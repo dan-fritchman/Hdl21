@@ -1,0 +1,21 @@
+[package]
+name = "hdl21"
+version = "0.1.5"
+authors = [
+    "Dan Fritchman <dan@fritch.mn>",
+]
+edition = "2018"
+license = "BSD-3-Clause"
+description = "Hardware Description Library"
+
+[lib]
+name = "hdl21"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = {version = "0.11.1", features = ["extension-module"]}
+
+# Note this is really what sets Python install-dependencies
+# for Maturin-built projects (not pyproject.toml)! 
+[package.metadata.maturin]
+requires-dist = ["protobuf>=3.13.0", "betterproto[compiler]>=1.2.5"]

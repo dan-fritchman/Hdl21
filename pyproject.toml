@@ -1,0 +1,21 @@
+[project]
+name = "hdl21"
+version = "0.1.0"
+description = "Hardware Description Library"
+authors = [
+    "Dan Fritchman <dan@fritch.mn>",
+]
+license = "BSD-3-Clause"
+readme = "readme.md"
+python = "^3.7"
+
+[dependencies]
+[build-system]
+requires = ["maturin"]
+build-backend = "maturin"
+
+[tool.maturin]
+sdist-include = ["path/**/*", "hdl21/*.py"]
+
+[pytest]
+testpaths = "tests"
