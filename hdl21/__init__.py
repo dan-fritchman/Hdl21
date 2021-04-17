@@ -21,17 +21,29 @@ class NoResult:
 
 
 primitive_types = (int, float, str, type(None))
-banned_types = (dict, list, tuple)
+_protected = [
+    "_name",
+    "_parent",
+    "_args",
+    "_kwargs",
+    "_func",
+    "_fdeps",
+    "_rdeps",
+    "_result",
+    "_resolve",
+    "_replace",
+]
 
 
 def dotattrs(cls):
     """ Class decorator which adds the 'get DotAttrs' functionality """
 
-    def __getattr__(self, name):
-        if name in cls._protected:
-            return cls.__getattribute__(name)
-        d = DotAttr(name, self)
-        d.deps.append(self)
+    def __getattr__(self, key):
+        if key in _protected:
+            return self.__getattribute__(key)
+        d = DotAttr(key, self)
+        d._fdeps.append(self)
+        self._rdeps.append(d)
         return d
 
     cls.__getattr__ = __getattr__
@@ -42,9 +54,29 @@ def calls(cls):
     """ Class decorator which adds the 'call generates Calls' functionality """
 
     def __call__(self, *args, **kwargs):
-        return Call(parent=self, args=args, kwargs=kwargs)
+        c = Call(_func=self, _args=args, _kwargs=kwargs)
+        self._rdeps.append(c)
+        for a in args:
+            if hasattr(a, "_rdeps"):
+                a._rdeps.append(c)
+        for v in kwargs.values():
+            if hasattr(v, "_rdeps"):
+                v._rdeps.append(c)
+        return c
 
     cls.__call__ = __call__
+    return cls
+
+
+def no_setattr(cls):
+    """ Class decorator removes setattr functionality """
+
+    def __setattr__(self, key, val):
+        if key not in _protected:
+            raise TabError
+        super(cls, self).__setattr__(key, val)
+
+    cls.__setattr__ = __setattr__
     return cls
 
 
@@ -52,8 +84,6 @@ class ModuleDict:
     # A very helpful "dictionary"
     def __init__(self, name):
         self.name = name
-        self.locals = locals()
-        self.globals = globals()
         self.dunders = dict()
         self.defs = dict()
         self.names = dict()
@@ -67,66 +97,88 @@ class ModuleDict:
             return self.defs[key]
         if key in self.names:
             return self.names[key]
-        e = Name(name=key, parent=self)
+        e = Name(_name=key, _parent=self)
         self.names.__setitem__(key, e)
         return e
 
     def __setitem__(self, key, val):
         if key.startswith("__"):
             return self.dunders.__setitem__(key, val)
+        if key in self.names:
+            old = self.names[key]
+            if old._fdeps:
+                raise TabError
+            # Replace the old Name in each reverse dependency
+            for rdep in old._rdeps:
+                rdep._replace(old=old, new=val)
         return self.defs.__setitem__(key, val)
 
     def __repr__(self):
         return f"ModuleDict({self.defs})"
 
 
-@dotattrs
 @calls
+@dotattrs
+@no_setattr
 @dataclass
 class Call:
     """ Function-style call into many of these objects """
 
-    args: tuple
-    kwargs: dict
-    parent: ModuleDict = field(repr=False)
+    _args: tuple
+    _kwargs: dict
+    _func: object = field(repr=False)
+    _rdeps: list = field(init=False, default_factory=list)
     _result: object = field(init=False, default=NoResult)
-    _protected: ClassVar = field(default=["args", "kwargs", "parent", "deps"])
 
     @property
-    def deps(self):
-        return [self.parent] + list(self.args) + list(self.kwargs.values())
+    def _fdeps(self):
+        """ Forward dependencies: the target function, and all its arguments """
+        return [self._func] + list(self._args) + list(self._kwargs.values())
+
+    def _replace(self, old, new):
+        """ Replace (forward) dependency `old` with `new` """
+        if old is self._func:
+            self._func = new
+        for idx, val in enumerate(self._args):
+            if val is old:
+                self._args[idx] = new
+        for k, v in self._kwargs.items():
+            if v is old:
+                self._kwargs[k] = new
 
 
-@dotattrs
 @calls
+@dotattrs
+@no_setattr
 @dataclass
 class DotAttr:
     """ Dot-accessed attribute """
 
-    name: str
-    parent: object = field(repr=False)
-    deps: list = field(init=False, default_factory=list)
+    _name: str
+    _parent: object = field(repr=False)
+    _fdeps: list = field(init=False, default_factory=list)
+    _rdeps: list = field(init=False, default_factory=list)
     _result: object = field(init=False, repr=False, default=NoResult)
-    _protected: ClassVar = field(
-        default=["name", "parent", "deps", "_result", "_resolve"]
-    )
+
+    def _replace(self, old, new):
+        """ Replace (forward) dependency `old` with `new` """
+        for idx, val in enumerate(self._fdeps):
+            if val is old:
+                self._fdeps[idx] = new
 
 
-@dotattrs
 @calls
+@dotattrs
+@no_setattr
 @dataclass
 class Name:
-    """ Attribute in a Module class dict """
+    """ Unresolved Name Reference """
 
-    name: str
-    parent: ModuleDict = field(repr=False)
-    deps: list = field(init=False, default_factory=list)
+    _name: str
+    _parent: ModuleDict = field(repr=False)
+    _fdeps: list = field(init=False, default_factory=list)
+    _rdeps: list = field(init=False, default_factory=list)
     _result: object = field(init=False, repr=False, default=NoResult)
-    _protected: ClassVar = field(default=["name", "parent", "deps"])
-
-    _protected: ClassVar = field(
-        default=["name", "parent", "deps", "_result", "_resolve"]
-    )
 
 
 class Resolver:
@@ -152,29 +204,29 @@ class Resolver:
     def resolve_name(self, name: Name) -> object:
         if name._result is not NoResult:
             return name._result
-        # if self.dct.defs[name.name] is not name:
-        #     # Not sure how this would happen, something went wrong
-        #     raise TabError
         for frame in self.frames:
-            if name.name in frame.f_locals:
-                name._result = frame.f_locals[name.name]
+            if name._name in frame.f_locals:
+                name._result = frame.f_locals[name._name]
                 return name._result
-        raise ResolutionError
+        if name._name in builtins.__dict__:
+            name._result = getattr(builtins, name._name)
+            return name._result
+        raise ResolutionError(f"Error resolving {name._name} in {self.dct.name}")
 
     def resolve_dotattr(self, dot: DotAttr):
         if dot._result is not NoResult:
             return dot._result
-        parent = self.resolve(dot.parent)
-        name = self.resolve(dot.name)
+        parent = self.resolve(dot._parent)
+        name = self.resolve(dot._name)
         dot._result = getattr(parent, name)
         return dot._result
 
     def resolve_call(self, call: Call):
         if call._result is not NoResult:
             return call._result
-        args = (self.resolve(a) for a in call.args)
-        kwargs = {k: self.resolve(v) for k, v in call.kwargs}
-        func = self.resolve(call.parent)
+        args = (self.resolve(a) for a in call._args)
+        kwargs = {k: self.resolve(v) for k, v in call._kwargs.items()}
+        func = self.resolve(call._func)
         call._result = func(*args, **kwargs)
         return call._result
 
@@ -187,12 +239,16 @@ class ModuleMeta(type):
         # Cover the `Module` base-class
         if mcs._module_cls is None:
             if bases != ():
-                raise RuntimeError
+                raise RuntimeError(
+                    "Hdl21 Internal Error: {name} defined where hdl21.Module definition expected/"
+                )
             return dict()
         # Cover custom sub-classes
         # Require they are sub-classes of our Module, and nothing else
         if bases != (Module,):
-            raise RuntimeError
+            raise RuntimeError(
+                f"Class {name} defined with base-classes {bases}. hdl21.Modules do not support multiple inheritance. "
+            )
         return ModuleDict(name)
 
     def __new__(mcs, name, bases, dct):
@@ -225,33 +281,10 @@ class ModuleMeta(type):
                     m.signals[k] = v
             elif isinstance(v, Instance):
                 v.name = k
-                m.signals[k] = v
+                m.instances[k] = v
             else:
                 raise TypeError
         return m
-
-    @staticmethod
-    def order(dct: ModuleDict) -> list:
-        """ Depth-first organize the definitions in `dct` """
-
-        def _helper(obj, accum):
-            # Check whether we've already visited this object,
-            # And check whether it is a primitive, and so has no dependencies
-            if obj in accum or isinstance(obj, primitive_types):
-                return
-            # Check for any explicitly disallowed types
-            if isinstance(obj, banned_types):
-                raise TypeError
-            # Descend into each dependency, recursively accumulating theirs
-            for dep in obj.deps:
-                _helper(dep, accum)
-            # And finally, add ourselves
-            accum.append(obj)
-
-        accum = []
-        for obj in dct.defs.values():
-            _helper(obj, accum)
-        return accum
 
 
 class Module(metaclass=ModuleMeta):
@@ -327,6 +360,6 @@ def Port(**kwargs):
 
 
 class Instance:
-    def __init__(self, module: Module, conns: dict):
+    def __init__(self, module: Module, **conns: dict):
         self.module = module
         self.conns = conns
