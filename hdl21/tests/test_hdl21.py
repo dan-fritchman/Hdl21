@@ -73,9 +73,9 @@ def test_module2():
 def test_generator1():
     import hdl21 as h
 
-    @dataclass
+    @h.paramclass
     class MyParams:
-        a: int = 5
+        a = h.Param(dtype=int, desc="five", default=5)
 
     @h.generator
     def gen1(params: MyParams) -> h.Module:
@@ -88,3 +88,86 @@ def test_generator1():
     assert m.name == "gen1"
     assert isinstance(m.i, h.Signal)
     assert m._genparams == MyParams(a=3)
+
+
+def test_params1():
+    from hdl21 import paramclass, Param, isparamclass
+
+    @paramclass
+    class MyParams:
+        a = Param(dtype=int, default=5, desc="your fave")
+
+    assert isparamclass(MyParams)
+
+    m = MyParams()
+    assert isinstance(m.a, int)
+    assert m.a == 5
+    assert isinstance(m.__params__["a"], Param)
+    assert m.defaults() == dict(a=5)
+    assert m.descriptions() == dict(a="your fave")
+
+
+def test_params2():
+    from hdl21 import paramclass, Param, isparamclass
+
+    @paramclass
+    class Pc2:
+        # Required
+        r = Param(dtype=str, desc="required")
+        # Optional
+        o = Param(dtype=str, default="hmmm", desc="optional")
+
+    assert isparamclass(Pc2)
+    assert Pc2.defaults() == dict(o="hmmm")
+    assert Pc2.descriptions() == dict(r="required", o="optional")
+
+    p = Pc2(r="provided")
+    assert isinstance(p.r, str)
+    assert p.r == "provided"
+    assert isinstance(p.o, str)
+    assert p.o == "hmmm"
+    assert p.defaults() == dict(o="hmmm")
+    assert p.descriptions() == dict(r="required", o="optional")
+
+
+def test_bad_params1():
+    # Test a handful of errors Params and paramclasses should raise.
+
+    from hdl21 import (
+        paramclass,
+        Param,
+        isparamclass,
+        ValidationError,
+        FrozenInstanceError,
+    )
+
+    with pytest.raises(RuntimeError):
+        # Test that creating a paramclass with parent-class(es) fails
+
+        @paramclass
+        class C(TabError):  # Of course this is a sub-class of the best built-in class
+            ...
+
+    @paramclass
+    class C:
+        a = Param(dtype=int, desc="Gonna Fail!")
+
+    with pytest.raises(RuntimeError):
+        # Test that sub-classing a paramclass fails
+
+        class D(C):
+            ...
+
+    with pytest.raises(TypeError):
+        # Test that missing arguments fail
+        c = C()
+
+    with pytest.raises(ValidationError):
+        # Test invalid argument types fail
+
+        c = C(a=TabError)
+
+    with pytest.raises(FrozenInstanceError):
+        # Test that attempts at mutating paramclasses fail
+        c = C(a=3)
+        c.a = 4

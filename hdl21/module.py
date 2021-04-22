@@ -1,6 +1,6 @@
 import builtins
 import inspect
-from enum import Enum
+
 from textwrap import dedent
 from dataclasses import dataclass, field
 from typing import ClassVar, Optional
@@ -298,6 +298,7 @@ class Module(metaclass=ModuleMeta):
             return super().__setattr__(key, val)
 
         # Type-based organization
+        from .signal import Signal, SignalVisibility
         if isinstance(val, Signal):
             val.name = key
             self.namespace[key] = val
@@ -340,48 +341,6 @@ class Module(metaclass=ModuleMeta):
             )
         )
 
-
-class PortDir(Enum):
-    INPUT = 0
-    OUTPUT = 1
-    INOUT = 2
-    NONE = 3
-
-
-class SignalVisibility(Enum):
-    INTERNAL = 0
-    PORT = 1
-
-
-class Signal:
-    def __init__(
-        self,
-        *,
-        name=None,
-        width=1,
-        visibility=SignalVisibility.INTERNAL,
-        direction=PortDir.NONE,
-    ):
-        self.name = name
-        self.width = width
-        self.visibility = visibility
-        self.direction = direction
-
-
-def Input(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.INPUT)
-
-
-def Output(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.OUTPUT)
-
-
-def Inout(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.INOUT)
-
-
-def Port(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.NONE)
 
 
 class Instance:
