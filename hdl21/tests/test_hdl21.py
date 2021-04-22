@@ -1,4 +1,5 @@
 import pytest
+from dataclasses import dataclass
 
 
 def test_health():
@@ -18,6 +19,7 @@ def test_health():
 
 
 def test_module1():
+    """ Initial Module Test """
     import hdl21 as h
 
     class M1(h.Module):
@@ -59,3 +61,30 @@ def test_module2():
     assert isinstance(M2.signals["q"], h.Signal)
     assert isinstance(M2.instances["i"], h.Instance)
 
+    # Test the getattr magic for signals, ports, and instances
+    assert isinstance(M2.i, h.Instance)
+    assert M2.instances["i"] is M2.i
+    assert isinstance(M2.q, h.Signal)
+    assert M2.signals["q"] is M2.q
+    assert isinstance(M1.s, h.Signal)
+    assert M1.ports["s"] is M1.s
+
+
+def test_generator1():
+    import hdl21 as h
+
+    @dataclass
+    class MyParams:
+        a: int = 5
+
+    @h.generator
+    def gen1(params: MyParams) -> h.Module:
+        m = h.Module()
+        m.i = h.Input()
+        return m
+
+    m = h.elaborate(gen1, MyParams(a=3))
+
+    assert m.name == "gen1"
+    assert isinstance(m.i, h.Signal)
+    assert m._genparams == MyParams(a=3)
