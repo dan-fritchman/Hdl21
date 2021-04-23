@@ -168,9 +168,42 @@ class Module(metaclass=ModuleMeta):
 
 
 class Instance:
-    def __init__(self, module: Module, **conns: dict):
-        self.module = module
-        self.conns = conns
+    """ Hierarchical Instance of another Module or Generator """
+
+    def __init__(self, of: Union[Module, "Generator"], params: Optional[object] = None):
+        if isinstance(of, Module) and params is not None:
+            raise RuntimeError(
+                f"Invalid Module-instance with parameters {params}. Instance parameters can be used with *generator* functions. "
+            )
+        self.of = of
+        self.params = params
+        self.conns = dict()
+        self._initialized = True
+
+    def __call__(self, **kwargs) -> "Instance":
+        """ Connect-by-call """
+        from .signal import Signal
+
+        for k, v in kwargs.items():
+            if not isinstance(v, Signal):
+                raise TypeError
+            self.conns[k] = v
+        # Don't forget to retain ourselves at the call-site!
+        return self
+
+    def __setattr__(self, key: str, val: object):
+        """ Connect-by-setattr """
+        if not getattr(self, "_initialized", False) or key.startswith("_"):
+            # Bootstrapping phase: do regular setattrs to get started
+            return super().__setattr__(key, val)
+        if key == "name":  # Special case(s)
+            return super().__setattr__(key, val)
+
+        from .signal import Signal
+
+        if not isinstance(val, Signal):
+            raise TypeError
+        self.conns[key] = val
 
 
 class ModuleDict:

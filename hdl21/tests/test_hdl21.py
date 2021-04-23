@@ -53,7 +53,7 @@ def test_module2():
         s = h.Input()
 
     class M2(h.Module):
-        i = h.Instance(M1, s=q)
+        i = h.Instance(M1)(s=q)
         q = h.Signal()
 
     assert isinstance(M1, h.Module)
@@ -87,6 +87,47 @@ def test_generator1():
     assert m.name == "gen1"
     assert isinstance(m.i, h.Signal)
     assert m._genparams == MyParams(a=3)
+
+
+def test_generator2():
+    @h.paramclass
+    class P2:
+        f = h.Param(dtype=float, desc="a real number", default=1e-11)
+
+    @h.generator
+    def g2(params: P2, ctx: h.Context) -> h.Module:
+        assert isinstance(params, P2)
+        assert isinstance(ctx, h.Context)
+        return h.Module()
+
+    m = h.elaborate(g2, P2())
+
+    assert isinstance(m, h.Module)
+    assert m.name == "g2"
+    assert m._genparams == P2()
+
+
+def test_generator3():
+    @h.paramclass
+    class P3:
+        width = h.Param(dtype=int, desc="bit-width, maybe", default=1)
+
+    @h.generator
+    def g3a(params: P3) -> h.Module:
+        return h.Module()
+
+    @h.generator
+    def g3b(params: P3, ctx: h.Context) -> h.Module:
+        return h.Module()
+
+    m = h.Module(name="m")
+
+    class HasGeneratorInstances(h.Module):
+        a = h.Instance(g3a, P3())
+        b = h.Instance(g3b, P3(width=5))
+        c = h.Instance(m)
+
+    h.elaborate(HasGeneratorInstances)
 
 
 def test_params1():
