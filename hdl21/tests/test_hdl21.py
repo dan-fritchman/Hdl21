@@ -1,5 +1,5 @@
 import pytest
-from dataclasses import dataclass
+import hdl21 as h
 
 
 def test_health():
@@ -20,7 +20,6 @@ def test_health():
 
 def test_module1():
     """ Initial Module Test """
-    import hdl21 as h
 
     class M1(h.Module):
         a = h.Input()
@@ -28,6 +27,7 @@ def test_module1():
         c = h.Inout()
         d = h.Port()
         e = h.Signal()
+        f = h.Signal()
 
     assert isinstance(M1, h.Module)
     assert isinstance(M1.ports, dict)
@@ -43,11 +43,12 @@ def test_module1():
     assert "d" not in M1.signals
     assert "e" in M1.signals
     assert "e" not in M1.ports
+    assert "f" in M1.signals
+    assert "f" not in M1.ports
+    assert M1.e is not M1.f
 
 
 def test_module2():
-    import hdl21 as h
-
     class M1(h.Module):
         s = h.Input()
 
@@ -71,8 +72,6 @@ def test_module2():
 
 
 def test_generator1():
-    import hdl21 as h
-
     @h.paramclass
     class MyParams:
         a = h.Param(dtype=int, desc="five", default=5)

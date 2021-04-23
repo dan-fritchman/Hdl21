@@ -8,7 +8,7 @@ class PortDir(Enum):
     NONE = 3
 
 
-class SignalVisibility(Enum):
+class Visibility(Enum):
     INTERNAL = 0
     PORT = 1
 
@@ -19,7 +19,7 @@ class Signal:
         *,
         name=None,
         width=1,
-        visibility=SignalVisibility.INTERNAL,
+        visibility=Visibility.INTERNAL,
         direction=PortDir.NONE,
     ):
         self.name = name
@@ -29,16 +29,16 @@ class Signal:
 
 
 def Input(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.INPUT)
+    return Signal(visibility=Visibility.PORT, direction=PortDir.INPUT)
 
 
 def Output(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.OUTPUT)
+    return Signal(visibility=Visibility.PORT, direction=PortDir.OUTPUT)
 
 
 def Inout(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.INOUT)
+    return Signal(visibility=Visibility.PORT, direction=PortDir.INOUT)
 
 
 def Port(**kwargs):
-    return Signal(visibility=SignalVisibility.PORT, direction=PortDir.NONE)
+    return Signal(visibility=Visibility.PORT, direction=PortDir.NONE)

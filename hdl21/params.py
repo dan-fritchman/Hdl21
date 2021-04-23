@@ -24,7 +24,6 @@ class _Default:
     def __new__(cls, *_, **__):
         if cls._the_one is None:
             cls._the_one = super().__new__(cls)
-            return cls._the_one
         return cls._the_one
 
 
@@ -134,7 +133,6 @@ class Param:
     desc: str  # Description. Required
     default: Optional[Any] = _default  # Default Value. Optional
 
-    # Default factories are supported in std-lib dataclasses,
-    # but "in beta" in `pydantic.dataclasses`.
+    # Default factories are supported in std-lib dataclasses, but "in beta" in `pydantic.dataclasses`.
     # default_factory: Optional[Any] = _default  # Default Call-Factory
 
