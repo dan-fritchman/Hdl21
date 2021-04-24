@@ -1,8 +1,7 @@
 import inspect
-from typing import Callable, Union
+from typing import Callable, Union, Any
 from pydantic.dataclasses import dataclass
-from .module import Module, Instance
-from .params import isparamclass
+from .module import Module
 
 
 class Context:
@@ -15,14 +14,25 @@ class Generator:
     paramtype: type
     usecontext: bool
 
-    def __call__(self, *_, **__):
-        raise RuntimeError(
-            f"Invalid bare call to generator function {self.func.__name__}. You likely meant to elaborate an instance with `hdl21.elaborate({self.func.__name__})`."
-        )
+    def __call__(self, arg: Any):
+        return GeneratorCall(gen=self, arg=arg)
+
+
+@dataclass
+class GeneratorCall:
+    """ Generator 'Bare Calls' 
+    Stored for expansion during elaboration. 
+    Only single-argument calls with `Params` are supported. 
+    Any application of a `Context` is done during elaboration.  """
+
+    gen: Generator
+    arg: Any
 
 
 def generator(f: Callable) -> Generator:
     """ Decorator for Generator Functions """
+    from .params import isparamclass
+
     if not callable(f):
         raise RuntimeError(f"Invalid `@generator` application to non-callable {f}")
 
@@ -103,7 +113,7 @@ class Elaborator:
             self.elaborate_instance(inst)
         return module
 
-    def elaborate_instance(self, inst: Instance):
+    def elaborate_instance(self, inst: "Instance"):
         if isinstance(inst.of, Generator):
             return self.elaborate_generator(inst.of, inst.params)
         elif isinstance(inst.of, Module):

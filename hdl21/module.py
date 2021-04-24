@@ -13,7 +13,7 @@ import inspect
 
 from textwrap import dedent
 from dataclasses import dataclass, field
-from typing import ClassVar, Optional, Union, Callable
+from typing import ClassVar, Optional, Union, Callable, Any
 
 
 class ModuleMeta(type):
@@ -102,12 +102,16 @@ class Module(metaclass=ModuleMeta):
         self.ports = dict()
         self.signals = dict()
         self.instances = dict()
+        self.instarrays = dict()
         self.namespace = dict()  # Combination of all these
         self._genparams = None
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
         """ Set-attribute over-ride, organizing into type-based containers """
+        from .signal import Signal, Visibility
+        from .instance import Instance, InstArray
+
         if not getattr(self, "_initialized", False) or key.startswith("_"):
             return super().__setattr__(key, val)
 
@@ -122,8 +126,6 @@ class Module(metaclass=ModuleMeta):
             return super().__setattr__(key, val)
 
         # Type-based organization
-        from .signal import Signal, Visibility
-
         if isinstance(val, Signal):
             val.name = key
             self.namespace[key] = val
@@ -135,6 +137,10 @@ class Module(metaclass=ModuleMeta):
             val.name = key
             self.instances[key] = val
             self.namespace[key] = val
+        elif isinstance(val, InstArray):
+            val.name = key
+            self.instarrays[key] = val
+            self.namespace[key] = val
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
 
@@ -144,14 +150,14 @@ class Module(metaclass=ModuleMeta):
             return ns[key]
         return object.__getattribute__(self, key)
 
-    def __call__(self, *_args, **_kwargs):
+    def __call__(self, *args, **kwargs):
         """ Highly likely error: calling Modules in attempts to create Python-level instances, which they don't have.  """
         raise RuntimeError(
             dedent(
                 f"""\
-                Error: attempting to call (or instantiate) hdl21.Module {self.name}. 
-                You probably want to pass its class-object to another function instead, 
-                such as hdl21.Instance({self.name}), or retrieve its class-object attributes, 
+                Error: attempting to call (or instantiate) hdl21.Module {self.name}.
+                You probably want to pass its class-object to another function instead,
+                such as hdl21.Instance({self.name}), or retrieve its class-object attributes,
                 such as {self.name}.ports, {self.name}.instances, and so on."""
             )
         )
@@ -165,45 +171,6 @@ class Module(metaclass=ModuleMeta):
                 Sub-Typing hdl21.Module is not supported. """
             )
         )
-
-
-class Instance:
-    """ Hierarchical Instance of another Module or Generator """
-
-    def __init__(self, of: Union[Module, "Generator"], params: Optional[object] = None):
-        if isinstance(of, Module) and params is not None:
-            raise RuntimeError(
-                f"Invalid Module-instance with parameters {params}. Instance parameters can be used with *generator* functions. "
-            )
-        self.of = of
-        self.params = params
-        self.conns = dict()
-        self._initialized = True
-
-    def __call__(self, **kwargs) -> "Instance":
-        """ Connect-by-call """
-        from .signal import Signal
-
-        for k, v in kwargs.items():
-            if not isinstance(v, Signal):
-                raise TypeError
-            self.conns[k] = v
-        # Don't forget to retain ourselves at the call-site!
-        return self
-
-    def __setattr__(self, key: str, val: object):
-        """ Connect-by-setattr """
-        if not getattr(self, "_initialized", False) or key.startswith("_"):
-            # Bootstrapping phase: do regular setattrs to get started
-            return super().__setattr__(key, val)
-        if key == "name":  # Special case(s)
-            return super().__setattr__(key, val)
-
-        from .signal import Signal
-
-        if not isinstance(val, Signal):
-            raise TypeError
-        self.conns[key] = val
 
 
 class ModuleDict:
@@ -256,6 +223,8 @@ class ModuleDict:
             old = self.names.pop(key)
             for rdep in old._rdeps:
                 rdep._replace(old=old, new=val)
+        if not getattr(val, "__nodeclass__", False):
+            val = Val(val)
         # And store this in our definitions
         self.defs[key] = val
 
@@ -275,6 +244,7 @@ _protected = [
     "_args",
     "_kwargs",
     "_func",
+    "_val",
     "_fdeps",
     "_rdeps",
     "_result",
@@ -327,7 +297,9 @@ def no_setattr(cls):
         if key in _protected:
             return super(cls, self).__setattr__(key, val)
         # No other set-attr-ing allowed.
-        raise RuntimeError(f"Invalid attempt to set attribute {key} in class {cls}")
+        raise RuntimeError(
+            f"Invalid attempt to set dot-access attribute {key} inside Module-definition block"
+        )
 
     cls.__setattr__ = __setattr__
     return cls
@@ -401,8 +373,17 @@ class Name:
     _result: object = field(init=False, repr=False, default=NoResult)
 
 
+@nodeclass
+class Val:
+    """ Value, usually a literal assigned to a class-key """
+
+    _val: Any
+    _rdeps: list = field(init=False, default_factory=list)
+    _result: object = field(init=False, repr=False, default=NoResult)
+
+
 # Graph-Nodes are the Union of these three
-Node = Union[Name, DotAttr, Call]
+Node = Union[Name, DotAttr, Call, Val]
 
 
 class ResolutionError(Exception):
@@ -421,10 +402,25 @@ class Resolver:
     def __init__(self, dct: ModuleDict, frames: list):
         self.dct = dct
         self.frames = frames
+        self.connection_calls = list()
 
     def resolve_all(self) -> dict:
         """ Primary API method. Resolve everything in `self.dct`. """
-        return {k: self.resolve(v) for k, v in self.dct.defs.items()}
+        # Resolve all of the class attributes
+        results = {k: self.resolve(v) for k, v in self.dct.defs.items()}
+
+        # Finally, make our connection-calls.
+        for call in self.connection_calls:
+            func = self.resolve(call._func)
+            args = (self.resolve(a) for a in call._args)
+            kwargs = {k: self.resolve(v) for k, v in call._kwargs.items()}
+            f2 = func(*args, **kwargs)
+            # Instance connection-calls return themselves, a property we can check for!
+            if f2 is not func:
+                raise ResolutionError(
+                    f"Internal Error: hdl21 connecting non-Instance {func}"
+                )
+        return results
 
     def resolve(self, obj: object) -> None:
         """ Resolve unknown-type `obj` """
@@ -436,12 +432,23 @@ class Resolver:
             return self.resolve_call(obj)
         if isinstance(obj, DotAttr):
             return self.resolve_dotattr(obj)
+        if isinstance(obj, Val):
+            return self.resolve_val(obj)
         raise TypeError
+
+    def resolve_val(self, val: Val) -> object:
+        """ Resolve a (likely literal) value """
+        if val._result is not NoResult:  # Already computed
+            return val._result
+        val._result = self.resolve(val._val)
+        return val._result
 
     def resolve_name(self, name: Name) -> object:
         """ Resolve a named identifier """
         if name._result is not NoResult:  # Already computed
             return name._result
+        if name._name in self.dct.defs:  # Defined in our class-def
+            return self.resolve(self.dct.defs[name._name])
         # Hasn't been found - start walking the symbol-table
         for frame in self.frames:
             if name._name in frame.f_locals:
@@ -473,13 +480,21 @@ class Resolver:
         """ Resolve a function call. 
         Recursively resolves its function object and arguments,
         before calling the resolved function and returning the result. """
+        from .instance import Instance, InstArray
+
         if call._result is not NoResult:  # Already computed, generally via a `Name`
             return call._result
+        # Resolve our function-object
+        func = self.resolve(call._func)
+        # Special case for connections, which often create graph-cycles.
+        # Set these aside for later in our `connection_calls` list.
+        if isinstance(func, (Instance, InstArray)):
+            self.connection_calls.append(call)
+            call._result = func
+            return func
         # Resolve our arguments
         args = (self.resolve(a) for a in call._args)
         kwargs = {k: self.resolve(v) for k, v in call._kwargs.items()}
-        # Resolve our function-object
-        func = self.resolve(call._func)
         # Call it, store the result, and return it
         call._result = func(*args, **kwargs)
         return call._result

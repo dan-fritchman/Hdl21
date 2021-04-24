@@ -211,3 +211,71 @@ def test_bad_params1():
         # Test that attempts at mutating paramclasses fail
         c = C(a=3)
         c.a = 4
+
+    with pytest.raises(RuntimeError):
+        # Test the "no setattrs allowed" in class-def
+
+        class E(h.Module):
+            a = h.Signal()
+            a.b = 6
+
+    with pytest.raises(RuntimeError):
+        # And test this on literal values
+
+        class E2(h.Module):
+            a = 3
+            a.b = 6
+
+
+def test_array1():
+    class InArray(h.Module):
+        inp = h.Input()
+        out = h.Output()
+
+    m = h.Module(name="HasArray")
+    m.s1 = h.Signal(width=8)
+    m.s2 = h.Signal(width=1)
+    m.arr = h.InstArray(InArray, 8)
+    m.arr.inp = m.s1
+    m.arr.out = m.s2
+
+    assert m.name == "HasArray"
+
+
+def test_array2():
+    a = h.Module(name="a")
+
+    class HasArray2(h.Module):
+        s1 = h.Signal(width=8)
+        s2 = h.Signal(width=1)
+        arr = h.InstArray(a, 8)(inp=s1, out=s2)
+
+
+def test_cycle1():
+    # Test a cycle in a connection graph
+
+    class Thing(h.Module):
+        inp = h.Input()
+        out = h.Output()
+
+    class BackToBack(h.Module):
+        t1 = h.Instance(Thing)(inp=t2.out, out=t2.inp)
+        t2 = h.Instance(Thing)(inp=t1.out, out=t1.inp)
+
+    b = h.elaborate(BackToBack)
+
+    assert b.t1.inp is b.t2.out
+    assert b.t1.out is b.t2.inp
+    assert b.t2.inp is b.t1.out
+    assert b.t2.out is b.t1.inp
+
+    # Doing the same thing in procedural code
+    b2 = h.Module(name="BackToBack2")
+    b2.t1 = h.Instance(Thing)
+    b2.t2 = h.Instance(Thing)(inp=b2.t1.out, out=b2.t1.inp)
+    b2.t1(inp=b2.t2.out, out=b2.t2.inp)
+
+    assert b2.t1.inp is b2.t2.out
+    assert b2.t1.out is b2.t2.inp
+    assert b2.t2.inp is b2.t1.out
+    assert b2.t2.out is b2.t1.inp
