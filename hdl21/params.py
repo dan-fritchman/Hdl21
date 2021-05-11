@@ -2,7 +2,7 @@
 Hdl21 Parameters and Param-Classes 
 """
 
-from typing import Optional, Callable, Any, Union
+from typing import Optional, Any
 import dataclasses
 import pydantic
 
@@ -129,7 +129,7 @@ def isparamclass(cls: type) -> bool:
 class Param:
     """ Parameter Declaration """
 
-    dtype: type  # Datatype. Required
+    dtype: Any  # Datatype. Required
     desc: str  # Description. Required
     default: Optional[Any] = _default  # Default Value. Optional
 

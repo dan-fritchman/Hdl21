@@ -74,19 +74,19 @@ def test_module2():
 def test_generator1():
     @h.paramclass
     class MyParams:
-        a = h.Param(dtype=int, desc="five", default=5)
+        w = h.Param(dtype=int, desc="five", default=5)
 
     @h.generator
     def gen1(params: MyParams) -> h.Module:
         m = h.Module()
-        m.i = h.Input()
+        m.i = h.Input(width=params.w)
         return m
 
-    m = h.elaborate(gen1, MyParams(a=3))
+    m = h.elaborate(gen1, MyParams(w=3))
 
     assert m.name == "gen1"
     assert isinstance(m.i, h.Signal)
-    assert m._genparams == MyParams(a=3)
+    assert m._genparams == MyParams(w=3)
 
 
 def test_generator2():
@@ -168,6 +168,50 @@ def test_params2():
     assert p.o == "hmmm"
     assert p.defaults() == dict(o="hmmm")
     assert p.descriptions() == dict(r="required", o="optional")
+
+
+def test_params3():
+    # Test some list-tuple conversion
+    import hdl21 as h
+
+    @h.paramclass
+    class HasTuple:
+        t = h.Param(dtype=tuple, desc="Go ahead, try a list")
+
+    h = HasTuple(t=[1, 2, 3])
+    assert isinstance(h.t, tuple)
+    assert h.t == (1, 2, 3)
+
+
+def test_params4():
+    # Test some param-class nesting
+    import hdl21 as h
+
+    @h.paramclass
+    class Inner:
+        i = h.Param(dtype=int, desc="Inner int-field")
+
+    @h.paramclass
+    class Outer:
+        inner = h.Param(dtype=Inner, desc="Inner fields")
+        f = h.Param(dtype=float, desc="A float", default=3.14159)
+
+    o = Outer(inner=Inner(11))
+    assert isinstance(o, Outer)
+    assert isinstance(o.inner, Inner)
+    assert o.inner == Inner(11)
+    assert o.inner.i == 11
+    assert o.f == 3.14159
+
+    from dataclasses import asdict
+
+    # Create from a (nested) dictionary 
+    d1 = {"inner": {"i": 11}, "f": 22.2}
+    o = Outer(**d1)
+    # Convert back to another dictionary 
+    d2 = asdict(o)
+    # And check they line up 
+    assert d1 == d2
 
 
 def test_bad_params1():
@@ -279,3 +323,34 @@ def test_cycle1():
     assert b2.t1.out is b2.t2.inp
     assert b2.t2.inp is b2.t1.out
     assert b2.t2.out is b2.t1.inp
+
+
+def test_prim1():
+    # First test of transistor primitives
+    params = h.Mos.Params()
+    pmos = h.Pmos(params)
+    nmos = h.Nmos(params)
+
+    class HasMos(h.Module):
+        # Two transistors wired in parallel
+        p = h.Instance(pmos)(g=n.g, d=n.d, s=n.s, b=n.b)
+        n = h.Instance(nmos)(g=p.g, d=p.d, s=p.s, b=p.b)
+
+    h.elaborate(HasMos)
+
+
+def test_prim2():
+    class HasPrims(h.Module):
+        p = h.Signal()
+        n = h.Signal()
+
+        _rp = h.R.Params(r=50)
+        r = h.Instance(h.Resistor(_rp))(p=p, n=n)
+
+        c = h.Instance(h.Capacitor(h.C.Params(c=1e-12)))(p=p, n=n)
+        l = h.Instance(h.Inductor(h.L.Params(l=1e-15)))(p=p, n=n)
+        d = h.Instance(h.Diode(h.D.Params()))(p=p, n=n)
+        s = h.Instance(h.Short(h.Short.Params()))(p=p, n=n)
+
+    h.elaborate(HasPrims)
+

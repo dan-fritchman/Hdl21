@@ -1,6 +1,7 @@
 import inspect
 from typing import Callable, Union, Any
 from pydantic.dataclasses import dataclass
+from pydantic import ValidationError
 from .module import Module
 
 
@@ -17,6 +18,10 @@ class Generator:
     def __call__(self, arg: Any):
         return GeneratorCall(gen=self, arg=arg)
 
+    @property
+    def Params(self) -> type:
+        return self.paramtype
+
 
 @dataclass
 class GeneratorCall:
@@ -27,6 +32,10 @@ class GeneratorCall:
 
     gen: Generator
     arg: Any
+
+    def __post_init_post_parse__(self):
+        if not isinstance(self.arg, self.gen.Params):
+            raise ValidationError
 
 
 def generator(f: Callable) -> Generator:
@@ -96,16 +105,24 @@ class Elaborator:
             m = gen.func(params, self.ctx)
         else:
             m = gen.func(params)
+
         # Type-check the result
+        # Generators may return other (potentially nested) generator-calls; unwind any of them
+        while isinstance(m, GeneratorCall):
+            # Note this should hit Python's recursive stack-check if it doesn't terminate
+            m = self.elaborate_generator(gen=m.gen, params=m.arg)
+        # Ultimately they've gotta resolve to Modules, or they fail.
         if not isinstance(m, Module):
             raise TypeError(
                 f"Generator {self.func.__name__} returned {type(m)}, must return Module."
             )
+
         # Give it a reference to its generator-parameters
         m._genparams = params
         # If the Module that comes back is anonymous, give it a name equal to the Generator's
         if m.name is None:
             m.name = gen.func.__name__
+        # And elaborate the module
         return self.elaborate_module(m)
 
     def elaborate_module(self, module: Module) -> Module:
@@ -116,9 +133,11 @@ class Elaborator:
     def elaborate_instance(self, inst: "Instance"):
         if isinstance(inst.of, Generator):
             return self.elaborate_generator(inst.of, inst.params)
-        elif isinstance(inst.of, Module):
+        if isinstance(inst.of, GeneratorCall):
+            return self.elaborate_generator(gen=inst.of.gen, params=inst.of.arg)
+        if isinstance(inst.of, Module):
             return self.elaborate_module(inst.of)
-        raise TypeError()
+        raise TypeError(f"Invalid Instance of {inst.of}")
 
 
 def elaborate(top: Generator, params=None, ctx=None):

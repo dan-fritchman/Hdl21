@@ -29,8 +29,10 @@ class ModuleMeta(type):
         a = Signal()
         b = Input()
         c = Output()
-        d = Instance(OtherModule)
+        d = Instance(OtherModule)(a=a, b=b, c=c)
     ```
+
+    How this happens: 
 
     * Before class-body execution, `ModuleMeta.__prepare__` creates a `ModuleDict` to use for the class-body 
     * During class-body execution, the `ModuleDict` creates a graph of dataflow-ordered `Node` objects (`Name`, `Call`, `DotAttr`, et al)
@@ -434,7 +436,7 @@ class Resolver:
             return self.resolve_dotattr(obj)
         if isinstance(obj, Val):
             return self.resolve_val(obj)
-        raise TypeError
+        raise TypeError(f"Invalid attribute {obj} in Module {self.dct.name}")
 
     def resolve_val(self, val: Val) -> object:
         """ Resolve a (likely literal) value """

@@ -10,4 +10,5 @@ from .instance import *
 from .signal import *
 from .module import *
 from .generator import *
+from .primitives import *
 
