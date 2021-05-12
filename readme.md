@@ -4,19 +4,17 @@
 
 Hdl21 is a library for efficiently creating and manipulating structural hardware descriptions such as those common in custom integrated circuits. Circuits are described in two primary units of re-use: 
 
-- `Modules` are structural combinations of ports, signals, instances of other `Modules`. 
+- `Modules` are structural combinations of ports, signals, and instances of other `Modules`. 
 - `Generator`s are Python functions that return `Modules`. 
 
 In other words: 
 
 - `Generators` are code. `Modules` are data. 
 - `Generators` require a runtime environment. `Modules` do not. 
-- `Generators` have parameters. `Modules` do not. 
 
 ## Modules
 
-Modules have two definition syntaxes.
-The procedural/ imperative one:
+An example of creating a `Module`:
 
 ```python
 import hdl21 as h 
@@ -36,7 +34,7 @@ m.a = h.Instance(AnotherModule)
 * Hierarchical connections defined by (FIXME: `Bundles` or `Interfaces`, pick a name)
 
 
-`Modules` can also be defined through a `class`-based syntax. Creating a sub-class of `hdl21.Module` produces a new `Module`-definition, in which each attribute can be declared like so: 
+In addition to the procedural-mode shown above, `Modules` can also be defined through a `class`-based syntax. Creating a sub-class of `hdl21.Module` produces a new `Module`-definition, in which each attribute can be declared like so: 
 
 ```python
 import hdl21 as h 
@@ -88,7 +86,7 @@ m.b = Signal()
 m.c = Signal()
 # Create an Instance
 m.i1 = h.Instance(AnotherModule)
-# And wire it up
+# And wire them up
 m.i1.a = a
 m.i1.b = b
 m.i1.c = c
@@ -102,7 +100,7 @@ m = h.Module()
 # Create the Instances
 m.i1 = h.Instance(AnotherModule)
 m.i2 = h.Instance(AnotherModule)
-# And wire it up
+# And wire them up
 m.i1.a = m.i2.a
 m.i1.b = m.i2.b
 m.i1.c = m.i2.c
@@ -199,13 +197,13 @@ Note in the latter example, the Module `Inner` is defined solely inside the gene
 
 ## Parameters 
 
-`Generator` function-arguments allow for a few use-cases. The primary-such case is shown in each of the prior examples: `Generators` typically take a single argument `params`, which is a collection of `hdl21.Param` parameters. Parameters are strongly-typed and type-checked at runtime. Each requires a data-type `dtype` and description-string `desc`. Optional parameters include a default-value, which of course must be an instance of `dtype`.
+`Generator` function-arguments allow for a few use-cases. The primary-such case is shown in each of the prior examples: `Generators` typically take a single argument `params`, which is a collection of `hdl21.Params`. Parameters are strongly type-checked at runtime. Each requires a data-type `dtype` and description-string `desc`. Optional parameters include a default-value, which must be an instance of `dtype`.
 
 ```python
 npar = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
 ```
 
-The collections of these parameters used by `Generators` are called param-classes, and are typically formed by applying the `hdl21.paramclass` decorator to a class-definition-full of `hdl21.Params`:  
+The collections of these parameters used by `Generators` are called param-classes, and are typically formed by applying the `hdl21.paramclass` decorator to a class-body-full of `hdl21.Params`: 
 
 ```python
 import hdl21 as h
@@ -228,7 +226,7 @@ assert p.text == "Your Favorite Module"  # Also passes
  
 The `paramclass` decorator also adds `descriptions` and `defaults` methods which provide dictionaries of each parameter's default-values and string-descriptions. Similar to `dataclasses`, param-class constructors use the field-order defined in the class body. Note Python's function-argument rules dictate that all required arguments be declared first, and all optional arguments come last. 
 
-Param-classes can be nested, and can be converted to (potentially nested) dictionaries via `dataclasses.asdict`. The same conversion applies in reverse - (potentially nested) dictionaries can be expanded and serve as param-class constructor arguments: 
+Param-classes can be nested, and can be converted to (potentially nested) dictionaries via `dataclasses.asdict`. The same conversion applies in reverse - (potentially nested) dictionaries can be expanded to serve as param-class constructor arguments: 
 
 ```python 
 import hdl21 as h
@@ -259,14 +257,21 @@ Param-classes are immutable and hashable, and therefore require their attributes
 class HasTuple:
     t = h.Param(dtype=tuple, desc="Go ahead, try a list")
 
-h = HasTuple(t=[1, 2, 3])     # Give it a list
-assert isinstance(h.t, tuple) # Passes
-assert h.t == (1, 2, 3)       # Also passes 
+h = HasTuple(t=[1, 2, 3])      # Give it a list
+assert isinstance(h.t, tuple)  # Passes
+assert h.t == (1, 2, 3)        # Also passes 
 ```
 
 Dictionary-valued fields can instead be converted into more (potentially nested) param-classes. 
 
+## A Note on Parametrization 
 
+Hdl21 `Generators` have parameters. `Modules` do not. 
+
+This is a deliberate decision, which in this sense makes `hdl21.Module` less feature-rich than the analogous `module` concepts in existing HDLs (Verilog, VHDL, and even SPICE). These languages support what might be called "static parameters" - relatively simple relationships between parent and child-module parameterization. Setting, for example, the width of a signal or number of instances in an array is straightforward. But more elaborate parametrization-cases are either highly cumbersome or altogether impossible to create. (As an example, try using Verilog parametrization to make a programmable-depth binary tree.) Hdl21, in contrast, exposes all parametrization to the full Python-power of its generators. 
+
+
+---
 ## Why Use Python?
 
 Custom IC design is a complicated field. Its practitioners have to know a | lot | of | stuff, independent of any programming background. Many have little or no programming experience at all. Python is reknowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like. 
@@ -275,34 +280,41 @@ HDL21 exposes the ideas they're used to - `Modules`, `Ports`, `Signals` - via as
 
 ## Why *Not* Use {X}?
 
-We understand you have plenty of choice in the HDL space, and appreciate you flying with HDL21.
+We know you have plenty of choice when you fly, and appreciate you choosing Hdl21. A few alternatives and how they compare: 
 
-### Graphical Schematics
+### Schematics
 
-Generator code plz
+Graphical schematics have been the lingua franca of the custom-circuit field for, well, as long as it's been around. Most practitioners are most comfortable in this graphical form. (For plenty of circuits, so are Hdl21's authors.) Their most obvious limitation is the lack of capacity for programmable manipulation via something like Hdl21 `Generators`. Some schematic-GUI programs attempt to include "embedded scripting", perhaps even in Hdl21's own language (Python). We see those GUIs as entombing your programs in their badness. Hdl21 is instead a library, designed to be used by any Python program you like, sharable and runnable by anyone who has Python. (Which is everyone.) 
 
 ### Netlists (Spice et al)
 
-These lack the generator stuff duh
+Take all of the shortcomings listed for schematics above, and add to them an under-expressive, under-specified, ill-formed, incomplete suite of "programming languages", and you've got netlists. Their primary redeeming quality: existing EDA CAD tools take them as direct input. So Hdl21 Modules export netlists of most popular formats instead. 
 
-### (System)Verilog, VHDL, or Existing Dedicated HDLs
+### (System)Verilog, VHDL, other Existing Dedicated HDLs
 
-They've got more better stuff.
-Each born in the 80s, lack the dynamic generation capacity.
+The industry's primary, 80s-born digital HDLs Verilog and VHDL have more of the good stuff we want here - notably a more reasonable level of parametrization. And they have the desirable trait of being primary input to the core EDA tools. They nonetheless lack the levels of programmability present here. And they generally require one of those EDA tools to execute and do, well, much of anything. Parsing and manipulating them is well-reknowned for requiring a high pain tolerance. Again Hdl21 sees these as export formats. 
 
 ### Chisel
 
-Explicitly designed for digital-circuit generators, at the same home as HDL21 (UC Berkeley), Chisel encodes RTL generators as Scala-language classes featuring an elaborate DSL.
+Explicitly designed for digital-circuit generators at the same home as Hdl21 (UC Berkeley), Chisel encodes RTL-level hardware in Scala-language classes. It's the closest of the alternatives in spirit to Hdl21. (And it's aways more mature.) If you want big, custom, RTL-level circuits - processors, full SoCs, and the like - you should probably turn to Chisel instead. Chisel makes a number of decisions that make it less desirable for custom circuits, and have accordingly kept their designers' hands-off. 
 
-- Dont want the FIRRTL compiler
-- RTL-level target. E.g. `Signal + Signal`
-- Abstractions hide much of the detail custom circuits are designed to explicitly create
-- Many custom-circuit primitives such as individual transistors actively fight the dataflow RTL modeling style
+The Chisel library's primary goal is producing a compiler-style intermediate representation (FIRRTL) to be manipulated by a series of compiler-style passes. We like the compiler-style IR (and may some day output FIRRTL). But custom circuits really don't want that compiler. The point of designing custom circuits is dictating exactly what comes out - the compiler *output*. The compiler is, at best, in the way. 
 
-Above all, towards HDL21's goals Scala itself is Chisel's largest burden.
+Next, Chisel targets *RTL-level* hardware. This includes lots of things that would need something like a logic-synthesis tool to resolve to the structural circuits targeted by Hdl21. For example in Chisel (as well as Verilog and VHDL), it's semantically valid to perform an operation like `Signal + Signal`. In custom-circuit-land, it's much harder to say what that addition-operator would mean. Should it infer a digital adder? Short two currents together? Stick two capacitors in series? 
+Many custom-circuit primitives such as individual transistors actively fight the signal-flow/RTL modeling style assumed by the Chisel semantics and compiler. Again, it's in the way. Perhaps more important, many of Chisel's abstractions actively hide much of the detail custom circuits are designed to explicitly create. Implicit clock and reset signals serve as prominent examples. 
+
+Above all - Chisel is embedded in Scala. It's niche, it's complicated, it's subtle, it requires dragging around a JVM. It's not a language anyone would recommend to expert-designer/novice-programmers for any reason other than using Chisel. For Hdl21's goals, Scala itself is Chisel's biggest burden.
 
 ### Other Fancy Modern HDLs
 
-There are many of these, provide a list of links to them
-All focus on generating RTL-level hardware
+There are lots of other very cool hardware-description projects out there which take Hdl21's big-picture approach (embed the hardware idioms as a library in a modern programming languare). All focus on logical and/or RTL-level descriptions, unlike Hdl21's structural/ custom/ analog stuff. We recommend checking them out: 
+
+- [SpinalHDL](https://github.com/SpinalHDL/SpinalHDL)
+- [MyHDL](http://www.myhdl.org/)
+- [Migen](https://github.com/m-labs/migen) / [nMigen](https://github.com/m-labs/nmigen)
+- [Magma](https://github.com/phanrahan/magma)
+- [PyMtl](https://github.com/cornell-brg/pymtl) / [PyMtl3](https://github.com/pymtl/pymtl3)
+- [Clash](https://clash-lang.org/) 
+
+
 
