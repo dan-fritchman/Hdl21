@@ -1,3 +1,4 @@
+from enum import EnumMeta
 import pytest
 import hdl21 as h
 
@@ -205,12 +206,12 @@ def test_params4():
 
     from dataclasses import asdict
 
-    # Create from a (nested) dictionary 
+    # Create from a (nested) dictionary
     d1 = {"inner": {"i": 11}, "f": 22.2}
     o = Outer(**d1)
-    # Convert back to another dictionary 
+    # Convert back to another dictionary
     d2 = asdict(o)
-    # And check they line up 
+    # And check they line up
     assert d1 == d2
 
 
@@ -296,22 +297,20 @@ def test_array2():
 
 
 def test_cycle1():
-    # Test a cycle in a connection graph
-
     class Thing(h.Module):
         inp = h.Input()
         out = h.Output()
 
     class BackToBack(h.Module):
-        t1 = h.Instance(Thing)(inp=t2.out, out=t2.inp)
+        t1 = h.Instance(Thing)
         t2 = h.Instance(Thing)(inp=t1.out, out=t1.inp)
 
     b = h.elaborate(BackToBack)
 
-    assert b.t1.inp is b.t2.out
-    assert b.t1.out is b.t2.inp
-    assert b.t2.inp is b.t1.out
-    assert b.t2.out is b.t1.inp
+    assert isinstance(b.t1.inp, h.PortRef)
+    assert isinstance(b.t1.out, h.PortRef)
+    assert isinstance(b.t2.inp, h.PortRef)
+    assert isinstance(b.t2.out, h.PortRef)
 
     # Doing the same thing in procedural code
     b2 = h.Module(name="BackToBack2")
@@ -319,10 +318,46 @@ def test_cycle1():
     b2.t2 = h.Instance(Thing)(inp=b2.t1.out, out=b2.t1.inp)
     b2.t1(inp=b2.t2.out, out=b2.t2.inp)
 
-    assert b2.t1.inp is b2.t2.out
-    assert b2.t1.out is b2.t2.inp
-    assert b2.t2.inp is b2.t1.out
-    assert b2.t2.out is b2.t1.inp
+    assert isinstance(b.t1.inp, h.PortRef)
+    assert isinstance(b.t1.out, h.PortRef)
+    assert isinstance(b.t2.inp, h.PortRef)
+    assert isinstance(b.t2.out, h.PortRef)
+
+    # FIXME: better post-elaboration checks that this works out
+
+
+def test_gen3():
+    import hdl21 as h
+
+    @h.paramclass
+    class MyParams:
+        w = h.Param(dtype=int, desc="Input bit-width. Required")
+
+    @h.generator
+    def MyThirdGenerator(params: MyParams) -> h.Module:
+        # Create an internal Module
+        class Inner(h.Module):
+            i = h.Input(width=params.w)
+
+        # Manipulate it a bit
+        o = h.Output(width=2 * Inner.i.width)
+
+        # FIXME! Versions like this don't work; decide what to do with em.
+        with pytest.raises(TypeError):
+
+            class Inner2(h.Module):
+                i = h.Input(width=params.w)
+                o = h.Output(width=2 * params.w)
+
+        # Instantiate that in another Module
+        class Outer(h.Module):
+            inner = h.Instance(Inner)
+
+        # And manipulate that some more too
+        Outer.inp = h.Input(width=params.w)
+        return Outer
+
+    h.elaborate(MyThirdGenerator, MyParams(1))
 
 
 def test_prim1():
@@ -353,4 +388,123 @@ def test_prim2():
         s = h.Instance(h.Short(h.Short.Params()))(p=p, n=n)
 
     h.elaborate(HasPrims)
+
+
+def test_intf1():
+    # Create an interface
+
+    import hdl21 as h
+
+    i1 = h.Interface(name="MyFirstInterface")
+    i1.s1 = h.Signal()
+    i1.s2 = h.Signal()
+
+    assert isinstance(i1, h.Interface)
+    assert isinstance(i1.s1, h.Signal)
+    assert isinstance(i1.s2, h.Signal)
+
+    ii1 = i1()
+    assert isinstance(ii1, h.InterfaceInstance)
+    assert ii1.role is None
+    assert ii1.port == False
+
+
+def test_intf2():
+    # Wire up a few Modules via interfaces
+    import hdl21 as h
+
+    MySecondInterface = h.Interface(name="MySecondInterface")
+
+    m1 = h.Module(name="M1")
+    m1.i = MySecondInterface(port=True)
+    m2 = h.Module(name="M2")
+    m2.i = MySecondInterface(port=True)
+
+    # Now create a parent Module connecting the two
+    m3 = h.Module()
+    m3.i1 = h.Instance(m1)
+    m3.i2 = h.Instance(m2)(i=m1.i)
+
+
+def test_inft3():
+    # Test the interface-definition decorator
+
+    import hdl21 as h
+
+    @h.interface
+    class Diff:  # Differential Signal Interface
+        p = h.Signal()
+        n = h.Signal()
+
+    @h.interface
+    class DisplayPort:  # DisplayPort, kinda
+        main_link = Diff()
+        aux = h.Signal()
+
+    assert isinstance(DisplayPort, h.Interface)
+    assert isinstance(DisplayPort(), h.InterfaceInstance)
+    assert isinstance(DisplayPort.main_link, h.InterfaceInstance)
+    assert isinstance(DisplayPort.main_link.p, h.PortRef)
+    assert isinstance(DisplayPort.main_link.n, h.PortRef)
+    assert isinstance(DisplayPort.aux, h.Signal)
+    assert isinstance(Diff, h.Interface)
+    assert isinstance(Diff(), h.InterfaceInstance)
+    assert isinstance(Diff.p, h.Signal)
+
+    assert isinstance(Diff.n, h.Signal)
+
+
+def test_intf4():
+    # Test interface roles
+    import hdl21 as h
+    from enum import Enum, EnumMeta, auto
+
+    @h.interface
+    class Diff:  # Differential Signal Interface
+        p = h.Signal()
+        n = h.Signal()
+
+    @h.interface
+    class HasRoles:  # An Interface with Roles
+        class Roles(Enum):  # USB-Style Role Nomenclature
+            HOST = auto()
+            DEVICE = auto()
+
+        # Create signals going in either direction
+        tx = h.Signal(src=Roles.HOST, dest=Roles.DEVICE)
+        rx = h.Signal(src=Roles.DEVICE, dest=Roles.HOST)
+
+        # And create differential versions thereof
+        txd = Diff(src=Roles.HOST, dest=Roles.DEVICE)
+        rxd = Diff(src=Roles.DEVICE, dest=Roles.HOST)
+
+    hr = HasRoles()
+    assert isinstance(HasRoles, h.Interface)
+    assert isinstance(HasRoles.roles, EnumMeta)
+    assert isinstance(HasRoles.Roles, EnumMeta)
+    assert isinstance(hr, h.InterfaceInstance)
+    assert isinstance(HasRoles.tx, h.Signal)
+    assert isinstance(HasRoles.rx, h.Signal)
+    assert isinstance(HasRoles.txd, h.InterfaceInstance)
+    assert isinstance(HasRoles.rxd, h.InterfaceInstance)
+
+    class Host(h.Module):
+        # A thing with a HOST-roled interface-port
+        port_ = HasRoles(port=True, role=HasRoles.Roles.HOST)
+
+    class Device(h.Module):
+        # A thing with a DEVICE-roled interface-port
+        port_ = HasRoles(port=True, role=HasRoles.Roles.DEVICE)
+
+    class System(h.Module):
+        # Parent system-module including a host and device
+        host = h.Instance(Host)
+        dev_ = h.Instance(Device)(port_=host.port_)
+
+    assert isinstance(System, h.Module)
+    assert isinstance(System.host, h.Instance)
+    assert isinstance(System.dev_, h.Instance)
+
+    h.elaborate(System)
+    # FIXME: better post-elab checks
 

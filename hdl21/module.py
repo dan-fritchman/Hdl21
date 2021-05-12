@@ -105,6 +105,7 @@ class Module(metaclass=ModuleMeta):
         self.signals = dict()
         self.instances = dict()
         self.instarrays = dict()
+        self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
         self._genparams = None
         self._initialized = True
@@ -113,6 +114,7 @@ class Module(metaclass=ModuleMeta):
         """ Set-attribute over-ride, organizing into type-based containers """
         from .signal import Signal, Visibility
         from .instance import Instance, InstArray
+        from .interface import InterfaceInstance
 
         if not getattr(self, "_initialized", False) or key.startswith("_"):
             return super().__setattr__(key, val)
@@ -143,6 +145,10 @@ class Module(metaclass=ModuleMeta):
             val.name = key
             self.instarrays[key] = val
             self.namespace[key] = val
+        elif isinstance(val, InterfaceInstance):
+            val.name = key
+            self.interfaces[key] = val
+            self.namespace[key] = val
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
 
@@ -152,7 +158,7 @@ class Module(metaclass=ModuleMeta):
             return ns[key]
         return object.__getattribute__(self, key)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *_args, **_kwargs):
         """ Highly likely error: calling Modules in attempts to create Python-level instances, which they don't have.  """
         raise RuntimeError(
             dedent(
@@ -164,7 +170,7 @@ class Module(metaclass=ModuleMeta):
             )
         )
 
-    def __init_subclass__(cls, /, **_kwargs):
+    def __init_subclass__(cls, *_args, **_kwargs):
         """ Sub-Classing Disable-ization """
         raise RuntimeError(
             dedent(

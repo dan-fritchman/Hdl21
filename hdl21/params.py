@@ -64,7 +64,7 @@ def paramclass(cls: type):
     * Inheritance is not supported
     """
     if cls.__bases__ != (object,):
-        raise RuntimeError(f"Invalid @paramclass inheriting from {cls.__bases__}")
+        raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
     protected_names = ["descriptions", "defaults"]
     dunders = dict()
     params = dict()
