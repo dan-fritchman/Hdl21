@@ -28,12 +28,12 @@ m.s = h.Signal()
 m.a = h.Instance(AnotherModule)
 ```
 
-`Modules` are type-specific containers of just a handful of `hdl21` types. They can include:
+`Modules` are type-specific containers of just a handful of `hdl21` types. They can include: 
 
 * `Instances` of other `Modules`
 * IO defined by a set of `Ports`
 * Internal `Signals`
-* Hierarchical connections defined by (FIXME: `Bundles` or `Interfaces`, pick a name)
+* Hierarchical connections defined by `Interfaces` 
 
 
 In addition to the procedural-mode shown above, `Modules` can also be defined through a `class`-based syntax. Creating a sub-class of `hdl21.Module` produces a new `Module`-definition, in which each attribute can be declared like so: 

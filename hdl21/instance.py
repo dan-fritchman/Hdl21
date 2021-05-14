@@ -8,8 +8,6 @@ from pydantic.dataclasses import dataclass
 from typing import Optional, Union
 
 from .connect import connectable, connects
-from .module import Module
-from .interface import InterfaceInstance
 
 
 @connectable
@@ -20,12 +18,21 @@ class PortRef:
     inst: Union["Instance", "InstArray", "InterfaceInstance"]
     portname: str
 
+    def __eq__(self, other) -> bool:
+        """ Port-reference equality requires *identity* between instances 
+        (and of course equality of port-name). """
+        return self.inst is other.inst and self.portname == other.portname
+
+    def __hash__(self):
+        """ Hash references as the tuple of their instance-address and name """
+        return hash((id(self.inst), self.portname))
+
 
 @connects
 class Instance:
     """ Hierarchical Instance of another Module or Generator """
 
-    _specialcases = ["name", "of", "conns", "portrefs", "_initialized"]
+    _specialcases = ["name", "of", "conns", "portrefs", "_elaborated", "_initialized"]
 
     def __init__(
         self,
@@ -33,6 +40,8 @@ class Instance:
         params: Optional[object] = None,
     ):
         from .generator import Generator, GeneratorCall
+        from .module import Module
+        from .interface import InterfaceInstance
 
         if isinstance(of, Generator):
             of = of(params)
@@ -44,14 +53,26 @@ class Instance:
         self.params = params
         self.conns = dict()
         self.portrefs = dict()
+        self._elaborated = False
         self._initialized = True
+
+    @property
+    def module(self) -> Optional["Module"]:
+        from .module import Module
+        from .generator import GeneratorCall
+
+        if isinstance(self.of, Module):
+            return self.of
+        if isinstance(self.of, GeneratorCall):
+            return self.of.result
+        return None
 
 
 @connects
 class InstArray:
     """ Array of Instances """
 
-    _specialcases = ["name", "of", "n", "conns", "portrefs", "_initialized"]
+    _specialcases = ["name", "of", "conns", "portrefs", "_elaborated", "_initialized"]
 
     def __init__(
         self,
@@ -61,6 +82,7 @@ class InstArray:
         params: Optional[object] = None,
     ):
         from .generator import Generator, GeneratorCall
+        from .module import Module
 
         if isinstance(of, Generator):
             of = of(params)
@@ -75,10 +97,13 @@ class InstArray:
 
         # So far, this is the only difference from `Instance`. Better sharing likely awaits.
         self.n = n
+        self._elaborated = False
         self._initialized = True
 
 
 # Get the runtime type-checking to understand the types forward-referenced and then defined here
+from .interface import InterfaceInstance
+
 PortRef.__pydantic_model__.Config.arbitrary_types_allowed = True
 PortRef.__pydantic_model__.update_forward_refs()
 

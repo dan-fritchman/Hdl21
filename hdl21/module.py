@@ -107,7 +107,7 @@ class Module(metaclass=ModuleMeta):
         self.instarrays = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
-        self._genparams = None
+        self._elaborated = False
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
@@ -120,7 +120,7 @@ class Module(metaclass=ModuleMeta):
             return super().__setattr__(key, val)
 
         # Protected attrs - the internal dicts
-        banned = ["ports", "signals", "instances", "namespace"]
+        banned = ["ports", "signals", "instances", "namespace", "add"]
         if key in banned:
             raise RuntimeError(
                 f"Error attempting to over-write protected attribute {key} of Module {self}"
@@ -152,7 +152,42 @@ class Module(metaclass=ModuleMeta):
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
 
-    def __getattr__(self, key):
+    def add(self, val: object) -> None:
+        """ Add a named HDL object into one of our internal dictionaries. 
+        This allows for programmatic insertion of attributes whose names are not legal Python identifiers, 
+        such as keywords ('in', 'from') and those including invalid characters. 
+        This method is also the means by which underscore-prefaced attributes are added during elaboration. """
+        from .signal import Signal, Visibility
+        from .instance import Instance, InstArray
+        from .interface import InterfaceInstance
+
+        if not isinstance(val, (Signal, Instance, InstArray, InterfaceInstance)):
+            raise TypeError(f"Invalid Module attribute {val} for {self}")
+        if not val.name:
+            raise RuntimeError(
+                f"Invalid anonymous attribute {val} cannot be added to Module {self.name}"
+            )
+        # Type-based organization
+        if isinstance(val, Signal):
+            self.namespace[val.name] = val
+            if val.visibility == Visibility.PORT:
+                self.ports[val.name] = val
+            else:
+                self.signals[val.name] = val
+        elif isinstance(val, Instance):
+            self.instances[val.name] = val
+            self.namespace[val.name] = val
+        elif isinstance(val, InstArray):
+            self.instarrays[val.name] = val
+            self.namespace[val.name] = val
+        elif isinstance(val, InterfaceInstance):
+            self.interfaces[val.name] = val
+            self.namespace[val.name] = val
+        else:
+            raise TypeError(f"Invalid Module attribute {val} for {self}")
+
+    def __getattr__(self, key: str) -> Any:
+        """ Include our namespace-worth of HDL objects in dot-access retrievals """
         ns = self.__getattribute__("namespace")
         if key in ns:
             return ns[key]
@@ -179,6 +214,16 @@ class Module(metaclass=ModuleMeta):
                 Sub-Typing hdl21.Module is not supported. """
             )
         )
+
+    def __repr__(self) -> str:
+        if self.name:
+            return f"Module(name={self.name})"
+        return f"Module(_anon_)"
+
+    @property
+    def _interface_ports(self):
+        """ Port-Exposed Interface Instances """
+        return {name: intf for name, intf in self.interfaces.items() if intf.port}
 
 
 class ModuleDict:
@@ -444,14 +489,14 @@ class Resolver:
             return self.resolve_val(obj)
         raise TypeError(f"Invalid attribute {obj} in Module {self.dct.name}")
 
-    def resolve_val(self, val: Val) -> object:
+    def resolve_val(self, val: Val) -> Any:
         """ Resolve a (likely literal) value """
         if val._result is not NoResult:  # Already computed
             return val._result
         val._result = self.resolve(val._val)
         return val._result
 
-    def resolve_name(self, name: Name) -> object:
+    def resolve_name(self, name: Name) -> Any:
         """ Resolve a named identifier """
         if name._result is not NoResult:  # Already computed
             return name._result
@@ -474,7 +519,7 @@ class Resolver:
             return name._result
         raise ResolutionError(f"Error resolving {name._name} in {self.dct.name}")
 
-    def resolve_dotattr(self, dot: DotAttr) -> object:
+    def resolve_dotattr(self, dot: DotAttr) -> Any:
         """ Resolve a dot-access attribute `dot`. 
         Recursively calls `resolve` for dot's parent, to ensure it's been resolved first. """
         if dot._result is not NoResult:  # Already computed
@@ -484,7 +529,7 @@ class Resolver:
         dot._result = getattr(parent, dot._name)
         return dot._result
 
-    def resolve_call(self, call: Call) -> object:
+    def resolve_call(self, call: Call) -> Any:
         """ Resolve a function call. 
         Recursively resolves its function object and arguments,
         before calling the resolved function and returning the result. """

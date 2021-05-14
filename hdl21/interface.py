@@ -96,6 +96,7 @@ class InterfaceInstance:
         "dest",
         "conns",
         "portrefs",
+        "_elaborated",
         "_initialized",
     ]
 
@@ -117,6 +118,7 @@ class InterfaceInstance:
         self.dest = dest
         self.conns = dict()
         self.portrefs = dict()
+        self._elaborated = False
         self._initialized = True
 
 

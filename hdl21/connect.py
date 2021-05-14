@@ -48,22 +48,23 @@ def connects(cls: type) -> type:
         """ Port access by getattr """
         if not self.__getattribute__("_initialized") or key.startswith("_"):
             # Bootstrapping phase: do regular getattrs to get started
-            return object.__getattr__(self, key)
+            return object.__getattribute__(self, key)
         if key in self.__getattribute__("_specialcases"):  # Special case(s)
-            return object.__getattr__(self, key)
+            return object.__getattribute__(self, key)
 
-        # Return anything already connected to us by name `key`
-        # FIXME: do we want this? Maybe always returning PortRefs is better, as these could be resolved during elab.
-        # conns = self.__getattribute__("conns")
-        # if key in conns.keys():
-        #     return conns[key]
+        # After elaboration, the fancy PortRef creation below goes away. Only return ready-made connections.
+        if self.__getattribute__("_elaborated"):
+            conns = self.__getattribute__("conns")
+            if key in conns.keys():
+                return conns[key]
+            raise AttributeError
 
         from .instance import PortRef
         from .module import Module
 
         # If we have a concrete Module, check whether it has this as a port, and only return it if so
         # (If it's a generator, in contrast, we don't necessarily know the ports yet.)
-        # FIXME: whether to run this check here, and whether to include interface-ports 
+        # FIXME: whether to run this check here, and whether to include interface-ports
         # if isinstance(self.of, Module) and key not in self.of.ports:
         #     raise RuntimeError(f"Invalid port {key} accessed on Module {self.of}")
 

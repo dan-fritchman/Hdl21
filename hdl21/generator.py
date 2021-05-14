@@ -1,12 +1,13 @@
+import copy
 import inspect
-from typing import Callable, Union, Any
+from dataclasses import field
+from typing import Callable, Union, Any, Optional
 from pydantic.dataclasses import dataclass
 from pydantic import ValidationError
+
+# Local imports
 from .module import Module
-
-
-class Context:
-    ...
+from .signal import Signal
 
 
 @dataclass
@@ -32,8 +33,10 @@ class GeneratorCall:
 
     gen: Generator
     arg: Any
+    result: Optional[Module] = field(init=False, default=None)
 
     def __post_init_post_parse__(self):
+        """ Validate that our argument matches the Generator param-type """
         if not isinstance(self.arg, self.gen.Params):
             raise ValidationError
 
@@ -41,6 +44,7 @@ class GeneratorCall:
 def generator(f: Callable) -> Generator:
     """ Decorator for Generator Functions """
     from .params import isparamclass
+    from .elab import Context
 
     if not callable(f):
         raise RuntimeError(f"Invalid `@generator` application to non-callable {f}")
@@ -73,80 +77,4 @@ def generator(f: Callable) -> Generator:
             f"Generator {f.__name__} must return (and must be annotated to return) a Module."
         )
     return Generator(func=f, paramtype=paramtype, usecontext=usecontext)
-
-
-class Elaborator:
-    def __init__(
-        self, *, top: Union[Module, Generator], params: object, ctx: Context,
-    ):
-        self.top = top
-        self.ctx = ctx
-        self.params = params
-        # Keep the defined Modules in two collections, an ordered list and a set for quick membership tests
-        self.module_order = list()
-        self.module_set = set()
-
-    def elaborate(self):
-        """ Elaborate our top node """
-        if isinstance(self.top, Module):
-            return self.elaborate_module(self.top)
-        if isinstance(self.top, Generator):
-            return self.elaborate_generator(self.top, self.params)
-        raise TypeError(
-            f"Invalid Elaboration top-level {self.top}, must be a Module or Generator"
-        )
-
-    def elaborate_generator(self, gen: Generator, params: object) -> Module:
-        """ Elaborate Generator-function `gen` with Parameters `params`. 
-        Returns the generated Module. """
-
-        # The main event: Run the generator-function
-        if gen.usecontext:
-            m = gen.func(params, self.ctx)
-        else:
-            m = gen.func(params)
-
-        # Type-check the result
-        # Generators may return other (potentially nested) generator-calls; unwind any of them
-        while isinstance(m, GeneratorCall):
-            # Note this should hit Python's recursive stack-check if it doesn't terminate
-            m = self.elaborate_generator(gen=m.gen, params=m.arg)
-        # Ultimately they've gotta resolve to Modules, or they fail.
-        if not isinstance(m, Module):
-            raise TypeError(
-                f"Generator {self.func.__name__} returned {type(m)}, must return Module."
-            )
-
-        # Give it a reference to its generator-parameters
-        m._genparams = params
-        # If the Module that comes back is anonymous, give it a name equal to the Generator's
-        if m.name is None:
-            m.name = gen.func.__name__
-        # And elaborate the module
-        return self.elaborate_module(m)
-
-    def elaborate_module(self, module: Module) -> Module:
-        for inst in module.instances.values():
-            self.elaborate_instance(inst)
-        return module
-
-    def elaborate_instance(self, inst: "Instance"):
-        if isinstance(inst.of, Generator):
-            return self.elaborate_generator(inst.of, inst.params)
-        if isinstance(inst.of, GeneratorCall):
-            return self.elaborate_generator(gen=inst.of.gen, params=inst.of.arg)
-        if isinstance(inst.of, Module):
-            return self.elaborate_module(inst.of)
-        raise TypeError(f"Invalid Instance of {inst.of}")
-
-
-def elaborate(top: Generator, params=None, ctx=None):
-    """ In-Memory Elaborate Generator or Module `top`. """
-    ctx = ctx or Context()
-    if params is not None and not isinstance(top, Generator):
-        raise RuntimeError(
-            f"Error attempting to elaborate non-generator {top} with non-null params {params}"
-        )
-    elab = Elaborator(top=top, params=params, ctx=ctx)
-    return elab.elaborate()
 

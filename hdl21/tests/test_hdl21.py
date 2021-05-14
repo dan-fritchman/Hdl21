@@ -4,7 +4,7 @@ import hdl21 as h
 
 def test_version():
     assert h.__version__ == "0.1.0"
-    
+
 
 def test_module1():
     """ Initial Module Test """
@@ -74,7 +74,6 @@ def test_generator1():
 
     assert m.name == "gen1"
     assert isinstance(m.i, h.Signal)
-    assert m._genparams == MyParams(w=3)
 
 
 def test_generator2():
@@ -92,7 +91,6 @@ def test_generator2():
 
     assert isinstance(m, h.Module)
     assert m.name == "g2"
-    assert m._genparams == P2()
 
 
 def test_generator3():
@@ -294,10 +292,10 @@ def test_cycle1():
 
     b = h.elaborate(BackToBack)
 
-    assert isinstance(b.t1.inp, h.PortRef)
-    assert isinstance(b.t1.out, h.PortRef)
-    assert isinstance(b.t2.inp, h.PortRef)
-    assert isinstance(b.t2.out, h.PortRef)
+    assert isinstance(b.t1.inp, h.Signal)
+    assert isinstance(b.t1.out, h.Signal)
+    assert isinstance(b.t2.inp, h.Signal)
+    assert isinstance(b.t2.out, h.Signal)
 
     # Doing the same thing in procedural code
     b2 = h.Module(name="BackToBack2")
@@ -305,10 +303,10 @@ def test_cycle1():
     b2.t2 = h.Instance(Thing)(inp=b2.t1.out, out=b2.t1.inp)
     b2.t1(inp=b2.t2.out, out=b2.t2.inp)
 
-    assert isinstance(b.t1.inp, h.PortRef)
-    assert isinstance(b.t1.out, h.PortRef)
-    assert isinstance(b.t2.inp, h.PortRef)
-    assert isinstance(b.t2.out, h.PortRef)
+    assert isinstance(b.t1.inp, h.Signal)
+    assert isinstance(b.t1.out, h.Signal)
+    assert isinstance(b.t2.inp, h.Signal)
+    assert isinstance(b.t2.out, h.Signal)
 
     # FIXME: better post-elaboration checks that this works out
 
@@ -355,10 +353,11 @@ def test_prim1():
 
     class HasMos(h.Module):
         # Two transistors wired in parallel
-        p = h.Instance(pmos)(g=n.g, d=n.d, s=n.s, b=n.b)
+        p = h.Instance(pmos)
         n = h.Instance(nmos)(g=p.g, d=p.d, s=p.s, b=p.b)
 
     h.elaborate(HasMos)
+    # FIXME: post-elab checks
 
 
 def test_prim2():
@@ -408,9 +407,16 @@ def test_intf2():
     m2.i = MySecondInterface(port=True)
 
     # Now create a parent Module connecting the two
-    m3 = h.Module()
+    m3 = h.Module(name="M3")
     m3.i1 = h.Instance(m1)
-    m3.i2 = h.Instance(m2)(i=m1.i)
+    m3.i2 = h.Instance(m2)(i=m3.i1.i)
+    assert "_i2_i__i1_i_" not in m3.namespace
+
+    m3e = h.elaborate(m3)
+    assert isinstance(m3e, h.Module)
+    assert isinstance(m3e.i1, h.Instance)
+    assert isinstance(m3e.i2, h.Instance)
+    assert "_i2_i__i1_i_" in m3e.namespace
 
 
 def test_inft3():
@@ -437,7 +443,6 @@ def test_inft3():
     assert isinstance(Diff, h.Interface)
     assert isinstance(Diff(), h.InterfaceInstance)
     assert isinstance(Diff.p, h.Signal)
-
     assert isinstance(Diff.n, h.Signal)
 
 
@@ -491,7 +496,8 @@ def test_intf4():
     assert isinstance(System, h.Module)
     assert isinstance(System.host, h.Instance)
     assert isinstance(System.dev_, h.Instance)
+    assert "_dev__port___host_port__" not in System.namespace
 
-    h.elaborate(System)
-    # FIXME: better post-elab checks
+    sys = h.elaborate(System)
+    assert "_dev__port___host_port__" in sys.namespace
 
