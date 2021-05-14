@@ -5,7 +5,7 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
 from pydantic.dataclasses import dataclass
-from typing import Optional, Union, Any
+from typing import Optional, Union
 
 from .connect import connectable, connects
 from .module import Module
@@ -19,9 +19,6 @@ class PortRef:
 
     inst: Union["Instance", "InstArray", "InterfaceInstance"]
     portname: str
-
-
-PortRef.__pydantic_model__.Config.arbitrary_types_allowed = True
 
 
 @connects
@@ -81,5 +78,7 @@ class InstArray:
         self._initialized = True
 
 
+# Get the runtime type-checking to understand the types forward-referenced and then defined here
+PortRef.__pydantic_model__.Config.arbitrary_types_allowed = True
 PortRef.__pydantic_model__.update_forward_refs()
 

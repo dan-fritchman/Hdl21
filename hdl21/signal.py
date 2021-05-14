@@ -30,7 +30,7 @@ class Visibility(Enum):
 class Signal:
     """ 
     # hdl21 Signal 
-    Th base-level unit of hardware connectivity 
+    The base-level unit of hardware connectivity 
     """
 
     name: Optional[str] = None
