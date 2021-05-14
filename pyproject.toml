@@ -8,6 +8,7 @@ readme = "readme.md"
 
 [tool.poetry.dependencies]
 python = "^3.7"
+pydantic = "^1.8.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
