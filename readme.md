@@ -2,6 +2,8 @@
 
 ## Generator-Based Structural Hardware Description Library
 
+[![test](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml/badge.svg)](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml)
+
 Hdl21 is a library for efficiently creating and manipulating structural hardware descriptions such as those common in custom integrated circuits. Circuits are described in two primary units of re-use: 
 
 - `Modules` are structural combinations of ports, signals, and instances of other `Modules`. 
