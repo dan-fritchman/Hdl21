@@ -317,4 +317,25 @@ There are lots of other very cool hardware-description projects out there which 
 - [Clash](https://clash-lang.org/) 
 
 
+--- 
+
+## Development 
+
+* Install [Poetry](https://python-poetry.org/docs/) (the cool-kids' TOML-configured `pip` replacement). Or drag `pip` along if you know how. 
+* Clone this repo & navigate to it 
+* `poetry install` will install all dependencies
+* `pytest -s` should yield something like: 
+
+
+```
+$ pytest -s
+=== test session starts ===
+platform darwin -- Python 3.8.5, pytest-5.4.3, py-1.10.0, pluggy-0.13.1
+rootdir: /home/Hdl21
+collected 21 items                                                                    
+
+hdl21/tests/test_hdl21.py .....................
+
+=== 21 passed in 0.27s ===
+```
 
