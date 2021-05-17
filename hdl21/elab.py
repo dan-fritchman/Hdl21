@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from .module import Module
 from .instance import Instance
 from .interface import Interface, InterfaceInstance
-from .signal import Port, Signal, Visibility
+from .signal import Port, PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
 
 
@@ -203,14 +203,21 @@ class ImplicitConnectionElaborator:
                 # (If other instances are inconsistent, later stages will flag them)
                 lastmod = portref.inst.module
                 sig = lastmod.ports.get(portref.portname, None)
-                if sig is None:  # Check its Interface-valued ports too!
+                if sig is not None:  # Clone it, and remove any Port-attributes
+                    sig = copy.copy(sig)
+                    sig.visibility = Visibility.INTERNAL
+                    sig.direction = PortDir.NONE
+                else:  # Check its Interface-valued ports too!
                     sig = lastmod._interface_ports.get(portref.portname, None)
+                    if sig is not None:
+                        sig = copy.copy(sig)
+                        sig.port = False
+                        sig.role = None
                 if sig is None:
                     raise RuntimeError(
                         f"Invalid port {portref.portname} on Instance {portref.inst.name} in Module {module.name}"
                     )
-                # Clone it, rename it, and add it to the Module namespace
-                sig = copy.copy(sig)
+                # Rename it and add it to the Module namespace
                 sig.name = signame
                 module.add(sig)
             # And re-connect it to each Instance

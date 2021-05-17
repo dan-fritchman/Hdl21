@@ -501,3 +501,70 @@ def test_intf4():
     sys = h.elaborate(System)
     assert "_dev__port___host_port__" in sys.namespace
 
+
+def test_proto1():
+    # First Proto-export test
+    import hdl21 as h
+    from hdl21.proto import to_proto
+
+    m = h.Module(name="TestProto1")
+    ppkg = to_proto(m)
+    assert isinstance(ppkg, h.proto.Package)
+    assert len(ppkg.modules) == 1
+    pm = ppkg.modules[0]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "TestProto1"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 0
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+
+def test_proto2():
+    # Proto-export test with some hierarchy
+    import hdl21 as h
+    from hdl21.proto import to_proto
+
+    Child1 = h.Module(name="Child1")
+    Child1.inp = h.Input(width=8)
+    Child1.out = h.Output()
+    Child2 = h.Module(name="Child2")
+    Child2.inp = h.Input()
+    Child2.out = h.Output(width=8)
+    TestProto2 = h.Module(name="TestProto2")
+    TestProto2.c1 = h.Instance(Child1)
+    TestProto2.c2 = h.Instance(Child2)
+    TestProto2.c2(inp=TestProto2.c1.out, out=TestProto2.c1.inp)
+
+    ppkg = to_proto(TestProto2)
+
+    assert isinstance(ppkg, h.proto.Package)
+    assert len(ppkg.modules) == 3
+
+    # Check the first Module in, Child1
+    pm = ppkg.modules[0]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "Child1"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 2
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+    # Check the second Module in, Child2
+    pm = ppkg.modules[1]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "Child2"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 2
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+    # And check the parent module
+    pm = ppkg.modules[2]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "TestProto2"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 0
+    assert len(pm.instances) == 2
+    assert len(pm.default_parameters) == 0
+
