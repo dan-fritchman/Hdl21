@@ -1,8 +1,6 @@
 from textwrap import dedent
 from enum import Enum, EnumMeta
 from typing import Optional
-from dataclasses import field
-from pydantic.dataclasses import dataclass
 
 from .instance import connects, connectable
 
@@ -20,6 +18,7 @@ class Interface:
         self.signals = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
+        self._elaborated = False
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):

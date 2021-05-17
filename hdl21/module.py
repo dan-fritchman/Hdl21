@@ -13,7 +13,7 @@ import inspect
 
 from textwrap import dedent
 from dataclasses import dataclass, field
-from typing import ClassVar, Optional, Union, Callable, Any
+from typing import Optional, Union, Callable, Any
 
 
 class ModuleMeta(type):
@@ -107,7 +107,6 @@ class Module(metaclass=ModuleMeta):
         self.instarrays = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
-        self._elaborated = False
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
