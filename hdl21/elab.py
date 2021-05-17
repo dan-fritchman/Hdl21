@@ -205,7 +205,7 @@ class ImplicitConnectionElaborator:
                 sig = lastmod.ports.get(portref.portname, None)
                 if sig is not None:  # Clone it, and remove any Port-attributes
                     sig = copy.copy(sig)
-                    sig.visibility = Visibility.INTERNAL
+                    sig.vis = Visibility.INTERNAL
                     sig.direction = PortDir.NONE
                 else:  # Check its Interface-valued ports too!
                     sig = lastmod._interface_ports.get(portref.portname, None)
@@ -293,7 +293,7 @@ class InterfaceFlattener:
                     dir_ = PortDir.NONE
                 # Apply all these attributes to our new Signal
                 sig.name = signame
-                sig.visibility = vis_
+                sig.vis = vis_
                 sig.direction = dir_
                 # And add it to the Module namespace
                 module.add(sig)

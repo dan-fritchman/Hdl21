@@ -132,7 +132,7 @@ class Module(metaclass=ModuleMeta):
         if isinstance(val, Signal):
             val.name = key
             self.namespace[key] = val
-            if val.visibility == Visibility.PORT:
+            if val.vis == Visibility.PORT:
                 self.ports[key] = val
             else:
                 self.signals[key] = val
@@ -169,7 +169,7 @@ class Module(metaclass=ModuleMeta):
         # Type-based organization
         if isinstance(val, Signal):
             self.namespace[val.name] = val
-            if val.visibility == Visibility.PORT:
+            if val.vis == Visibility.PORT:
                 self.ports[val.name] = val
             else:
                 self.signals[val.name] = val

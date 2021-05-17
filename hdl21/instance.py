@@ -38,6 +38,8 @@ class Instance:
         self,
         of: Union["Module", "Generator", "GeneratorCall"],
         params: Optional[object] = None,
+        *,
+        name: Optional[str] = None,
     ):
         from .generator import Generator, GeneratorCall
         from .module import Module
@@ -49,6 +51,7 @@ class Instance:
             raise RuntimeError(
                 f"Invalid instance with parameters {params}. Instance parameters can be used with *generator* functions. "
             )
+        self.name = name
         self.of = of
         self.params = params
         self.conns = dict()
@@ -58,6 +61,8 @@ class Instance:
 
     @property
     def module(self) -> Optional["Module"]:
+        """ Property to retrieve the Instance's resolved Module, if complete. 
+        Returns `None` if unresolved. """
         from .module import Module
         from .generator import GeneratorCall
 
@@ -78,8 +83,9 @@ class InstArray:
         self,
         of: Union["Module", "Generator", "GeneratorCall"],
         n: int,
-        *,
         params: Optional[object] = None,
+        *,
+        name: Optional[str] = None,
     ):
         from .generator import Generator, GeneratorCall
         from .module import Module
@@ -90,6 +96,7 @@ class InstArray:
             raise RuntimeError(
                 f"Invalid instance with parameters {params}. Instance parameters can be used with *generator* functions. "
             )
+        self.name = name
         self.of = of
         self.params = params
         self.conns = dict()

@@ -568,3 +568,78 @@ def test_proto2():
     assert len(pm.instances) == 2
     assert len(pm.default_parameters) == 0
 
+
+def test_proto_roundtrip():
+    import hdl21 as h
+    from types import SimpleNamespace
+
+    # Create an empty (named) Module
+    M1 = h.Module(name="M1")
+
+    # Protobuf round-trip it
+    ppkg = h.to_proto(M1)
+    ns = h.from_proto(ppkg)
+
+    assert isinstance(ns, SimpleNamespace)
+    assert isinstance(ns.M1, h.Module)
+    assert len(ns.M1.signals) == 0
+    assert len(ns.M1.ports) == 0
+    assert len(ns.M1.instances) == 0
+
+
+def test_proto_roundtrip2():
+    import hdl21 as h
+    from types import SimpleNamespace
+
+    # Create a child/leaf Module
+    M1 = h.Module(name="M1")
+    M1.i = h.Input()
+    M1.o = h.Output()
+    M1.p = h.Port()
+
+    # Create an instantiating parent-module
+    M2 = h.Module(name="M2")
+    M2.i = h.Input()
+    M2.o = h.Output()
+    M2.p = h.Port()
+    M2.s = h.Signal()
+
+    # Add a few instances of it
+    M2.i0 = h.Instance(M1)
+    M2.i1 = h.Instance(M1)
+    M2.i2 = h.Instance(M1)
+    M2.i0(i=M2.i, o=M2.i1.i, p=M2.p)
+    M2.i1(i=M2.i0.o, o=M2.s, p=M2.p)
+    M2.i2(i=M2.s, o=M2.o, p=M2.p)
+
+    # Protobuf round-trip it
+    ppkg = h.to_proto(M2)
+    ns = h.from_proto(ppkg)
+
+    # And check all kinda stuff about what comes back
+    assert isinstance(ns, SimpleNamespace)
+    assert isinstance(ns.M1, h.Module)
+    assert isinstance(ns.M2, h.Module)
+
+    assert len(ns.M1.signals) == 0
+    assert len(ns.M1.ports) == 3
+    assert "i" in ns.M1.ports
+    assert ns.M1.i.direction == h.signal.PortDir.INPUT
+    assert ns.M1.i.vis == h.signal.Visibility.PORT
+    assert "o" in ns.M1.ports
+    assert ns.M1.o.direction == h.signal.PortDir.OUTPUT
+    assert ns.M1.o.vis == h.signal.Visibility.PORT
+    assert "p" in ns.M1.ports
+    assert ns.M1.p.direction == h.signal.PortDir.NONE
+    assert ns.M1.p.vis == h.signal.Visibility.PORT
+    assert len(ns.M1.instances) == 0
+
+    assert len(ns.M2.instances) == 3
+    for i in ns.M2.instances.values():
+        assert i.module is ns.M1
+        assert i.conns["p"] is ns.M2.p
+    assert len(ns.M2.ports) == 3
+    assert len(ns.M2.signals) == 2
+    assert "s" in ns.M2.signals
+    assert "_i1_i__i0_o_" in ns.M2.signals
+

@@ -14,4 +14,4 @@ from .interface import *
 from .elab import *
 
 from . import proto
-from .proto import to_proto 
+from .proto import to_proto, from_proto  
