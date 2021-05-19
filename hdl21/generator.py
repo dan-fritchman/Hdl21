@@ -1,4 +1,3 @@
-import copy
 import inspect
 from dataclasses import field
 from typing import Callable, Union, Any, Optional
@@ -7,7 +6,7 @@ from pydantic import ValidationError
 
 # Local imports
 from .module import Module
-from .signal import Signal
+from .instance import calls_instantiate
 
 
 @dataclass
@@ -24,6 +23,7 @@ class Generator:
         return self.paramtype
 
 
+@calls_instantiate
 @dataclass
 class GeneratorCall:
     """ Generator 'Bare Calls' 

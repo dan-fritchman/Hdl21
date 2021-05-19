@@ -7,6 +7,7 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 from pydantic.dataclasses import dataclass
 from typing import Optional, Union
 
+# Local imports
 from .connect import connectable, connects
 
 
@@ -114,3 +115,20 @@ from .interface import InterfaceInstance
 PortRef.__pydantic_model__.Config.arbitrary_types_allowed = True
 PortRef.__pydantic_model__.update_forward_refs()
 
+
+def calls_instantiate(cls: type) -> type:
+    """ Decorator which adds 'calls produce `hdl21.Instances` functionality. """
+
+    def __call__(self, **kwargs) -> Instance:
+        """ Calls Create `hdl21.Instances`, 
+        and pass any (keyword-only) arguments to said `Instances`, 
+        generally to connect-by-call. """
+        return Instance(of=self)(**kwargs)
+
+    # Check for an existing __call__ method, and if there is one, bail
+    if "__call__" in cls.__dict__:
+        raise RuntimeError(
+            f"Hdl21 Internal Error: Invalid conflict between `calls_instantiate` decorator and explicit `__call__` method on {cls}"
+        )
+    cls.__call__ = __call__
+    return cls

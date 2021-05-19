@@ -41,7 +41,7 @@ def test_module2():
         s = h.Input()
 
     class M2(h.Module):
-        i = h.Instance(M1)(s=q)
+        i = M1(s=q)
         q = h.Signal()
 
     assert isinstance(M1, h.Module)
@@ -106,14 +106,18 @@ def test_generator3():
     def g3b(params: P3, ctx: h.Context) -> h.Module:
         return h.Module()
 
-    m = h.Module(name="m")
+    M = h.Module(name="M")
+    p3a = P3()
+    p3b = P3(width=5)
 
     class HasGeneratorInstances(h.Module):
-        a = h.Instance(g3a, P3())
-        b = h.Instance(g3b, P3(width=5))
-        c = h.Instance(m)
+        a = g3a(p3a)()
+        b = g3b(p3b)()
+        c = M()
 
     h.elaborate(HasGeneratorInstances)
+
+    # FIXME: post-elab tests
 
 
 def test_params1():
@@ -287,8 +291,8 @@ def test_cycle1():
         out = h.Output()
 
     class BackToBack(h.Module):
-        t1 = h.Instance(Thing)
-        t2 = h.Instance(Thing)(inp=t1.out, out=t1.inp)
+        t1 = Thing()
+        t2 = Thing(inp=t1.out, out=t1.inp)
 
     b = h.elaborate(BackToBack)
 
@@ -299,8 +303,8 @@ def test_cycle1():
 
     # Doing the same thing in procedural code
     b2 = h.Module(name="BackToBack2")
-    b2.t1 = h.Instance(Thing)
-    b2.t2 = h.Instance(Thing)(inp=b2.t1.out, out=b2.t1.inp)
+    b2.t1 = Thing()
+    b2.t2 = Thing(inp=b2.t1.out, out=b2.t1.inp)
     b2.t1(inp=b2.t2.out, out=b2.t2.inp)
 
     assert isinstance(b.t1.inp, h.Signal)
@@ -336,7 +340,7 @@ def test_gen3():
 
         # Instantiate that in another Module
         class Outer(h.Module):
-            inner = h.Instance(Inner)
+            inner = Inner()
 
         # And manipulate that some more too
         Outer.inp = h.Input(width=params.w)
@@ -353,8 +357,8 @@ def test_prim1():
 
     class HasMos(h.Module):
         # Two transistors wired in parallel
-        p = h.Instance(pmos)
-        n = h.Instance(nmos)(g=p.g, d=p.d, s=p.s, b=p.b)
+        p = pmos()
+        n = nmos(g=p.g, d=p.d, s=p.s, b=p.b)
 
     h.elaborate(HasMos)
     # FIXME: post-elab checks
@@ -366,12 +370,12 @@ def test_prim2():
         n = h.Signal()
 
         _rp = h.R.Params(r=50)
-        r = h.Instance(h.Resistor(_rp))(p=p, n=n)
+        r = h.Resistor(_rp)(p=p, n=n)
 
-        c = h.Instance(h.Capacitor(h.C.Params(c=1e-12)))(p=p, n=n)
-        l = h.Instance(h.Inductor(h.L.Params(l=1e-15)))(p=p, n=n)
-        d = h.Instance(h.Diode(h.D.Params()))(p=p, n=n)
-        s = h.Instance(h.Short(h.Short.Params()))(p=p, n=n)
+        c = h.Capacitor(h.C.Params(c=1e-12))(p=p, n=n)
+        l = h.Inductor(h.L.Params(l=1e-15))(p=p, n=n)
+        d = h.Diode(h.D.Params())(p=p, n=n)
+        s = h.Short(h.Short.Params())(p=p, n=n)
 
     h.elaborate(HasPrims)
 
@@ -408,8 +412,8 @@ def test_intf2():
 
     # Now create a parent Module connecting the two
     m3 = h.Module(name="M3")
-    m3.i1 = h.Instance(m1)
-    m3.i2 = h.Instance(m2)(i=m3.i1.i)
+    m3.i1 = m1()
+    m3.i2 = m2(i=m3.i1.i)
     assert "_i2_i__i1_i_" not in m3.namespace
 
     m3e = h.elaborate(m3)
@@ -490,8 +494,8 @@ def test_intf4():
 
     class System(h.Module):
         # Parent system-module including a host and device
-        host = h.Instance(Host)
-        dev_ = h.Instance(Device)(port_=host.port_)
+        host = Host()
+        dev_ = Device(port_=host.port_)
 
     assert isinstance(System, h.Module)
     assert isinstance(System.host, h.Instance)
@@ -532,8 +536,8 @@ def test_proto2():
     Child2.inp = h.Input()
     Child2.out = h.Output(width=8)
     TestProto2 = h.Module(name="TestProto2")
-    TestProto2.c1 = h.Instance(Child1)
-    TestProto2.c2 = h.Instance(Child2)
+    TestProto2.c1 = Child1()
+    TestProto2.c2 = Child2()
     TestProto2.c2(inp=TestProto2.c1.out, out=TestProto2.c1.inp)
 
     ppkg = to_proto(TestProto2)
@@ -605,9 +609,9 @@ def test_proto_roundtrip2():
     M2.s = h.Signal()
 
     # Add a few instances of it
-    M2.i0 = h.Instance(M1)
-    M2.i1 = h.Instance(M1)
-    M2.i2 = h.Instance(M1)
+    M2.i0 = M1()
+    M2.i1 = M1()
+    M2.i2 = M1()
     M2.i0(i=M2.i, o=M2.i1.i, p=M2.p)
     M2.i1(i=M2.i0.o, o=M2.s, p=M2.p)
     M2.i2(i=M2.s, o=M2.o, p=M2.p)
@@ -679,8 +683,8 @@ def test_bigger_interfaces():
     class Board(h.Module):
         # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
         jtag = Jtag(role=MsRoles.SL)
-        chip = h.Instance(Chip)(jtag=jtag)
-        flash = h.Instance(SpiFlash)(spi=chip.spi)
+        chip = Chip(jtag=jtag)
+        flash = SpiFlash(spi=chip.spi)
 
     class Tester(h.Module):
         # A typical test-widget with a JTAG port
@@ -689,8 +693,8 @@ def test_bigger_interfaces():
     class TestSystem(h.Module):
         # A system in which `Tester` can test `Board`
         jtag = Jtag()
-        tester = h.Instance(Tester)(jtag=jtag)
-        board = h.Instance(Board)(jtag=jtag)
+        tester = Tester(jtag=jtag)
+        board = Board(jtag=jtag)
 
     sys = h.elaborate(TestSystem)
     # FIXME: more post-elabortion tests

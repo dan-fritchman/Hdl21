@@ -9,11 +9,15 @@ which unwind `Module` sub-class-body contents in dataflow order.
 """
 
 import builtins
+from hdl21.instance import InstArray, calls_instantiate
 import inspect
 
 from textwrap import dedent
 from dataclasses import dataclass, field
 from typing import Optional, Union, Callable, Any
+
+# Local imports
+from .instance import calls_instantiate
 
 
 class ModuleMeta(type):
@@ -93,6 +97,7 @@ class ModuleMeta(type):
         return m
 
 
+@calls_instantiate
 class Module(metaclass=ModuleMeta):
     """ 
     # Module
@@ -192,19 +197,7 @@ class Module(metaclass=ModuleMeta):
             return ns[key]
         return object.__getattribute__(self, key)
 
-    def __call__(self, *_args, **_kwargs):
-        """ Highly likely error: calling Modules in attempts to create Python-level instances, which they don't have.  """
-        raise RuntimeError(
-            dedent(
-                f"""\
-                Error: attempting to call (or instantiate) hdl21.Module {self.name}.
-                You probably want to pass its class-object to another function instead,
-                such as hdl21.Instance({self.name}), or retrieve its class-object attributes,
-                such as {self.name}.ports, {self.name}.instances, and so on."""
-            )
-        )
-
-    def __init_subclass__(cls, *_args, **_kwargs):
+    def __init_subclass__(cls, *_, **__):
         """ Sub-Classing Disable-ization """
         raise RuntimeError(
             dedent(
@@ -462,13 +455,14 @@ class Resolver:
         results = {k: self.resolve(v) for k, v in self.dct.defs.items()}
 
         # Finally, make our connection-calls.
+        from .instance import Instance, InstArray
+
         for call in self.connection_calls:
-            func = self.resolve(call._func)
+            # func = self.resolve(call._func)
             args = (self.resolve(a) for a in call._args)
             kwargs = {k: self.resolve(v) for k, v in call._kwargs.items()}
-            f2 = func(*args, **kwargs)
-            # Instance connection-calls return themselves, a property we can check for!
-            if f2 is not func:
+            rv = call._result(*args, **kwargs)
+            if not isinstance(rv, (Instance, InstArray)):
                 raise ResolutionError(
                     f"Internal Error: hdl21 connecting non-Instance {func}"
                 )
@@ -533,6 +527,7 @@ class Resolver:
         Recursively resolves its function object and arguments,
         before calling the resolved function and returning the result. """
         from .instance import Instance, InstArray
+        from .generator import GeneratorCall
 
         if call._result is not NoResult:  # Already computed, generally via a `Name`
             return call._result
@@ -540,6 +535,11 @@ class Resolver:
         func = self.resolve(call._func)
         # Special case for connections, which often create graph-cycles.
         # Set these aside for later in our `connection_calls` list.
+        if isinstance(func, (Module, GeneratorCall)):  
+            # Turn these into Instances by calling them 
+            self.connection_calls.append(call)
+            call._result = func()
+            return call._result
         if isinstance(func, (Instance, InstArray)):
             self.connection_calls.append(call)
             call._result = func
