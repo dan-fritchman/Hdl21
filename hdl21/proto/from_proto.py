@@ -11,7 +11,7 @@ from . import circuit_pb2 as protodefs
 # HDL
 from ..module import Module
 from ..instance import Instance
-from ..signal import Port, PortDir, Visibility
+from ..signal import Signal, Port, PortDir
 
 
 def from_proto(pkg: protodefs.Package) -> SimpleNamespace:
@@ -52,13 +52,18 @@ class ProtoImporter:
         # FIXME: whatever to do with these qualified path-names
         module.name = pmod.name.name
 
-        # Lap through ports
+        # Import its ports
         for pport in pmod.ports:
             dir_ = self.import_port_dir(pport)
             port = Port(
                 name=pport.signal.name, width=pport.signal.width, direction=dir_,
             )
             module.add(port)
+
+        # Import its signals
+        for psig in pmod.signals:
+            sig = Signal(name=psig.name, width=psig.width)
+            module.add(sig)
 
         # Lap through instances, connecting them, creating internal Signals if necessary (bleh)
         for pinst in pmod.instances:
@@ -74,13 +79,12 @@ class ProtoImporter:
                 # Grab this Signal, if it exists
                 sig = module.namespace.get(sname, None)
                 if sig is None:
-                    # Here's the SPICE-style "signals from nothing". (Bleh.)
-                    # Create Signals for thus-far-unencountered identifiers.
-                    sig = copy.copy(inst.module.ports[pname])
-                    sig.name = sname
-                    sig.vis = Visibility.INTERNAL
-                    sig.direction = PortDir.NONE
-                    module.add(sig)
+                    # This block has held, at some points in code-history,
+                    # the SPICE-style "create nets from thin air" behavior.
+                    # That's outta here; undeclared signals produce errors instead.
+                    raise RuntimeError(
+                        f"Invalid Signal {sname} on Instance {inst.name} in Module {module.name}"
+                    )
 
                 # And connect it to the Instance
                 setattr(inst, pname, sig)

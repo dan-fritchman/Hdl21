@@ -63,6 +63,11 @@ class ProtoExporter:
             pport.signal.width = port.width
             pmod.ports.append(pport)
 
+        # Create its Signal-objects
+        for sig in module.signals.values():
+            psig = protodefs.Signal(name=sig.name, width=sig.width)
+            pmod.signals.append(psig)
+
         # Create each Proto-Instance
         for inst in module.instances.values():
             if not inst.module:

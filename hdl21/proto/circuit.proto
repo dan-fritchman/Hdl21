@@ -44,17 +44,7 @@ message Signal {
   int64 width = 2;
 }
 
-message Module {
-  // Required.
-  QualifiedName name = 1;
 
-  // Ports are nets.
-  repeated Port ports = 2;
-
-  repeated Instance instances = 3;
-
-  map<string, Parameter> default_parameters = 4;
-}
 
 message Instance {
   // Required.
@@ -66,4 +56,18 @@ message Instance {
   
   // Map internal to external signals by name.
   map<string, string> connections = 4;
+}
+
+/// Module - the primary unit of hardware re-use
+message Module {
+  // Required Module Name 
+  QualifiedName name = 1;
+  // Port Definitions 
+  repeated Port ports = 2;
+  // Internal Signals
+  repeated Signal signals = 3;
+  // Module Instances
+  repeated Instance instances = 4;
+  // Parameters and Default Values 
+  map<string, Parameter> default_parameters = 5;
 }

@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rcircuit.proto\"1\n\x07Package\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x07modules\x18\x02 \x03(\x0b\x32\x07.Module\"-\n\rQualifiedName\x12\x0e\n\x06\x64omain\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"/\n\tReference\x12\x1c\n\x02qn\x18\x01 \x01(\x0b\x32\x0e.QualifiedNameH\x00\x42\x04\n\x02to\"K\n\tParameter\x12\x11\n\x07integer\x18\x02 \x01(\x03H\x00\x12\x10\n\x06\x64ouble\x18\x03 \x01(\x01H\x00\x12\x10\n\x06string\x18\x04 \x01(\tH\x00\x42\x07\n\x05value\"|\n\x04Port\x12\x17\n\x06signal\x18\x01 \x01(\x0b\x32\x07.Signal\x12\"\n\tdirection\x18\x02 \x01(\x0e\x32\x0f.Port.Direction\"7\n\tDirection\x12\t\n\x05INPUT\x10\x00\x12\n\n\x06OUTPUT\x10\x01\x12\t\n\x05INOUT\x10\x02\x12\x08\n\x04NONE\x10\x03\"%\n\x06Signal\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05width\x18\x02 \x01(\x03\"\xdc\x01\n\x06Module\x12\x1c\n\x04name\x18\x01 \x01(\x0b\x32\x0e.QualifiedName\x12\x14\n\x05ports\x18\x02 \x03(\x0b\x32\x05.Port\x12\x1c\n\tinstances\x18\x03 \x03(\x0b\x32\t.Instance\x12:\n\x12\x64\x65\x66\x61ult_parameters\x18\x04 \x03(\x0b\x32\x1e.Module.DefaultParametersEntry\x1a\x44\n\x16\x44\x65\x66\x61ultParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\"\xa0\x02\n\x08Instance\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x1a\n\x06module\x18\x02 \x01(\x0b\x32\n.Reference\x12>\n\x13instance_parameters\x18\x03 \x03(\x0b\x32!.Instance.InstanceParametersEntry\x12/\n\x0b\x63onnections\x18\x04 \x03(\x0b\x32\x1a.Instance.ConnectionsEntry\x1a\x45\n\x17InstanceParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\x1a\x32\n\x10\x43onnectionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x62\x06proto3'
+  serialized_pb=b'\n\rcircuit.proto\"1\n\x07Package\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x07modules\x18\x02 \x03(\x0b\x32\x07.Module\"-\n\rQualifiedName\x12\x0e\n\x06\x64omain\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"/\n\tReference\x12\x1c\n\x02qn\x18\x01 \x01(\x0b\x32\x0e.QualifiedNameH\x00\x42\x04\n\x02to\"K\n\tParameter\x12\x11\n\x07integer\x18\x02 \x01(\x03H\x00\x12\x10\n\x06\x64ouble\x18\x03 \x01(\x01H\x00\x12\x10\n\x06string\x18\x04 \x01(\tH\x00\x42\x07\n\x05value\"|\n\x04Port\x12\x17\n\x06signal\x18\x01 \x01(\x0b\x32\x07.Signal\x12\"\n\tdirection\x18\x02 \x01(\x0e\x32\x0f.Port.Direction\"7\n\tDirection\x12\t\n\x05INPUT\x10\x00\x12\n\n\x06OUTPUT\x10\x01\x12\t\n\x05INOUT\x10\x02\x12\x08\n\x04NONE\x10\x03\"%\n\x06Signal\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05width\x18\x02 \x01(\x03\"\xa0\x02\n\x08Instance\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x1a\n\x06module\x18\x02 \x01(\x0b\x32\n.Reference\x12>\n\x13instance_parameters\x18\x03 \x03(\x0b\x32!.Instance.InstanceParametersEntry\x12/\n\x0b\x63onnections\x18\x04 \x03(\x0b\x32\x1a.Instance.ConnectionsEntry\x1a\x45\n\x17InstanceParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\x1a\x32\n\x10\x43onnectionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xf6\x01\n\x06Module\x12\x1c\n\x04name\x18\x01 \x01(\x0b\x32\x0e.QualifiedName\x12\x14\n\x05ports\x18\x02 \x03(\x0b\x32\x05.Port\x12\x18\n\x07signals\x18\x03 \x03(\x0b\x32\x07.Signal\x12\x1c\n\tinstances\x18\x04 \x03(\x0b\x32\t.Instance\x12:\n\x12\x64\x65\x66\x61ult_parameters\x18\x05 \x03(\x0b\x32\x1e.Module.DefaultParametersEntry\x1a\x44\n\x16\x44\x65\x66\x61ultParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\x62\x06proto3'
 )
 
 
@@ -305,97 +305,6 @@ _SIGNAL = _descriptor.Descriptor(
 )
 
 
-_MODULE_DEFAULTPARAMETERSENTRY = _descriptor.Descriptor(
-  name='DefaultParametersEntry',
-  full_name='Module.DefaultParametersEntry',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  create_key=_descriptor._internal_create_key,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='key', full_name='Module.DefaultParametersEntry.key', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"".decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='value', full_name='Module.DefaultParametersEntry.value', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=b'8\001',
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=559,
-  serialized_end=627,
-)
-
-_MODULE = _descriptor.Descriptor(
-  name='Module',
-  full_name='Module',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  create_key=_descriptor._internal_create_key,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='name', full_name='Module.name', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='ports', full_name='Module.ports', index=1,
-      number=2, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='instances', full_name='Module.instances', index=2,
-      number=3, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='default_parameters', full_name='Module.default_parameters', index=3,
-      number=4, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-  ],
-  extensions=[
-  ],
-  nested_types=[_MODULE_DEFAULTPARAMETERSENTRY, ],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=407,
-  serialized_end=627,
-)
-
-
 _INSTANCE_INSTANCEPARAMETERSENTRY = _descriptor.Descriptor(
   name='InstanceParametersEntry',
   full_name='Instance.InstanceParametersEntry',
@@ -430,8 +339,8 @@ _INSTANCE_INSTANCEPARAMETERSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=797,
-  serialized_end=866,
+  serialized_start=574,
+  serialized_end=643,
 )
 
 _INSTANCE_CONNECTIONSENTRY = _descriptor.Descriptor(
@@ -468,8 +377,8 @@ _INSTANCE_CONNECTIONSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=868,
-  serialized_end=918,
+  serialized_start=645,
+  serialized_end=695,
 )
 
 _INSTANCE = _descriptor.Descriptor(
@@ -520,8 +429,106 @@ _INSTANCE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=630,
-  serialized_end=918,
+  serialized_start=407,
+  serialized_end=695,
+)
+
+
+_MODULE_DEFAULTPARAMETERSENTRY = _descriptor.Descriptor(
+  name='DefaultParametersEntry',
+  full_name='Module.DefaultParametersEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='Module.DefaultParametersEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='Module.DefaultParametersEntry.value', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=b'8\001',
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=876,
+  serialized_end=944,
+)
+
+_MODULE = _descriptor.Descriptor(
+  name='Module',
+  full_name='Module',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='Module.name', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='ports', full_name='Module.ports', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='signals', full_name='Module.signals', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='instances', full_name='Module.instances', index=3,
+      number=4, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='default_parameters', full_name='Module.default_parameters', index=4,
+      number=5, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[_MODULE_DEFAULTPARAMETERSENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=698,
+  serialized_end=944,
 )
 
 _PACKAGE.fields_by_name['modules'].message_type = _MODULE
@@ -541,26 +548,27 @@ _PARAMETER.fields_by_name['string'].containing_oneof = _PARAMETER.oneofs_by_name
 _PORT.fields_by_name['signal'].message_type = _SIGNAL
 _PORT.fields_by_name['direction'].enum_type = _PORT_DIRECTION
 _PORT_DIRECTION.containing_type = _PORT
-_MODULE_DEFAULTPARAMETERSENTRY.fields_by_name['value'].message_type = _PARAMETER
-_MODULE_DEFAULTPARAMETERSENTRY.containing_type = _MODULE
-_MODULE.fields_by_name['name'].message_type = _QUALIFIEDNAME
-_MODULE.fields_by_name['ports'].message_type = _PORT
-_MODULE.fields_by_name['instances'].message_type = _INSTANCE
-_MODULE.fields_by_name['default_parameters'].message_type = _MODULE_DEFAULTPARAMETERSENTRY
 _INSTANCE_INSTANCEPARAMETERSENTRY.fields_by_name['value'].message_type = _PARAMETER
 _INSTANCE_INSTANCEPARAMETERSENTRY.containing_type = _INSTANCE
 _INSTANCE_CONNECTIONSENTRY.containing_type = _INSTANCE
 _INSTANCE.fields_by_name['module'].message_type = _REFERENCE
 _INSTANCE.fields_by_name['instance_parameters'].message_type = _INSTANCE_INSTANCEPARAMETERSENTRY
 _INSTANCE.fields_by_name['connections'].message_type = _INSTANCE_CONNECTIONSENTRY
+_MODULE_DEFAULTPARAMETERSENTRY.fields_by_name['value'].message_type = _PARAMETER
+_MODULE_DEFAULTPARAMETERSENTRY.containing_type = _MODULE
+_MODULE.fields_by_name['name'].message_type = _QUALIFIEDNAME
+_MODULE.fields_by_name['ports'].message_type = _PORT
+_MODULE.fields_by_name['signals'].message_type = _SIGNAL
+_MODULE.fields_by_name['instances'].message_type = _INSTANCE
+_MODULE.fields_by_name['default_parameters'].message_type = _MODULE_DEFAULTPARAMETERSENTRY
 DESCRIPTOR.message_types_by_name['Package'] = _PACKAGE
 DESCRIPTOR.message_types_by_name['QualifiedName'] = _QUALIFIEDNAME
 DESCRIPTOR.message_types_by_name['Reference'] = _REFERENCE
 DESCRIPTOR.message_types_by_name['Parameter'] = _PARAMETER
 DESCRIPTOR.message_types_by_name['Port'] = _PORT
 DESCRIPTOR.message_types_by_name['Signal'] = _SIGNAL
-DESCRIPTOR.message_types_by_name['Module'] = _MODULE
 DESCRIPTOR.message_types_by_name['Instance'] = _INSTANCE
+DESCRIPTOR.message_types_by_name['Module'] = _MODULE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 Package = _reflection.GeneratedProtocolMessageType('Package', (_message.Message,), {
@@ -605,21 +613,6 @@ Signal = _reflection.GeneratedProtocolMessageType('Signal', (_message.Message,),
   })
 _sym_db.RegisterMessage(Signal)
 
-Module = _reflection.GeneratedProtocolMessageType('Module', (_message.Message,), {
-
-  'DefaultParametersEntry' : _reflection.GeneratedProtocolMessageType('DefaultParametersEntry', (_message.Message,), {
-    'DESCRIPTOR' : _MODULE_DEFAULTPARAMETERSENTRY,
-    '__module__' : 'circuit_pb2'
-    # @@protoc_insertion_point(class_scope:Module.DefaultParametersEntry)
-    })
-  ,
-  'DESCRIPTOR' : _MODULE,
-  '__module__' : 'circuit_pb2'
-  # @@protoc_insertion_point(class_scope:Module)
-  })
-_sym_db.RegisterMessage(Module)
-_sym_db.RegisterMessage(Module.DefaultParametersEntry)
-
 Instance = _reflection.GeneratedProtocolMessageType('Instance', (_message.Message,), {
 
   'InstanceParametersEntry' : _reflection.GeneratedProtocolMessageType('InstanceParametersEntry', (_message.Message,), {
@@ -643,8 +636,23 @@ _sym_db.RegisterMessage(Instance)
 _sym_db.RegisterMessage(Instance.InstanceParametersEntry)
 _sym_db.RegisterMessage(Instance.ConnectionsEntry)
 
+Module = _reflection.GeneratedProtocolMessageType('Module', (_message.Message,), {
 
-_MODULE_DEFAULTPARAMETERSENTRY._options = None
+  'DefaultParametersEntry' : _reflection.GeneratedProtocolMessageType('DefaultParametersEntry', (_message.Message,), {
+    'DESCRIPTOR' : _MODULE_DEFAULTPARAMETERSENTRY,
+    '__module__' : 'circuit_pb2'
+    # @@protoc_insertion_point(class_scope:Module.DefaultParametersEntry)
+    })
+  ,
+  'DESCRIPTOR' : _MODULE,
+  '__module__' : 'circuit_pb2'
+  # @@protoc_insertion_point(class_scope:Module)
+  })
+_sym_db.RegisterMessage(Module)
+_sym_db.RegisterMessage(Module.DefaultParametersEntry)
+
+
 _INSTANCE_INSTANCEPARAMETERSENTRY._options = None
 _INSTANCE_CONNECTIONSENTRY._options = None
+_MODULE_DEFAULTPARAMETERSENTRY._options = None
 # @@protoc_insertion_point(module_scope)

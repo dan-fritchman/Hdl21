@@ -643,3 +643,55 @@ def test_proto_roundtrip2():
     assert "s" in ns.M2.signals
     assert "_i1_i__i0_o_" in ns.M2.signals
 
+
+def test_bigger_interfaces():
+    import hdl21 as h
+    from enum import Enum, auto
+
+    class MsRoles(Enum):
+        MS = auto()
+        SL = auto()
+
+    @h.interface
+    class Jtag:
+        roles = MsRoles
+        tck = h.Signal(src=roles.MS, dest=roles.SL)
+        tdi = h.Signal(src=roles.MS, dest=roles.SL)
+        tms = h.Signal(src=roles.MS, dest=roles.SL)
+        tdo = h.Signal(src=roles.SL, dest=roles.MS)
+
+    @h.interface
+    class Spi:
+        roles = MsRoles
+        sck = h.Signal(src=roles.MS, dest=roles.SL)
+        cs = h.Signal(src=roles.MS, dest=roles.SL)
+        dq = h.Signal(src=roles.SL, dest=roles.MS, width=4)
+
+    class Chip(h.Module):
+        spi = Spi(role=MsRoles.MS, port=True)
+        jtag = Jtag(role=MsRoles.SL, port=True)
+        ...  # Actual internal content, which likely connects these down *many* levels of hierarchy
+
+    class SpiFlash(h.Module):
+        # A typical flash memory with a SPI port
+        spi = Spi(role=MsRoles.SL, port=True)
+
+    class Board(h.Module):
+        # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
+        jtag = Jtag(role=MsRoles.SL)
+        chip = h.Instance(Chip)(jtag=jtag)
+        flash = h.Instance(SpiFlash)(spi=chip.spi)
+
+    class Tester(h.Module):
+        # A typical test-widget with a JTAG port
+        jtag = Jtag(role=MsRoles.MS, port=True)
+
+    class TestSystem(h.Module):
+        # A system in which `Tester` can test `Board`
+        jtag = Jtag()
+        tester = h.Instance(Tester)(jtag=jtag)
+        board = h.Instance(Board)(jtag=jtag)
+
+    sys = h.elaborate(TestSystem)
+    # FIXME: more post-elabortion tests
+
