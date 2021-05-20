@@ -29,7 +29,7 @@ jobs:
     - name: Test with pytest
       run: |
         poetry run pytest -sv --cov=./ --cov-report=xml
-    - name: Upload coverage to Codecov
+    - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
       uses: codecov/codecov-action@v1
       with:
         files: ./coverage.xml 
