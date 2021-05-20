@@ -122,7 +122,7 @@ class InterfaceInstance:
 
 
 def interface(cls: type) -> Interface:
-    """ Interface Definition Decorator 
+    """ # Interface Definition Decorator 
     
     Converts a class-body full of Interface-storable attributes (Signals, other Interfaces) to an `hdl21.Interface`. 
     Example Usage: 

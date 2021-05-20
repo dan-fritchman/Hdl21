@@ -35,13 +35,13 @@ m.a = AnotherModule()
 * Internal `Signals`
 * Structured connections defined by `Interfaces` 
 
-
-In addition to the procedural-mode shown above, `Modules` can also be defined through a `class`-based syntax. Creating a sub-class of `hdl21.Module` produces a new `Module`-definition, in which each attribute can be declared like so: 
+In addition to the procedural-mode shown above, `Modules` can also be defined through a `class`-based syntax. 
 
 ```python
 import hdl21 as h 
 
-class MyModule(h.Module):
+@h.module
+class MyModule:
     i = h.Input()
     o = h.Output(width=8)
     s = h.Signal()
@@ -131,19 +131,6 @@ m.i1 = AnotherModule()
 m.i2 = AnotherModule(a=m.i1.a, b=m.i1.b, c=m.i1.c)
 ```
 
-The `Module` class-syntax allows for quite a bit more magic in this respect. The `Module` class-body executes in dataflow/dependency order, allowing references to objects before they are declared. 
-
-```python
-class Thing(h.Module):
-    inp = h.Input()
-    out = h.Output()
-
-class BackToBack(h.Module):
-    t1 = Thing(inp=t2.out, out=t2.inp) # Note there is no `t2` yet
-    t2 = Thing(inp=t1.out, out=t1.inp) # There it is
-```
-
-While this dependency-ordered execution applies to all `Module` contents, it's particularly handy for connections. 
 
 ## Generators
 
@@ -168,7 +155,8 @@ The generator-function body can define a `Module` however it likes - procedurall
 @h.generator
 def MySecondGenerator(params: MyParams) -> h.Module:
     # A very exciting (second) generator function 
-    class MySecondGen(h.Module):
+    @h.module
+    class MySecondGen:
         i = h.Input(width=params.w)
     return MySecondGen
 ```
@@ -179,14 +167,16 @@ Or any combination of the two:
 @h.generator
 def MyThirdGenerator(params: MyParams) -> h.Module:
     # Create an internal Module
-    class Inner(h.Module):
+    @h.module
+    class Inner:
         i = h.Input(width=params.w)
 
     # Manipulate it a bit
     Inner.o = h.Output(width=2 * Inner.i.width)
 
     # Instantiate that in another Module 
-    class Outer(h.Module):
+    @h.module
+    class Outer:
         inner = Inner()
 
     # And manipulate that some more too 

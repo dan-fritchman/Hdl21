@@ -9,7 +9,8 @@ def test_version():
 def test_module1():
     """ Initial Module Test """
 
-    class M1(h.Module):
+    @h.module
+    class M1:
         a = h.Input()
         b = h.Output()
         c = h.Inout()
@@ -37,12 +38,14 @@ def test_module1():
 
 
 def test_module2():
-    class M1(h.Module):
+    @h.module
+    class M1:
         s = h.Input()
 
-    class M2(h.Module):
-        i = M1(s=q)
+    @h.module
+    class M2:
         q = h.Signal()
+        i = M1(s=q)
 
     assert isinstance(M1, h.Module)
     assert isinstance(M2, h.Module)
@@ -110,7 +113,8 @@ def test_generator3():
     p3a = P3()
     p3b = P3(width=5)
 
-    class HasGeneratorInstances(h.Module):
+    @h.module
+    class HasGeneratorInstances:
         a = g3a(p3a)()
         b = g3b(p3b)()
         c = M()
@@ -210,7 +214,6 @@ def test_bad_params1():
     from hdl21 import (
         paramclass,
         Param,
-        isparamclass,
         ValidationError,
         FrozenInstanceError,
     )
@@ -247,22 +250,22 @@ def test_bad_params1():
         c.a = 4
 
     with pytest.raises(RuntimeError):
-        # Test the "no setattrs allowed" in class-def
+        # Test "no Module sub-classing"
 
         class E(h.Module):
-            a = h.Signal()
-            a.b = 6
+            ...
 
     with pytest.raises(RuntimeError):
-        # And test this on literal values
+        # Test "no decorating inherited types"
 
-        class E2(h.Module):
-            a = 3
-            a.b = 6
+        @h.module
+        class E2(TabError):
+            ...
 
 
 def test_array1():
-    class InArray(h.Module):
+    @h.module
+    class InArray:
         inp = h.Input()
         out = h.Output()
 
@@ -279,18 +282,23 @@ def test_array1():
 def test_array2():
     a = h.Module(name="a")
 
-    class HasArray2(h.Module):
+    @h.module
+    class HasArray2:
         s1 = h.Signal(width=8)
         s2 = h.Signal(width=1)
         arr = h.InstArray(a, 8)(inp=s1, out=s2)
 
+    # FIXME: some real checks here plz
+
 
 def test_cycle1():
-    class Thing(h.Module):
+    @h.module
+    class Thing:
         inp = h.Input()
         out = h.Output()
 
-    class BackToBack(h.Module):
+    @h.module
+    class BackToBack:
         t1 = Thing()
         t2 = Thing(inp=t1.out, out=t1.inp)
 
@@ -324,22 +332,14 @@ def test_gen3():
 
     @h.generator
     def MyThirdGenerator(params: MyParams) -> h.Module:
-        # Create an internal Module
-        class Inner(h.Module):
+        @h.module
+        class Inner:
             i = h.Input(width=params.w)
-
-        # Manipulate it a bit
-        o = h.Output(width=2 * Inner.i.width)
-
-        # FIXME! Versions like this don't work; decide what to do with em.
-        with pytest.raises(TypeError):
-
-            class Inner2(h.Module):
-                i = h.Input(width=params.w)
-                o = h.Output(width=2 * params.w)
+            o = h.Output(width=2 * params.w)
 
         # Instantiate that in another Module
-        class Outer(h.Module):
+        @h.module
+        class Outer:
             inner = Inner()
 
         # And manipulate that some more too
@@ -355,7 +355,8 @@ def test_prim1():
     pmos = h.Pmos(params)
     nmos = h.Nmos(params)
 
-    class HasMos(h.Module):
+    @h.module
+    class HasMos:
         # Two transistors wired in parallel
         p = pmos()
         n = nmos(g=p.g, d=p.d, s=p.s, b=p.b)
@@ -365,7 +366,8 @@ def test_prim1():
 
 
 def test_prim2():
-    class HasPrims(h.Module):
+    @h.module
+    class HasPrims:
         p = h.Signal()
         n = h.Signal()
 
@@ -484,15 +486,18 @@ def test_intf4():
     assert isinstance(HasRoles.txd, h.InterfaceInstance)
     assert isinstance(HasRoles.rxd, h.InterfaceInstance)
 
-    class Host(h.Module):
+    @h.module
+    class Host:
         # A thing with a HOST-roled interface-port
         port_ = HasRoles(port=True, role=HasRoles.Roles.HOST)
 
-    class Device(h.Module):
+    @h.module
+    class Device:
         # A thing with a DEVICE-roled interface-port
         port_ = HasRoles(port=True, role=HasRoles.Roles.DEVICE)
 
-    class System(h.Module):
+    @h.module
+    class System:
         # Parent system-module including a host and device
         host = Host()
         dev_ = Device(port_=host.port_)
@@ -671,26 +676,31 @@ def test_bigger_interfaces():
         cs = h.Signal(src=roles.MS, dest=roles.SL)
         dq = h.Signal(src=roles.SL, dest=roles.MS, width=4)
 
-    class Chip(h.Module):
+    @h.module
+    class Chip:
         spi = Spi(role=MsRoles.MS, port=True)
         jtag = Jtag(role=MsRoles.SL, port=True)
         ...  # Actual internal content, which likely connects these down *many* levels of hierarchy
 
-    class SpiFlash(h.Module):
+    @h.module
+    class SpiFlash:
         # A typical flash memory with a SPI port
         spi = Spi(role=MsRoles.SL, port=True)
 
-    class Board(h.Module):
+    @h.module
+    class Board:
         # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
         jtag = Jtag(role=MsRoles.SL)
         chip = Chip(jtag=jtag)
         flash = SpiFlash(spi=chip.spi)
 
-    class Tester(h.Module):
+    @h.module
+    class Tester:
         # A typical test-widget with a JTAG port
         jtag = Jtag(role=MsRoles.MS, port=True)
 
-    class TestSystem(h.Module):
+    @h.module
+    class TestSystem:
         # A system in which `Tester` can test `Board`
         jtag = Jtag()
         tester = Tester(jtag=jtag)

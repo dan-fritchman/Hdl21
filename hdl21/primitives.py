@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Optional, Callable, Any, Union
 from .params import paramclass, Param
 from .generator import Generator, generator
-from .module import Module
+from .module import module, Module
 from .signal import Port
 
 
@@ -48,7 +48,8 @@ class MosParams:
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
 
 
-class MosModule(Module):
+@module
+class MosModule:
     """ Primitive Module for all MOS Transistors """
 
     d = Port()
@@ -81,7 +82,8 @@ class DiodeParams:
     # tp = Param(dtype=Tbd!, desc="Diode type specifier")
 
 
-class DiodeModule(Module):
+@module
+class DiodeModule:
     """ Primitive Module for Diodes """
 
     p = Port()
@@ -102,7 +104,8 @@ class ResistorParams:
     r = Param(dtype=float, desc="Resistance (ohms)")
 
 
-class ResistorModule(Module):
+@module
+class ResistorModule:
     """ Primitive Module for Ideal Resistors """
 
     p = Port()
@@ -123,7 +126,8 @@ class CapacitorParams:
     c = Param(dtype=float, desc="Capacitance (F)")
 
 
-class CapacitorModule(Module):
+@module
+class CapacitorModule:
     """ Primitive Module for Ideal Capacitors """
 
     p = Port()
@@ -144,7 +148,8 @@ class InductorParams:
     l = Param(dtype=float, desc="Inductance (H)")
 
 
-class InductorModule(Module):
+@module
+class InductorModule:
     """ Primitive Module for Ideal Inductors """
 
     p = Port()
@@ -167,7 +172,8 @@ class ShortParams:
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
 
 
-class ShortModule(Module):
+@module
+class ShortModule:
     """ Primitive Module for Short-Circuit Ties Between Signals """
 
     p = Port()
