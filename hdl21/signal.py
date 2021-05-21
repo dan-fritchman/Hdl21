@@ -20,11 +20,12 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 
 """
 
-from typing import Optional
+from typing import Optional, Any, List, Union
 from enum import Enum
 from dataclasses import field
 from pydantic.dataclasses import dataclass
 
+# Local imports
 from .connect import connectable
 
 
@@ -63,6 +64,48 @@ class Signal:
         if self.width < 1:
             raise ValueError
 
+    def __getitem__(self, key: Any) -> "Slice":
+        """ Square-Bracket Slicing into Signals, returning Signal-Slices. 
+        Does *HDL-style* slicing, in which: 
+        * Slice indices are *inclusive*
+        * Larger arguments are expected to come *first*. 
+        
+        e.g. The top "half" of a width-ten `Signal` can be retrieved via:
+        `Signal(width=10)[9:5]` """
+
+        if isinstance(key, int):
+            if key >= self.width:
+                raise ValueError(f"Out-of-bounds index {key} into {self}")
+            if key < 0:
+                raise ValueError(f"Invalid negative index {key} into {self}")
+            return Slice(signal=self, top=key, bot=key)
+
+        if isinstance(key, slice):
+            # Note these `slice` attributes are descriptor-things, and they get weird, fast.
+            # Extracting their three key fields the most-hardest way via `__getattribute__` seems to work cleanest.
+            start = slice.__getattribute__(key, "start")
+            stop = slice.__getattribute__(key, "stop")
+            step = slice.__getattribute__(key, "step")
+            if step is not None:
+                raise ValueError(
+                    f"Invalid slice (with step) {key} indexed into {self}"
+                )
+            top = start or self.width - 1
+            if top > self.width:
+                raise ValueError(f"Out-of-bounds index {top} into {self}")
+            if top < 0:
+                raise ValueError(f"Invalid negative index {top} into {self}")
+            bot = stop or 0
+            if bot > self.width:
+                raise ValueError(f"Out-of-bounds index {bot} into {self}")
+            if bot < 0:
+                raise ValueError(f"Invalid negative index {bot} into {self}")
+            if bot >= top:
+                raise ValueError(f"Invalid slice (start <= stop) {key} into {self}")
+            return Slice(signal=self, top=top, bot=bot)
+
+        raise TypeError(f"Invalid slice-type {key} into {self}")
+
 
 def Input(**kwargs) -> Signal:
     """ Input Port Constructor. Thin wrapper around `hdl21.Signal` """
@@ -84,3 +127,33 @@ def Port(direction=PortDir.NONE, **kwargs) -> Signal:
     The `direction` argument sets the Port's direction, 
     and defaults to the unknown direction `PortDir.NONE`. """
     return Signal(direction=direction, vis=Visibility.PORT, **kwargs)
+
+
+@connectable
+@dataclass
+class Slice:
+    """ Signal Slice, comprising a subset of its width """
+
+    signal: Signal
+    top: int
+    bot: int
+
+    @property
+    def width(self):
+        return 1 + self.top - self.bot
+
+
+@connectable
+class Concat:
+    """ Signal Concatenation 
+    Uses *HDL-convention* ordering, in which *MSBs* are specified first. """
+
+    def __init__(self, *parts):
+        for p in parts:
+            if not isinstance(p, (Signal, Slice, Concat)):
+                raise TypeError
+        self.parts = parts
+
+    @property
+    def width(self):
+        return sum([s.width for s in self.parts])

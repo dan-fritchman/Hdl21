@@ -699,3 +699,99 @@ def test_bigger_interfaces():
     sys = h.elaborate(TestSystem)
     # FIXME: more post-elabortion tests
 
+
+def test_signal_slice1():
+    # Initial test of signal slicing
+    import hdl21 as h
+
+    sig = h.Signal(width=10)
+    sl = sig[0]
+    assert isinstance(sl, h.signal.Slice)
+    assert sl.top == 0
+    assert sl.bot == 0
+    assert sl.width == 1
+    assert sl.signal is sig
+
+    sl = sig[4:0]
+    assert isinstance(sl, h.signal.Slice)
+    assert sl.top == 4
+    assert sl.bot == 0
+    assert sl.width == 5
+    assert sl.signal is sig
+
+    sl = sig[:]
+    assert isinstance(sl, h.signal.Slice)
+    assert sl.top == 9
+    assert sl.bot == 0
+    assert sl.width == 10
+    assert sl.signal is sig
+
+
+def test_bad_slice1():
+    # Test slicing error-cases
+    import hdl21 as h
+
+    with pytest.raises(TypeError):
+        h.Signal(width=11)[None]
+
+    with pytest.raises(ValueError):
+        h.Signal(width=11)[11]
+
+    with pytest.raises(ValueError):
+        h.Signal(width=11)[-1]
+
+    with pytest.raises(ValueError):
+        h.Signal(width=11)[1:1:1]
+
+    with pytest.raises(ValueError):
+        h.Signal(width=11)[1:9]
+
+    with pytest.raises(ValueError):
+        h.Signal(width=11)[:-1]
+
+    with pytest.raises(ValueError):
+        h.Signal(width=11)[-1:]
+
+
+def test_signal_concat1():
+    # Initial Signal concatenation test
+    import hdl21 as h
+
+    c = h.Concat(h.Signal(width=1), h.Signal(width=2), h.Signal(width=3))
+    assert isinstance(c, h.signal.Concat)
+    assert len(c.parts) == 3
+    for p in c.parts:
+        assert isinstance(p, h.signal.Signal)
+    assert c.width == 6
+
+    c = h.Concat(h.Signal(width=1)[0], h.Signal(width=2)[0], h.Signal(width=3)[0])
+    assert isinstance(c, h.signal.Concat)
+    assert len(c.parts) == 3
+    for p in c.parts:
+        assert isinstance(p, h.signal.Slice)
+    assert c.width == 3
+
+    c = h.Concat(
+        h.Concat(h.Signal(), h.Signal()), h.Signal(width=2), h.Signal(width=2)[:]
+    )
+    assert isinstance(c, h.signal.Concat)
+    assert len(c.parts) == 3
+    assert c.width == 6
+
+
+def test_slice_module1():
+    # Make use of slicing and concatenation in a module
+    import hdl21 as h
+
+    C = h.Module(name="C")
+    C.p1 = h.Port(width=1)
+    C.p4 = h.Port(width=4)
+    C.p7 = h.Port(width=7)
+
+    P = h.Module(name="P")
+    C.s4 = h.Signal(width=4)
+    C.s2 = h.Signal(width=2)
+    P.ic = C(p1=C.s4[0], p4=C.s4, p7=h.Concat(C.s4, C.s2, C.s2[0]))
+
+    h.elaborate(P)
+
