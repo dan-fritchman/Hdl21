@@ -585,7 +585,9 @@ def test_proto3():
 
     M2 = h.Module(name="M2")
     M2.s = h.Signal(width=4)
-    M2.i = M1(p1=M2.s[0], p8=h.Concat(M2.s, M2.s))
+    M2.i = M1()
+    M2.i(p1=M2.s[0])
+    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[3:2]))
 
     ppkg = to_proto(M2)
 
@@ -633,8 +635,10 @@ def test_proto3():
     assert inst.conns["p1"].top == 0
     assert inst.conns["p1"].bot == 0
     assert isinstance(inst.conns["p8"], h.signal.Concat)
-    for part in inst.conns["p8"].parts:
-        assert part is ns.M2.s
+    assert len(inst.conns["p8"].parts) == 3
+    assert inst.conns["p8"].parts[0] is ns.M2.s
+    assert isinstance(inst.conns["p8"].parts[1], h.signal.Concat)
+    assert isinstance(inst.conns["p8"].parts[2], h.signal.Slice)
 
 
 def test_proto_roundtrip():

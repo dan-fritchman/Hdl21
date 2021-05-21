@@ -146,13 +146,15 @@ class ProtoExporter:
                 pconn.sig.CopyFrom(psig)
                 pconc.parts.append(pconn)
             elif isinstance(part, signal.Slice):
-                psig = protodefs.Signal(name=part.name, width=part.width)
+                psig = protodefs.Slice(signal=part.signal.name, top=part.top, bot=part.bot)
                 pconn = protodefs.Connection()
-                pconn.sig.CopyFrom(psig)
+                pconn.slice.CopyFrom(psig)
                 pconc.parts.append(pconn)
             elif isinstance(part, signal.Concat):
-                sub_pcon = self.export_concat(part)
-                pconc.parts.append(sub_pcon)
+                sub_pconc = self.export_concat(part)
+                pconn = protodefs.Connection()
+                pconn.concat.CopyFrom(sub_pconc)
+                pconc.parts.append(pconn)
             else:
                 raise TypeError
         return pconc

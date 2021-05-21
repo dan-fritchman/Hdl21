@@ -45,7 +45,9 @@ class ProtoImporter:
     def import_module(self, pmod: protodefs.Module) -> Module:
         """ Convert Proto-Module `pmod` to an `hdl21.Module` """
         if (pmod.name.domain, pmod.name.name) in self.modules:  # Already done!
-            return self.modules[(pmod.name.domain, pmod.name.name)]
+            raise RuntimeError(
+                f"Proto Import Error: Redefined Module {(pmod.name.domain, pmod.name.name)}"
+            )
 
         # Create the Module
         module = Module()
