@@ -10,7 +10,7 @@ from . import circuit_pb2 as protodefs
 from ..elab import elaborate, Elabable
 from ..module import Module
 from ..instance import Instance
-from ..signal import Port, PortDir
+from .. import signal
 
 
 def to_proto(top: Elabable, **kwargs) -> protodefs.Package:
@@ -82,15 +82,15 @@ class ProtoExporter:
         self.pkg.modules.append(pmod)
         return pmod
 
-    def export_port_dir(self, port: Port) -> protodefs.Port.Direction:
+    def export_port_dir(self, port: signal.Port) -> protodefs.Port.Direction:
         # Convert between Port-Direction Enumerations
-        if port.direction == PortDir.INPUT:
+        if port.direction == signal.PortDir.INPUT:
             return protodefs.Port.Direction.INPUT
-        if port.direction == PortDir.OUTPUT:
+        if port.direction == signal.PortDir.OUTPUT:
             return protodefs.Port.Direction.OUTPUT
-        if port.direction == PortDir.INOUT:
+        if port.direction == signal.PortDir.INOUT:
             return protodefs.Port.Direction.INOUT
-        if port.direction == PortDir.NONE:
+        if port.direction == signal.PortDir.NONE:
             return protodefs.Port.Direction.NONE
         raise ValueError
 
@@ -111,10 +111,49 @@ class ProtoExporter:
 
         # Create its connections mapping
         for pname, sig in inst.conns.items():
-            pinst.connections[pname] = sig.name
+            # Create a proto-Connection
+            pconn = protodefs.Connection()
+
+            if isinstance(sig, signal.Signal):
+                pconn.sig.name = sig.name
+                pconn.sig.width = sig.width
+            elif isinstance(sig, signal.Slice):
+                pconn.slice.signal = sig.signal.name
+                pconn.slice.bot = sig.bot
+                pconn.slice.top = sig.top
+            elif isinstance(sig, signal.Concat):
+                pconc = self.export_concat(sig)
+                pconn.concat.CopyFrom(pconc)
+            else:
+                raise TypeError
+            # Assign it into the connections dict.
+            # The proto interface requires copying it along the way
+            pinst.connections[pname].CopyFrom(pconn)
 
         # FIXME: Parameters for Primitives/ External Modules
         # for pname, pval in inst.parameters_they_dont_have_yet:
         #     fail
 
         return pinst
+
+    def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
+        """ Export (potentially recursive) Signal Concatenations """
+        pconc = protodefs.Concat()
+        for part in concat.parts:
+            if isinstance(part, signal.Signal):
+                psig = protodefs.Signal(name=part.name, width=part.width)
+                pconn = protodefs.Connection()
+                pconn.sig.CopyFrom(psig)
+                pconc.parts.append(pconn)
+            elif isinstance(part, signal.Slice):
+                psig = protodefs.Signal(name=part.name, width=part.width)
+                pconn = protodefs.Connection()
+                pconn.sig.CopyFrom(psig)
+                pconc.parts.append(pconn)
+            elif isinstance(part, signal.Concat):
+                sub_pcon = self.export_concat(part)
+                pconc.parts.append(sub_pcon)
+            else:
+                raise TypeError
+        return pconc
+

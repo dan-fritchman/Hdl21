@@ -1,8 +1,8 @@
 """
 hdl21 ProtoBuf Import 
 """
-import copy
 from types import SimpleNamespace
+from typing import Union
 
 # Local imports
 # Proto-definitions
@@ -11,7 +11,7 @@ from . import circuit_pb2 as protodefs
 # HDL
 from ..module import Module
 from ..instance import Instance
-from ..signal import Signal, Port, PortDir
+from ..signal import Signal, Port, PortDir, Slice, Concat
 
 
 def from_proto(pkg: protodefs.Package) -> SimpleNamespace:
@@ -70,22 +70,14 @@ class ProtoImporter:
             inst = self.import_instance(pinst)
             module.add(inst)
 
-            # Make its connections
-            for pname, sname in pinst.connections.items():
+            # Make the instance's connections
+            for pname, pconn in pinst.connections.items():
                 if pname not in inst.module.ports:
                     raise RuntimeError(
                         f"Invalid Port {pname} on Instance {inst.name} of Module {inst.module.name} in Module {module.name}"
                     )
-                # Grab this Signal, if it exists
-                sig = module.namespace.get(sname, None)
-                if sig is None:
-                    # This block has held, at some points in code-history,
-                    # the SPICE-style "create nets from thin air" behavior.
-                    # That's outta here; undeclared signals produce errors instead.
-                    raise RuntimeError(
-                        f"Invalid Signal {sname} on Instance {inst.name} in Module {module.name}"
-                    )
-
+                # Import the Signal-object
+                sig = self.import_connection(pconn, module)
                 # And connect it to the Instance
                 setattr(inst, pname, sig)
 
@@ -93,6 +85,42 @@ class ProtoImporter:
         self.modules[(pmod.name.domain, pmod.name.name)] = module
         setattr(self.ns, module.name, module)
         return module
+
+    def import_connection(
+        self, pconn: protodefs.Connection, module: Module
+    ) -> Union[Signal, Slice, Concat]:
+        """ Import a Proto-defined `Connection` into a Signal, Slice, or Concatenation """
+        # Connections are a proto `oneof` union; figure out which to import
+        stype = pconn.WhichOneof("stype")
+        # Concatenations are more complicated and need their own method
+        if stype == "concat":
+            return self.import_concat(pconn.concat, module)
+        # For signals & slices, first sort out the signal-name, so we can grab the object from `module.namespace`
+        if stype == "sig":
+            sname = pconn.sig.name
+        elif stype == "slice":
+            sname = pconn.slice.signal
+        else:
+            raise ValueError(f"Invalid Connection Type: {pconn}")
+        # Grab this Signal, if it exists
+        sig = module.namespace.get(sname, None)
+        if sig is None:
+            # This block has held, at some points in code-history,
+            # the SPICE-style "create nets from thin air" behavior.
+            # That's outta here; undeclared signals produce errors instead.
+            raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
+        # Now chop this up if it's a Slice
+        if stype == "slice":
+            sig = Slice(signal=sig, top=pconn.slice.top, bot=pconn.slice.bot)
+        return sig
+
+    def import_concat(self, pconc: protodefs.Concat, module: Module) -> Concat:
+        """ Import a (potentially nested) Concatenation """
+        parts = []
+        for ppart in pconc.parts:
+            part = self.import_connection(ppart, module)
+            parts.append(part)
+        return Concat(*parts)
 
     def import_instance(self, pinst: protodefs.Instance) -> Instance:
         """ Convert Proto-Instance `pinst` to an `hdl21.Instance`. 

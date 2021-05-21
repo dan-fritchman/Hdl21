@@ -1,5 +1,6 @@
 import pytest
 import hdl21 as h
+from types import SimpleNamespace
 
 
 def test_version():
@@ -573,9 +574,71 @@ def test_proto2():
     assert len(pm.default_parameters) == 0
 
 
+def test_proto3():
+    # Proto-export test with some slicing and concatenation
+    import hdl21 as h
+    from hdl21.proto import to_proto
+
+    M1 = h.Module(name="M1")
+    M1.p8 = h.Inout(width=8)
+    M1.p1 = h.Inout(width=1)
+
+    M2 = h.Module(name="M2")
+    M2.s = h.Signal(width=4)
+    M2.i = M1(p1=M2.s[0], p8=h.Concat(M2.s, M2.s))
+
+    ppkg = to_proto(M2)
+
+    assert isinstance(ppkg, h.proto.Package)
+    assert len(ppkg.modules) == 2
+
+    # Check the chil module
+    pm = ppkg.modules[0]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "M1"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 2
+    assert len(pm.signals) == 0
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+    # And check the parent module
+    pm = ppkg.modules[1]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "M2"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 0
+    assert len(pm.signals) == 1
+    assert len(pm.instances) == 1
+    assert len(pm.default_parameters) == 0
+
+    ns = h.from_proto(ppkg)
+
+    assert isinstance(ns, SimpleNamespace)
+
+    assert isinstance(ns.M1, h.Module)
+    assert len(ns.M1.ports) == 2
+    assert len(ns.M1.signals) == 0
+    assert len(ns.M1.instances) == 0
+
+    assert isinstance(ns.M2, h.Module)
+    assert len(ns.M2.ports) == 0
+    assert len(ns.M2.signals) == 1
+    assert len(ns.M2.instances) == 1
+    assert "s" in ns.M2.signals
+    assert "i" in ns.M2.instances
+    inst = ns.M2.i
+    assert isinstance(inst.conns["p1"], h.signal.Slice)
+    assert inst.conns["p1"].signal is ns.M2.s
+    assert inst.conns["p1"].top == 0
+    assert inst.conns["p1"].bot == 0
+    assert isinstance(inst.conns["p8"], h.signal.Concat)
+    for part in inst.conns["p8"].parts:
+        assert part is ns.M2.s
+
+
 def test_proto_roundtrip():
     import hdl21 as h
-    from types import SimpleNamespace
 
     # Create an empty (named) Module
     M1 = h.Module(name="M1")
