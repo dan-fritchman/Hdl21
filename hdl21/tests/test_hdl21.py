@@ -1,6 +1,9 @@
 import pytest
-import hdl21 as h
 from types import SimpleNamespace
+from enum import Enum, auto
+
+# Import the PUT (package under test)
+import hdl21 as h
 
 
 def test_version():
@@ -122,33 +125,31 @@ def test_generator3():
 
 
 def test_params1():
-    from hdl21 import paramclass, Param, isparamclass
+    # Initial param-class test
 
-    @paramclass
+    @h.paramclass
     class MyParams:
-        a = Param(dtype=int, default=5, desc="your fave")
+        a = h.Param(dtype=int, default=5, desc="your fave")
 
-    assert isparamclass(MyParams)
+    assert h.isparamclass(MyParams)
 
     m = MyParams()
     assert isinstance(m.a, int)
     assert m.a == 5
-    assert isinstance(m.__params__["a"], Param)
+    assert isinstance(m.__params__["a"], h.Param)
     assert m.defaults() == dict(a=5)
     assert m.descriptions() == dict(a="your fave")
 
 
 def test_params2():
-    from hdl21 import paramclass, Param, isparamclass
-
-    @paramclass
+    @h.paramclass
     class Pc2:
         # Required
-        r = Param(dtype=str, desc="required")
+        r = h.Param(dtype=str, desc="required")
         # Optional
-        o = Param(dtype=str, default="hmmm", desc="optional")
+        o = h.Param(dtype=str, default="hmmm", desc="optional")
 
-    assert isparamclass(Pc2)
+    assert h.isparamclass(Pc2)
     assert Pc2.defaults() == dict(o="hmmm")
     assert Pc2.descriptions() == dict(r="required", o="optional")
 
@@ -162,21 +163,18 @@ def test_params2():
 
 
 def test_params3():
-    # Test some list-tuple conversion
-    import hdl21 as h
-
+    # Test parameters with a creation-time list-tuple conversion
     @h.paramclass
     class HasTuple:
         t = h.Param(dtype=tuple, desc="Go ahead, try a list")
 
-    h = HasTuple(t=[1, 2, 3])
-    assert isinstance(h.t, tuple)
-    assert h.t == (1, 2, 3)
+    ht = HasTuple(t=[1, 2, 3])
+    assert isinstance(ht.t, tuple)
+    assert ht.t == (1, 2, 3)
 
 
 def test_params4():
     # Test some param-class nesting
-    import hdl21 as h
 
     @h.paramclass
     class Inner:
@@ -317,8 +315,6 @@ def test_cycle1():
 
 
 def test_gen3():
-    import hdl21 as h
-
     @h.paramclass
     class MyParams:
         w = h.Param(dtype=int, desc="Input bit-width. Required")
@@ -379,12 +375,61 @@ def test_prim2():
         s = h.Short(h.Short.Params())(p=p, n=n)
 
     h.elaborate(HasPrims)
+    # FIXME: post-elab checks
+
+
+def test_prim_proto1():
+    # Test round-tripping primitives through proto
+    class HasPrims(h.Module):
+        p = h.Signal()
+        n = h.Signal()
+
+        # Wire up a bunch of two-terminal primitives in parallel
+        _rp = h.R.Params(r=50)
+        r = h.Resistor(_rp)(p=p, n=n)
+        _cp = h.C.Params(c=1e-12)
+        c = h.Capacitor(_cp)(p=p, n=n)
+        _lp = h.L.Params(l=1e-15)
+        l = h.Inductor(_lp)(p=p, n=n)
+        _dp = h.D.Params()
+        d = h.Diode(_dp)(p=p, n=n)
+        _sp = h.Short.Params()
+        s = h.Short(_sp)(p=p, n=n)
+
+    ppkg = h.to_proto(HasPrims)
+
+    assert isinstance(ppkg, h.proto.Package)
+    assert len(ppkg.modules) == 1
+
+    # Check the proto-Module
+    pm = ppkg.modules[0]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "HasPrims"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 0
+    assert len(pm.signals) == 2
+    assert len(pm.instances) == 5
+    assert len(pm.default_parameters) == 0
+    for inst in pm.instances:
+        assert isinstance(inst, h.proto.Instance)
+        assert inst.module.WhichOneof("to") == "qn"
+        assert inst.module.qn.domain == "hdl21.primitives"
+
+    ns = h.from_proto(ppkg)
+
+    assert isinstance(ns, SimpleNamespace)
+    assert hasattr(ns, "HasPrims")
+    HasPrims = ns.HasPrims
+    assert isinstance(HasPrims, h.Module)
+    assert len(HasPrims.ports) == 0
+    assert len(HasPrims.signals) == 2
+    assert len(HasPrims.instances) == 5
+    for inst in HasPrims.instances.values():
+        assert isinstance(inst._resolved, h.primitives.PrimitiveCall)
 
 
 def test_intf1():
     # Create an interface
-
-    import hdl21 as h
 
     i1 = h.Interface(name="MyFirstInterface")
     i1.s1 = h.Signal()
@@ -402,7 +447,6 @@ def test_intf1():
 
 def test_intf2():
     # Wire up a few Modules via interfaces
-    import hdl21 as h
 
     MySecondInterface = h.Interface(name="MySecondInterface")
 
@@ -426,8 +470,6 @@ def test_intf2():
 
 def test_inft3():
     # Test the interface-definition decorator
-
-    import hdl21 as h
 
     @h.interface
     class Diff:  # Differential Signal Interface
@@ -453,7 +495,7 @@ def test_inft3():
 
 def test_intf4():
     # Test interface roles
-    import hdl21 as h
+
     from enum import Enum, EnumMeta, auto
 
     @h.interface
@@ -509,11 +551,9 @@ def test_intf4():
 
 def test_proto1():
     # First Proto-export test
-    import hdl21 as h
-    from hdl21.proto import to_proto
 
     m = h.Module(name="TestProto1")
-    ppkg = to_proto(m)
+    ppkg = h.to_proto(m)
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 1
     pm = ppkg.modules[0]
@@ -527,8 +567,6 @@ def test_proto1():
 
 def test_proto2():
     # Proto-export test with some hierarchy
-    import hdl21 as h
-    from hdl21.proto import to_proto
 
     Child1 = h.Module(name="Child1")
     Child1.inp = h.Input(width=8)
@@ -541,7 +579,7 @@ def test_proto2():
     TestProto2.c2 = Child2()
     TestProto2.c2(inp=TestProto2.c1.out, out=TestProto2.c1.inp)
 
-    ppkg = to_proto(TestProto2)
+    ppkg = h.to_proto(TestProto2)
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 3
@@ -552,6 +590,7 @@ def test_proto2():
     assert pm.name.name == "Child1"
     assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
     assert len(pm.ports) == 2
+    assert len(pm.signals) == 0
     assert len(pm.instances) == 0
     assert len(pm.default_parameters) == 0
 
@@ -561,6 +600,7 @@ def test_proto2():
     assert pm.name.name == "Child2"
     assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
     assert len(pm.ports) == 2
+    assert len(pm.signals) == 0
     assert len(pm.instances) == 0
     assert len(pm.default_parameters) == 0
 
@@ -576,8 +616,6 @@ def test_proto2():
 
 def test_proto3():
     # Proto-export test with some slicing and concatenation
-    import hdl21 as h
-    from hdl21.proto import to_proto
 
     M1 = h.Module(name="M1")
     M1.p8 = h.Inout(width=8)
@@ -589,7 +627,7 @@ def test_proto3():
     M2.i(p1=M2.s[0])
     M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[3:2]))
 
-    ppkg = to_proto(M2)
+    ppkg = h.to_proto(M2)
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 2
@@ -642,7 +680,7 @@ def test_proto3():
 
 
 def test_proto_roundtrip():
-    import hdl21 as h
+    # Test protobuf round-tripping
 
     # Create an empty (named) Module
     M1 = h.Module(name="M1")
@@ -659,8 +697,6 @@ def test_proto_roundtrip():
 
 
 def test_proto_roundtrip2():
-    import hdl21 as h
-    from types import SimpleNamespace
 
     # Create a child/leaf Module
     M1 = h.Module(name="M1")
@@ -707,7 +743,7 @@ def test_proto_roundtrip2():
 
     assert len(ns.M2.instances) == 3
     for i in ns.M2.instances.values():
-        assert i.module is ns.M1
+        assert i.of is ns.M1
         assert i.conns["p"] is ns.M2.p
     assert len(ns.M2.ports) == 3
     assert len(ns.M2.signals) == 2
@@ -716,8 +752,7 @@ def test_proto_roundtrip2():
 
 
 def test_bigger_interfaces():
-    import hdl21 as h
-    from enum import Enum, auto
+    # Test a slightly more elaborate Interface-based system
 
     class MsRoles(Enum):
         MS = auto()
@@ -769,7 +804,6 @@ def test_bigger_interfaces():
 
 def test_signal_slice1():
     # Initial test of signal slicing
-    import hdl21 as h
 
     sig = h.Signal(width=10)
     sl = sig[0]
@@ -796,7 +830,6 @@ def test_signal_slice1():
 
 def test_bad_slice1():
     # Test slicing error-cases
-    import hdl21 as h
 
     with pytest.raises(TypeError):
         h.Signal(width=11)[None]
@@ -822,7 +855,6 @@ def test_bad_slice1():
 
 def test_signal_concat1():
     # Initial Signal concatenation test
-    import hdl21 as h
 
     c = h.Concat(h.Signal(width=1), h.Signal(width=2), h.Signal(width=3))
     assert isinstance(c, h.signal.Concat)
@@ -848,7 +880,6 @@ def test_signal_concat1():
 
 def test_slice_module1():
     # Make use of slicing and concatenation in a module
-    import hdl21 as h
 
     C = h.Module(name="C")
     C.p1 = h.Port(width=1)

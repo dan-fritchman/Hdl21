@@ -1,3 +1,10 @@
+"""
+# hdl21 Elaboration 
+
+Defines the primary `elaborate` method used to flesh out an in-memory `Module` or `Generator`. 
+Internally defines and uses a number of hierarchical visitor-classes which traverse the hardware hierarchy, 
+performing one or more transformation-passes.  
+"""
 import copy
 from enum import Enum, auto
 from typing import Callable, Union, Any, Optional, Dict
@@ -7,6 +14,7 @@ from pydantic import ValidationError
 # Local imports
 from .module import Module
 from .instance import Instance
+from .primitives import PrimitiveCall
 from .interface import Interface, InterfaceInstance
 from .signal import Port, PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
@@ -29,6 +37,7 @@ class GeneratorElaborator:
         self.ctx = ctx
         self.calls = dict()  # GeneratorCall ids to references
         self.modules = dict()  # Module ids to references
+        self.primitive_calls = dict()  # PrimitiveCall ids to references
 
     def elaborate(self):
         """ Elaborate our top node """
@@ -59,7 +68,7 @@ class GeneratorElaborator:
         # Ultimately they've gotta resolve to Modules, or they fail.
         if not isinstance(m, Module):
             raise TypeError(
-                f"Generator {self.func.__name__} returned {type(m)}, must return Module."
+                f"Generator {call.gen.func.__name__} returned {type(m)}, must return Module."
             )
 
         # Give the GeneratorCall a reference to its result, and store it in our local dict
@@ -94,6 +103,13 @@ class GeneratorElaborator:
         self.modules[id(module)] = module
         return module
 
+    def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
+        """ Elaborate PrimitiveCall `call` """
+        # Store a reference in our cache, and return it as-is
+        if id(call) not in self.primitive_calls:
+            self.primitive_calls[id(call)] = call
+        return call
+
     def elaborate_interface_instance(self, inst: InterfaceInstance) -> None:
         """ Annotate each InterfaceInstance so that its pre-elaboration `PortRef` magic is disabled. """
         inst._elaborated = True
@@ -110,6 +126,8 @@ class GeneratorElaborator:
             return self.elaborate_generator_call(call=inst.of)
         if isinstance(inst.of, Module):
             return self.elaborate_module(inst.of)
+        if isinstance(inst.of, PrimitiveCall):
+            return self.elaborate_primitive_call(inst.of)
         raise TypeError(f"Invalid Instance of {inst.of}")
 
 
@@ -129,11 +147,19 @@ class ImplicitConnectionElaborator:
             raise TypeError
         return self.elaborate_module(self.top)
 
-    def elaborate_instance(self, inst: Instance) -> Module:
+    def elaborate_instance(self, inst: Instance) -> Union[Module, PrimitiveCall]:
         """ Elaborate a Module Instance. """
-        if not inst.module:
-            raise RuntimeError(f"Error elaborating non-Module Instance {inst}")
-        return self.elaborate_module(inst.module)
+        if not inst._resolved:
+            raise RuntimeError(f"Error elaborating undefined Instance {inst}")
+        if isinstance(inst._resolved, Module):
+            return self.elaborate_module(inst._resolved)
+        if isinstance(inst._resolved, PrimitiveCall):
+            return self.elaborate_primitive_call(inst._resolved)
+        raise TypeError
+
+    def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
+        # Nothing to see here, carry on
+        return call
 
     def elaborate_module(self, module: Module) -> Module:
         """ Elaborate Module `module`. First depth-first elaborates its Instances, 
@@ -201,7 +227,7 @@ class ImplicitConnectionElaborator:
 
                 # Create the Signal, looking up all its properties from the last Instance's Module
                 # (If other instances are inconsistent, later stages will flag them)
-                lastmod = portref.inst.module
+                lastmod = portref.inst._resolved
                 sig = lastmod.ports.get(portref.portname, None)
                 if sig is not None:  # Clone it, and remove any Port-attributes
                     sig = copy.copy(sig)
@@ -338,11 +364,19 @@ class InterfaceFlattener:
         self.results[id(intf)] = flat
         return flat
 
-    def elaborate_instance(self, inst: Instance) -> Module:
+    def elaborate_instance(self, inst: Instance) -> Union[Module, PrimitiveCall]:
         """ Elaborate a Module Instance. """
-        if not inst.module:
-            raise RuntimeError(f"Error elaborating non-Module Instance {inst}")
-        return self.elaborate_module(inst.module)
+        if not inst._resolved:
+            raise RuntimeError(f"Error elaborating undefined Instance {inst}")
+        if isinstance(inst._resolved, Module):
+            return self.elaborate_module(inst._resolved)
+        if isinstance(inst._resolved, PrimitiveCall):
+            return self.elaborate_primitive_call(inst._resolved)
+        raise TypeError
+
+    def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
+        # Nothing to see here, carry on
+        return call
 
 
 class ElabPasses(Enum):

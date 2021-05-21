@@ -2,7 +2,7 @@
 hdl21 ProtoBuf Import 
 """
 from types import SimpleNamespace
-from typing import Union
+from typing import Union, Any
 
 # Local imports
 # Proto-definitions
@@ -12,6 +12,8 @@ from . import circuit_pb2 as protodefs
 from ..module import Module
 from ..instance import Instance
 from ..signal import Signal, Port, PortDir, Slice, Concat
+from .. import primitives
+from ..primitives import Primitive
 
 
 def from_proto(pkg: protodefs.Package) -> SimpleNamespace:
@@ -44,7 +46,7 @@ class ProtoImporter:
 
     def import_module(self, pmod: protodefs.Module) -> Module:
         """ Convert Proto-Module `pmod` to an `hdl21.Module` """
-        if (pmod.name.domain, pmod.name.name) in self.modules:  # Already done!
+        if (pmod.name.domain, pmod.name.name) in self.modules:
             raise RuntimeError(
                 f"Proto Import Error: Redefined Module {(pmod.name.domain, pmod.name.name)}"
             )
@@ -74,9 +76,9 @@ class ProtoImporter:
 
             # Make the instance's connections
             for pname, pconn in pinst.connections.items():
-                if pname not in inst.module.ports:
+                if pname not in inst._resolved.ports:
                     raise RuntimeError(
-                        f"Invalid Port {pname} on Instance {inst.name} of Module {inst.module.name} in Module {module.name}"
+                        f"Invalid Port {pname} on {inst} in Module {module.name}"
                     )
                 # Import the Signal-object
                 sig = self.import_connection(pconn, module)
@@ -129,26 +131,51 @@ class ProtoImporter:
         Requires an available Module-definition to be referenced. 
         Connections are *not* performed inside this method. """
 
-        module = self.import_module_reference(pinst.module)
-        return Instance(name=pinst.name, of=module)
-
-    def import_module_reference(self, ref: protodefs.Reference) -> Module:
-        """ Resolve a Proto-defined `Reference` to an in-memory `Module`. 
-        Requires that `pinst.module` be defined by the time this is called. 
-        Typically this requires dependency-ordering of the Module definitions.
-        """
-
         # Also a small piece of proof that Google hates Python.
-        if ref.WhichOneof("to") != "qn":  # Only `QualifiedName` as valid and supported
+        ref = pinst.module
+        if ref.WhichOneof("to") != "qn":  # Only `QualifiedName` is valid and supported
             raise ValueError(f"Invalid reference {ref}")
-        if ref.qn.domain != "THIS_LIBRARYS_FLAT_NAMESPACE":
-            raise ValueError(f"Invalid reference {ref}; qualified names coming soon")
 
-        key = (ref.qn.domain, ref.qn.name)
-        module = self.modules.get(key, None)
-        if module is None:
-            raise RuntimeError(f"Invalid undefined Module {key} ")
-        return module
+        if ref.qn.domain == "hdl21.primitives":
+            # Retrieve the Primitive from `hdl21.primitives`
+            prim = getattr(primitives, ref.qn.name, None)
+            if not isinstance(prim, Primitive):
+                raise RuntimeError(
+                    f"Attempt to import invalid `hdl21.primitive` {ref.qn.name}"
+                )
+
+            # Import all of its instance parameters
+            pdict = {}
+            for pname, pparam in pinst.parameters.items():
+                pdict[pname] = self.import_parameter(pparam)
+            params = prim.Params(**pdict)
+
+            # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
+            target = prim(params)
+        elif ref.qn.domain == "THIS_LIBRARYS_FLAT_NAMESPACE":  # FIXME!
+            key = (ref.qn.domain, ref.qn.name)
+            module = self.modules.get(key, None)
+            if module is None:
+                raise RuntimeError(f"Invalid undefined Module {key} ")
+            if len(pinst.parameters):
+                raise RuntimeError(
+                    f"Invalid Instance {pinst} with of Module {module} - does not accept Parameters"
+                )
+            target = module
+        else:
+            raise ValueError(f"Undefined Module Domain {ref.qn.domain}")
+
+        return Instance(name=pinst.name, of=target)
+
+    def import_parameter(self, pparam: protodefs.Parameter) -> Any:
+        ptype = pparam.WhichOneof("value")
+        if ptype == "integer":
+            return int(pparam.integer)
+        if ptype == "double":
+            return float(pparam.double)
+        if ptype == "string":
+            return str(pparam.string)
+        raise ValueError
 
     def import_port_dir(self, pport: protodefs.Port) -> PortDir:
         # Convert between Port-Direction Enumerations

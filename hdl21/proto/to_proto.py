@@ -1,6 +1,7 @@
 """
 hdl21 ProtoBuf Export
 """
+from dataclasses import asdict
 
 # Local imports
 # Proto-definitions
@@ -9,6 +10,7 @@ from . import circuit_pb2 as protodefs
 # HDL
 from ..elab import elaborate, Elabable
 from ..module import Module
+from ..primitives import Primitive, PrimitiveCall
 from ..instance import Instance
 from .. import signal
 
@@ -70,7 +72,7 @@ class ProtoExporter:
 
         # Create each Proto-Instance
         for inst in module.instances.values():
-            if not inst.module:
+            if not inst._resolved:
                 raise RuntimeError(
                     f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
                 )
@@ -99,15 +101,35 @@ class ProtoExporter:
         Depth-first retrieves a Module definition first, 
         using its generated `name` field as the Instance's `module` pointer. """
 
-        # First depth-first seek out our definition,
-        # Retrieving the data we need to make a `Reference` to it
-        pmod = self.export_module(inst.module)
-
         # Create the Proto-Instance
         pinst = protodefs.Instance(name=inst.name)
-        # Give it a Reference to its Module
-        pinst.module.qn.domain = pmod.name.domain
-        pinst.module.qn.name = pmod.name.name
+
+        # First depth-first seek out our definition,
+        # Retrieving the data we need to make a `Reference` to it
+        if isinstance(inst._resolved, Module):
+            pmod = self.export_module(inst._resolved)
+            # Give it a Reference to its Module
+            pinst.module.qn.CopyFrom(pmod.name)
+        elif isinstance(inst._resolved, PrimitiveCall):
+            call = inst._resolved
+            prim = call.prim
+            # Create a reference to the `hdl21.primitives` namespace
+            pinst.module.qn.domain = "hdl21.primitives"
+            pinst.module.qn.name = prim.name
+            # Set the parameter-values
+            for key, val in asdict(call.params).items():
+                if isinstance(val, type(None)):
+                    continue  # None-valued parameters go un-set
+                elif isinstance(val, int):
+                    pinst.parameters[key].integer = val
+                elif isinstance(val, float):
+                    pinst.parameters[key].double = val
+                elif isinstance(val, str):
+                    pinst.parameters[key].string = val
+                else:
+                    raise TypeError(f"Invalid instance parameter {val} for {inst}")
+        else:
+            raise TypeError
 
         # Create its connections mapping
         for pname, sig in inst.conns.items():
@@ -130,10 +152,6 @@ class ProtoExporter:
             # The proto interface requires copying it along the way
             pinst.connections[pname].CopyFrom(pconn)
 
-        # FIXME: Parameters for Primitives/ External Modules
-        # for pname, pval in inst.parameters_they_dont_have_yet:
-        #     fail
-
         return pinst
 
     def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
@@ -146,7 +164,9 @@ class ProtoExporter:
                 pconn.sig.CopyFrom(psig)
                 pconc.parts.append(pconn)
             elif isinstance(part, signal.Slice):
-                psig = protodefs.Slice(signal=part.signal.name, top=part.top, bot=part.bot)
+                psig = protodefs.Slice(
+                    signal=part.signal.name, top=part.top, bot=part.bot
+                )
                 pconn = protodefs.Connection()
                 pconn.slice.CopyFrom(psig)
                 pconc.parts.append(pconn)
