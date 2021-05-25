@@ -57,7 +57,7 @@ def connects(cls: type) -> type:
             conns = self.__getattribute__("conns")
             if key in conns.keys():
                 return conns[key]
-            raise AttributeError
+            raise AttributeError(f"No attribute {key} for {self}")
 
         from .instance import PortRef
         from .module import Module

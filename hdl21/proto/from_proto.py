@@ -1,8 +1,8 @@
 """
 hdl21 ProtoBuf Import 
 """
-import copy
 from types import SimpleNamespace
+from typing import Union, Any
 
 # Local imports
 # Proto-definitions
@@ -11,7 +11,9 @@ from . import circuit_pb2 as protodefs
 # HDL
 from ..module import Module
 from ..instance import Instance
-from ..signal import Signal, Port, PortDir
+from ..signal import Signal, Port, PortDir, Slice, Concat
+from .. import primitives
+from ..primitives import Primitive
 
 
 def from_proto(pkg: protodefs.Package) -> SimpleNamespace:
@@ -44,8 +46,10 @@ class ProtoImporter:
 
     def import_module(self, pmod: protodefs.Module) -> Module:
         """ Convert Proto-Module `pmod` to an `hdl21.Module` """
-        if (pmod.name.domain, pmod.name.name) in self.modules:  # Already done!
-            return self.modules[(pmod.name.domain, pmod.name.name)]
+        if (pmod.name.domain, pmod.name.name) in self.modules:
+            raise RuntimeError(
+                f"Proto Import Error: Redefined Module {(pmod.name.domain, pmod.name.name)}"
+            )
 
         # Create the Module
         module = Module()
@@ -70,22 +74,14 @@ class ProtoImporter:
             inst = self.import_instance(pinst)
             module.add(inst)
 
-            # Make its connections
-            for pname, sname in pinst.connections.items():
-                if pname not in inst.module.ports:
+            # Make the instance's connections
+            for pname, pconn in pinst.connections.items():
+                if pname not in inst._resolved.ports:
                     raise RuntimeError(
-                        f"Invalid Port {pname} on Instance {inst.name} of Module {inst.module.name} in Module {module.name}"
+                        f"Invalid Port {pname} on {inst} in Module {module.name}"
                     )
-                # Grab this Signal, if it exists
-                sig = module.namespace.get(sname, None)
-                if sig is None:
-                    # This block has held, at some points in code-history,
-                    # the SPICE-style "create nets from thin air" behavior.
-                    # That's outta here; undeclared signals produce errors instead.
-                    raise RuntimeError(
-                        f"Invalid Signal {sname} on Instance {inst.name} in Module {module.name}"
-                    )
-
+                # Import the Signal-object
+                sig = self.import_connection(pconn, module)
                 # And connect it to the Instance
                 setattr(inst, pname, sig)
 
@@ -94,31 +90,92 @@ class ProtoImporter:
         setattr(self.ns, module.name, module)
         return module
 
+    def import_connection(
+        self, pconn: protodefs.Connection, module: Module
+    ) -> Union[Signal, Slice, Concat]:
+        """ Import a Proto-defined `Connection` into a Signal, Slice, or Concatenation """
+        # Connections are a proto `oneof` union; figure out which to import
+        stype = pconn.WhichOneof("stype")
+        # Concatenations are more complicated and need their own method
+        if stype == "concat":
+            return self.import_concat(pconn.concat, module)
+        # For signals & slices, first sort out the signal-name, so we can grab the object from `module.namespace`
+        if stype == "sig":
+            sname = pconn.sig.name
+        elif stype == "slice":
+            sname = pconn.slice.signal
+        else:
+            raise ValueError(f"Invalid Connection Type: {pconn}")
+        # Grab this Signal, if it exists
+        sig = module.namespace.get(sname, None)
+        if sig is None:
+            # This block has held, at some points in code-history,
+            # the SPICE-style "create nets from thin air" behavior.
+            # That's outta here; undeclared signals produce errors instead.
+            raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
+        # Now chop this up if it's a Slice
+        if stype == "slice":
+            sig = Slice(signal=sig, top=pconn.slice.top, bot=pconn.slice.bot)
+        return sig
+
+    def import_concat(self, pconc: protodefs.Concat, module: Module) -> Concat:
+        """ Import a (potentially nested) Concatenation """
+        parts = []
+        for ppart in pconc.parts:
+            part = self.import_connection(ppart, module)
+            parts.append(part)
+        return Concat(*parts)
+
     def import_instance(self, pinst: protodefs.Instance) -> Instance:
         """ Convert Proto-Instance `pinst` to an `hdl21.Instance`. 
         Requires an available Module-definition to be referenced. 
         Connections are *not* performed inside this method. """
 
-        module = self.import_module_reference(pinst.module)
-        return Instance(name=pinst.name, of=module)
-
-    def import_module_reference(self, ref: protodefs.Reference) -> Module:
-        """ Resolve a Proto-defined `Reference` to an in-memory `Module`. 
-        Requires that `pinst.module` be defined by the time this is called. 
-        Typically this requires dependency-ordering of the Module definitions.
-        """
-
         # Also a small piece of proof that Google hates Python.
-        if ref.WhichOneof("to") != "qn":  # Only `QualifiedName` as valid and supported
+        ref = pinst.module
+        if ref.WhichOneof("to") != "qn":  # Only `QualifiedName` is valid and supported
             raise ValueError(f"Invalid reference {ref}")
-        if ref.qn.domain != "THIS_LIBRARYS_FLAT_NAMESPACE":
-            raise ValueError(f"Invalid reference {ref}; qualified names coming soon")
 
-        key = (ref.qn.domain, ref.qn.name)
-        module = self.modules.get(key, None)
-        if module is None:
-            raise RuntimeError(f"Invalid undefined Module {key} ")
-        return module
+        if ref.qn.domain == "hdl21.primitives":
+            # Retrieve the Primitive from `hdl21.primitives`
+            prim = getattr(primitives, ref.qn.name, None)
+            if not isinstance(prim, Primitive):
+                raise RuntimeError(
+                    f"Attempt to import invalid `hdl21.primitive` {ref.qn.name}"
+                )
+
+            # Import all of its instance parameters
+            pdict = {}
+            for pname, pparam in pinst.parameters.items():
+                pdict[pname] = self.import_parameter(pparam)
+            params = prim.Params(**pdict)
+
+            # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
+            target = prim(params)
+        elif ref.qn.domain == "THIS_LIBRARYS_FLAT_NAMESPACE":  # FIXME!
+            key = (ref.qn.domain, ref.qn.name)
+            module = self.modules.get(key, None)
+            if module is None:
+                raise RuntimeError(f"Invalid undefined Module {key} ")
+            if len(pinst.parameters):
+                raise RuntimeError(
+                    f"Invalid Instance {pinst} with of Module {module} - does not accept Parameters"
+                )
+            target = module
+        else:
+            raise ValueError(f"Undefined Module Domain {ref.qn.domain}")
+
+        return Instance(name=pinst.name, of=target)
+
+    def import_parameter(self, pparam: protodefs.Parameter) -> Any:
+        ptype = pparam.WhichOneof("value")
+        if ptype == "integer":
+            return int(pparam.integer)
+        if ptype == "double":
+            return float(pparam.double)
+        if ptype == "string":
+            return str(pparam.string)
+        raise ValueError
 
     def import_port_dir(self, pport: protodefs.Port) -> PortDir:
         # Convert between Port-Direction Enumerations

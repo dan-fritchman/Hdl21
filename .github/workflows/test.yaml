@@ -28,4 +28,13 @@ jobs:
         poetry install 
     - name: Test with pytest
       run: |
-        poetry run pytest -s 
+        poetry run pytest -sv --cov=./ --cov-report=xml
+    - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
+      uses: codecov/codecov-action@v1
+      with:
+        files: ./coverage.xml 
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true

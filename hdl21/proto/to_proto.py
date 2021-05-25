@@ -1,6 +1,7 @@
 """
 hdl21 ProtoBuf Export
 """
+from dataclasses import asdict
 
 # Local imports
 # Proto-definitions
@@ -9,8 +10,9 @@ from . import circuit_pb2 as protodefs
 # HDL
 from ..elab import elaborate, Elabable
 from ..module import Module
+from ..primitives import Primitive, PrimitiveCall
 from ..instance import Instance
-from ..signal import Port, PortDir
+from .. import signal
 
 
 def to_proto(top: Elabable, **kwargs) -> protodefs.Package:
@@ -70,7 +72,7 @@ class ProtoExporter:
 
         # Create each Proto-Instance
         for inst in module.instances.values():
-            if not inst.module:
+            if not inst._resolved:
                 raise RuntimeError(
                     f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
                 )
@@ -82,15 +84,15 @@ class ProtoExporter:
         self.pkg.modules.append(pmod)
         return pmod
 
-    def export_port_dir(self, port: Port) -> protodefs.Port.Direction:
+    def export_port_dir(self, port: signal.Port) -> protodefs.Port.Direction:
         # Convert between Port-Direction Enumerations
-        if port.direction == PortDir.INPUT:
+        if port.direction == signal.PortDir.INPUT:
             return protodefs.Port.Direction.INPUT
-        if port.direction == PortDir.OUTPUT:
+        if port.direction == signal.PortDir.OUTPUT:
             return protodefs.Port.Direction.OUTPUT
-        if port.direction == PortDir.INOUT:
+        if port.direction == signal.PortDir.INOUT:
             return protodefs.Port.Direction.INOUT
-        if port.direction == PortDir.NONE:
+        if port.direction == signal.PortDir.NONE:
             return protodefs.Port.Direction.NONE
         raise ValueError
 
@@ -99,22 +101,81 @@ class ProtoExporter:
         Depth-first retrieves a Module definition first, 
         using its generated `name` field as the Instance's `module` pointer. """
 
-        # First depth-first seek out our definition,
-        # Retrieving the data we need to make a `Reference` to it
-        pmod = self.export_module(inst.module)
-
         # Create the Proto-Instance
         pinst = protodefs.Instance(name=inst.name)
-        # Give it a Reference to its Module
-        pinst.module.qn.domain = pmod.name.domain
-        pinst.module.qn.name = pmod.name.name
+
+        # First depth-first seek out our definition,
+        # Retrieving the data we need to make a `Reference` to it
+        if isinstance(inst._resolved, Module):
+            pmod = self.export_module(inst._resolved)
+            # Give it a Reference to its Module
+            pinst.module.qn.CopyFrom(pmod.name)
+        elif isinstance(inst._resolved, PrimitiveCall):
+            call = inst._resolved
+            prim = call.prim
+            # Create a reference to the `hdl21.primitives` namespace
+            pinst.module.qn.domain = "hdl21.primitives" # FIXME: any more of these domains to be created
+            pinst.module.qn.name = prim.name
+            # Set the parameter-values
+            for key, val in asdict(call.params).items():
+                if isinstance(val, type(None)):
+                    continue  # None-valued parameters go un-set
+                elif isinstance(val, int):
+                    pinst.parameters[key].integer = val
+                elif isinstance(val, float):
+                    pinst.parameters[key].double = val
+                elif isinstance(val, str):
+                    pinst.parameters[key].string = val
+                else:
+                    raise TypeError(f"Invalid instance parameter {val} for {inst}")
+        else:
+            raise TypeError
 
         # Create its connections mapping
         for pname, sig in inst.conns.items():
-            pinst.connections[pname] = sig.name
+            # Create a proto-Connection
+            pconn = protodefs.Connection()
 
-        # FIXME: Parameters for Primitives/ External Modules
-        # for pname, pval in inst.parameters_they_dont_have_yet:
-        #     fail
+            if isinstance(sig, signal.Signal):
+                pconn.sig.name = sig.name
+                pconn.sig.width = sig.width
+            elif isinstance(sig, signal.Slice):
+                pconn.slice.signal = sig.signal.name
+                pconn.slice.bot = sig.bot
+                pconn.slice.top = sig.top
+            elif isinstance(sig, signal.Concat):
+                pconc = self.export_concat(sig)
+                pconn.concat.CopyFrom(pconc)
+            else:
+                raise TypeError
+            # Assign it into the connections dict.
+            # The proto interface requires copying it along the way
+            pinst.connections[pname].CopyFrom(pconn)
 
         return pinst
+
+    def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
+        """ Export (potentially recursive) Signal Concatenations """
+        pconc = protodefs.Concat()
+        for part in concat.parts:
+            if isinstance(part, signal.Signal):
+                psig = protodefs.Signal(name=part.name, width=part.width)
+                pconn = protodefs.Connection()
+                pconn.sig.CopyFrom(psig)
+                pconc.parts.append(pconn)
+            elif isinstance(part, signal.Slice):
+                psig = protodefs.Slice(
+                    signal=part.signal.name, top=part.top, bot=part.bot
+                )
+                pconn = protodefs.Connection()
+                pconn.slice.CopyFrom(psig)
+                pconc.parts.append(pconn)
+            elif isinstance(part, signal.Concat):
+                sub_pconc = self.export_concat(part)
+                pconn = protodefs.Connection()
+                pconn.concat.CopyFrom(sub_pconc)
+                pconc.parts.append(pconn)
+            else:
+                raise TypeError
+        return pconc
+
