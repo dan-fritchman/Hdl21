@@ -105,6 +105,21 @@ class MosParams:
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
 
+    def __post_init_post_parse__(self):
+        """ Value Checks """
+        if self.w <= 0:
+            raise ValueError(f"MosParams with invalid width {self.w}")
+        if self.l <= 0:
+            raise ValueError(f"MosParams with invalid length {self.l}")
+        if self.npar <= 0:
+            raise ValueError(
+                f"MosParams with invalid number parallel fingers {self.npar}"
+            )
+        if self.nser <= 0:
+            raise ValueError(
+                f"MosParams with invalid number series fingers {self.nser}"
+            )
+
 
 Mos = Primitive(
     name="Mos",

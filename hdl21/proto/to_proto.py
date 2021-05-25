@@ -114,7 +114,7 @@ class ProtoExporter:
             call = inst._resolved
             prim = call.prim
             # Create a reference to the `hdl21.primitives` namespace
-            pinst.module.qn.domain = "hdl21.primitives"
+            pinst.module.qn.domain = "hdl21.primitives" # FIXME: any more of these domains to be created
             pinst.module.qn.name = prim.name
             # Set the parameter-values
             for key, val in asdict(call.params).items():
