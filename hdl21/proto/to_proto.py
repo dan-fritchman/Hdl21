@@ -1,7 +1,9 @@
 """
 hdl21 ProtoBuf Export
 """
+from textwrap import dedent
 from dataclasses import asdict
+from typing import Optional
 
 # Local imports
 # Proto-definitions
@@ -15,10 +17,12 @@ from ..instance import Instance
 from .. import signal
 
 
-def to_proto(top: Elabable, **kwargs) -> protodefs.Package:
+def to_proto(
+    top: Elabable, domain: Optional[str] = None, **kwargs
+) -> protodefs.Package:
     """ Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package` """
     top = elaborate(top=top, **kwargs)
-    exporter = ProtoExporter(top=top)
+    exporter = ProtoExporter(top=top, domain=domain)
     return exporter.export()
 
 
@@ -28,10 +32,12 @@ class ProtoExporter:
     Modules are defined in `self.pkg` in dependency order. 
     Upon round-tripping, all dependent child-modules will be encountered before their parent instantiators. """
 
-    def __init__(self, top: Module):
+    def __init__(self, top: Module, domain: Optional[str] = None):
         self.top = top
         self.modules = dict()  # Module-id to Proto-Module dict
-        self.pkg = protodefs.Package(name="THIS_LIBRARY")
+        self.module_names = dict()  # (Serialized) Module-name to Proto-Module dict
+        # Default `domain` AKA package-name is the empty string
+        self.pkg = protodefs.Package(name=domain or "")
 
     def export(self) -> protodefs.Package:
         """ Export starting at `self.top`, visiting every hierarchical node along the way. 
@@ -40,6 +46,23 @@ class ProtoExporter:
             raise TypeError
         self.export_module(self.top)
         return self.pkg
+
+    def export_module_name(self, module: Module) -> protodefs.QualifiedName:
+        """ Create and return a unique `QualifiedName` for Module `module`.
+        Raises a `RuntimeError` if unique name is taken. """
+
+        mname = module._pymodule.__name__ + "." + module.name
+        qname = protodefs.QualifiedName(domain=self.pkg.name, name=mname)
+        if (qname.domain, qname.name) in self.module_names:
+            conflict = self.module_names[(qname.domain, qname.name)]
+            raise RuntimeError(
+                dedent(
+                    f"""\
+                    Cannot serialize Module {module} due to conflicting name with {conflict}. 
+                    (Was this a generator that didn't get decorated with `@hdl21.generator`?) """
+                )
+            )
+        return qname
 
     def export_module(self, module: Module) -> protodefs.Module:
         if id(module) in self.modules:  # Already done
@@ -53,9 +76,9 @@ class ProtoExporter:
         # Create the Proto-Module
         pmod = protodefs.Module()
 
-        # FIXME: unique naming
-        pmod.name.domain = "THIS_LIBRARYS_FLAT_NAMESPACE"
-        pmod.name.name = module.name
+        # Create its serialized name
+        qname = self.export_module_name(module)
+        pmod.name.CopyFrom(qname)
 
         # Create its Port-objects
         for port in module.ports.values():
@@ -79,8 +102,9 @@ class ProtoExporter:
             pinst = self.export_instance(inst)
             pmod.instances.append(pinst)
 
-        # Store a reference to the result, and return it
+        # Store references to the result, and return it
         self.modules[id(module)] = pmod
+        self.module_names[(qname.domain, qname.name)] = pmod
         self.pkg.modules.append(pmod)
         return pmod
 
@@ -114,7 +138,7 @@ class ProtoExporter:
             call = inst._resolved
             prim = call.prim
             # Create a reference to the `hdl21.primitives` namespace
-            pinst.module.qn.domain = "hdl21.primitives" # FIXME: any more of these domains to be created
+            pinst.module.qn.domain = "hdl21.primitives"
             pinst.module.qn.name = prim.name
             # Set the parameter-values
             for key, val in asdict(call.params).items():

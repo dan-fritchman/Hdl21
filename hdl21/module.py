@@ -7,9 +7,9 @@ It also includes the fun machinery for class-syntax creation of `Module`s,
 enabled by a custom metaclass and its partner custom dictionary, 
 which unwind `Module` sub-class-body contents in dataflow order. 
 """
-
+import inspect
 from textwrap import dedent
-from typing import Any
+from typing import Any, Optional
 
 # Local imports
 from .instance import calls_instantiate
@@ -22,7 +22,7 @@ class Module:
     The central element of hardware re-use. 
     """
 
-    def __init__(self, *, name=None):
+    def __init__(self, *, name: Optional[str] = None):
         self.name = name
         self.ports = dict()
         self.signals = dict()
@@ -30,6 +30,13 @@ class Module:
         self.instarrays = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
+        for fr in inspect.stack():
+            # Find the first frame not from *this* file
+            # Sometimes this will be a Generator. That's OK, they'll figure it out.
+            pymod = inspect.getmodule(fr[0])
+            if pymod.__file__ != __file__:
+                break
+        self._pymodule = pymod  # Reference to the (Python) module where called
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
@@ -49,6 +56,8 @@ class Module:
             "namespace",
             "add",
             "_interface_ports",
+            "_pymodule",
+            "_initialized",
         ]
         if key in banned:
             raise RuntimeError(

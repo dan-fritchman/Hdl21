@@ -78,6 +78,7 @@ class GeneratorElaborator:
         # FIXME: cook up a unique name, mixing in the param-values
         if m.name is None:
             m.name = call.gen.func.__name__
+        m._pymodule = call.gen.pymodule
         # And elaborate the module
         return self.elaborate_module(m)
 

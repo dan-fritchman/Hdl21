@@ -31,10 +31,6 @@ class ProtoImporter:
         self.modules = dict()  # Dict of qual-names to Modules
         self.ns = SimpleNamespace()
         self.ns.name = pkg.name
-        if pkg.name != "THIS_LIBRARY":
-            raise ValueError(
-                f"Invalid package name {pkg.name}, scoping coming soon"
-            )  # FIXME!
 
     def import_(self) -> SimpleNamespace:
         """ Import the top-level `Package` to a Python namespace """
@@ -53,8 +49,23 @@ class ProtoImporter:
 
         # Create the Module
         module = Module()
-        # FIXME: whatever to do with these qualified path-names
-        module.name = pmod.name.name
+        # Get or create its namespace, and set its name
+        ns = self.ns
+        parts = pmod.name.name.split(".")  # Path-parts are dot-separated
+        for part in parts[:-1]:
+            attr = getattr(ns, part, None)
+            if attr is None:  # Create a new Namespce
+                new_ns = SimpleNamespace()
+                new_ns.name = part
+                setattr(ns, part, new_ns)
+                ns = new_ns
+            elif isinstance(attr, SimpleNamespace):
+                ns = attr
+            else:
+                raise RuntimeError(
+                    f"Invalid Module path-name {pmod.name.name} overwriting {attr}"
+                )
+        module.name = parts[-1]
 
         # Import its ports
         for pport in pmod.ports:
@@ -87,7 +98,7 @@ class ProtoImporter:
 
         # Add the Module to our cache and return-namespace, and return it
         self.modules[(pmod.name.domain, pmod.name.name)] = module
-        setattr(self.ns, module.name, module)
+        setattr(ns, module.name, module)
         return module
 
     def import_connection(
@@ -152,7 +163,8 @@ class ProtoImporter:
 
             # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
             target = prim(params)
-        elif ref.qn.domain == "THIS_LIBRARYS_FLAT_NAMESPACE":  # FIXME!
+
+        elif ref.qn.domain == self.pkg.name:  # Internally-defined Module
             key = (ref.qn.domain, ref.qn.name)
             module = self.modules.get(key, None)
             if module is None:

@@ -408,8 +408,8 @@ def test_prim_proto1():
     # Check the proto-Module
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "HasPrims"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.HasPrims"
+    assert pm.name.domain == ""
     assert len(pm.ports) == 0
     assert len(pm.signals) == 2
     assert len(pm.instances) == 5
@@ -421,6 +421,8 @@ def test_prim_proto1():
 
     ns = h.from_proto(ppkg)
 
+    assert isinstance(ns, SimpleNamespace)
+    ns = ns.hdl21.tests.test_hdl21
     assert isinstance(ns, SimpleNamespace)
     assert hasattr(ns, "HasPrims")
     HasPrims = ns.HasPrims
@@ -565,8 +567,8 @@ def test_proto1():
     assert len(ppkg.modules) == 1
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "TestProto1"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.TestProto1"
+    assert pm.name.domain == ""
     assert len(pm.ports) == 0
     assert len(pm.instances) == 0
     assert len(pm.default_parameters) == 0
@@ -594,8 +596,8 @@ def test_proto2():
     # Check the first Module in, Child1
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "Child1"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.Child1"
+    assert pm.name.domain == ""
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -604,8 +606,8 @@ def test_proto2():
     # Check the second Module in, Child2
     pm = ppkg.modules[1]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "Child2"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.Child2"
+    assert pm.name.domain == ""
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -614,8 +616,8 @@ def test_proto2():
     # And check the parent module
     pm = ppkg.modules[2]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "TestProto2"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.TestProto2"
+    assert pm.name.domain == ""
     assert len(pm.ports) == 0
     assert len(pm.instances) == 2
     assert len(pm.default_parameters) == 0
@@ -634,16 +636,16 @@ def test_proto3():
     M2.i(p1=M2.s[0])
     M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[3:2]))
 
-    ppkg = h.to_proto(M2)
+    ppkg = h.to_proto(M2, domain="test_proto3")
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 2
 
-    # Check the chil module
+    # Check the child module
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "M1"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.M1"
+    assert pm.name.domain == "test_proto3"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -652,8 +654,8 @@ def test_proto3():
     # And check the parent module
     pm = ppkg.modules[1]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "M2"
-    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert pm.name.name == "hdl21.tests.test_hdl21.M2"
+    assert pm.name.domain == "test_proto3"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 1
     assert len(pm.instances) == 1
@@ -662,26 +664,27 @@ def test_proto3():
     ns = h.from_proto(ppkg)
 
     assert isinstance(ns, SimpleNamespace)
-
+    ns = ns.hdl21.tests.test_hdl21
+    assert isinstance(ns, SimpleNamespace)
     assert isinstance(ns.M1, h.Module)
     assert len(ns.M1.ports) == 2
     assert len(ns.M1.signals) == 0
     assert len(ns.M1.instances) == 0
 
-    assert isinstance(ns.M2, h.Module)
-    assert len(ns.M2.ports) == 0
-    assert len(ns.M2.signals) == 1
-    assert len(ns.M2.instances) == 1
-    assert "s" in ns.M2.signals
-    assert "i" in ns.M2.instances
-    inst = ns.M2.i
+    assert isinstance(M2, h.Module)
+    assert len(M2.ports) == 0
+    assert len(M2.signals) == 1
+    assert len(M2.instances) == 1
+    assert "s" in M2.signals
+    assert "i" in M2.instances
+    inst = M2.i
     assert isinstance(inst.conns["p1"], h.signal.Slice)
-    assert inst.conns["p1"].signal is ns.M2.s
+    assert inst.conns["p1"].signal is M2.s
     assert inst.conns["p1"].top == 0
     assert inst.conns["p1"].bot == 0
     assert isinstance(inst.conns["p8"], h.signal.Concat)
     assert len(inst.conns["p8"].parts) == 3
-    assert inst.conns["p8"].parts[0] is ns.M2.s
+    assert inst.conns["p8"].parts[0] is M2.s
     assert isinstance(inst.conns["p8"].parts[1], h.signal.Concat)
     assert isinstance(inst.conns["p8"].parts[2], h.signal.Slice)
 
@@ -696,6 +699,8 @@ def test_proto_roundtrip():
     ppkg = h.to_proto(M1)
     ns = h.from_proto(ppkg)
 
+    assert isinstance(ns, SimpleNamespace)
+    ns = ns.hdl21.tests.test_hdl21
     assert isinstance(ns, SimpleNamespace)
     assert isinstance(ns.M1, h.Module)
     assert len(ns.M1.signals) == 0
@@ -732,30 +737,32 @@ def test_proto_roundtrip2():
 
     # And check all kinda stuff about what comes back
     assert isinstance(ns, SimpleNamespace)
-    assert isinstance(ns.M1, h.Module)
-    assert isinstance(ns.M2, h.Module)
+    M1 = ns.hdl21.tests.test_hdl21.M1
+    M2 = ns.hdl21.tests.test_hdl21.M2
+    assert isinstance(M1, h.Module)
+    assert isinstance(M2, h.Module)
 
-    assert len(ns.M1.signals) == 0
-    assert len(ns.M1.ports) == 3
-    assert "i" in ns.M1.ports
-    assert ns.M1.i.direction == h.signal.PortDir.INPUT
-    assert ns.M1.i.vis == h.signal.Visibility.PORT
-    assert "o" in ns.M1.ports
-    assert ns.M1.o.direction == h.signal.PortDir.OUTPUT
-    assert ns.M1.o.vis == h.signal.Visibility.PORT
-    assert "p" in ns.M1.ports
-    assert ns.M1.p.direction == h.signal.PortDir.NONE
-    assert ns.M1.p.vis == h.signal.Visibility.PORT
-    assert len(ns.M1.instances) == 0
+    assert len(M1.signals) == 0
+    assert len(M1.ports) == 3
+    assert "i" in M1.ports
+    assert M1.i.direction == h.signal.PortDir.INPUT
+    assert M1.i.vis == h.signal.Visibility.PORT
+    assert "o" in M1.ports
+    assert M1.o.direction == h.signal.PortDir.OUTPUT
+    assert M1.o.vis == h.signal.Visibility.PORT
+    assert "p" in M1.ports
+    assert M1.p.direction == h.signal.PortDir.NONE
+    assert M1.p.vis == h.signal.Visibility.PORT
+    assert len(M1.instances) == 0
 
-    assert len(ns.M2.instances) == 3
-    for i in ns.M2.instances.values():
-        assert i.of is ns.M1
-        assert i.conns["p"] is ns.M2.p
-    assert len(ns.M2.ports) == 3
-    assert len(ns.M2.signals) == 2
-    assert "s" in ns.M2.signals
-    assert "_i1_i__i0_o_" in ns.M2.signals
+    assert len(M2.instances) == 3
+    for i in M2.instances.values():
+        assert i.of is M1
+        assert i.conns["p"] is M2.p
+    assert len(M2.ports) == 3
+    assert len(M2.signals) == 2
+    assert "s" in M2.signals
+    assert "_i1_i__i0_o_" in M2.signals
 
 
 def test_bigger_interfaces():
@@ -904,4 +911,36 @@ def test_slice_module1():
     P.ic = C(p1=C.s4[0], p4=C.s4, p7=h.Concat(C.s4, C.s2, C.s2[0]))
 
     h.elaborate(P)
+
+
+def test_bad_proto_naming():
+    # Test some cases which generate serialization naming conflicts
+    # Same Module-names in same Python module
+
+    with pytest.raises(RuntimeError):
+        # Create a naming conflict between Module definitions
+        Ma1 = h.Module(name="Ma")
+        Ma2 = h.Module(name="Ma")
+
+        @h.module
+        class MaParent:
+            ma1 = Ma1()
+            ma2 = Ma2()
+
+        h.to_proto(MaParent)
+
+    with pytest.raises(RuntimeError):
+        # Do the same via some functions that should be generators
+        def m1():
+            return h.Module(name="Ma")
+
+        def m2():
+            return h.Module(name="Ma")
+
+        @h.module
+        class MaParent:
+            ma1 = m1()()
+            ma2 = m2()()
+
+        h.to_proto(MaParent)
 
