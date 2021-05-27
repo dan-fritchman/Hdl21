@@ -79,7 +79,7 @@ def test_generator1():
 
     m = h.elaborate(gen1, MyParams(w=3))
 
-    assert m.name == "gen1"
+    assert m.name == "gen1(MyParams(w=3))"
     assert isinstance(m.i, h.Signal)
 
 
@@ -90,6 +90,7 @@ def test_generator2():
 
     @h.generator
     def g2(params: P2, ctx: h.Context) -> h.Module:
+        # Generator which takes a Context-argument
         assert isinstance(params, P2)
         assert isinstance(ctx, h.Context)
         return h.Module()
@@ -97,7 +98,7 @@ def test_generator2():
     m = h.elaborate(g2, P2())
 
     assert isinstance(m, h.Module)
-    assert m.name == "g2"
+    assert m.name == "g2(P2(f=1e-11))"
 
 
 def test_generator3():
@@ -179,6 +180,7 @@ def test_params3():
 
 def test_params4():
     # Test some param-class nesting
+    from dataclasses import asdict
 
     @h.paramclass
     class Inner:
@@ -196,15 +198,19 @@ def test_params4():
     assert o.inner.i == 11
     assert o.f == 3.14159
 
-    from dataclasses import asdict
-
     # Create from a (nested) dictionary
     d1 = {"inner": {"i": 11}, "f": 22.2}
-    o = Outer(**d1)
+    o1 = Outer(**d1)
+    uname1 = h.params._unique_name(o1)
     # Convert back to another dictionary
-    d2 = asdict(o)
+    d2 = asdict(o1)
     # And check they line up
     assert d1 == d2
+    # Round-trip back to an `Outer`
+    o2 = Outer(**d2)
+    uname2 = h.params._unique_name(o2)
+    assert uname1 == uname2
+    assert uname1 == "Outer(3dcc309796996b3a8a61db66631c5a93)"
 
 
 def test_bad_params1():
@@ -344,6 +350,8 @@ def test_gen3():
         return Outer
 
     h.elaborate(MyThirdGenerator, MyParams(1))
+
+    # FIXME: post-elab checks
 
 
 def test_prim1():

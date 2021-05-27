@@ -18,6 +18,7 @@ from .primitives import PrimitiveCall
 from .interface import Interface, InterfaceInstance
 from .signal import Port, PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
+from .params import _unique_name
 
 
 class Context:
@@ -74,10 +75,13 @@ class GeneratorElaborator:
         # Give the GeneratorCall a reference to its result, and store it in our local dict
         call.result = m
         self.calls[id(call)] = call
-        # If the Module that comes back is anonymous, give it a name equal to the Generator's
-        # FIXME: cook up a unique name, mixing in the param-values
+        # Create a unique name
+        # If the Module that comes back is anonymous, start by giving it a name equal to the Generator's
         if m.name is None:
             m.name = call.gen.func.__name__
+        # Then add a unique suffix per its parameter-values
+        m.name += "(" + _unique_name(call.arg) + ")"
+        # Update the Module's `pymodule`, which generally at this point is `hdl21.generator`
         m._pymodule = call.gen.pymodule
         # And elaborate the module
         return self.elaborate_module(m)
