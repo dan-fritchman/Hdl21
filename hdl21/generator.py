@@ -1,6 +1,11 @@
+"""
+# hdl21 Generators
+"""
+
 import inspect
 from dataclasses import field
 from typing import Callable, Union, Any, Optional
+from types import ModuleType
 from pydantic.dataclasses import dataclass
 from pydantic import ValidationError
 
@@ -11,15 +16,25 @@ from .instance import calls_instantiate
 
 @dataclass
 class Generator:
-    func: Callable
-    paramtype: type
-    usecontext: bool
+    """ # Generator Object 
+    Typically created by the `@hdl.generator` decorator. 
+    Stores a function-object and parameters-type, 
+    along with some auxiliary data. 
+    """
+
+    func: Callable  # The generator function
+    paramtype: type  # Parameter type
+    usecontext: bool  # Boolean indication of `Context` usage
+    pymodule: ModuleType  # Python module where function defined
 
     def __call__(self, arg: Any):
+        """ Calls to Generators create GeneratorCall-objects
+        to be expanded during elaboration. """
         return GeneratorCall(gen=self, arg=arg)
 
     @property
     def Params(self) -> type:
+        """ Parameter-Type Property """
         return self.paramtype
 
 
@@ -76,5 +91,11 @@ def generator(f: Callable) -> Generator:
         raise TypeError(
             f"Generator {f.__name__} must return (and must be annotated to return) a Module."
         )
-    return Generator(func=f, paramtype=paramtype, usecontext=usecontext)
+
+    # Grab a reference to the Python-module defining the function
+    # (For later name-unique-ifying)
+    pymodule = inspect.getmodule(f)
+    return Generator(
+        func=f, paramtype=paramtype, usecontext=usecontext, pymodule=pymodule
+    )
 

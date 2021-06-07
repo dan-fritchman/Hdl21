@@ -4,7 +4,10 @@ Hdl21 Parameters and Param-Classes
 
 from typing import Optional, Any
 import dataclasses
+import json
+import hashlib
 import pydantic
+
 
 # Import a few likely common Exception-types,
 # Not used directly here, but likely by users and tests
@@ -135,4 +138,47 @@ class Param:
 
     # Default factories are supported in std-lib dataclasses, but "in beta" in `pydantic.dataclasses`.
     # default_factory: Optional[Any] = _default  # Default Call-Factory
+
+
+def _unique_name(params: Any) -> str:
+    """ Create a unique name for parameter-class instance `params` """
+    if not isparamclass(params):
+        raise RuntimeError(f"Invalid parameter-class instance {params}")
+
+    # Determine whether *all* fields of `params` are scalar values: strings, numbers, and options thereof
+    scalars = [
+        str,
+        int,
+        float,
+        type(None),
+        Optional[str],
+        Optional[int],
+        Optional[float],
+    ]
+    # Boolean indication of whether *all* param-datatypes are from among these
+    all_scalar = all([param.dtype in scalars for param in params.__params__.values()])
+
+    # If all params are scalars, create a readable string of their values
+    if all_scalar:
+        name = params.__class__.__name__ + "("
+        for pname in params.__params__.keys():
+            pval = getattr(params, pname)
+            name += pname + "=" + str(pval) + " "
+        name = name.rstrip()
+        name += ")"
+
+        # These names must also be limited in length, for sake of our favorite output formats.
+        # If the generated name is too long, use the hashing method below instead
+        if len(name) < 128:  # Probably(?) a reasonable length limit
+            return name
+
+    # Non-scalar cases generally include nested `@paramclasses` or sequences,
+    # or surpass the length-limits above.
+    # Instead take a hash of their UTF-8 encoded JSON, and return its hex digest.
+    jsonstr = json.dumps(params, indent=4, default=pydantic.json.pydantic_encoder)
+    # Note the "not used for security" option ensures consistent hashing between runs/ Python-processes
+    h = hashlib.new("md5", usedforsecurity=False)
+    h.update(bytes(jsonstr, encoding="utf-8"))
+    # Combine the `@paramclass` name with this (hex) digest
+    return params.__class__.__name__ + "(" + h.hexdigest() + ")"
 

@@ -33,22 +33,33 @@ class PortRef:
 class Instance:
     """ Hierarchical Instance of another Module or Generator """
 
-    _specialcases = ["name", "of", "conns", "portrefs", "_elaborated", "_initialized"]
+    _specialcases = [
+        "name",
+        "of",
+        "conns",
+        "portrefs",
+        "_resolved",
+        "_elaborated",
+        "_initialized",
+    ]
 
     def __init__(
         self,
-        of: Union["Module", "Generator", "GeneratorCall"],
+        of: Union["Module", "Generator", "GeneratorCall", "PrimitiveCall"],
         params: Optional[object] = None,
         *,
         name: Optional[str] = None,
     ):
         from .generator import Generator, GeneratorCall
         from .module import Module
-        from .interface import InterfaceInstance
+        from .primitives import PrimitiveCall
 
         if isinstance(of, Generator):
             of = of(params)
-        elif isinstance(of, (Module, GeneratorCall)) and params is not None:
+        elif (
+            isinstance(of, (Module, GeneratorCall, PrimitiveCall))
+            and params is not None
+        ):
             raise RuntimeError(
                 f"Invalid instance with parameters {params}. Instance parameters can be used with *generator* functions. "
             )
@@ -60,14 +71,18 @@ class Instance:
         self._elaborated = False
         self._initialized = True
 
+    def __repr__(self):
+        return f"Instance(name={self.name} of={self.of})"
+
     @property
-    def module(self) -> Optional["Module"]:
+    def _resolved(self) -> Optional[Union["Module", "PrimitiveCall"]]:
         """ Property to retrieve the Instance's resolved Module, if complete. 
         Returns `None` if unresolved. """
         from .module import Module
         from .generator import GeneratorCall
+        from .primitives import PrimitiveCall
 
-        if isinstance(self.of, Module):
+        if isinstance(self.of, (Module, PrimitiveCall)):
             return self.of
         if isinstance(self.of, GeneratorCall):
             return self.of.result
