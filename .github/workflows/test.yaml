@@ -1,0 +1,40 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: test
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install poetry 
+        poetry install 
+    - name: Test with pytest
+      run: |
+        poetry run pytest -sv --cov=./ --cov-report=xml
+    - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
+      uses: codecov/codecov-action@v1
+      with:
+        files: ./coverage.xml 
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true

@@ -2,6 +2,9 @@
 
 ## Generator-Based Structural Hardware Description Library
 
+[![test](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml/badge.svg)](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml)
+[![codecov](https://codecov.io/gh/dan-fritchman/Hdl21/branch/main/graph/badge.svg?token=f8LKUqEPdq)](https://codecov.io/gh/dan-fritchman/Hdl21)
+
 Hdl21 is a library for efficiently creating and manipulating structural hardware descriptions such as those common in custom integrated circuits. Circuits are described in two primary units of re-use: 
 
 - `Modules` are structural combinations of ports, signals, and instances of other `Modules`. 
@@ -23,15 +26,15 @@ m = h.Module(name="MyModule")
 m.i = h.Input()
 m.o = h.Output(width=8)
 m.s = h.Signal()
-m.a = h.Instance(AnotherModule)
+m.a = AnotherModule()
 ```
 
-`Modules` are type-specific containers of just a handful of `hdl21` types. They can include:
+`Modules` are type-specific containers of just a handful of `hdl21` types. They can include: 
 
-* `Instances` of other `Modules`
+* Instances of other `Modules`
 * IO defined by a set of `Ports`
 * Internal `Signals`
-* Hierarchical connections defined by (FIXME: `Bundles` or `Interfaces`, pick a name)
+* Structured connections defined by `Interfaces` 
 
 
 In addition to the procedural-mode shown above, `Modules` can also be defined through a `class`-based syntax. Creating a sub-class of `hdl21.Module` produces a new `Module`-definition, in which each attribute can be declared like so: 
@@ -43,7 +46,7 @@ class MyModule(h.Module):
     i = h.Input()
     o = h.Output(width=8)
     s = h.Signal()
-    a = h.Instance(AnotherModule)
+    a = AnotherModule()
 ```
 
 This class-based syntax produces identical results as the procedural code-block above. Its declarative style can be much more natural and expressive in many contexts, including for designers familiar with popular HDLs. 
@@ -85,7 +88,7 @@ m.a = Signal()
 m.b = Signal()
 m.c = Signal()
 # Create an Instance
-m.i1 = h.Instance(AnotherModule)
+m.i1 = AnotherModule()
 # And wire them up
 m.i1.a = a
 m.i1.b = b
@@ -98,8 +101,8 @@ This also works without the parent-module `Signals`:
 # Create a module
 m = h.Module() 
 # Create the Instances
-m.i1 = h.Instance(AnotherModule)
-m.i2 = h.Instance(AnotherModule)
+m.i1 = AnotherModule()
+m.i2 = AnotherModule()
 # And wire them up
 m.i1.a = m.i2.a
 m.i1.b = m.i2.b
@@ -112,8 +115,8 @@ Instances can instead be connected by call:
 # Create a module
 m = h.Module() 
 # Create the Instances
-m.i1 = h.Instance(AnotherModule)
-m.i2 = h.Instance(AnotherModule)
+m.i1 = AnotherModule()
+m.i2 = AnotherModule()
 # Call one to connect them
 m.i1(a=m.i2.a, b=m.i2.b, c=m.i2.c)
 ```
@@ -124,9 +127,9 @@ These connection-calls can also be performed inline, as the instances are being 
 # Create a module
 m = h.Module() 
 # Create the Instance `i1`
-m.i1 = h.Instance(AnotherModule)
+m.i1 = AnotherModule()
 # Create another Instance `i2`, and connect to `i1`
-m.i2 = h.Instance(AnotherModule)(a=m.i1.a, b=m.i1.b, c=m.i1.c)
+m.i2 = AnotherModule(a=m.i1.a, b=m.i1.b, c=m.i1.c)
 ```
 
 The `Module` class-syntax allows for quite a bit more magic in this respect. The `Module` class-body executes in dataflow/dependency order, allowing references to objects before they are declared. 
@@ -137,8 +140,8 @@ class Thing(h.Module):
     out = h.Output()
 
 class BackToBack(h.Module):
-    t1 = h.Instance(Thing)(inp=t2.out, out=t2.inp) # Note there is no `t2` yet
-    t2 = h.Instance(Thing)(inp=t1.out, out=t1.inp) # There it is
+    t1 = Thing(inp=t2.out, out=t2.inp) # Note there is no `t2` yet
+    t2 = Thing(inp=t1.out, out=t1.inp) # There it is
 ```
 
 While this dependency-ordered execution applies to all `Module` contents, it's particularly handy for connections. 
@@ -185,7 +188,7 @@ def MyThirdGenerator(params: MyParams) -> h.Module:
 
     # Instantiate that in another Module 
     class Outer(h.Module):
-        inner = h.Instance(Inner)
+        inner = Inner()
 
     # And manipulate that some more too 
     Outer.inp = h.Input(width=params.w)
@@ -317,4 +320,25 @@ There are lots of other very cool hardware-description projects out there which 
 - [Clash](https://clash-lang.org/) 
 
 
+--- 
+
+## Development 
+
+* Install [Poetry](https://python-poetry.org/docs/) (the cool-kids' TOML-configured `pip` replacement). Or drag `pip` along if you know how. 
+* Clone this repo & navigate to it 
+* `poetry install` will install all dependencies
+* `pytest -s` should yield something like: 
+
+
+```
+$ pytest -s
+=== test session starts ===
+platform darwin -- Python 3.8.5, pytest-5.4.3, py-1.10.0, pluggy-0.13.1
+rootdir: /home/Hdl21
+collected 21 items                                                                    
+
+hdl21/tests/test_hdl21.py .....................
+
+=== 21 passed in 0.27s ===
+```
 

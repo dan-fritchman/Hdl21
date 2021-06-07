@@ -9,11 +9,15 @@ which unwind `Module` sub-class-body contents in dataflow order.
 """
 
 import builtins
+from hdl21.instance import InstArray, calls_instantiate
 import inspect
 
 from textwrap import dedent
 from dataclasses import dataclass, field
-from typing import ClassVar, Optional, Union, Callable, Any
+from typing import Optional, Union, Callable, Any
+
+# Local imports
+from .instance import calls_instantiate
 
 
 class ModuleMeta(type):
@@ -93,6 +97,7 @@ class ModuleMeta(type):
         return m
 
 
+@calls_instantiate
 class Module(metaclass=ModuleMeta):
     """ 
     # Module
@@ -107,7 +112,6 @@ class Module(metaclass=ModuleMeta):
         self.instarrays = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
-        self._genparams = None
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
@@ -120,7 +124,7 @@ class Module(metaclass=ModuleMeta):
             return super().__setattr__(key, val)
 
         # Protected attrs - the internal dicts
-        banned = ["ports", "signals", "instances", "namespace"]
+        banned = ["ports", "signals", "instances", "namespace", "add"]
         if key in banned:
             raise RuntimeError(
                 f"Error attempting to over-write protected attribute {key} of Module {self}"
@@ -133,7 +137,7 @@ class Module(metaclass=ModuleMeta):
         if isinstance(val, Signal):
             val.name = key
             self.namespace[key] = val
-            if val.visibility == Visibility.PORT:
+            if val.vis == Visibility.PORT:
                 self.ports[key] = val
             else:
                 self.signals[key] = val
@@ -152,25 +156,48 @@ class Module(metaclass=ModuleMeta):
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
 
-    def __getattr__(self, key):
+    def add(self, val: object) -> None:
+        """ Add a named HDL object into one of our internal dictionaries. 
+        This allows for programmatic insertion of attributes whose names are not legal Python identifiers, 
+        such as keywords ('in', 'from') and those including invalid characters. 
+        This method is also the means by which underscore-prefaced attributes are added during elaboration. """
+        from .signal import Signal, Visibility
+        from .instance import Instance, InstArray
+        from .interface import InterfaceInstance
+
+        if not isinstance(val, (Signal, Instance, InstArray, InterfaceInstance)):
+            raise TypeError(f"Invalid Module attribute {val} for {self}")
+        if not val.name:
+            raise RuntimeError(
+                f"Invalid anonymous attribute {val} cannot be added to Module {self.name}"
+            )
+        # Type-based organization
+        if isinstance(val, Signal):
+            self.namespace[val.name] = val
+            if val.vis == Visibility.PORT:
+                self.ports[val.name] = val
+            else:
+                self.signals[val.name] = val
+        elif isinstance(val, Instance):
+            self.instances[val.name] = val
+            self.namespace[val.name] = val
+        elif isinstance(val, InstArray):
+            self.instarrays[val.name] = val
+            self.namespace[val.name] = val
+        elif isinstance(val, InterfaceInstance):
+            self.interfaces[val.name] = val
+            self.namespace[val.name] = val
+        else:
+            raise TypeError(f"Invalid Module attribute {val} for {self}")
+
+    def __getattr__(self, key: str) -> Any:
+        """ Include our namespace-worth of HDL objects in dot-access retrievals """
         ns = self.__getattribute__("namespace")
         if key in ns:
             return ns[key]
         return object.__getattribute__(self, key)
 
-    def __call__(self, *_args, **_kwargs):
-        """ Highly likely error: calling Modules in attempts to create Python-level instances, which they don't have.  """
-        raise RuntimeError(
-            dedent(
-                f"""\
-                Error: attempting to call (or instantiate) hdl21.Module {self.name}.
-                You probably want to pass its class-object to another function instead,
-                such as hdl21.Instance({self.name}), or retrieve its class-object attributes,
-                such as {self.name}.ports, {self.name}.instances, and so on."""
-            )
-        )
-
-    def __init_subclass__(cls, *_args, **_kwargs):
+    def __init_subclass__(cls, *_, **__):
         """ Sub-Classing Disable-ization """
         raise RuntimeError(
             dedent(
@@ -179,6 +206,16 @@ class Module(metaclass=ModuleMeta):
                 Sub-Typing hdl21.Module is not supported. """
             )
         )
+
+    def __repr__(self) -> str:
+        if self.name:
+            return f"Module(name={self.name})"
+        return f"Module(_anon_)"
+
+    @property
+    def _interface_ports(self):
+        """ Port-Exposed Interface Instances """
+        return {name: intf for name, intf in self.interfaces.items() if intf.port}
 
 
 class ModuleDict:
@@ -418,13 +455,14 @@ class Resolver:
         results = {k: self.resolve(v) for k, v in self.dct.defs.items()}
 
         # Finally, make our connection-calls.
+        from .instance import Instance, InstArray
+
         for call in self.connection_calls:
-            func = self.resolve(call._func)
+            # func = self.resolve(call._func)
             args = (self.resolve(a) for a in call._args)
             kwargs = {k: self.resolve(v) for k, v in call._kwargs.items()}
-            f2 = func(*args, **kwargs)
-            # Instance connection-calls return themselves, a property we can check for!
-            if f2 is not func:
+            rv = call._result(*args, **kwargs)
+            if not isinstance(rv, (Instance, InstArray)):
                 raise ResolutionError(
                     f"Internal Error: hdl21 connecting non-Instance {func}"
                 )
@@ -444,14 +482,14 @@ class Resolver:
             return self.resolve_val(obj)
         raise TypeError(f"Invalid attribute {obj} in Module {self.dct.name}")
 
-    def resolve_val(self, val: Val) -> object:
+    def resolve_val(self, val: Val) -> Any:
         """ Resolve a (likely literal) value """
         if val._result is not NoResult:  # Already computed
             return val._result
         val._result = self.resolve(val._val)
         return val._result
 
-    def resolve_name(self, name: Name) -> object:
+    def resolve_name(self, name: Name) -> Any:
         """ Resolve a named identifier """
         if name._result is not NoResult:  # Already computed
             return name._result
@@ -474,7 +512,7 @@ class Resolver:
             return name._result
         raise ResolutionError(f"Error resolving {name._name} in {self.dct.name}")
 
-    def resolve_dotattr(self, dot: DotAttr) -> object:
+    def resolve_dotattr(self, dot: DotAttr) -> Any:
         """ Resolve a dot-access attribute `dot`. 
         Recursively calls `resolve` for dot's parent, to ensure it's been resolved first. """
         if dot._result is not NoResult:  # Already computed
@@ -484,11 +522,12 @@ class Resolver:
         dot._result = getattr(parent, dot._name)
         return dot._result
 
-    def resolve_call(self, call: Call) -> object:
+    def resolve_call(self, call: Call) -> Any:
         """ Resolve a function call. 
         Recursively resolves its function object and arguments,
         before calling the resolved function and returning the result. """
         from .instance import Instance, InstArray
+        from .generator import GeneratorCall
 
         if call._result is not NoResult:  # Already computed, generally via a `Name`
             return call._result
@@ -496,6 +535,11 @@ class Resolver:
         func = self.resolve(call._func)
         # Special case for connections, which often create graph-cycles.
         # Set these aside for later in our `connection_calls` list.
+        if isinstance(func, (Module, GeneratorCall)):  
+            # Turn these into Instances by calling them 
+            self.connection_calls.append(call)
+            call._result = func()
+            return call._result
         if isinstance(func, (Instance, InstArray)):
             self.connection_calls.append(call)
             call._result = func

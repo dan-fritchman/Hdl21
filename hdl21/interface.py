@@ -1,8 +1,6 @@
 from textwrap import dedent
 from enum import Enum, EnumMeta
 from typing import Optional
-from dataclasses import field
-from pydantic.dataclasses import dataclass
 
 from .instance import connects, connectable
 
@@ -20,6 +18,7 @@ class Interface:
         self.signals = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
+        self._elaborated = False
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
@@ -96,6 +95,7 @@ class InterfaceInstance:
         "dest",
         "conns",
         "portrefs",
+        "_elaborated",
         "_initialized",
     ]
 
@@ -117,6 +117,7 @@ class InterfaceInstance:
         self.dest = dest
         self.conns = dict()
         self.portrefs = dict()
+        self._elaborated = False
         self._initialized = True
 
 
@@ -167,6 +168,7 @@ def interface(cls: type) -> Interface:
 
     protected_names = ["signals", "interfaces"]
     dunders = dict()
+    unders = dict()
 
     # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the interface
     for key, val in cls.__dict__.items():
@@ -174,6 +176,8 @@ def interface(cls: type) -> Interface:
             raise RuntimeError(f"Invalid field name {key} in interface {cls}")
         elif key.startswith("__"):
             dunders[key] = val
+        elif key.startswith("_"):
+            unders[key] = val
         elif key == "Roles":
             # Special-case the upper-cased `Roles`, as it'll often be a class-def
             setattr(intf, "roles", val)

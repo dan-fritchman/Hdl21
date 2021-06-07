@@ -1,22 +1,9 @@
-from enum import EnumMeta
 import pytest
 import hdl21 as h
 
 
-def test_health():
-    """ Test the core library is "there". 
-    Also check whether the module-system's version """
-    from .. import health as health1
-    from hdl21 import health as health2
-
-    a = health1()
-    assert a == "alive"
-
-    if health1 is not health2:
-        import warnings
-        import hdl21
-
-        warnings.warn(f"Module under test is not installed version {hdl21}")
+def test_version():
+    assert h.__version__ == "0.1.0"
 
 
 def test_module1():
@@ -54,7 +41,7 @@ def test_module2():
         s = h.Input()
 
     class M2(h.Module):
-        i = h.Instance(M1)(s=q)
+        i = M1(s=q)
         q = h.Signal()
 
     assert isinstance(M1, h.Module)
@@ -87,7 +74,6 @@ def test_generator1():
 
     assert m.name == "gen1"
     assert isinstance(m.i, h.Signal)
-    assert m._genparams == MyParams(w=3)
 
 
 def test_generator2():
@@ -105,7 +91,6 @@ def test_generator2():
 
     assert isinstance(m, h.Module)
     assert m.name == "g2"
-    assert m._genparams == P2()
 
 
 def test_generator3():
@@ -121,14 +106,18 @@ def test_generator3():
     def g3b(params: P3, ctx: h.Context) -> h.Module:
         return h.Module()
 
-    m = h.Module(name="m")
+    M = h.Module(name="M")
+    p3a = P3()
+    p3b = P3(width=5)
 
     class HasGeneratorInstances(h.Module):
-        a = h.Instance(g3a, P3())
-        b = h.Instance(g3b, P3(width=5))
-        c = h.Instance(m)
+        a = g3a(p3a)()
+        b = g3b(p3b)()
+        c = M()
 
     h.elaborate(HasGeneratorInstances)
+
+    # FIXME: post-elab tests
 
 
 def test_params1():
@@ -302,26 +291,26 @@ def test_cycle1():
         out = h.Output()
 
     class BackToBack(h.Module):
-        t1 = h.Instance(Thing)
-        t2 = h.Instance(Thing)(inp=t1.out, out=t1.inp)
+        t1 = Thing()
+        t2 = Thing(inp=t1.out, out=t1.inp)
 
     b = h.elaborate(BackToBack)
 
-    assert isinstance(b.t1.inp, h.PortRef)
-    assert isinstance(b.t1.out, h.PortRef)
-    assert isinstance(b.t2.inp, h.PortRef)
-    assert isinstance(b.t2.out, h.PortRef)
+    assert isinstance(b.t1.inp, h.Signal)
+    assert isinstance(b.t1.out, h.Signal)
+    assert isinstance(b.t2.inp, h.Signal)
+    assert isinstance(b.t2.out, h.Signal)
 
     # Doing the same thing in procedural code
     b2 = h.Module(name="BackToBack2")
-    b2.t1 = h.Instance(Thing)
-    b2.t2 = h.Instance(Thing)(inp=b2.t1.out, out=b2.t1.inp)
+    b2.t1 = Thing()
+    b2.t2 = Thing(inp=b2.t1.out, out=b2.t1.inp)
     b2.t1(inp=b2.t2.out, out=b2.t2.inp)
 
-    assert isinstance(b.t1.inp, h.PortRef)
-    assert isinstance(b.t1.out, h.PortRef)
-    assert isinstance(b.t2.inp, h.PortRef)
-    assert isinstance(b.t2.out, h.PortRef)
+    assert isinstance(b.t1.inp, h.Signal)
+    assert isinstance(b.t1.out, h.Signal)
+    assert isinstance(b.t2.inp, h.Signal)
+    assert isinstance(b.t2.out, h.Signal)
 
     # FIXME: better post-elaboration checks that this works out
 
@@ -351,7 +340,7 @@ def test_gen3():
 
         # Instantiate that in another Module
         class Outer(h.Module):
-            inner = h.Instance(Inner)
+            inner = Inner()
 
         # And manipulate that some more too
         Outer.inp = h.Input(width=params.w)
@@ -368,10 +357,11 @@ def test_prim1():
 
     class HasMos(h.Module):
         # Two transistors wired in parallel
-        p = h.Instance(pmos)(g=n.g, d=n.d, s=n.s, b=n.b)
-        n = h.Instance(nmos)(g=p.g, d=p.d, s=p.s, b=p.b)
+        p = pmos()
+        n = nmos(g=p.g, d=p.d, s=p.s, b=p.b)
 
     h.elaborate(HasMos)
+    # FIXME: post-elab checks
 
 
 def test_prim2():
@@ -380,12 +370,12 @@ def test_prim2():
         n = h.Signal()
 
         _rp = h.R.Params(r=50)
-        r = h.Instance(h.Resistor(_rp))(p=p, n=n)
+        r = h.Resistor(_rp)(p=p, n=n)
 
-        c = h.Instance(h.Capacitor(h.C.Params(c=1e-12)))(p=p, n=n)
-        l = h.Instance(h.Inductor(h.L.Params(l=1e-15)))(p=p, n=n)
-        d = h.Instance(h.Diode(h.D.Params()))(p=p, n=n)
-        s = h.Instance(h.Short(h.Short.Params()))(p=p, n=n)
+        c = h.Capacitor(h.C.Params(c=1e-12))(p=p, n=n)
+        l = h.Inductor(h.L.Params(l=1e-15))(p=p, n=n)
+        d = h.Diode(h.D.Params())(p=p, n=n)
+        s = h.Short(h.Short.Params())(p=p, n=n)
 
     h.elaborate(HasPrims)
 
@@ -421,9 +411,16 @@ def test_intf2():
     m2.i = MySecondInterface(port=True)
 
     # Now create a parent Module connecting the two
-    m3 = h.Module()
-    m3.i1 = h.Instance(m1)
-    m3.i2 = h.Instance(m2)(i=m1.i)
+    m3 = h.Module(name="M3")
+    m3.i1 = m1()
+    m3.i2 = m2(i=m3.i1.i)
+    assert "_i2_i__i1_i_" not in m3.namespace
+
+    m3e = h.elaborate(m3)
+    assert isinstance(m3e, h.Module)
+    assert isinstance(m3e.i1, h.Instance)
+    assert isinstance(m3e.i2, h.Instance)
+    assert "_i2_i__i1_i_" in m3e.namespace
 
 
 def test_inft3():
@@ -450,7 +447,6 @@ def test_inft3():
     assert isinstance(Diff, h.Interface)
     assert isinstance(Diff(), h.InterfaceInstance)
     assert isinstance(Diff.p, h.Signal)
-
     assert isinstance(Diff.n, h.Signal)
 
 
@@ -498,13 +494,208 @@ def test_intf4():
 
     class System(h.Module):
         # Parent system-module including a host and device
-        host = h.Instance(Host)
-        dev_ = h.Instance(Device)(port_=host.port_)
+        host = Host()
+        dev_ = Device(port_=host.port_)
 
     assert isinstance(System, h.Module)
     assert isinstance(System.host, h.Instance)
     assert isinstance(System.dev_, h.Instance)
+    assert "_dev__port___host_port__" not in System.namespace
 
-    h.elaborate(System)
-    # FIXME: better post-elab checks
+    sys = h.elaborate(System)
+    assert "_dev__port___host_port__" in sys.namespace
+
+
+def test_proto1():
+    # First Proto-export test
+    import hdl21 as h
+    from hdl21.proto import to_proto
+
+    m = h.Module(name="TestProto1")
+    ppkg = to_proto(m)
+    assert isinstance(ppkg, h.proto.Package)
+    assert len(ppkg.modules) == 1
+    pm = ppkg.modules[0]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "TestProto1"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 0
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+
+def test_proto2():
+    # Proto-export test with some hierarchy
+    import hdl21 as h
+    from hdl21.proto import to_proto
+
+    Child1 = h.Module(name="Child1")
+    Child1.inp = h.Input(width=8)
+    Child1.out = h.Output()
+    Child2 = h.Module(name="Child2")
+    Child2.inp = h.Input()
+    Child2.out = h.Output(width=8)
+    TestProto2 = h.Module(name="TestProto2")
+    TestProto2.c1 = Child1()
+    TestProto2.c2 = Child2()
+    TestProto2.c2(inp=TestProto2.c1.out, out=TestProto2.c1.inp)
+
+    ppkg = to_proto(TestProto2)
+
+    assert isinstance(ppkg, h.proto.Package)
+    assert len(ppkg.modules) == 3
+
+    # Check the first Module in, Child1
+    pm = ppkg.modules[0]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "Child1"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 2
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+    # Check the second Module in, Child2
+    pm = ppkg.modules[1]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "Child2"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 2
+    assert len(pm.instances) == 0
+    assert len(pm.default_parameters) == 0
+
+    # And check the parent module
+    pm = ppkg.modules[2]
+    assert isinstance(pm, h.proto.Module)
+    assert pm.name.name == "TestProto2"
+    assert pm.name.domain == "THIS_LIBRARYS_FLAT_NAMESPACE"
+    assert len(pm.ports) == 0
+    assert len(pm.instances) == 2
+    assert len(pm.default_parameters) == 0
+
+
+def test_proto_roundtrip():
+    import hdl21 as h
+    from types import SimpleNamespace
+
+    # Create an empty (named) Module
+    M1 = h.Module(name="M1")
+
+    # Protobuf round-trip it
+    ppkg = h.to_proto(M1)
+    ns = h.from_proto(ppkg)
+
+    assert isinstance(ns, SimpleNamespace)
+    assert isinstance(ns.M1, h.Module)
+    assert len(ns.M1.signals) == 0
+    assert len(ns.M1.ports) == 0
+    assert len(ns.M1.instances) == 0
+
+
+def test_proto_roundtrip2():
+    import hdl21 as h
+    from types import SimpleNamespace
+
+    # Create a child/leaf Module
+    M1 = h.Module(name="M1")
+    M1.i = h.Input()
+    M1.o = h.Output()
+    M1.p = h.Port()
+
+    # Create an instantiating parent-module
+    M2 = h.Module(name="M2")
+    M2.i = h.Input()
+    M2.o = h.Output()
+    M2.p = h.Port()
+    M2.s = h.Signal()
+
+    # Add a few instances of it
+    M2.i0 = M1()
+    M2.i1 = M1()
+    M2.i2 = M1()
+    M2.i0(i=M2.i, o=M2.i1.i, p=M2.p)
+    M2.i1(i=M2.i0.o, o=M2.s, p=M2.p)
+    M2.i2(i=M2.s, o=M2.o, p=M2.p)
+
+    # Protobuf round-trip it
+    ppkg = h.to_proto(M2)
+    ns = h.from_proto(ppkg)
+
+    # And check all kinda stuff about what comes back
+    assert isinstance(ns, SimpleNamespace)
+    assert isinstance(ns.M1, h.Module)
+    assert isinstance(ns.M2, h.Module)
+
+    assert len(ns.M1.signals) == 0
+    assert len(ns.M1.ports) == 3
+    assert "i" in ns.M1.ports
+    assert ns.M1.i.direction == h.signal.PortDir.INPUT
+    assert ns.M1.i.vis == h.signal.Visibility.PORT
+    assert "o" in ns.M1.ports
+    assert ns.M1.o.direction == h.signal.PortDir.OUTPUT
+    assert ns.M1.o.vis == h.signal.Visibility.PORT
+    assert "p" in ns.M1.ports
+    assert ns.M1.p.direction == h.signal.PortDir.NONE
+    assert ns.M1.p.vis == h.signal.Visibility.PORT
+    assert len(ns.M1.instances) == 0
+
+    assert len(ns.M2.instances) == 3
+    for i in ns.M2.instances.values():
+        assert i.module is ns.M1
+        assert i.conns["p"] is ns.M2.p
+    assert len(ns.M2.ports) == 3
+    assert len(ns.M2.signals) == 2
+    assert "s" in ns.M2.signals
+    assert "_i1_i__i0_o_" in ns.M2.signals
+
+
+def test_bigger_interfaces():
+    import hdl21 as h
+    from enum import Enum, auto
+
+    class MsRoles(Enum):
+        MS = auto()
+        SL = auto()
+
+    @h.interface
+    class Jtag:
+        roles = MsRoles
+        tck = h.Signal(src=roles.MS, dest=roles.SL)
+        tdi = h.Signal(src=roles.MS, dest=roles.SL)
+        tms = h.Signal(src=roles.MS, dest=roles.SL)
+        tdo = h.Signal(src=roles.SL, dest=roles.MS)
+
+    @h.interface
+    class Spi:
+        roles = MsRoles
+        sck = h.Signal(src=roles.MS, dest=roles.SL)
+        cs = h.Signal(src=roles.MS, dest=roles.SL)
+        dq = h.Signal(src=roles.SL, dest=roles.MS, width=4)
+
+    class Chip(h.Module):
+        spi = Spi(role=MsRoles.MS, port=True)
+        jtag = Jtag(role=MsRoles.SL, port=True)
+        ...  # Actual internal content, which likely connects these down *many* levels of hierarchy
+
+    class SpiFlash(h.Module):
+        # A typical flash memory with a SPI port
+        spi = Spi(role=MsRoles.SL, port=True)
+
+    class Board(h.Module):
+        # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
+        jtag = Jtag(role=MsRoles.SL)
+        chip = Chip(jtag=jtag)
+        flash = SpiFlash(spi=chip.spi)
+
+    class Tester(h.Module):
+        # A typical test-widget with a JTAG port
+        jtag = Jtag(role=MsRoles.MS, port=True)
+
+    class TestSystem(h.Module):
+        # A system in which `Tester` can test `Board`
+        jtag = Jtag()
+        tester = Tester(jtag=jtag)
+        board = Board(jtag=jtag)
+
+    sys = h.elaborate(TestSystem)
+    # FIXME: more post-elabortion tests
 
