@@ -3,7 +3,7 @@ hdl21 ProtoBuf Export
 """
 from textwrap import dedent
 from dataclasses import asdict
-from typing import Optional
+from typing import Optional, List, Union
 
 # Local imports
 # Proto-definitions
@@ -11,45 +11,55 @@ from . import circuit_pb2 as protodefs
 
 # HDL
 from ..elab import elaborate, Elabable
-from ..module import Module
+from ..module import Module, ExternalModule, ExternalModuleCall
 from ..primitives import Primitive, PrimitiveCall
 from ..instance import Instance
 from .. import signal
 
 
 def to_proto(
-    top: Elabable, domain: Optional[str] = None, **kwargs
+    top: Union[Elabable, List[Elabable]], domain: Optional[str] = None, **kwargs
 ) -> protodefs.Package:
-    """ Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package` """
-    top = elaborate(top=top, **kwargs)
-    exporter = ProtoExporter(top=top, domain=domain)
+    """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`"""
+    if not isinstance(top, list):
+        tops = [top]
+    else:
+        tops = top
+    # Elaborate all the top-level Modules
+    tops = [elaborate(top=t, **kwargs) for t in tops]
+    exporter = ProtoExporter(tops=tops, domain=domain)
     return exporter.export()
 
 
 class ProtoExporter:
-    """ Hierarchical Protobuf Exporter. 
-    Walks a Module hierarchy from Module `self.top`, defining each required Module along the way. 
-    Modules are defined in `self.pkg` in dependency order. 
-    Upon round-tripping, all dependent child-modules will be encountered before their parent instantiators. """
+    """Hierarchical Protobuf Exporter.
+    Walks a Module hierarchy from Module `self.top`, defining each required Module along the way.
+    Modules are defined in `self.pkg` in dependency order.
+    Upon round-tripping, all dependent child-modules will be encountered before their parent instantiators."""
 
-    def __init__(self, top: Module, domain: Optional[str] = None):
-        self.top = top
+    def __init__(self, tops: List[Module], domain: Optional[str] = None):
+        self.tops = tops
         self.modules = dict()  # Module-id to Proto-Module dict
         self.module_names = dict()  # (Serialized) Module-name to Proto-Module dict
+        self.ext_modules = dict()  # ExternalModule-id to Proto-ExternalModule dict
         # Default `domain` AKA package-name is the empty string
         self.pkg = protodefs.Package(name=domain or "")
 
     def export(self) -> protodefs.Package:
-        """ Export starting at `self.top`, visiting every hierarchical node along the way. 
-        Returns our generated `Package` as a result. """
-        if not isinstance(self.top, Module):
+        """Export starting with every Module in `self.tops`,
+        visiting every hierarchical node along the way.
+        Returns our generated `Package` as a result."""
+        if not isinstance(self.tops, list):
             raise TypeError
-        self.export_module(self.top)
+        for m in self.tops:
+            if not isinstance(m, Module):
+                raise TypeError
+            self.export_module(m)
         return self.pkg
 
     def export_module_name(self, module: Module) -> protodefs.QualifiedName:
-        """ Create and return a unique `QualifiedName` for Module `module`.
-        Raises a `RuntimeError` if unique name is taken. """
+        """Create and return a unique `QualifiedName` for Module `module`.
+        Raises a `RuntimeError` if unique name is taken."""
 
         mname = module._pymodule.__name__ + "." + module.name
         qname = protodefs.QualifiedName(domain=self.pkg.name, name=mname)
@@ -82,11 +92,7 @@ class ProtoExporter:
 
         # Create its Port-objects
         for port in module.ports.values():
-            pport = protodefs.Port()
-            pport.direction = self.export_port_dir(port)
-            pport.signal.name = port.name
-            pport.signal.width = port.width
-            pmod.ports.append(pport)
+            pmod.ports.append(self.export_port(port))
 
         # Create its Signal-objects
         for sig in module.signals.values():
@@ -108,6 +114,30 @@ class ProtoExporter:
         self.pkg.modules.append(pmod)
         return pmod
 
+    def export_external_module(self, emod: ExternalModule) -> protodefs.ExternalModule:
+        """Export an `ExternalModule`"""
+        if id(emod) in self.ext_modules:  # Already done
+            return self.ext_modules[id(emod)]
+
+        # Create the Proto-ExternalModule
+        pmod = protodefs.ExternalModule(name=emod.name)
+
+        # Create its Port-objects
+        for port in emod.ports.values():
+            pmod.ports.append(self.export_port(port))
+
+        # Store references to the result, and return it
+        self.ext_modules[id(emod)] = pmod
+        self.pkg.ext_modules.append(pmod)
+        return pmod
+
+    def export_port(self, port: signal.Port) -> protodefs.Port:
+        pport = protodefs.Port()
+        pport.direction = self.export_port_dir(port)
+        pport.signal.name = port.name
+        pport.signal.width = port.width
+        return pport
+
     def export_port_dir(self, port: signal.Port) -> protodefs.Port.Direction:
         # Convert between Port-Direction Enumerations
         if port.direction == signal.PortDir.INPUT:
@@ -121,9 +151,9 @@ class ProtoExporter:
         raise ValueError
 
     def export_instance(self, inst: Instance) -> protodefs.Instance:
-        """ Convert an hdl21.Instance into a Proto-Instance 
-        Depth-first retrieves a Module definition first, 
-        using its generated `name` field as the Instance's `module` pointer. """
+        """Convert an hdl21.Instance into a Proto-Instance
+        Depth-first retrieves a Module definition first,
+        using its generated `name` field as the Instance's `module` pointer."""
 
         # Create the Proto-Instance
         pinst = protodefs.Instance(name=inst.name)
@@ -134,14 +164,22 @@ class ProtoExporter:
             pmod = self.export_module(inst._resolved)
             # Give it a Reference to its Module
             pinst.module.qn.CopyFrom(pmod.name)
-        elif isinstance(inst._resolved, PrimitiveCall):
+        elif isinstance(inst._resolved, (PrimitiveCall, ExternalModuleCall)):
             call = inst._resolved
-            prim = call.prim
-            # Create a reference to the `hdl21.primitives` namespace
-            pinst.module.qn.domain = "hdl21.primitives"
-            pinst.module.qn.name = prim.name
+            if isinstance(inst._resolved, PrimitiveCall):
+                # Create a reference to the `hdl21.primitives` namespace
+                pinst.module.qn.domain = "hdl21.primitives"
+                pinst.module.qn.name = call.prim.name
+                params = asdict(call.params)
+            else:  # ExternalModuleCall
+                self.export_external_module(call.module)
+                # External Modules have a blank domain
+                pinst.module.qn.domain = ""
+                pinst.module.qn.name = call.module.name
+                params = call.params
+
             # Set the parameter-values
-            for key, val in asdict(call.params).items():
+            for key, val in params.items():
                 if isinstance(val, type(None)):
                     continue  # None-valued parameters go un-set
                 elif isinstance(val, int):
@@ -179,7 +217,7 @@ class ProtoExporter:
         return pinst
 
     def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
-        """ Export (potentially recursive) Signal Concatenations """
+        """Export (potentially recursive) Signal Concatenations"""
         pconc = protodefs.Concat()
         for part in concat.parts:
             if isinstance(part, signal.Signal):
@@ -202,4 +240,3 @@ class ProtoExporter:
             else:
                 raise TypeError
         return pconc
-

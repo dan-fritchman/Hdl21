@@ -185,4 +185,3 @@ def interface(cls: type) -> Interface:
             setattr(intf, key, val)
     # And return the interface
     return intf
-

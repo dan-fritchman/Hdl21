@@ -98,4 +98,3 @@ def generator(f: Callable) -> Generator:
     return Generator(
         func=f, paramtype=paramtype, usecontext=usecontext, pymodule=pymodule
     )
-

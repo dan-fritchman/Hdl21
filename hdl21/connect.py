@@ -3,7 +3,7 @@
 
 Decorators which add a number of connection-related facilities onto classes to which they are applied. 
 """
-from typing import Any
+from typing import Any, Union
 
 
 def connectable(cls: type) -> type:
@@ -19,17 +19,23 @@ def is_connectable(obj: Any) -> bool:
 
 def connects(cls: type) -> type:
     """ Decorator to add 'connect by call' and 'connect by setattr' semantics. 
+    Applied to hdl21 internal types such as `Instance`, `InstArray` and `Interface`. 
     
     `connects` classes have a few more subtle requirements, including that they 
     indicate when their constructors complete via an `_initialized` field, 
     include a `conns` connections-dict, and a `portrefs` dictionary of past port-references. """
 
+    # First check and fail if any of the methods to be defined here are already defined elsewhere
+    defined_here = ["__call__", "__setattr__", "__getattr__", "connect"]
+    if any([key in cls.__dict__ for key in defined_here]):
+        raise RuntimeError(
+            f"Invalid modification of {cls} with `@hdl21.connects`: {key} is already defined, and will not be over-written."
+        )
+
     def __call__(self, **kwargs):
         """ Connect-by-call """
-        for k, v in kwargs.items():
-            if not is_connectable(v):
-                raise TypeError(f"{self} attempting to connect non-connectable {v}")
-            self.conns[k] = v
+        for key, val in kwargs.items():
+            self.connect(key, val)
         # Don't forget to retain ourselves at the call-site!
         return self
 
@@ -40,9 +46,17 @@ def connects(cls: type) -> type:
             return object.__setattr__(self, key, val)
         if key in self.__getattribute__("_specialcases"):  # Special case(s)
             return object.__setattr__(self, key, val)
-        if not is_connectable(val):
-            raise TypeError(f"{self} attempting to connect non-connectable {val}")
-        self.conns[key] = val
+        self.connect(key, val)
+
+    def connect(self, portname: str, signal: Union["Signal", "PortRef"]) -> None:
+        """ Connect Signal `signal` to port (name) `portname`. 
+        Called by both by-call and by-assignment convenience methods, and usable directly. 
+        Direct calls to `connect` will generally be required for ports with otherwise illegal names, 
+        e.g. Python language keywords (`in`, `from`, etc.), 
+        or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.). """
+        if not is_connectable(signal):
+            raise TypeError(f"{self} attempting to connect non-connectable {signal}")
+        self.conns[portname] = signal
 
     def __getattr__(self, key: str):
         """ Port access by getattr """
@@ -60,13 +74,6 @@ def connects(cls: type) -> type:
             raise AttributeError(f"No attribute {key} for {self}")
 
         from .instance import PortRef
-        from .module import Module
-
-        # If we have a concrete Module, check whether it has this as a port, and only return it if so
-        # (If it's a generator, in contrast, we don't necessarily know the ports yet.)
-        # FIXME: whether to run this check here, and whether to include interface-ports
-        # if isinstance(self.of, Module) and key not in self.of.ports:
-        #     raise RuntimeError(f"Invalid port {key} accessed on Module {self.of}")
 
         # Check in our existing port-references
         port_refs = self.__getattribute__("portrefs")
@@ -78,7 +85,10 @@ def connects(cls: type) -> type:
         port_refs[key] = port_ref
         return port_ref
 
+    # Attach all of these to the class
     cls.__call__ = __call__
     cls.__setattr__ = __setattr__
     cls.__getattr__ = __getattr__
+    cls.connect = connect
+    # And don't forget to return it!
     return cls

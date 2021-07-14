@@ -9,17 +9,19 @@ which unwind `Module` sub-class-body contents in dataflow order.
 """
 import inspect
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Any, Optional, List, Union, Dict
+from pydantic.dataclasses import dataclass
 
 # Local imports
 from .instance import calls_instantiate
+from .signal import Signal, Visibility
 
 
 @calls_instantiate
 class Module:
-    """ 
+    """
     # Module
-    The central element of hardware re-use. 
+    The central element of hardware re-use.
     """
 
     def __init__(self, *, name: Optional[str] = None):
@@ -90,11 +92,16 @@ class Module:
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
 
-    def add(self, val: object) -> None:
-        """ Add a named HDL object into one of our internal dictionaries. 
-        This allows for programmatic insertion of attributes whose names are not legal Python identifiers, 
-        such as keywords ('in', 'from') and those including invalid characters. 
-        This method is also the means by which underscore-prefaced attributes are added during elaboration. """
+    def add(self, val: Any) -> Any:
+        """ Add a named HDL object into one of our internal dictionaries.
+
+        This allows for programmatic insertion of attributes whose names are not legal Python identifiers,
+        such as keywords ('in', 'from') and those including invalid characters.
+        This method is also the means by which underscore-prefaced attributes are added during elaboration.
+
+        The added object `val` is also provided as the return value, enabling usages such as
+        `instance.inp = module.add(h.Input(width=5))` and similar. """
+
         from .signal import Signal, Visibility
         from .instance import Instance, InstArray
         from .interface import InterfaceInstance
@@ -123,6 +130,8 @@ class Module:
             self.namespace[val.name] = val
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
+        # And return our newly-added attribute
+        return val
 
     def __getattr__(self, key: str) -> Any:
         """ Include our namespace-worth of HDL objects in dot-access retrievals """
@@ -153,39 +162,40 @@ class Module:
 
 
 def module(cls: type) -> Module:
-    """ # Module Definition Decorator 
-    
-    Converts a class-body full of Interface-storable attributes to an `hdl21.Module`. 
-    Example Usage: 
+    """
+    # Module Definition Decorator
+
+    Converts a class-body full of Interface-storable attributes to an `hdl21.Module`.
+    Example Usage:
 
     ```python
     import hdl21 as h
 
     @h.module
-    class M1: 
+    class M1:
         d = h.Port()
         e = h.Signal()
-    
+
     @h.module
     class M2:
         q = h.Signal()
         i = M1(d=q)
     ```
 
-    `hdl21.Modules` are strongly-typed containers of other hardware objects: 
+    `hdl21.Modules` are strongly-typed containers of other hardware objects:
     * `Signals` and `Ports`
-    * Instances of other `Modules` 
+    * Instances of other `Modules`
     * Structured connections via `Interfaces`
 
-    Attempts to set module attributes of any other types will raise a `TypeError`. 
-    Notably this includes any behavioral elements implemented by Python functions. 
-    If you'd like atribrary-executing Python-code that creates or manipulates `Modules`, 
-    you probably want an `hdl21.Generator` instead. 
+    Attempts to set module attributes of any other types will raise a `TypeError`.
+    Notably this includes any behavioral elements implemented by Python functions.
+    If you'd like atribrary-executing Python-code that creates or manipulates `Modules`,
+    you probably want an `hdl21.Generator` instead.
 
-    Temporary variables can be declared inside of the `@module`-decorated class-body, 
-    so long as they are meet the Python-standard convention for private data: 
-    name-prefixing with an underscore. 
-    These temporary variables are *not* propagated along as members of the `Module`. 
+    Temporary variables can be declared inside of the `@module`-decorated class-body,
+    so long as they are meet the Python-standard convention for private data:
+    name-prefixing with an underscore.
+    These temporary variables are *not* propagated along as members of the `Module`.
     """
 
     if cls.__bases__ != (object,):
@@ -208,3 +218,57 @@ def module(cls: type) -> Module:
     # And return the Module
     return module
 
+
+@dataclass
+class ExternalModule:
+    """
+    # External Module
+
+    Wrapper for circuits defined outside Hdl21, such as:
+    * Inclusion of existing SPICE or Verilog netlists
+    * Foundry or technology-specific primitives
+
+    Unlike `Modules`, `ExternalModules` include parameters to support legacy HDLs.
+    Said parameters may only take on a limited number of datatypes,
+    and may not be nested.
+    Parameter type-requirements *are not* stored by `ExternalModules`.
+    Calling them to create a parametrized instance stores a largely arbitrary
+    dictionary of params.
+    """
+
+    name: str
+    desc: str
+    port_list: List[Signal]
+    # FIXME: do we want an optional parameter-types type-thing
+
+    def __post_init_post_parse__(self):
+        """After type-checking, do some more checks on values"""
+        for p in self.port_list:
+            if not p.name:
+                raise ValueError(f"Unnamed Primitive Port {p} for {self.name}")
+            if p.vis != Visibility.PORT:
+                raise ValueError(
+                    f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
+                )
+
+    def __call__(self, **kwargs) -> "ExternalModuleCall":
+        return ExternalModuleCall(module=self, params=kwargs)
+
+    @property
+    def ports(self) -> dict:
+        return {p.name: p for p in self.port_list}
+
+
+@calls_instantiate
+@dataclass
+class ExternalModuleCall:
+    """External Module Call
+    A combination of an `ExternalModule` and its Parameter-values,
+    typically generated by calling the Module."""
+
+    module: ExternalModule
+    params: Dict[str, Union[int, float, str]]
+
+    @property
+    def ports(self) -> dict:
+        return self.module.ports

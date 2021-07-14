@@ -6,5 +6,4 @@
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python.pythonPath": "/Users/dan/miniconda3/envs/py38/bin/python"
 }

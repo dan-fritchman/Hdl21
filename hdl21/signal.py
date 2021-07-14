@@ -48,9 +48,9 @@ class Visibility(Enum):
 @connectable
 @dataclass
 class Signal:
-    """ 
-    # hdl21 Signal 
-    The base-level unit of hardware connectivity 
+    """
+    # hdl21 Signal
+    The base-level unit of hardware connectivity
     """
 
     name: Optional[str] = None
@@ -65,11 +65,11 @@ class Signal:
             raise ValueError
 
     def __getitem__(self, key: Any) -> "Slice":
-        """ Square-Bracket Slicing into Signals, returning Signal-Slices. 
-        Does *HDL-style* slicing, in which: 
+        """ Square-Bracket Slicing into Signals, returning Signal-Slices.
+        Does *HDL-style* slicing, in which:
         * Slice indices are *inclusive*
-        * Larger arguments are expected to come *first*. 
-        
+        * Larger arguments are expected to come *first*.
+
         e.g. The top "half" of a width-ten `Signal` can be retrieved via:
         `Signal(width=10)[9:5]` """
 
@@ -87,9 +87,7 @@ class Signal:
             stop = slice.__getattribute__(key, "stop")
             step = slice.__getattribute__(key, "step")
             if step is not None:
-                raise ValueError(
-                    f"Invalid slice (with step) {key} indexed into {self}"
-                )
+                raise ValueError(f"Invalid slice (with step) {key} indexed into {self}")
             top = start or self.width - 1
             if top > self.width:
                 raise ValueError(f"Out-of-bounds index {top} into {self}")
@@ -123,8 +121,8 @@ def Inout(**kwargs) -> Signal:
 
 
 def Port(direction=PortDir.NONE, **kwargs) -> Signal:
-    """ Port Constructor. Thin wrapper around `hdl21.Signal`. 
-    The `direction` argument sets the Port's direction, 
+    """ Port Constructor. Thin wrapper around `hdl21.Signal`.
+    The `direction` argument sets the Port's direction,
     and defaults to the unknown direction `PortDir.NONE`. """
     return Signal(direction=direction, vis=Visibility.PORT, **kwargs)
 
@@ -145,7 +143,7 @@ class Slice:
 
 @connectable
 class Concat:
-    """ Signal Concatenation 
+    """ Signal Concatenation
     Uses *HDL-convention* ordering, in which *MSBs* are specified first. """
 
     def __init__(self, *parts):
@@ -157,3 +155,19 @@ class Concat:
     @property
     def width(self):
         return sum([s.width for s in self.parts])
+
+
+@connectable
+@dataclass
+class NoConn:
+    """
+    # No-Connect 
+    
+    Special placeholder connectable-object which indicates "unconnected" Ports,
+    typically unconnected outputs.
+    
+    An optional `name` field allows guidance for external netlisting, 
+    for cases in which consistent naming is desirable (e.g. for waveform probing). 
+    """
+
+    name: Optional[str] = None

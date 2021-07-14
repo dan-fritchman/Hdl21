@@ -38,6 +38,7 @@ class Instance:
         "of",
         "conns",
         "portrefs",
+        "connect",
         "_resolved",
         "_elaborated",
         "_initialized",
@@ -45,19 +46,25 @@ class Instance:
 
     def __init__(
         self,
-        of: Union["Module", "Generator", "GeneratorCall", "PrimitiveCall"],
+        of: Union[
+            "Module",
+            "Generator",
+            "GeneratorCall",
+            "PrimitiveCall",
+            "ExternalModuleCall",
+        ],
         params: Optional[object] = None,
         *,
         name: Optional[str] = None,
     ):
         from .generator import Generator, GeneratorCall
-        from .module import Module
+        from .module import Module, ExternalModuleCall
         from .primitives import PrimitiveCall
 
         if isinstance(of, Generator):
             of = of(params)
         elif (
-            isinstance(of, (Module, GeneratorCall, PrimitiveCall))
+            isinstance(of, (Module, GeneratorCall, PrimitiveCall, ExternalModuleCall))
             and params is not None
         ):
             raise RuntimeError(
@@ -75,14 +82,16 @@ class Instance:
         return f"Instance(name={self.name} of={self.of})"
 
     @property
-    def _resolved(self) -> Optional[Union["Module", "PrimitiveCall"]]:
+    def _resolved(
+        self,
+    ) -> Optional[Union["Module", "PrimitiveCall", "ExternalModuleCall"]]:
         """ Property to retrieve the Instance's resolved Module, if complete. 
         Returns `None` if unresolved. """
-        from .module import Module
+        from .module import Module, ExternalModuleCall
         from .generator import GeneratorCall
         from .primitives import PrimitiveCall
 
-        if isinstance(self.of, (Module, PrimitiveCall)):
+        if isinstance(self.of, (Module, PrimitiveCall, ExternalModuleCall)):
             return self.of
         if isinstance(self.of, GeneratorCall):
             return self.of.result
@@ -93,11 +102,19 @@ class Instance:
 class InstArray:
     """ Array of Instances """
 
-    _specialcases = ["name", "of", "conns", "portrefs", "_elaborated", "_initialized"]
+    _specialcases = [
+        "name",
+        "of",
+        "conns",
+        "portrefs",
+        "connect",
+        "_elaborated",
+        "_initialized",
+    ]
 
     def __init__(
         self,
-        of: Union["Module", "Generator", "GeneratorCall"],
+        of: Union["Module", "Generator", "GeneratorCall", "ExternalModuleCall"],
         n: int,
         params: Optional[object] = None,
         *,
