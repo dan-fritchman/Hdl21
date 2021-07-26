@@ -642,7 +642,7 @@ def test_proto3():
     M2.s = h.Signal(width=4)
     M2.i = M1()
     M2.i(p1=M2.s[0])
-    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[3:2]))
+    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[2:3]))
 
     ppkg = h.to_proto(M2, domain="test_proto3")
 
@@ -838,9 +838,10 @@ def test_signal_slice1():
     assert sl.top == 0
     assert sl.bot == 0
     assert sl.width == 1
+    assert sl.step == 1
     assert sl.signal is sig
 
-    sl = sig[4:0]
+    sl = sig[0:4]
     assert isinstance(sl, h.signal.Slice)
     assert sl.top == 4
     assert sl.bot == 0
@@ -855,9 +856,26 @@ def test_signal_slice1():
     assert sl.signal is sig
 
 
+def test_signal_slice2():
+    # Test slicing advanced features
+    sl = h.Signal(width=11)[-1]
+    assert sl.top == 10
+    assert sl.bot == 10
+    assert sl.width == 1
+
+    sl = h.Signal(width=11)[:-1]
+    assert sl.top == 9
+    assert sl.bot == 0
+    assert sl.width == 10
+
+    sl = h.Signal(width=11)[-2:]
+    assert sl.top == 10
+    assert sl.bot == 9
+    assert sl.width == 2
+
+
 def test_bad_slice1():
     # Test slicing error-cases
-
     with pytest.raises(TypeError):
         h.Signal(width=11)[None]
 
@@ -865,19 +883,10 @@ def test_bad_slice1():
         h.Signal(width=11)[11]
 
     with pytest.raises(ValueError):
-        h.Signal(width=11)[-1]
-
-    with pytest.raises(ValueError):
         h.Signal(width=11)[1:1:1]
 
     with pytest.raises(ValueError):
-        h.Signal(width=11)[1:9]
-
-    with pytest.raises(ValueError):
-        h.Signal(width=11)[:-1]
-
-    with pytest.raises(ValueError):
-        h.Signal(width=11)[-1:]
+        h.Signal(width=11)[9:1]
 
 
 def test_signal_concat1():

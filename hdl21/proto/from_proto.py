@@ -126,7 +126,7 @@ class ProtoImporter:
             raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
         # Now chop this up if it's a Slice
         if stype == "slice":
-            sig = Slice(signal=sig, top=pconn.slice.top, bot=pconn.slice.bot)
+            sig = Slice(signal=sig, top=pconn.slice.top, bot=pconn.slice.bot, step=1)
         return sig
 
     def import_concat(self, pconc: protodefs.Concat, module: Module) -> Concat:
