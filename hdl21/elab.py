@@ -12,7 +12,7 @@ from pydantic.dataclasses import dataclass
 from pydantic import ValidationError
 
 # Local imports
-from .module import Module
+from .module import Module, ExternalModuleCall
 from .instance import Instance
 from .primitives import PrimitiveCall
 from .interface import Interface, InterfaceInstance
@@ -39,6 +39,7 @@ class GeneratorElaborator:
         self.calls = dict()  # GeneratorCall ids to references
         self.modules = dict()  # Module ids to references
         self.primitive_calls = dict()  # PrimitiveCall ids to references
+        self.ext_module_calls = dict()  # PrimitiveCall ids to references
 
     def elaborate(self):
         """ Elaborate our top node """
@@ -87,8 +88,8 @@ class GeneratorElaborator:
         return self.elaborate_module(m)
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. First depth-first elaborates its Instances, 
-        before creating any implicit Signals and connecting them. 
+        """ Elaborate Module `module`. First depth-first elaborates its Instances,
+        before creating any implicit Signals and connecting them.
         Finally checks for connection-consistency with each Instance. """
         if id(module) in self.modules:  # Already done!
             return module
@@ -108,6 +109,13 @@ class GeneratorElaborator:
         self.modules[id(module)] = module
         return module
 
+    def elaborate_external_module(self, call: ExternalModuleCall) -> ExternalModuleCall:
+        """ Elaborate ExternalModuleCall `call` """
+        # Store a reference in our cache, and return it as-is
+        if id(call) not in self.ext_module_calls:
+            self.ext_module_calls[id(call)] = call
+        return call
+
     def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
         """ Elaborate PrimitiveCall `call` """
         # Store a reference in our cache, and return it as-is
@@ -120,8 +128,8 @@ class GeneratorElaborator:
         inst._elaborated = True
 
     def elaborate_instance(self, inst: Instance) -> Module:
-        """ Elaborate a Module Instance. 
-        Largely pushes through depth-first definition of the target-Module. 
+        """ Elaborate a Module Instance.
+        Largely pushes through depth-first definition of the target-Module.
         Connections, port-direction checking and the like are performed in `elaborate_module`. """
         inst._elaborated = True  # Turn off the instance's pre-elaboration magic
         if isinstance(inst.of, Generator):  # FIXME: maybe move this
@@ -133,11 +141,13 @@ class GeneratorElaborator:
             return self.elaborate_module(inst.of)
         if isinstance(inst.of, PrimitiveCall):
             return self.elaborate_primitive_call(inst.of)
+        if isinstance(inst.of, ExternalModuleCall):
+            return self.elaborate_external_module(inst.of)
         raise TypeError(f"Invalid Instance of {inst.of}")
 
 
 class ImplicitConnectionElaborator:
-    """ Hierarchical Implicit-Connection Elaborator 
+    """ Hierarchical Implicit-Connection Elaborator
     Transform any implicit signals, i.e. port-to-port connections, into explicit ones. """
 
     def __init__(
@@ -145,12 +155,20 @@ class ImplicitConnectionElaborator:
     ):
         self.top = top
         self.ctx = ctx
+        self.ext_module_calls = dict()
 
     def elaborate(self):
         """ Elaborate our top node """
         if not isinstance(self.top, Module):
             raise TypeError
         return self.elaborate_module(self.top)
+
+    def elaborate_external_module(self, call: ExternalModuleCall) -> ExternalModuleCall:
+        """ Elaborate ExternalModuleCall `call` """
+        # Store a reference in our cache, and return it as-is
+        if id(call) not in self.ext_module_calls:
+            self.ext_module_calls[id(call)] = call
+        return call
 
     def elaborate_instance(self, inst: Instance) -> Union[Module, PrimitiveCall]:
         """ Elaborate a Module Instance. """
@@ -160,6 +178,8 @@ class ImplicitConnectionElaborator:
             return self.elaborate_module(inst._resolved)
         if isinstance(inst._resolved, PrimitiveCall):
             return self.elaborate_primitive_call(inst._resolved)
+        if isinstance(inst.of, ExternalModuleCall):
+            return self.elaborate_external_module(inst._resolved)
         raise TypeError
 
     def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
@@ -167,7 +187,7 @@ class ImplicitConnectionElaborator:
         return call
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. First depth-first elaborates its Instances, 
+        """ Elaborate Module `module`. First depth-first elaborates its Instances,
         before creating any implicit Signals and connecting them. """
 
         from .instance import PortRef
@@ -332,8 +352,8 @@ class InterfaceFlattener:
         return module
 
     def elaborate_interface_instance(self, inst: InterfaceInstance) -> FlatInterface:
-        """ Elaborate an Interface Instance. 
-        Really meaning get a flattened definition of its target Interface. 
+        """ Elaborate an Interface Instance.
+        Really meaning get a flattened definition of its target Interface.
         All connection-checking is done elsewhere. """
         return self.flatten_interface(inst.of)
 
@@ -377,6 +397,8 @@ class InterfaceFlattener:
             return self.elaborate_module(inst._resolved)
         if isinstance(inst._resolved, PrimitiveCall):
             return self.elaborate_primitive_call(inst._resolved)
+        if isinstance(inst.of, ExternalModuleCall):
+            return self.elaborate_external_module(inst._resolved)
         raise TypeError
 
     def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
@@ -444,4 +466,3 @@ def elaborate(top: Elabable, params=None, ctx=None, passes=None):
     for pass_ in passes:
         res = pass_funcs[pass_](top=res, ctx=ctx)
     return res
-

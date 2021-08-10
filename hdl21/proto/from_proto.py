@@ -174,6 +174,10 @@ class ProtoImporter:
                     f"Invalid Instance {pinst} with of Module {module} - does not accept Parameters"
                 )
             target = module
+        elif not ref.qn.domain:
+            raise NotImplementedError(
+                f"Importing ExternalModule from proto coming soon!"
+            )
         else:
             raise ValueError(f"Undefined Module Domain {ref.qn.domain}")
 
@@ -200,4 +204,3 @@ class ProtoImporter:
         if pport.direction == protodefs.Port.Direction.NONE:
             return PortDir.NONE
         raise ValueError
-

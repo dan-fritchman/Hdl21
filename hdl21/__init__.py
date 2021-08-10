@@ -11,7 +11,8 @@ from .module import *
 from .generator import *
 from .primitives import *
 from .interface import *
+from .netlist import *
 from .elab import *
 
 from . import proto
-from .proto import to_proto, from_proto  
+from .proto import to_proto, from_proto

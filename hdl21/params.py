@@ -181,4 +181,3 @@ def _unique_name(params: Any) -> str:
     h.update(bytes(jsonstr, encoding="utf-8"))
     # Combine the `@paramclass` name with this (hex) digest
     return params.__class__.__name__ + "(" + h.hexdigest() + ")"
-

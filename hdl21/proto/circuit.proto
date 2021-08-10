@@ -4,6 +4,7 @@ syntax = "proto3";
 message Package {
   string name = 1;
   repeated Module modules = 2;
+  repeated ExternalModule ext_modules = 3;
 }
 
 message QualifiedName {
@@ -17,11 +18,18 @@ message Reference {
   }
 }
 
+/// Parameter Enumeration 
+/// 
+/// Supports the common param-types supported in legacy HDLs 
+/// such as Verilog and SPICE. 
+/// Both `string` and `literal` variants are stored as Protobuf strings,
+/// but are handled materially 
 message Parameter {
   oneof value {
-    int64 integer = 2;
-    double double = 3;
-    string string = 4;
+    int64 integer = 2;  // Int 
+    double double = 3;  // Float 
+    string string = 4;  // String-valued parameter 
+    string literal = 5; // Literal expressions, e.g. "my_param1 * 5 + sin(your_param3)"
   }
 }
 
@@ -52,10 +60,12 @@ message Slice {
   // Bottom Index
   int64 bot = 3;
 }
+
 // Signal Concatenation 
 message Concat {
   repeated Connection parts = 1;
 }
+
 // Connection Union
 // Enumerates all types that can be 
 // (a) Connected to Ports, and 
@@ -81,7 +91,7 @@ message Instance {
 
 /// Module - the primary unit of hardware re-use
 message Module {
-  // Required Module Name 
+  // Module Name 
   QualifiedName name = 1;
   // Port Definitions 
   repeated Port ports = 2;
@@ -92,3 +102,14 @@ message Module {
   // Parameters and Default Values 
   map<string, Parameter> default_parameters = 5;
 }
+
+/// # Externally Defined Module 
+/// Primarily for sake of port-ordering, 
+/// for translation with by-position formats. 
+message ExternalModule {
+  // Module Name 
+  string name = 1;
+  // Port Definitions 
+  repeated Port ports = 2;
+}
+

@@ -976,4 +976,3 @@ def test_bad_proto_naming():
             ma2 = m2()()
 
         h.to_proto(MaParent)
-
