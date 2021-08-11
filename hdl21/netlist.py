@@ -78,6 +78,10 @@ class Netlister:
 class SpectreNetlister(Netlister):
     """Netlister for Spectre compatible netlist"""
 
+    @classmethod
+    def get_signal_definition(cls, signals: List[str]) -> str:
+        return ""
+
     def get_module_name(self, module: protodefs.Module) -> str:
         """ Create a Spectre-compatible name for proto-Module `module` """
 
@@ -136,8 +140,7 @@ class SpectreNetlister(Netlister):
         if stype == "sig":
             return self.get_signal(pconn.sig)
         if stype == "slice":
-            raise RuntimeError(f"Coming Soon!")
-            # sname = pconn.slice.signal
+            return self.get_slice(pconn.slice)
         # Concatenations are more complicated and need their own method
         if stype == "concat":
             return self.get_concat(pconn.concat)
@@ -165,7 +168,12 @@ class SpectreNetlister(Netlister):
         if psig.width == 1:  # width==1, i.e. a scalar signal
             return psig.name
         # Vector/ multi "bit" Signal. Creates several spice signals.
-        return " ".join([f"{psig.name}[{k}]" for k in reversed(range(psig.width))])
+        return " ".join([f"{psig.name}_{k}" for k in reversed(range(psig.width))])
+
+    @classmethod
+    def get_slice(cls, pslice: protodefs.Slice) -> str:
+        """ Get the definition of slice """
+        return " ".join([f'{pslice.signal}_{k}' for k in range(pslice.top, pslice.bot-1, -1)])
 
     def get_instance(self, pinst: protodefs.Instance) -> str:
         """Create and return a netlist-string for Instance `pinst`"""
@@ -210,8 +218,8 @@ class SpectreNetlister(Netlister):
         out += "\n+  " + module_name + " "
 
         # Write the parameter-values
-        if len(pinst.parameters):
-            raise TabError(f"Coming Soon!")
+        # if len(pinst.parameters):
+        #     raise TabError(f"Coming Soon!")
 
         # Close it, and return the result
         out += " \n"

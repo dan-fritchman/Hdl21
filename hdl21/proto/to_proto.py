@@ -176,7 +176,7 @@ class ProtoExporter:
                 # External Modules have a blank domain
                 pinst.module.qn.domain = ""
                 pinst.module.qn.name = call.module.name
-                params = call.params
+                params = asdict(call.params)
 
             # Set the parameter-values
             for key, val in params.items():
