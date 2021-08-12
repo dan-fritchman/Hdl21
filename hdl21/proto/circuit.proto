@@ -5,6 +5,7 @@ message Package {
   string name = 1;
   repeated Module modules = 2;
   repeated ExternalModule ext_modules = 3;
+  repeated ExternalSource ext_sources = 4;
 }
 
 message QualifiedName {
@@ -111,5 +112,15 @@ message ExternalModule {
   string name = 1;
   // Port Definitions 
   repeated Port ports = 2;
+}
+
+/// # External Source
+/// Primarily for sake of port-ordering, 
+/// for translation with by-position formats. 
+message ExternalSource {
+  oneof src {
+    string path = 1; // File-path on (some) filesystem
+    string url = 2; // URL to module definitions 
+  }
 }
 

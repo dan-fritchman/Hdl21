@@ -1,8 +1,11 @@
 """
 hdl21 ProtoBuf Export
 """
+from hdl21sim import Sim
 from textwrap import dedent
 from dataclasses import asdict
+from enum import Enum
+from types import SimpleNamespace
 from typing import Optional, List, Union
 
 # Local imports
@@ -10,7 +13,7 @@ from typing import Optional, List, Union
 from . import circuit_pb2 as protodefs
 
 # HDL
-from ..elab import elaborate, Elabable
+from ..elab import elaborate, Elabable, elabable
 from ..module import Module, ExternalModule, ExternalModuleCall
 from ..primitives import Primitive, PrimitiveCall
 from ..instance import Instance
@@ -18,10 +21,14 @@ from .. import signal
 
 
 def to_proto(
-    top: Union[Elabable, List[Elabable]], domain: Optional[str] = None, **kwargs
+    top: Union[Elabable, List[Elabable], SimpleNamespace],
+    domain: Optional[str] = None,
+    **kwargs,
 ) -> protodefs.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`"""
-    if not isinstance(top, list):
+    if isinstance(top, SimpleNamespace):
+        tops = [v for v in top.__dict__.values() if elabable(v)]
+    elif not isinstance(top, list):
         tops = [top]
     else:
         tops = top
@@ -188,6 +195,9 @@ class ProtoExporter:
                     pinst.parameters[key].double = val
                 elif isinstance(val, str):
                     pinst.parameters[key].string = val
+                elif isinstance(val, Enum):
+                    # Enum-valued parameters are always strings
+                    pinst.parameters[key].string = val.value
                 else:
                     raise TypeError(f"Invalid instance parameter {val} for {inst}")
         else:

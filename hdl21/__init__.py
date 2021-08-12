@@ -13,6 +13,7 @@ from .primitives import *
 from .interface import *
 from .netlist import *
 from .elab import *
+from .walker import HierarchyWalker
 
 from . import proto
 from .proto import to_proto, from_proto
