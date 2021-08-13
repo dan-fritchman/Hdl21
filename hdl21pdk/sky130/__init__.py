@@ -52,6 +52,7 @@ class Sky130Walker(h.HierarchyWalker):
 
         # Create the module definition
         mod = h.ExternalModule(
+            domain="sky130",
             name=modname,
             desc=f"Sky130 PDK {modname}",
             port_list=copy.copy(Mos.port_list),
@@ -87,7 +88,6 @@ def compile(src: h.proto.Package) -> h.proto.Package:
     """Compile proto-Package `src` to Sky130"""
     ns = h.from_proto(src)
     Sky130Walker().visit_namespace(ns)
-    print(ns)
     return h.to_proto(ns)
 
 

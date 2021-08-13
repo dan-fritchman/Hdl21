@@ -437,20 +437,20 @@ def test_prim_proto1():
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 1
+    assert ppkg.domain == ""
 
     # Check the proto-Module
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.HasPrims"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.HasPrims"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 2
     assert len(pm.instances) == 5
     assert len(pm.default_parameters) == 0
     for inst in pm.instances:
         assert isinstance(inst, h.proto.Instance)
-        assert inst.module.WhichOneof("to") == "qn"
-        assert inst.module.qn.domain == "hdl21.primitives"
+        assert inst.module.WhichOneof("to") == "external"
+        assert inst.module.external.domain == "hdl21.primitives"
 
     ns = h.from_proto(ppkg)
 
@@ -598,10 +598,10 @@ def test_proto1():
     ppkg = h.to_proto(m)
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 1
+    assert ppkg.domain == ""
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.TestProto1"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.TestProto1"
     assert len(pm.ports) == 0
     assert len(pm.instances) == 0
     assert len(pm.default_parameters) == 0
@@ -625,12 +625,12 @@ def test_proto2():
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 3
+    assert ppkg.domain == ""
 
     # Check the first Module in, Child1
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.Child1"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.Child1"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -639,8 +639,7 @@ def test_proto2():
     # Check the second Module in, Child2
     pm = ppkg.modules[1]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.Child2"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.Child2"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -649,8 +648,7 @@ def test_proto2():
     # And check the parent module
     pm = ppkg.modules[2]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.TestProto2"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.TestProto2"
     assert len(pm.ports) == 0
     assert len(pm.instances) == 2
     assert len(pm.default_parameters) == 0
@@ -673,12 +671,12 @@ def test_proto3():
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 2
+    assert ppkg.domain == "test_proto3"
 
     # Check the child module
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.M1"
-    assert pm.name.domain == "test_proto3"
+    assert pm.name == "hdl21.tests.test_hdl21.M1"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -687,8 +685,7 @@ def test_proto3():
     # And check the parent module
     pm = ppkg.modules[1]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.M2"
-    assert pm.name.domain == "test_proto3"
+    assert pm.name == "hdl21.tests.test_hdl21.M2"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 1
     assert len(pm.instances) == 1

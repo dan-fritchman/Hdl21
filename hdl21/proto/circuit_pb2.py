@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rcircuit.proto\"}\n\x07Package\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x07modules\x18\x02 \x03(\x0b\x32\x07.Module\x12$\n\x0b\x65xt_modules\x18\x03 \x03(\x0b\x32\x0f.ExternalModule\x12$\n\x0b\x65xt_sources\x18\x04 \x03(\x0b\x32\x0f.ExternalSource\"-\n\rQualifiedName\x12\x0e\n\x06\x64omain\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"/\n\tReference\x12\x1c\n\x02qn\x18\x01 \x01(\x0b\x32\x0e.QualifiedNameH\x00\x42\x04\n\x02to\"^\n\tParameter\x12\x11\n\x07integer\x18\x02 \x01(\x03H\x00\x12\x10\n\x06\x64ouble\x18\x03 \x01(\x01H\x00\x12\x10\n\x06string\x18\x04 \x01(\tH\x00\x12\x11\n\x07literal\x18\x05 \x01(\tH\x00\x42\x07\n\x05value\"|\n\x04Port\x12\x17\n\x06signal\x18\x01 \x01(\x0b\x32\x07.Signal\x12\"\n\tdirection\x18\x02 \x01(\x0e\x32\x0f.Port.Direction\"7\n\tDirection\x12\t\n\x05INPUT\x10\x00\x12\n\n\x06OUTPUT\x10\x01\x12\t\n\x05INOUT\x10\x02\x12\x08\n\x04NONE\x10\x03\"%\n\x06Signal\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05width\x18\x02 \x01(\x03\"1\n\x05Slice\x12\x0e\n\x06signal\x18\x01 \x01(\t\x12\x0b\n\x03top\x18\x02 \x01(\x03\x12\x0b\n\x03\x62ot\x18\x03 \x01(\x03\"$\n\x06\x43oncat\x12\x1a\n\x05parts\x18\x01 \x03(\x0b\x32\x0b.Connection\"a\n\nConnection\x12\x16\n\x03sig\x18\x01 \x01(\x0b\x32\x07.SignalH\x00\x12\x17\n\x05slice\x18\x02 \x01(\x0b\x32\x06.SliceH\x00\x12\x19\n\x06\x63oncat\x18\x03 \x01(\x0b\x32\x07.ConcatH\x00\x42\x07\n\x05stype\"\x94\x02\n\x08Instance\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x1a\n\x06module\x18\x02 \x01(\x0b\x32\n.Reference\x12-\n\nparameters\x18\x03 \x03(\x0b\x32\x19.Instance.ParametersEntry\x12/\n\x0b\x63onnections\x18\x04 \x03(\x0b\x32\x1a.Instance.ConnectionsEntry\x1a=\n\x0fParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\x1a?\n\x10\x43onnectionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.Connection:\x02\x38\x01\"\xf6\x01\n\x06Module\x12\x1c\n\x04name\x18\x01 \x01(\x0b\x32\x0e.QualifiedName\x12\x14\n\x05ports\x18\x02 \x03(\x0b\x32\x05.Port\x12\x18\n\x07signals\x18\x03 \x03(\x0b\x32\x07.Signal\x12\x1c\n\tinstances\x18\x04 \x03(\x0b\x32\t.Instance\x12:\n\x12\x64\x65\x66\x61ult_parameters\x18\x05 \x03(\x0b\x32\x1e.Module.DefaultParametersEntry\x1a\x44\n\x16\x44\x65\x66\x61ultParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\"4\n\x0e\x45xternalModule\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x05ports\x18\x02 \x03(\x0b\x32\x05.Port\"6\n\x0e\x45xternalSource\x12\x0e\n\x04path\x18\x01 \x01(\tH\x00\x12\r\n\x03url\x18\x02 \x01(\tH\x00\x42\x05\n\x03srcb\x06proto3'
+  serialized_pb=b'\n\rcircuit.proto\"\x7f\n\x07Package\x12\x0e\n\x06\x64omain\x18\x01 \x01(\t\x12\x18\n\x07modules\x18\x02 \x03(\x0b\x32\x07.Module\x12$\n\x0b\x65xt_modules\x18\x03 \x03(\x0b\x32\x0f.ExternalModule\x12$\n\x0b\x65xt_sources\x18\x04 \x03(\x0b\x32\x0f.ExternalSource\"-\n\rQualifiedName\x12\x0e\n\x06\x64omain\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\"F\n\tReference\x12\x0f\n\x05local\x18\x01 \x01(\tH\x00\x12\"\n\x08\x65xternal\x18\x02 \x01(\x0b\x32\x0e.QualifiedNameH\x00\x42\x04\n\x02to\"^\n\tParameter\x12\x11\n\x07integer\x18\x02 \x01(\x03H\x00\x12\x10\n\x06\x64ouble\x18\x03 \x01(\x01H\x00\x12\x10\n\x06string\x18\x04 \x01(\tH\x00\x12\x11\n\x07literal\x18\x05 \x01(\tH\x00\x42\x07\n\x05value\"|\n\x04Port\x12\x17\n\x06signal\x18\x01 \x01(\x0b\x32\x07.Signal\x12\"\n\tdirection\x18\x02 \x01(\x0e\x32\x0f.Port.Direction\"7\n\tDirection\x12\t\n\x05INPUT\x10\x00\x12\n\n\x06OUTPUT\x10\x01\x12\t\n\x05INOUT\x10\x02\x12\x08\n\x04NONE\x10\x03\"%\n\x06Signal\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\r\n\x05width\x18\x02 \x01(\x03\"1\n\x05Slice\x12\x0e\n\x06signal\x18\x01 \x01(\t\x12\x0b\n\x03top\x18\x02 \x01(\x03\x12\x0b\n\x03\x62ot\x18\x03 \x01(\x03\"$\n\x06\x43oncat\x12\x1a\n\x05parts\x18\x01 \x03(\x0b\x32\x0b.Connection\"a\n\nConnection\x12\x16\n\x03sig\x18\x01 \x01(\x0b\x32\x07.SignalH\x00\x12\x17\n\x05slice\x18\x02 \x01(\x0b\x32\x06.SliceH\x00\x12\x19\n\x06\x63oncat\x18\x03 \x01(\x0b\x32\x07.ConcatH\x00\x42\x07\n\x05stype\"\x94\x02\n\x08Instance\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x1a\n\x06module\x18\x02 \x01(\x0b\x32\n.Reference\x12-\n\nparameters\x18\x03 \x03(\x0b\x32\x19.Instance.ParametersEntry\x12/\n\x0b\x63onnections\x18\x04 \x03(\x0b\x32\x1a.Instance.ConnectionsEntry\x1a=\n\x0fParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\x1a?\n\x10\x43onnectionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.Connection:\x02\x38\x01\"\xe6\x01\n\x06Module\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x14\n\x05ports\x18\x02 \x03(\x0b\x32\x05.Port\x12\x18\n\x07signals\x18\x03 \x03(\x0b\x32\x07.Signal\x12\x1c\n\tinstances\x18\x04 \x03(\x0b\x32\t.Instance\x12:\n\x12\x64\x65\x66\x61ult_parameters\x18\x05 \x03(\x0b\x32\x1e.Module.DefaultParametersEntry\x1a\x44\n\x16\x44\x65\x66\x61ultParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x19\n\x05value\x18\x02 \x01(\x0b\x32\n.Parameter:\x02\x38\x01\"R\n\x0e\x45xternalModule\x12\x1c\n\x04name\x18\x01 \x01(\x0b\x32\x0e.QualifiedName\x12\x14\n\x05ports\x18\x02 \x03(\x0b\x32\x05.Port\x12\x0c\n\x04\x64\x65sc\x18\x03 \x01(\t\"6\n\x0e\x45xternalSource\x12\x0e\n\x04path\x18\x01 \x01(\tH\x00\x12\r\n\x03url\x18\x02 \x01(\tH\x00\x42\x05\n\x03srcb\x06proto3'
 )
 
 
@@ -54,8 +54,8 @@ _PORT_DIRECTION = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=405,
-  serialized_end=460,
+  serialized_start=430,
+  serialized_end=485,
 )
 _sym_db.RegisterEnumDescriptor(_PORT_DIRECTION)
 
@@ -69,7 +69,7 @@ _PACKAGE = _descriptor.Descriptor(
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='name', full_name='Package.name', index=0,
+      name='domain', full_name='Package.domain', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
@@ -109,7 +109,7 @@ _PACKAGE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=17,
-  serialized_end=142,
+  serialized_end=144,
 )
 
 
@@ -147,8 +147,8 @@ _QUALIFIEDNAME = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=144,
-  serialized_end=189,
+  serialized_start=146,
+  serialized_end=191,
 )
 
 
@@ -161,8 +161,15 @@ _REFERENCE = _descriptor.Descriptor(
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='qn', full_name='Reference.qn', index=0,
-      number=1, type=11, cpp_type=10, label=1,
+      name='local', full_name='Reference.local', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='external', full_name='Reference.external', index=1,
+      number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -184,8 +191,8 @@ _REFERENCE = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=191,
-  serialized_end=238,
+  serialized_start=193,
+  serialized_end=263,
 )
 
 
@@ -242,8 +249,8 @@ _PARAMETER = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=240,
-  serialized_end=334,
+  serialized_start=265,
+  serialized_end=359,
 )
 
 
@@ -282,8 +289,8 @@ _PORT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=336,
-  serialized_end=460,
+  serialized_start=361,
+  serialized_end=485,
 )
 
 
@@ -321,8 +328,8 @@ _SIGNAL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=462,
-  serialized_end=499,
+  serialized_start=487,
+  serialized_end=524,
 )
 
 
@@ -367,8 +374,8 @@ _SLICE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=501,
-  serialized_end=550,
+  serialized_start=526,
+  serialized_end=575,
 )
 
 
@@ -399,8 +406,8 @@ _CONCAT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=552,
-  serialized_end=588,
+  serialized_start=577,
+  serialized_end=613,
 )
 
 
@@ -450,8 +457,8 @@ _CONNECTION = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=590,
-  serialized_end=687,
+  serialized_start=615,
+  serialized_end=712,
 )
 
 
@@ -489,8 +496,8 @@ _INSTANCE_PARAMETERSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=840,
-  serialized_end=901,
+  serialized_start=865,
+  serialized_end=926,
 )
 
 _INSTANCE_CONNECTIONSENTRY = _descriptor.Descriptor(
@@ -527,8 +534,8 @@ _INSTANCE_CONNECTIONSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=903,
-  serialized_end=966,
+  serialized_start=928,
+  serialized_end=991,
 )
 
 _INSTANCE = _descriptor.Descriptor(
@@ -579,8 +586,8 @@ _INSTANCE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=690,
-  serialized_end=966,
+  serialized_start=715,
+  serialized_end=991,
 )
 
 
@@ -618,8 +625,8 @@ _MODULE_DEFAULTPARAMETERSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1147,
-  serialized_end=1215,
+  serialized_start=1156,
+  serialized_end=1224,
 )
 
 _MODULE = _descriptor.Descriptor(
@@ -632,8 +639,8 @@ _MODULE = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='name', full_name='Module.name', index=0,
-      number=1, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
@@ -677,8 +684,8 @@ _MODULE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=969,
-  serialized_end=1215,
+  serialized_start=994,
+  serialized_end=1224,
 )
 
 
@@ -692,8 +699,8 @@ _EXTERNALMODULE = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='name', full_name='ExternalModule.name', index=0,
-      number=1, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"".decode('utf-8'),
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
@@ -701,6 +708,13 @@ _EXTERNALMODULE = _descriptor.Descriptor(
       name='ports', full_name='ExternalModule.ports', index=1,
       number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='desc', full_name='ExternalModule.desc', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
@@ -716,8 +730,8 @@ _EXTERNALMODULE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1217,
-  serialized_end=1269,
+  serialized_start=1226,
+  serialized_end=1308,
 )
 
 
@@ -760,17 +774,20 @@ _EXTERNALSOURCE = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=1271,
-  serialized_end=1325,
+  serialized_start=1310,
+  serialized_end=1364,
 )
 
 _PACKAGE.fields_by_name['modules'].message_type = _MODULE
 _PACKAGE.fields_by_name['ext_modules'].message_type = _EXTERNALMODULE
 _PACKAGE.fields_by_name['ext_sources'].message_type = _EXTERNALSOURCE
-_REFERENCE.fields_by_name['qn'].message_type = _QUALIFIEDNAME
+_REFERENCE.fields_by_name['external'].message_type = _QUALIFIEDNAME
 _REFERENCE.oneofs_by_name['to'].fields.append(
-  _REFERENCE.fields_by_name['qn'])
-_REFERENCE.fields_by_name['qn'].containing_oneof = _REFERENCE.oneofs_by_name['to']
+  _REFERENCE.fields_by_name['local'])
+_REFERENCE.fields_by_name['local'].containing_oneof = _REFERENCE.oneofs_by_name['to']
+_REFERENCE.oneofs_by_name['to'].fields.append(
+  _REFERENCE.fields_by_name['external'])
+_REFERENCE.fields_by_name['external'].containing_oneof = _REFERENCE.oneofs_by_name['to']
 _PARAMETER.oneofs_by_name['value'].fields.append(
   _PARAMETER.fields_by_name['integer'])
 _PARAMETER.fields_by_name['integer'].containing_oneof = _PARAMETER.oneofs_by_name['value']
@@ -808,11 +825,11 @@ _INSTANCE.fields_by_name['parameters'].message_type = _INSTANCE_PARAMETERSENTRY
 _INSTANCE.fields_by_name['connections'].message_type = _INSTANCE_CONNECTIONSENTRY
 _MODULE_DEFAULTPARAMETERSENTRY.fields_by_name['value'].message_type = _PARAMETER
 _MODULE_DEFAULTPARAMETERSENTRY.containing_type = _MODULE
-_MODULE.fields_by_name['name'].message_type = _QUALIFIEDNAME
 _MODULE.fields_by_name['ports'].message_type = _PORT
 _MODULE.fields_by_name['signals'].message_type = _SIGNAL
 _MODULE.fields_by_name['instances'].message_type = _INSTANCE
 _MODULE.fields_by_name['default_parameters'].message_type = _MODULE_DEFAULTPARAMETERSENTRY
+_EXTERNALMODULE.fields_by_name['name'].message_type = _QUALIFIEDNAME
 _EXTERNALMODULE.fields_by_name['ports'].message_type = _PORT
 _EXTERNALSOURCE.oneofs_by_name['src'].fields.append(
   _EXTERNALSOURCE.fields_by_name['path'])

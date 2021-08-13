@@ -1,7 +1,7 @@
 """
 hdl21 ProtoBuf Export
 """
-from hdl21sim import Sim
+
 from textwrap import dedent
 from dataclasses import asdict
 from enum import Enum
@@ -13,7 +13,7 @@ from typing import Optional, List, Union
 from . import circuit_pb2 as protodefs
 
 # HDL
-from ..elab import elaborate, Elabable, elabable
+from ..elab import Elabables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
 from ..primitives import Primitive, PrimitiveCall
 from ..instance import Instance
@@ -21,19 +21,11 @@ from .. import signal
 
 
 def to_proto(
-    top: Union[Elabable, List[Elabable], SimpleNamespace],
-    domain: Optional[str] = None,
-    **kwargs,
+    top: Elabables, domain: Optional[str] = None, **kwargs,
 ) -> protodefs.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`"""
-    if isinstance(top, SimpleNamespace):
-        tops = [v for v in top.__dict__.values() if elabable(v)]
-    elif not isinstance(top, list):
-        tops = [top]
-    else:
-        tops = top
     # Elaborate all the top-level Modules
-    tops = [elaborate(top=t, **kwargs) for t in tops]
+    tops = elab_all(top)
     exporter = ProtoExporter(tops=tops, domain=domain)
     return exporter.export()
 
@@ -50,7 +42,7 @@ class ProtoExporter:
         self.module_names = dict()  # (Serialized) Module-name to Proto-Module dict
         self.ext_modules = dict()  # ExternalModule-id to Proto-ExternalModule dict
         # Default `domain` AKA package-name is the empty string
-        self.pkg = protodefs.Package(name=domain or "")
+        self.pkg = protodefs.Package(domain=domain or "")
 
     def export(self) -> protodefs.Package:
         """Export starting with every Module in `self.tops`,
@@ -68,10 +60,9 @@ class ProtoExporter:
         """Create and return a unique `QualifiedName` for Module `module`.
         Raises a `RuntimeError` if unique name is taken."""
 
-        mname = module._pymodule.__name__ + "." + module.name
-        qname = protodefs.QualifiedName(domain=self.pkg.name, name=mname)
-        if (qname.domain, qname.name) in self.module_names:
-            conflict = self.module_names[(qname.domain, qname.name)]
+        mname = module._defpath() + "." + module.name
+        if mname in self.module_names:
+            conflict = self.module_names[mname]
             raise RuntimeError(
                 dedent(
                     f"""\
@@ -79,7 +70,7 @@ class ProtoExporter:
                     (Was this a generator that didn't get decorated with `@hdl21.generator`?) """
                 )
             )
-        return qname
+        return mname
 
     def export_module(self, module: Module) -> protodefs.Module:
         if id(module) in self.modules:  # Already done
@@ -94,8 +85,7 @@ class ProtoExporter:
         pmod = protodefs.Module()
 
         # Create its serialized name
-        qname = self.export_module_name(module)
-        pmod.name.CopyFrom(qname)
+        pmod.name = self.export_module_name(module)
 
         # Create its Port-objects
         for port in module.ports.values():
@@ -117,7 +107,7 @@ class ProtoExporter:
 
         # Store references to the result, and return it
         self.modules[id(module)] = pmod
-        self.module_names[(qname.domain, qname.name)] = pmod
+        self.module_names[pmod.name] = pmod
         self.pkg.modules.append(pmod)
         return pmod
 
@@ -127,7 +117,8 @@ class ProtoExporter:
             return self.ext_modules[id(emod)]
 
         # Create the Proto-ExternalModule
-        pmod = protodefs.ExternalModule(name=emod.name)
+        qname = protodefs.QualifiedName(name=emod.name, domain=emod.domain)
+        pmod = protodefs.ExternalModule(name=qname)
 
         # Create its Port-objects
         for port in emod.ports.values():
@@ -170,19 +161,19 @@ class ProtoExporter:
         if isinstance(inst._resolved, Module):
             pmod = self.export_module(inst._resolved)
             # Give it a Reference to its Module
-            pinst.module.qn.CopyFrom(pmod.name)
+            pinst.module.local = pmod.name
         elif isinstance(inst._resolved, (PrimitiveCall, ExternalModuleCall)):
             call = inst._resolved
             if isinstance(inst._resolved, PrimitiveCall):
                 # Create a reference to the `hdl21.primitives` namespace
-                pinst.module.qn.domain = "hdl21.primitives"
-                pinst.module.qn.name = call.prim.name
+                pinst.module.external.domain = "hdl21.primitives"
+                pinst.module.external.name = call.prim.name
                 params = asdict(call.params)
             else:  # ExternalModuleCall
                 self.export_external_module(call.module)
                 # External Modules have a blank domain
-                pinst.module.qn.domain = ""
-                pinst.module.qn.name = call.module.name
+                pinst.module.external.domain = call.module.domain
+                pinst.module.external.name = call.module.name
                 params = call.params
 
             # Set the parameter-values
