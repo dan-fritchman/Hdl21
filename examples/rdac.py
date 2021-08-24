@@ -39,9 +39,126 @@ def rladder(params: RLadderParams) -> h.Module:
     return RLadder
 
 
-def external_factory(name: str, port_names: Sequence[str]) -> h.ExternalModule:
+@h.paramclass
+class PassGateParams:
+    nmos: h.Module = h.Param(dtype=Any, desc="NMOS generator")
+    nmos_params: Dict[str, Any] = h.Param(dtype=Any, desc="PMOS Parameters")
+    pmos: h.Module = h.Param(dtype=Any, desc="PMOS generator")
+    pmos_params: Dict[str, Any] = h.Param(dtype=Any, desc="PMOS parameters")
+
+
+@h.generator
+def passgate(params: PassGateParams) -> h.Module:
+    @h.module
+    class PassGate:
+        source = h.Inout()
+        drain = h.Inout()
+    if params.pmos is not None:
+        setattr(PassGate, f'VDD', h.Inout())
+        setattr(PassGate, f'en_b', h.Input())
+        setattr(PassGate, f'PSW', params.pmos(params.pmos_params)(
+            D=PassGate.drain, S=PassGate.source, G=PassGate.en_b, B=PassGate.VDD))
+    if params.nmos is not None:
+        setattr(PassGate, f'VSS', h.Inout())
+        setattr(PassGate, f'en', h.Input())
+        setattr(PassGate, f'NSW', params.nmos(params.nmos_params)(
+            D=PassGate.drain, S=PassGate.source, G=PassGate.en, B=PassGate.VSS))
+
+    return PassGate
+
+
+@h.generator
+def mux(params: PassGateParams) -> h.Module:
+    @h.module
+    class Mux:
+        sourceA = h.Input()
+        sourceB = h.Input()
+        out = h.Output()
+        ctrl = h.Input()
+        ctrl_b = h.Input()
+
+    aconns, bconns = dict(), dict()
+    if params.pmos is not None:
+        setattr(Mux, f'VDD', h.Inout())
+        aconns['VDD'] = Mux.VDD
+        aconns['en_b'] = Mux.ctrl_b
+        bconns['VDD'] = Mux.VDD
+        bconns['en_b'] = Mux.ctrl
+    if params.nmos is not None:
+        setattr(Mux, f'VSS', h.Inout())
+        aconns['VSS'] = Mux.VSS
+        aconns['en'] = Mux.ctrl
+        bconns['VSS'] = Mux.VSS
+        bconns['en_b'] = Mux.ctrl_b
+    setattr(Mux, f'passgate_a', passgate(params)(**aconns))
+    setattr(Mux, f'passgate_b', passgate(params)(**bconns))
+    return Mux
+
+
+@h.paramclass
+class MuxTreeParams:
+    nbit: int = h.Param(dtype=int, desc="Number of bits")
+    mux_params: Any = h.Param(dtype=Any, desc="Parameters for the MUX generator")
+
+
+@h.generator
+def mux_tree(params: MuxTreeParams) -> h.Module:
+    n_inputs = 2 ** params.nbit
+    p_ctrl = params.mux_params.nmos is not None
+    n_ctrl = params.mux_params.pmos is not None
+
+    # Base module
+    @h.module
+    class MuxTree:
+        out = h.Output()
+        v_in = h.Input(width=n_inputs)
+        ctrl = h.Input(width=params.nbit)
+        ctrl_b = h.Input(width=params.nbit)
+
+    base_mux_conns = dict()
+    if p_ctrl:
+        setattr(MuxTree, 'VSS', h.Inout())
+        base_mux_conns['VSS'] = MuxTree.VSS
+    if n_ctrl:
+        setattr(MuxTree, 'VDD', h.Inout())
+        base_mux_conns['VDD'] = MuxTree.VDD
+
+    # Build the MUX tree layer by layer
+    curr_input = MuxTree.v_in
+    for layer in range(params.nbit-1, -1, -1):
+        layer_mux_conns = base_mux_conns.copy()
+        layer_mux_conns['ctrl'] = MuxTree.ctrl[layer]
+        layer_mux_conns['ctrl_b'] = MuxTree.ctrl_b[layer]
+        if layer != 0:
+            setattr(MuxTree, f'sig_{layer}', h.Signal(width=2 ** layer))
+            curr_output = getattr(MuxTree, f'sig_{layer}')
+        else:
+            curr_output = MuxTree.out
+        for mux_idx in range(2**layer):
+            mux_conns = base_mux_conns.copy()
+            mux_conns['sourceA'] = curr_input[2 * mux_idx]
+            mux_conns['sourceB'] = curr_input[2 * mux_idx + 1]
+            mux_conns['out'] = curr_output[mux_idx]
+            setattr(MuxTree, f'mux_{layer}_{mux_idx}', mux(params.mux_params)(**mux_conns))
+    return MuxTree
+
+
+def external_factory(name: str, param_names: Sequence[str], port_names: Sequence[str]
+                     ) -> Tuple[h.ExternalModule, h.Param]:
+    """
+    Parameters:
+        name: should correspond to the expected name in output netlists
+        param_names: A list of parameters instances of this external primitive take
+        port_names: A list of port names of this external primitive
+    Outputs:
+        NewPrimitive: An instance of h.Primitive
+        NewParamClass: An instance of h.paramclass
+    """
+    param_attr_dict = {n: h.Param(dtype=Any, desc=f'Gen parameter {n} of {name}') for n in param_names}
+    # Dynamically create the parameter class, pass it to the h.paramclass decorator function
+    custom_params = h.paramclass(type(f"{name}Params", (), param_attr_dict))
     return h.ExternalModule(name, f'external_module_{name}',
-                            [h.Inout(name=n) for n in port_names])
+                            [h.Inout(name=n) for n in port_names]), custom_params
 
 
 def primitive_factory(name: str, param_names: Sequence[str], port_names: Sequence[str]) -> Tuple[h.Primitive, h.Param]:
@@ -65,11 +182,17 @@ def primitive_factory(name: str, param_names: Sequence[str], port_names: Sequenc
 
 
 def generate():
-    res_prim, res_params = primitive_factory("rupolym_m", ["w", "l"], ["PLUS", "MINUS"])
-    res_prim = external_factory("rupolym_m", ["PLUS", "MINUS"])
+    res_prim, res_params = external_factory("rupolym_m", ["w", "l"], ["PLUS", "MINUS"])
     params = RLadderParams(
         nseg=15, res=res_prim, res_params=res_params(w=4, l=10), res_conns=dict(PLUS='P', MINUS='N'))
     proto = h.to_proto(h.elaborate(rladder, params))
+    h.netlist("", proto)
+
+    nmos, nmos_params = external_factory("nch_mac", ['l'], ["D", "G", "S", "B"])
+    pmos, pmos_params = external_factory("pch_mac", ['l'], ["D", "G", "S", "B"])
+    params = MuxTreeParams(nbit=4, mux_params=PassGateParams(
+        nmos=nmos, nmos_params=nmos_params(l=1), pmos=pmos, pmos_params=pmos_params(l=1)))
+    proto = h.to_proto(h.elaborate(mux_tree, params))
     h.netlist("", proto)
 
 
