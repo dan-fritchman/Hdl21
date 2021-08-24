@@ -8,6 +8,7 @@ message Package {
   repeated ExternalSource ext_sources = 4;
 }
 
+/// Domain-qualified name, referring outside its own Library 
 message QualifiedName {
   string domain = 1;
   string name = 2;

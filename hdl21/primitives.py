@@ -5,6 +5,34 @@ Primitives are leaf-level Modules typically defined not by users,
 but by simulation tools or device fabricators. 
 Prominent examples include MOS transistors, diodes, resistors, and capacitors. 
 
+Primitives divide in two classes, `physical` and `ideal`, 
+indicated by their `primtype` attribute. 
+`PrimitiveType.IDEAL` primitives specify circuit-theoretic ideal elements 
+e.g. resistors, capacitors, inductors, and notably aphysical elements 
+such as ideal voltage and current sources. 
+`PrimitiveType.PHYSICAL` primitives in contrast specify abstract versions 
+of ultimately physically-realizable elements such as transistors and diodes. 
+These elements typically require some external translation, e.g. by a process-technology 
+library, to execute in simulations or to be realized in hardware. 
+
+Many element-types (particularly passives) come in both `ideal` and `physical` flavors, 
+as typical process-technologies include physical passives, but with far different 
+parameterization than ideal passives. For example resistors are commonly specified 
+in physical length and width. Capacitors are similarly specified in physical terms, 
+often adding metal layers or other physical features. The component-value (R,C,L, etc.) 
+for these physically-specified cells is commonly suggestive or optional. 
+
+| Physical           | Ideal          | Alias(es)         | 
+| ------------------ | -------------- | ----------------- | 
+| PhysicalResistor   | IdealResistor  | R, Res, Resistor  | 
+| PhysicalInductor   | IdealInductor  | L, Ind, Inductor  | 
+| PhysicalCapacitor  | IdealCapacitor | C, Cap, Capacitor | 
+| PhysicalShort      | IdealShort     | Short             | 
+|                    | VoltageSource  | Vsrc, V           | 
+|                    | CurrentSource  | Isrc, I           | 
+| Mos                |                |                   | 
+| Diode              |                | D                 | 
+
 """
 
 from pydantic.dataclasses import dataclass
@@ -13,9 +41,16 @@ from enum import Enum
 from typing import Optional, Any, List, Type, Union
 
 # Local imports
-from .params import paramclass, Param, isparamclass
+from .params import paramclass, Param, isparamclass, HasNoParams
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
+
+
+class PrimitiveType(Enum):
+    """ Enumerated Primitive-Types """
+
+    IDEAL = "IDEAL"
+    PHYSICAL = "PHYSICAL"
 
 
 @dataclass
@@ -31,6 +66,7 @@ class Primitive:
     desc: str
     port_list: List[Signal]
     paramtype: Type
+    primtype: PrimitiveType
 
     def __post_init_post_parse__(self):
         """After type-checking, do plenty more checks on values"""
@@ -91,7 +127,8 @@ class MosVth(Enum):
     """MOS Threshold Enumeration"""
 
     STD = "STD"
-    # Moar coming soon!
+    LOW = "LOW"
+    HIGH = "HIGH"
 
 
 @paramclass
@@ -126,6 +163,7 @@ Mos = Primitive(
     desc="Mos Transistor",
     port_list=[Port(name="d"), Port(name="g"), Port(name="s"), Port(name="b")],
     paramtype=MosParams,
+    primtype=PrimitiveType.PHYSICAL,
 )
 
 
@@ -153,6 +191,7 @@ Diode = Primitive(
     desc="Diode",
     port_list=[Port(name="p"), Port(name="n")],
     paramtype=DiodeParams,
+    primtype=PrimitiveType.PHYSICAL,
 )
 
 
@@ -165,62 +204,165 @@ class ResistorParams:
     r = Param(dtype=float, desc="Resistance (ohms)")
 
 
-Resistor = Primitive(
-    name="Resistor",
-    desc="Resistor",
+IdealResistor = Primitive(
+    name="IdealResistor",
+    desc="Ideal Resistor",
     port_list=[Port(name="p"), Port(name="n")],
     paramtype=ResistorParams,
+    primtype=PrimitiveType.IDEAL,
 )
 
 
 # Common aliases
-R = Res = Resistor
+R = Res = Resistor = IdealResistor
 
 
 @paramclass
-class CapacitorParams:
+class PhysicalResistorParams:
+    r = Param(dtype=float, desc="Resistance (ohms)")
+
+
+PhysicalResistor = Primitive(
+    name="PhysicalResistor",
+    desc="Physical Resistor",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=ResistorParams,
+    primtype=PrimitiveType.PHYSICAL,
+)
+
+
+@paramclass
+class IdealCapacitorParams:
     c = Param(dtype=float, desc="Capacitance (F)")
 
 
-Capacitor = Primitive(
-    name="Capacitor",
-    desc="Capacitor",
+IdealCapacitor = Primitive(
+    name="IdealCapacitor",
+    desc="Ideal Capacitor",
     port_list=[Port(name="p"), Port(name="n")],
-    paramtype=CapacitorParams,
+    paramtype=IdealCapacitorParams,
+    primtype=PrimitiveType.IDEAL,
 )
 
 
 # Common aliases
-C = Cap = Capacitor
+C = Cap = Capacitor = IdealCapacitor
 
 
 @paramclass
-class InductorParams:
+class PhysicalCapacitorParams:
+    c = Param(dtype=float, desc="Capacitance (F)")
+
+
+PhysicalCapacitor = Primitive(
+    name="PhysicalCapacitor",
+    desc="Physical Capacitor",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=PhysicalCapacitorParams,
+    primtype=PrimitiveType.PHYSICAL,
+)
+
+
+@paramclass
+class IdealInductorParams:
     l = Param(dtype=float, desc="Inductance (H)")
 
 
-Inductor = Primitive(
-    name="Inductor",
-    desc="Inductor",
+IdealInductor = Primitive(
+    name="IdealInductor",
+    desc="Ideal Inductor",
     port_list=[Port(name="p"), Port(name="n")],
-    paramtype=InductorParams,
+    paramtype=IdealInductorParams,
+    primtype=PrimitiveType.IDEAL,
 )
 
 
 # Common alias(es)
-L = Inductor
+L = Inductor = IdealInductor
 
 
 @paramclass
-class ShortParams:
+class PhysicalInductorParams:
+    l = Param(dtype=float, desc="Inductance (H)")
+
+
+PhysicalInductor = Primitive(
+    name="PhysicalInductor",
+    desc="Physical Inductor",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=PhysicalInductorParams,
+    primtype=PrimitiveType.PHYSICAL,
+)
+
+
+@paramclass
+class PhysicalShortParams:
     layer = Param(dtype=Optional[int], desc="Metal layer", default=None)
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
 
 
-Short = Primitive(
-    name="Short",
+PhysicalShort = Primitive(
+    name="PhysicalShort",
     desc="Short-Circuit/ Net-Tie",
     port_list=[Port(name="p"), Port(name="n")],
-    paramtype=ShortParams,
+    paramtype=PhysicalShortParams,
+    primtype=PrimitiveType.PHYSICAL,
 )
+
+IdealShort = Primitive(
+    name="IdealShort",
+    desc="Short-Circuit/ Net-Tie",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=HasNoParams,
+    primtype=PrimitiveType.IDEAL,
+)
+
+Short = IdealShort
+
+
+# Type alias for many scalar parameters
+ScalarParam = Union[int, float, str]
+ScalarOption = Optional[ScalarParam]
+
+
+@paramclass
+class VoltageSourceParams:
+    dc = Param(dtype=ScalarOption, default=0, desc="DC Value (V)")
+    delay = Param(dtype=ScalarOption, default=None, desc="Time Delay (s)")
+
+    # Pulse source parameters
+    v0 = Param(dtype=ScalarOption, default=None, desc="Zero Value (V)")
+    v1 = Param(dtype=ScalarOption, default=None, desc="One Value (V)")
+    period = Param(dtype=ScalarOption, default=None, desc="Period (s)")
+    rise = Param(dtype=ScalarOption, default=None, desc="Rise time (s)")
+    fall = Param(dtype=ScalarOption, default=None, desc="Fall time (s)")
+    width = Param(dtype=ScalarOption, default=None, desc="Pulse width (s)")
+
+
+VoltageSource = Primitive(
+    name="VoltageSource",
+    desc="Ideal Voltage Source",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=VoltageSourceParams,
+    primtype=PrimitiveType.IDEAL,
+)
+
+V = Vsrc = VoltageSource
+
+
+@paramclass
+class CurrentSourceParams:
+    dc = Param(dtype=ScalarOption, default=0, desc="DC Value (A)")
+
+
+CurrentSource = Primitive(
+    name="CurrentSource",
+    desc="Ideal Current Source",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=CurrentSourceParams,
+    primtype=PrimitiveType.IDEAL,
+)
+
+I = Isrc = CurrentSource
+

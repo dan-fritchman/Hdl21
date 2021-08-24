@@ -180,18 +180,15 @@ class ProtoImporter:
 
         elif ref.WhichOneof("to") == "external":  # Defined outside package
             # First check the priviledged/ internally-defined domains
-            if ref.external.domain == "hdl21.primitives":
+            if ref.external.domain in ("hdl21.primitives", "hdl21.ideal"):
                 # Retrieve the Primitive from `hdl21.primitives`
-                prim = getattr(primitives, ref.external.name, None)
-                if not isinstance(prim, Primitive):
-                    raise RuntimeError(
-                        f"Attempt to import invalid `hdl21.primitive` {ref.qn.name}"
-                    )
+                prim = self.import_primitive(ref.external)
                 # Import all of its instance parameters, and convert them to its param-type
                 pdict = self.import_parameters(pinst.parameters)
                 params = prim.Params(**pdict)
                 # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
                 target = prim(params)
+
             else:  # External Module
                 key = (ref.external.domain, ref.external.name)
                 emod = self.ext_modules.get(key, None)
@@ -206,13 +203,26 @@ class ProtoImporter:
 
         return Instance(name=pinst.name, of=target)
 
-    def import_parameters(self, pparams: Dict[str, protodefs.Parameter]) -> dict:
+    @classmethod
+    def import_primitive(cls, pref: protodefs.QualifiedName) -> Primitive:
+        if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
+            raise ValueError
+        prim = getattr(primitives, pref.name, None)
+        if not isinstance(prim, Primitive):
+            raise RuntimeError(
+                f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+            )
+        return prim
+
+    @classmethod
+    def import_parameters(cls, pparams: Dict[str, protodefs.Parameter]) -> dict:
         pdict = {}
         for pname, pparam in pparams.items():
-            pdict[pname] = self.import_parameter(pparam)
+            pdict[pname] = cls.import_parameter(pparam)
         return pdict
 
-    def import_parameter(self, pparam: protodefs.Parameter) -> Any:
+    @classmethod
+    def import_parameter(cls, pparam: protodefs.Parameter) -> Any:
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
             return int(pparam.integer)

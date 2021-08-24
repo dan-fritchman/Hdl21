@@ -15,7 +15,7 @@ from . import circuit_pb2 as protodefs
 # HDL
 from ..elab import Elabables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
-from ..primitives import Primitive, PrimitiveCall
+from ..primitives import Primitive, PrimitiveCall, PrimitiveType
 from ..instance import Instance
 from .. import signal
 
@@ -129,14 +129,39 @@ class ProtoExporter:
         self.pkg.ext_modules.append(pmod)
         return pmod
 
-    def export_port(self, port: signal.Port) -> protodefs.Port:
+    @classmethod
+    def export_primitive(cls, prim: Primitive) -> protodefs.ExternalModule:
+        """Export a `Primitive as a `protodefs.ExternalModule`. 
+        Not typically done as part of serialization, 
+        but solely as an aid to other conversion utilities. """
+
+        # Create the Proto-ExternalModule
+        if prim.primtype == PrimitiveType.PHYSICAL:
+            domain = "hdl21.primitives"
+        elif prim.primtype == PrimitiveType.IDEAL:
+            domain = "hdl21.ideal"
+        else:
+            raise ValueError
+        qname = protodefs.QualifiedName(name=prim.name, domain=domain)
+        pmod = protodefs.ExternalModule(name=qname)
+
+        # Create its Port-objects
+        for port in prim.port_list:
+            pmod.ports.append(cls.export_port(port))
+
+        # And return it
+        return pmod
+
+    @classmethod
+    def export_port(cls, port: signal.Port) -> protodefs.Port:
         pport = protodefs.Port()
-        pport.direction = self.export_port_dir(port)
+        pport.direction = cls.export_port_dir(port)
         pport.signal.name = port.name
         pport.signal.width = port.width
         return pport
 
-    def export_port_dir(self, port: signal.Port) -> protodefs.Port.Direction:
+    @classmethod
+    def export_port_dir(cls, port: signal.Port) -> protodefs.Port.Direction:
         # Convert between Port-Direction Enumerations
         if port.direction == signal.PortDir.INPUT:
             return protodefs.Port.Direction.INPUT
@@ -165,14 +190,18 @@ class ProtoExporter:
         elif isinstance(inst._resolved, (PrimitiveCall, ExternalModuleCall)):
             call = inst._resolved
             if isinstance(inst._resolved, PrimitiveCall):
-                # Create a reference to the `hdl21.primitives` namespace
-                pinst.module.external.domain = "hdl21.primitives"
+                # Create a reference to one of the `primitive` namespaces
+                if call.prim.primtype == PrimitiveType.PHYSICAL:
+                    pinst.module.external.domain = "hdl21.primitives"
+                elif call.prim.primtype == PrimitiveType.IDEAL:
+                    pinst.module.external.domain = "hdl21.ideal"
+                else:
+                    raise ValueError
                 pinst.module.external.name = call.prim.name
                 params = asdict(call.params)
             else:  # ExternalModuleCall
                 self.export_external_module(call.module)
-                # External Modules have a blank domain
-                pinst.module.external.domain = call.module.domain
+                pinst.module.external.domain = call.module.domain or ""
                 pinst.module.external.name = call.module.name
                 params = call.params
 

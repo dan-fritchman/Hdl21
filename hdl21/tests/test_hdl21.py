@@ -450,7 +450,7 @@ def test_prim_proto1():
     for inst in pm.instances:
         assert isinstance(inst, h.proto.Instance)
         assert inst.module.WhichOneof("to") == "external"
-        assert inst.module.external.domain == "hdl21.primitives"
+        assert inst.module.external.domain in ["hdl21.ideal", "hdl21.primitives"]
 
     ns = h.from_proto(ppkg)
 
