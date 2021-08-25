@@ -267,6 +267,31 @@ def test_bad_params1():
         class E2(TabError):
             ...
 
+    with pytest.raises(RuntimeError):
+        # Test bad parameter names
+
+        @h.paramclass
+        class P:
+            descriptions = h.Param(dtype=str, desc="", default="BAD!")
+
+    with pytest.raises(RuntimeError):
+        # Test bad parameter names
+
+        @h.paramclass
+        class P:
+            defaults = h.Param(dtype=str, desc="", default="BAD!")
+
+    with pytest.raises(RuntimeError):
+        # Test non-params in `@paramclass`
+
+        @h.paramclass
+        class P:
+            something = 11
+
+    with pytest.raises(RuntimeError):
+        # Test a bad argument type
+        h.params._unique_name(33)
+
 
 def test_array1():
     @h.module
