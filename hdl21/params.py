@@ -151,3 +151,12 @@ def _unique_name(params: Any) -> str:
     h.update(pickle.dumps(params))
     # Combine the `@paramclass` name with this (hex) digest
     return params.__class__.__name__ + "(" + h.hexdigest() + ")"
+
+
+# Shortcut for parameter-less generators.
+# Defines the empty-value `@paramclass`.
+HasNoParams = paramclass(
+    dataclasses.make_dataclass("NoParams", fields=[], namespace={}, frozen=True)
+)
+# And an instance of it
+NoParams = HasNoParams()

@@ -39,6 +39,7 @@ class Module:
             if pymod.__file__ != __file__:
                 break
         self._pymodule = pymod  # Reference to the (Python) module where called
+        self._importpath = None  # Optional field set by importers
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
@@ -59,6 +60,7 @@ class Module:
             "add",
             "_interface_ports",
             "_pymodule",
+            "_importpath",
             "_initialized",
         ]
         if key in banned:
@@ -160,6 +162,17 @@ class Module:
         """ Port-Exposed Interface Instances """
         return {name: intf for name, intf in self.interfaces.items() if intf.port}
 
+    def _defpath(self) -> str:
+        """ Helper for exporting. 
+        Returns a string representing "where" this module was defined. 
+        This is generally one of a few things: 
+        * If "normally" defined via Python code, it's the Python module path 
+        * If *imported*, it's the path inferred during import """
+        if self._importpath:  # Imported. Return the period-separated import path.
+            return ".".join(self._importpath)
+        # Defined the old fashioned way. Use the Python module name.
+        return self._pymodule.__name__
+
 
 def module(cls: type) -> Module:
     """
@@ -239,6 +252,7 @@ class ExternalModule:
     name: str
     desc: str
     port_list: List[Signal]
+    domain: Optional[str] = None
     # FIXME: do we want an optional parameter-types type-thing
 
     def __post_init_post_parse__(self):

@@ -2,19 +2,24 @@ syntax = "proto3";
 
 /// Package - A Collection of Circuit-Modules
 message Package {
-  string name = 1;
+  string domain = 1;
   repeated Module modules = 2;
   repeated ExternalModule ext_modules = 3;
+  repeated ExternalSource ext_sources = 4;
 }
 
+/// Domain-qualified name, referring outside its own Library 
 message QualifiedName {
   string domain = 1;
   string name = 2;
 }
 
+/// Reference to another Module, 
+/// either defined in this Library (local) or another (external)
 message Reference {
   oneof to {
-    QualifiedName qn = 1;
+    string local = 1;
+    QualifiedName external = 2;
   }
 }
 
@@ -92,7 +97,7 @@ message Instance {
 /// Module - the primary unit of hardware re-use
 message Module {
   // Module Name 
-  QualifiedName name = 1;
+  string name = 1;
   // Port Definitions 
   repeated Port ports = 2;
   // Internal Signals
@@ -107,9 +112,21 @@ message Module {
 /// Primarily for sake of port-ordering, 
 /// for translation with by-position formats. 
 message ExternalModule {
-  // Module Name 
-  string name = 1;
+  // (Qualified) Module Name 
+  QualifiedName name = 1;
   // Port Definitions 
   repeated Port ports = 2;
+  // Description
+  string desc = 3;
+}
+
+/// # External Source
+/// Primarily for sake of port-ordering, 
+/// for translation with by-position formats. 
+message ExternalSource {
+  oneof src {
+    string path = 1; // File-path on (some) filesystem
+    string url = 2; // URL to module definitions 
+  }
 }
 

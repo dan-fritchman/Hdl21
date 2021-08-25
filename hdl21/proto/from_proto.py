@@ -2,14 +2,14 @@
 hdl21 ProtoBuf Import 
 """
 from types import SimpleNamespace
-from typing import Union, Any
+from typing import Union, Any, Dict, List
 
 # Local imports
 # Proto-definitions
 from . import circuit_pb2 as protodefs
 
 # HDL
-from ..module import Module
+from ..module import Module, ExternalModule
 from ..instance import Instance
 from ..signal import Signal, Port, PortDir, Slice, Concat
 from .. import primitives
@@ -28,31 +28,27 @@ class ProtoImporter:
 
     def __init__(self, pkg: protodefs.Package):
         self.pkg = pkg
-        self.modules = dict()  # Dict of qual-names to Modules
+        self.modules = dict()  # Dict of names to Modules
+        self.ext_modules = dict()  # Dict of qual-names to ExternalModules
         self.ns = SimpleNamespace()
-        self.ns.name = pkg.name
+        self.ns.name = pkg.domain
 
     def import_(self) -> SimpleNamespace:
         """ Import the top-level `Package` to a Python namespace """
         # Walk through each proto-defined Module
+        # External modules first, as we know they have no dependencies
+        for emod in self.pkg.ext_modules:
+            self.import_external_module(emod)
         for pmod in self.pkg.modules:
             self.import_module(pmod)
         # Return our collected namespace
         return self.ns
 
-    def import_module(self, pmod: protodefs.Module) -> Module:
-        """ Convert Proto-Module `pmod` to an `hdl21.Module` """
-        if (pmod.name.domain, pmod.name.name) in self.modules:
-            raise RuntimeError(
-                f"Proto Import Error: Redefined Module {(pmod.name.domain, pmod.name.name)}"
-            )
-
-        # Create the Module
-        module = Module()
-        # Get or create its namespace, and set its name
+    def get_namespace(self, path: List[str]) -> SimpleNamespace:
+        # Get a (potentially nested) namespace at `path`,
+        # creating levels along the way if necessary.
         ns = self.ns
-        parts = pmod.name.name.split(".")  # Path-parts are dot-separated
-        for part in parts[:-1]:
+        for part in path:
             attr = getattr(ns, part, None)
             if attr is None:  # Create a new Namespce
                 new_ns = SimpleNamespace()
@@ -62,18 +58,45 @@ class ProtoImporter:
             elif isinstance(attr, SimpleNamespace):
                 ns = attr
             else:
-                raise RuntimeError(
-                    f"Invalid Module path-name {pmod.name.name} overwriting {attr}"
-                )
-        module.name = parts[-1]
+                raise RuntimeError(f"Invalid namespace path {path} overwriting {attr}")
+        return ns
+
+    def import_external_module(self, pmod: protodefs.ExternalModule) -> ExternalModule:
+        """ Convert Proto-Module `emod` to an `hdl21.ExternalModule` """
+        # Check out cache for whether a module by the same name has been imported
+        key = (pmod.name.domain, pmod.name.name)
+        if key in self.ext_modules:
+            conflict = self.ext_modules[key]
+            raise RuntimeError(
+                f"Cannot import conflicting definitions of {pmod} and {conflict}"
+            )
+        # Create the ExternalModule
+        emod = ExternalModule(
+            name=pmod.name.name,
+            domain=pmod.name.domain,
+            desc=pmod.desc,
+            port_list=self.import_ports(pmod.ports),
+        )
+        # Cache and return it
+        self.ext_modules[key] = emod
+        return emod
+
+    def import_module(self, pmod: protodefs.Module) -> Module:
+        """ Convert Proto-Module `pmod` to an `hdl21.Module` """
+        if pmod.name in self.modules:
+            raise RuntimeError(f"Proto Import Error: Redefined Module {pmod.name}")
+
+        # Create the Module
+        module = Module()
+        # Get or create its namespace, and set its name
+        path = pmod.name.split(".")  # Path-parts are dot-separated
+        ns = self.get_namespace(path[:-1])
+        # Save the import-path and name
+        module._importpath = path[:-1]
+        module.name = path[-1]
 
         # Import its ports
-        for pport in pmod.ports:
-            dir_ = self.import_port_dir(pport)
-            port = Port(
-                name=pport.signal.name, width=pport.signal.width, direction=dir_,
-            )
-            module.add(port)
+        [module.add(port) for port in self.import_ports(pmod.ports)]
 
         # Import its signals
         for psig in pmod.signals:
@@ -97,7 +120,7 @@ class ProtoImporter:
                 setattr(inst, pname, sig)
 
         # Add the Module to our cache and return-namespace, and return it
-        self.modules[(pmod.name.domain, pmod.name.name)] = module
+        self.modules[pmod.name] = module
         setattr(ns, module.name, module)
         return module
 
@@ -144,46 +167,62 @@ class ProtoImporter:
 
         # Also a small piece of proof that Google hates Python.
         ref = pinst.module
-        if ref.WhichOneof("to") != "qn":  # Only `QualifiedName` is valid and supported
-            raise ValueError(f"Invalid reference {ref}")
-
-        if ref.qn.domain == "hdl21.primitives":
-            # Retrieve the Primitive from `hdl21.primitives`
-            prim = getattr(primitives, ref.qn.name, None)
-            if not isinstance(prim, Primitive):
-                raise RuntimeError(
-                    f"Attempt to import invalid `hdl21.primitive` {ref.qn.name}"
-                )
-
-            # Import all of its instance parameters
-            pdict = {}
-            for pname, pparam in pinst.parameters.items():
-                pdict[pname] = self.import_parameter(pparam)
-            params = prim.Params(**pdict)
-
-            # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
-            target = prim(params)
-
-        elif ref.qn.domain == self.pkg.name:  # Internally-defined Module
-            key = (ref.qn.domain, ref.qn.name)
-            module = self.modules.get(key, None)
+        if ref.WhichOneof("to") == "local":
+            # Internally-defined Module
+            module = self.modules.get(ref.local, None)
             if module is None:
-                raise RuntimeError(f"Invalid undefined Module {key} ")
+                raise RuntimeError(f"Invalid undefined Module {ref.local} ")
             if len(pinst.parameters):
                 raise RuntimeError(
                     f"Invalid Instance {pinst} with of Module {module} - does not accept Parameters"
                 )
             target = module
-        elif not ref.qn.domain:
-            raise NotImplementedError(
-                f"Importing ExternalModule from proto coming soon!"
-            )
-        else:
-            raise ValueError(f"Undefined Module Domain {ref.qn.domain}")
+
+        elif ref.WhichOneof("to") == "external":  # Defined outside package
+            # First check the priviledged/ internally-defined domains
+            if ref.external.domain in ("hdl21.primitives", "hdl21.ideal"):
+                # Retrieve the Primitive from `hdl21.primitives`
+                prim = self.import_primitive(ref.external)
+                # Import all of its instance parameters, and convert them to its param-type
+                pdict = self.import_parameters(pinst.parameters)
+                params = prim.Params(**pdict)
+                # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
+                target = prim(params)
+
+            else:  # External Module
+                key = (ref.external.domain, ref.external.name)
+                emod = self.ext_modules.get(key, None)
+                if emod is None:
+                    raise RuntimeError(
+                        f"Invalid Instance of undefined External Module {key}"
+                    )
+                # Import all of its instance parameters to a dict
+                pdict = self.import_parameters(pinst.parameters)
+                # And call it with the parameters
+                target = emod(**pdict)
 
         return Instance(name=pinst.name, of=target)
 
-    def import_parameter(self, pparam: protodefs.Parameter) -> Any:
+    @classmethod
+    def import_primitive(cls, pref: protodefs.QualifiedName) -> Primitive:
+        if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
+            raise ValueError
+        prim = getattr(primitives, pref.name, None)
+        if not isinstance(prim, Primitive):
+            raise RuntimeError(
+                f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+            )
+        return prim
+
+    @classmethod
+    def import_parameters(cls, pparams: Dict[str, protodefs.Parameter]) -> dict:
+        pdict = {}
+        for pname, pparam in pparams.items():
+            pdict[pname] = cls.import_parameter(pparam)
+        return pdict
+
+    @classmethod
+    def import_parameter(cls, pparam: protodefs.Parameter) -> Any:
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
             return int(pparam.integer)
@@ -192,6 +231,16 @@ class ProtoImporter:
         if ptype == "string":
             return str(pparam.string)
         raise ValueError
+
+    def import_ports(self, pports: List[protodefs.Port]) -> List[Signal]:
+        # Import a list of proto-ports
+        ports = []
+        for pport in pports:
+            dir_ = self.import_port_dir(pport)
+            ports.append(
+                Port(name=pport.signal.name, width=pport.signal.width, direction=dir_,)
+            )
+        return ports
 
     def import_port_dir(self, pport: protodefs.Port) -> PortDir:
         # Convert between Port-Direction Enumerations

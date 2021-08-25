@@ -7,7 +7,8 @@ performing one or more transformation-passes.
 """
 import copy
 from enum import Enum, auto
-from typing import Callable, Union, Any, Optional, Dict
+from types import SimpleNamespace
+from typing import Union, Any, Dict, List
 from pydantic.dataclasses import dataclass
 from pydantic import ValidationError
 
@@ -22,27 +23,27 @@ from .params import _unique_name
 
 
 class Context:
-    """ Elaboration Context """
+    """Elaboration Context"""
 
     ...  # To be continued!
 
 
 class GeneratorElaborator:
-    """ Hierarchical Generator Elaborator 
-    Walks a hierarchy from `top` calling Generators. """
+    """Hierarchical Generator Elaborator
+    Walks a hierarchy from `top` calling Generators."""
 
     def __init__(
         self, top: Union[Module, GeneratorCall], ctx: Context,
     ):
         self.top = top
         self.ctx = ctx
-        self.calls = dict()  # GeneratorCall ids to references
+        self.generator_calls = dict()  # GeneratorCalls to their (Module) results
         self.modules = dict()  # Module ids to references
         self.primitive_calls = dict()  # PrimitiveCall ids to references
         self.ext_module_calls = dict()  # PrimitiveCall ids to references
 
     def elaborate(self):
-        """ Elaborate our top node """
+        """Elaborate our top node"""
         if isinstance(self.top, Module):
             return self.elaborate_module(self.top)
         if isinstance(self.top, GeneratorCall):
@@ -53,8 +54,14 @@ class GeneratorElaborator:
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate Generator-function-call `call`. Returns the generated Module. """
-        if call.result:  # Already done!
-            return call.result
+
+        # First check out cache
+        if call in self.generator_calls:  # Already done!
+            # Give the `call` a reference to its result.
+            # Note this *has not* necessarily already happened, as the `self.generator_calls` key may be an equally-valued (but distinct) `GeneratorCall`.
+            result = self.generator_calls[call]
+            call.result = result
+            return result
 
         # The main event: Run the generator-function
         if call.gen.usecontext:
@@ -75,7 +82,7 @@ class GeneratorElaborator:
 
         # Give the GeneratorCall a reference to its result, and store it in our local dict
         call.result = m
-        self.calls[id(call)] = call
+        self.generator_calls[call] = m
         # Create a unique name
         # If the Module that comes back is anonymous, start by giving it a name equal to the Generator's
         if m.name is None:
@@ -88,9 +95,9 @@ class GeneratorElaborator:
         return self.elaborate_module(m)
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. First depth-first elaborates its Instances,
+        """Elaborate Module `module`. First depth-first elaborates its Instances,
         before creating any implicit Signals and connecting them.
-        Finally checks for connection-consistency with each Instance. """
+        Finally checks for connection-consistency with each Instance."""
         if id(module) in self.modules:  # Already done!
             return module
 
@@ -110,27 +117,27 @@ class GeneratorElaborator:
         return module
 
     def elaborate_external_module(self, call: ExternalModuleCall) -> ExternalModuleCall:
-        """ Elaborate ExternalModuleCall `call` """
+        """Elaborate ExternalModuleCall `call`"""
         # Store a reference in our cache, and return it as-is
         if id(call) not in self.ext_module_calls:
             self.ext_module_calls[id(call)] = call
         return call
 
     def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
-        """ Elaborate PrimitiveCall `call` """
+        """Elaborate PrimitiveCall `call`"""
         # Store a reference in our cache, and return it as-is
         if id(call) not in self.primitive_calls:
             self.primitive_calls[id(call)] = call
         return call
 
     def elaborate_interface_instance(self, inst: InterfaceInstance) -> None:
-        """ Annotate each InterfaceInstance so that its pre-elaboration `PortRef` magic is disabled. """
+        """Annotate each InterfaceInstance so that its pre-elaboration `PortRef` magic is disabled."""
         inst._elaborated = True
 
     def elaborate_instance(self, inst: Instance) -> Module:
-        """ Elaborate a Module Instance.
+        """Elaborate a Module Instance.
         Largely pushes through depth-first definition of the target-Module.
-        Connections, port-direction checking and the like are performed in `elaborate_module`. """
+        Connections, port-direction checking and the like are performed in `elaborate_module`."""
         inst._elaborated = True  # Turn off the instance's pre-elaboration magic
         if isinstance(inst.of, Generator):  # FIXME: maybe move this
             call = GeneratorCall(gen=inst.of, arg=inst.params)
@@ -147,8 +154,8 @@ class GeneratorElaborator:
 
 
 class ImplicitConnectionElaborator:
-    """ Hierarchical Implicit-Connection Elaborator
-    Transform any implicit signals, i.e. port-to-port connections, into explicit ones. """
+    """Hierarchical Implicit-Connection Elaborator
+    Transform any implicit signals, i.e. port-to-port connections, into explicit ones."""
 
     def __init__(
         self, top: Module, ctx: Context,
@@ -158,20 +165,20 @@ class ImplicitConnectionElaborator:
         self.ext_module_calls = dict()
 
     def elaborate(self):
-        """ Elaborate our top node """
+        """Elaborate our top node"""
         if not isinstance(self.top, Module):
             raise TypeError
         return self.elaborate_module(self.top)
 
     def elaborate_external_module(self, call: ExternalModuleCall) -> ExternalModuleCall:
-        """ Elaborate ExternalModuleCall `call` """
+        """Elaborate ExternalModuleCall `call`"""
         # Store a reference in our cache, and return it as-is
         if id(call) not in self.ext_module_calls:
             self.ext_module_calls[id(call)] = call
         return call
 
     def elaborate_instance(self, inst: Instance) -> Union[Module, PrimitiveCall]:
-        """ Elaborate a Module Instance. """
+        """Elaborate a Module Instance."""
         if not inst._resolved:
             raise RuntimeError(f"Error elaborating undefined Instance {inst}")
         if isinstance(inst._resolved, Module):
@@ -187,8 +194,8 @@ class ImplicitConnectionElaborator:
         return call
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. First depth-first elaborates its Instances,
-        before creating any implicit Signals and connecting them. """
+        """Elaborate Module `module`. First depth-first elaborates its Instances,
+        before creating any implicit Signals and connecting them."""
 
         from .instance import PortRef
 
@@ -280,14 +287,14 @@ class ImplicitConnectionElaborator:
 
 @dataclass
 class FlatInterface:
-    """ Flattened Hierarchical Interface, resolved to constituent Signals """
+    """Flattened Hierarchical Interface, resolved to constituent Signals"""
 
     src: Interface  # Source/ Original Interface
     signals: Dict[str, Signal]  # Flattened Signals-Dict
 
 
 class InterfaceFlattener:
-    """ Interface-Flattening Elaborator Pass """
+    """Interface-Flattening Elaborator Pass"""
 
     def __init__(
         self, top: Module, ctx: Context,
@@ -297,7 +304,7 @@ class InterfaceFlattener:
         self.results = dict()  # Cache of Interfaces (ids) to FlatInterfaces
 
     def elaborate(self):
-        """ Elaborate our top node """
+        """Elaborate our top node"""
         if isinstance(self.top, Module):
             return self.elaborate_module(self.top)
         if isinstance(self.top, GeneratorCall):
@@ -307,7 +314,7 @@ class InterfaceFlattener:
         )
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Depth-first flatten Module `module`s Interfaces, and reconnect them """
+        """Depth-first flatten Module `module`s Interfaces, and reconnect them"""
         raise NotImplementedError  # FIXME!
         # The depth-first part first
         for inst in module.instances.values():
@@ -352,13 +359,13 @@ class InterfaceFlattener:
         return module
 
     def elaborate_interface_instance(self, inst: InterfaceInstance) -> FlatInterface:
-        """ Elaborate an Interface Instance.
+        """Elaborate an Interface Instance.
         Really meaning get a flattened definition of its target Interface.
-        All connection-checking is done elsewhere. """
+        All connection-checking is done elsewhere."""
         return self.flatten_interface(inst.of)
 
     def flatten_interface(self, intf: Interface) -> FlatInterface:
-        """ Convert nested Interface-definition `intf` into a flattened `FlatInterface` of scalar Signals """
+        """Convert nested Interface-definition `intf` into a flattened `FlatInterface` of scalar Signals"""
         if id(intf) in self.results:  # Already done
             return self.results[id(intf)]
 
@@ -390,7 +397,7 @@ class InterfaceFlattener:
         return flat
 
     def elaborate_instance(self, inst: Instance) -> Union[Module, PrimitiveCall]:
-        """ Elaborate a Module Instance. """
+        """Elaborate a Module Instance."""
         if not inst._resolved:
             raise RuntimeError(f"Error elaborating undefined Instance {inst}")
         if isinstance(inst._resolved, Module):
@@ -407,7 +414,7 @@ class InterfaceFlattener:
 
 
 class ElabPasses(Enum):
-    """ Enumerated Elaborator Passes """
+    """Enumerated Elaborator Passes"""
 
     EXPAND_GENERATORS = auto()
     EXPAND_IMPLICIT_CONNS = auto()
@@ -447,10 +454,44 @@ pass_funcs = {
 
 # Type short-hand for elaborate-able types
 Elabable = Union[Module, Generator, GeneratorCall]
+# (Plural Version)
+Elabables = Union[Elabable, List[Elabable], SimpleNamespace]
+
+
+def elabable(obj: Any) -> bool:
+    # Function to test this, since `isinstance` doesn't work for `Union`.
+    return isinstance(obj, (Module, Generator, GeneratorCall))
+
+
+def elab_list(obj: Any) -> list:
+    # Accumulate a list of all elab-able types in `obj`
+    accum = []
+    _elab_list_helper(obj, accum)
+    return accum
+
+
+def _elab_list_helper(obj: Any, accum: list) -> list:
+    # Recursive helper for hierarchically finding elaborate-able things in `obj`
+    if elabable(obj):
+        accum.append(obj)
+    elif isinstance(obj, list):
+        [_elab_list_helper(i, accum) for i in obj]
+    elif isinstance(obj, SimpleNamespace):
+        # Note this skips over non-elaboratable items (e.g. names), where the list demands all be suitable.
+        for i in obj.__dict__.values():
+            if isinstance(i, (SimpleNamespace, list)) or elabable(i):
+                _elab_list_helper(i, accum)
+    else:
+        raise TypeError(f"Attempting Invalid Elaboration of {obj}")
+
+
+def elab_all(top: Any, **kwargs) -> list:
+    # Elaborate everything we can find - potentially recursively - in `top`
+    return [elaborate(top=t, **kwargs) for t in elab_list(top)]
 
 
 def elaborate(top: Elabable, params=None, ctx=None, passes=None):
-    """ In-Memory Elaboration of Generator or Module `top`. """
+    """In-Memory Elaboration of Generator or Module `top`."""
     ctx = ctx or Context()
     passes = passes or copy.copy(default_passes)
     if params is not None:

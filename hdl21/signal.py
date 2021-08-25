@@ -57,6 +57,7 @@ class Signal:
     width: int = 1
     vis: Visibility = Visibility.INTERNAL
     direction: PortDir = PortDir.NONE
+    desc: Optional[str] = None  # Description
     src: Optional[Enum] = field(repr=False, default=None)
     dest: Optional[Enum] = field(repr=False, default=None)
 

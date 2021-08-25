@@ -55,6 +55,19 @@ class GeneratorCall:
         if not isinstance(self.arg, self.gen.Params):
             raise ValidationError
 
+    def __eq__(self, other) -> bool:
+        """ Generator-Call equality requires:
+        * *Identity* between generators, and 
+        * *Equality* between parameter-values. """
+        return self.gen is other.gen and self.arg == other.arg
+
+    def __hash__(self):
+        """ Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its generator, and 
+        * *Value* of its parameters. 
+        The two are joined for hashing as a two-element tuple. """
+        return hash((id(self.gen), self.arg))
+
 
 def generator(f: Callable) -> Generator:
     """ Decorator for Generator Functions """
