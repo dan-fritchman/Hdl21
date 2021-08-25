@@ -3,6 +3,7 @@
 """
 
 import inspect
+import pickle
 from dataclasses import field
 from typing import Callable, Union, Any, Optional
 from types import ModuleType
@@ -66,7 +67,7 @@ class GeneratorCall:
         * *Identity* of its generator, and 
         * *Value* of its parameters. 
         The two are joined for hashing as a two-element tuple. """
-        return hash((id(self.gen), self.arg))
+        return hash((id(self.gen), pickle.dumps(self.arg)))
 
 
 def generator(f: Callable) -> Generator:

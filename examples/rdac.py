@@ -1,3 +1,4 @@
+import sys
 from typing import Dict, Any, Tuple, Sequence
 
 import hdl21 as h
@@ -77,7 +78,7 @@ def mux(params: PassGateParams) -> h.Module:
         ctrl = h.Input()
         ctrl_b = h.Input()
 
-    aconns, bconns = dict(), dict()
+    aconns, bconns = dict(source=Mux.sourceA, drain=Mux.out), dict(source=Mux.sourceB, drain=Mux.out)
     if params.pmos is not None:
         setattr(Mux, f'VDD', h.Inout())
         aconns['VDD'] = Mux.VDD
@@ -89,7 +90,7 @@ def mux(params: PassGateParams) -> h.Module:
         aconns['VSS'] = Mux.VSS
         aconns['en'] = Mux.ctrl
         bconns['VSS'] = Mux.VSS
-        bconns['en_b'] = Mux.ctrl_b
+        bconns['en'] = Mux.ctrl_b
     setattr(Mux, f'passgate_a', passgate(params)(**aconns))
     setattr(Mux, f'passgate_b', passgate(params)(**bconns))
     return Mux
@@ -135,11 +136,12 @@ def mux_tree(params: MuxTreeParams) -> h.Module:
         else:
             curr_output = MuxTree.out
         for mux_idx in range(2**layer):
-            mux_conns = base_mux_conns.copy()
+            mux_conns = layer_mux_conns.copy()
             mux_conns['sourceA'] = curr_input[2 * mux_idx]
             mux_conns['sourceB'] = curr_input[2 * mux_idx + 1]
             mux_conns['out'] = curr_output[mux_idx]
             setattr(MuxTree, f'mux_{layer}_{mux_idx}', mux(params.mux_params)(**mux_conns))
+        curr_input = curr_output
     return MuxTree
 
 
@@ -184,16 +186,16 @@ def primitive_factory(name: str, param_names: Sequence[str], port_names: Sequenc
 def generate():
     res_prim, res_params = external_factory("rupolym_m", ["w", "l"], ["PLUS", "MINUS"])
     params = RLadderParams(
-        nseg=15, res=res_prim, res_params=res_params(w=4, l=10), res_conns=dict(PLUS='P', MINUS='N'))
+        nseg=15, res=res_prim, res_params=dict(w=4, l=10), res_conns=dict(PLUS='P', MINUS='N'))
     proto = h.to_proto(h.elaborate(rladder, params))
-    h.netlist("", proto)
+    h.netlist(proto, sys.stdout)
 
     nmos, nmos_params = external_factory("nch_mac", ['l'], ["D", "G", "S", "B"])
     pmos, pmos_params = external_factory("pch_mac", ['l'], ["D", "G", "S", "B"])
     params = MuxTreeParams(nbit=4, mux_params=PassGateParams(
-        nmos=nmos, nmos_params=nmos_params(l=1), pmos=pmos, pmos_params=pmos_params(l=1)))
+        nmos=nmos, nmos_params=dict(l=1), pmos=pmos, pmos_params=dict(l=1)))
     proto = h.to_proto(h.elaborate(mux_tree, params))
-    h.netlist("", proto)
+    h.netlist(proto, sys.stdout)
 
 
 if __name__ == '__main__':
