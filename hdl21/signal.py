@@ -67,19 +67,15 @@ class Signal:
 
     def __getitem__(self, key: Any) -> "Slice":
         """ Square-Bracket Slicing into Signals, returning Signal-Slices.
-        Does *HDL-style* slicing, in which:
-        * Slice indices are *inclusive*
-        * Larger arguments are expected to come *first*.
-
-        e.g. The top "half" of a width-ten `Signal` can be retrieved via:
-        `Signal(width=10)[9:5]` """
+        Does python style slicing
+        """
 
         if isinstance(key, int):
             if key >= self.width:
                 raise ValueError(f"Out-of-bounds index {key} into {self}")
             if key < 0:
-                raise ValueError(f"Invalid negative index {key} into {self}")
-            return Slice(signal=self, top=key, bot=key)
+                key = key + self.width
+            return Slice(signal=self, top=key, bot=key, step=1)
 
         if isinstance(key, slice):
             # Note these `slice` attributes are descriptor-things, and they get weird, fast.
@@ -87,21 +83,27 @@ class Signal:
             start = slice.__getattribute__(key, "start")
             stop = slice.__getattribute__(key, "stop")
             step = slice.__getattribute__(key, "step")
-            if step is not None:
-                raise ValueError(f"Invalid slice (with step) {key} indexed into {self}")
-            top = start or self.width - 1
+            start = 0 if start is None else start
+            stop = self.width - 1 if stop is None else stop
+            step = 1 if step is None else step
+            # Wrap around the start and stop to allow for negative slicing
+            start = start if start >= 0 else self.width + start
+            stop = stop if stop >= 0 else self.width + stop - 1
+            if step == 0:
+                raise ValueError(f"slice step cannot be zero")
+            elif step < 0:
+                top = start
+                bot = start + (-(start - stop) // step) * step  # Align bot with the step
+            else:
+                top = start + -(-(stop - start) // step) * step  # Align top with the step
+                bot = start
             if top > self.width:
                 raise ValueError(f"Out-of-bounds index {top} into {self}")
-            if top < 0:
-                raise ValueError(f"Invalid negative index {top} into {self}")
-            bot = stop or 0
             if bot > self.width:
                 raise ValueError(f"Out-of-bounds index {bot} into {self}")
-            if bot < 0:
-                raise ValueError(f"Invalid negative index {bot} into {self}")
             if bot >= top:
-                raise ValueError(f"Invalid slice (start <= stop) {key} into {self}")
-            return Slice(signal=self, top=top, bot=bot)
+                raise ValueError(f"Invalid slice ({bot} <= {top}) {key} into {self}")
+            return Slice(signal=self, top=top, bot=bot, step=step)
 
         raise TypeError(f"Invalid slice-type {key} into {self}")
 
@@ -136,6 +138,7 @@ class Slice:
     signal: Signal
     top: int
     bot: int
+    step: int
 
     @property
     def width(self):
