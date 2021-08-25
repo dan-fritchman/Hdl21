@@ -37,7 +37,7 @@ class GeneratorElaborator:
     ):
         self.top = top
         self.ctx = ctx
-        self.calls = dict()  # GeneratorCall ids to references
+        self.generator_calls = dict()  # GeneratorCalls to their (Module) results
         self.modules = dict()  # Module ids to references
         self.primitive_calls = dict()  # PrimitiveCall ids to references
         self.ext_module_calls = dict()  # PrimitiveCall ids to references
@@ -53,9 +53,15 @@ class GeneratorElaborator:
         )
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
-        """Elaborate Generator-function-call `call`. Returns the generated Module."""
-        if call.result:  # Already done!
-            return call.result
+        """ Elaborate Generator-function-call `call`. Returns the generated Module. """
+
+        # First check out cache
+        if call in self.generator_calls:  # Already done!
+            # Give the `call` a reference to its result.
+            # Note this *has not* necessarily already happened, as the `self.generator_calls` key may be an equally-valued (but distinct) `GeneratorCall`.
+            result = self.generator_calls[call]
+            call.result = result
+            return result
 
         # The main event: Run the generator-function
         if call.gen.usecontext:
@@ -76,7 +82,7 @@ class GeneratorElaborator:
 
         # Give the GeneratorCall a reference to its result, and store it in our local dict
         call.result = m
-        self.calls[id(call)] = call
+        self.generator_calls[call] = m
         # Create a unique name
         # If the Module that comes back is anonymous, start by giving it a name equal to the Generator's
         if m.name is None:

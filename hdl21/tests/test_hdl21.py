@@ -1,4 +1,5 @@
 import pytest
+from io import StringIO
 from types import SimpleNamespace
 from enum import Enum, auto
 
@@ -973,3 +974,36 @@ def test_bad_proto_naming():
             ma2 = m2()()
 
         h.to_proto(MaParent)
+
+
+def test_generator_recall():
+    """ Test multi-calling generators """
+
+    @h.generator
+    def CallMeTwice(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    @h.module
+    class Caller:
+        m1 = CallMeTwice(h.NoParams)()
+        m2 = CallMeTwice(h.NoParams)()
+
+    # Convert to proto
+    ppkg = h.to_proto(Caller)
+    assert len(ppkg.modules) == 2
+    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.CallMeTwice(NoParams())"
+    assert ppkg.modules[1].name == "hdl21.tests.test_hdl21.Caller"
+
+    # Convert the proto-package to a netlist, and run some (very basic) checks
+    nl = StringIO()
+    h.netlist(ppkg, nl)
+    nl = nl.getvalue()
+    assert "CallMeTwice_NoParams___" in nl
+    assert "Caller" in nl
+
+    # Round-trip back from Proto to Modules
+    rt = h.from_proto(ppkg)
+    ns = rt.hdl21.tests.test_hdl21
+    assert isinstance(ns.Caller, h.Module)
+    assert isinstance(getattr(ns, "CallMeTwice(NoParams())"), h.Module)
+
