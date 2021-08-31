@@ -11,6 +11,16 @@ from hdl21.primitives import Mos, MosType, MosVth, MosParams
 from hdl21.netlist import NetlistFormat
 
 
+@h.paramclass
+class Sky130MosParams:
+    """ Parameters for the PDK MOS transistor modules """
+
+    w = h.Param(dtype=str, desc="Width, in PDK Units (microns)")
+    l = h.Param(dtype=str, desc="Length, in PDK Units (microns)")
+    m = h.Param(dtype=int, desc="Multiplier", default=1)
+    mult = h.Param(dtype=int, desc="(Another?) Multiplier", default=1)
+
+
 class Sky130Walker(h.HierarchyWalker):
     """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
 
@@ -60,6 +70,7 @@ class Sky130Walker(h.HierarchyWalker):
             name=modname,
             desc=f"Sky130 PDK {modname}",
             port_list=copy.copy(Mos.port_list),
+            paramtype=Sky130MosParams,
         )
         # Store it in our cache
         self.mos_modules[key] = mod
@@ -75,16 +86,16 @@ class Sky130Walker(h.HierarchyWalker):
         # Not found; create a new `ExternalModuleCall`.
         # First retrieve the `ExternalModule`.
         mod = self.mos_module(params)
-        # Create the parameter-dictionary
+        # Convert to `mod`s parameter-space
         # Note this silly PDK keeps parameter-values in *microns* rather than SI meters.
-        modparams = dict(
+        modparams = Sky130MosParams(
             w="(650n * 1e6)" if params.w is None else f"({params.w} * 1e6)",
             l="(150n * 1e6)" if params.w is None else f"({params.l} * 1e6)",
             m=params.npar,
             mult=1,
         )
         # Combine the two into a call, store and return it
-        modcall = mod(**modparams)
+        modcall = mod(modparams)
         self.mos_modcalls[params] = modcall
         return modcall
 

@@ -159,8 +159,8 @@ def external_factory(name: str, param_names: Sequence[str], port_names: Sequence
     param_attr_dict = {n: h.Param(dtype=Any, desc=f'Gen parameter {n} of {name}') for n in param_names}
     # Dynamically create the parameter class, pass it to the h.paramclass decorator function
     custom_params = h.paramclass(type(f"{name}Params", (), param_attr_dict))
-    return h.ExternalModule(name, f'external_module_{name}',
-                            [h.Inout(name=n) for n in port_names]), custom_params
+    return h.ExternalModule(name, desc=f'external_module_{name}',
+                            port_list=[h.Inout(name=n) for n in port_names]), custom_params
 
 
 def primitive_factory(name: str, param_names: Sequence[str], port_names: Sequence[str]) -> Tuple[h.Primitive, h.Param]:

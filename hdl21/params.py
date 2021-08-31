@@ -4,8 +4,9 @@ Hdl21 Parameters and Param-Classes
 
 from typing import Optional, Any
 import dataclasses
-import hashlib
+import json
 import pickle
+import hashlib
 import pydantic
 
 
@@ -145,12 +146,82 @@ def _unique_name(params: Any) -> str:
     if not isparamclass(params):
         raise RuntimeError(f"Invalid parameter-class instance {params}")
 
+    # Determine whether *all* fields of `params` are scalar values: strings, numbers, and options thereof
+    scalars = [
+        str,
+        int,
+        float,
+        type(None),
+        Optional[str],
+        Optional[int],
+        Optional[float],
+    ]
+    # Boolean indication of whether *all* param-datatypes are from among these
+    all_scalar = all([param.dtype in scalars for param in params.__params__.values()])
+
+    # If all params are scalars, create a readable string of their values
+    if all_scalar:
+        name = params.__class__.__name__ + "("
+        for pname in params.__params__.keys():
+            pval = getattr(params, pname)
+            name += pname + "=" + str(pval) + " "
+        name = name.rstrip()
+        name += ")"
+
+        # These names must also be limited in length, for sake of our favorite output formats.
+        # If the generated name is too long, use the hashing method below instead
+        if len(name) < 128:  # Probably(?) a reasonable length limit
+            return name
+
+    # Non-scalar cases generally include nested `@paramclasses` or sequences,
+    # or surpass the length-limits above. We serialize and hash them.
+    # Preferably serialize as JSON
+    jsonstr = json.dumps(params, indent=4, default=hdl21_naming_encoder)
+    data = bytes(jsonstr, encoding="utf-8")
+
+    # If JSON encoding fails, we *could* use pickle instead.
+    # Disabled for now, because pickle is not guaranteed to be deterministic.
+    # Note JSON is preferable for its run-to-run stability,
+    # where pickle can generally serialize more types.
+    # data = pickle.dumps(params)
+
+    # Take that data and hash it
     # Note the "not used for security" option ensures consistent hashing between runs/ Python-processes
     h = hashlib.new("md5", usedforsecurity=False)
-    # We will pickle the params object to serialize it and hash it
-    h.update(pickle.dumps(params))
+    h.update(data)
     # Combine the `@paramclass` name with this (hex) digest
     return params.__class__.__name__ + "(" + h.hexdigest() + ")"
+
+
+def hdl21_naming_encoder(obj: Any) -> Any:
+    """ JSON encoder for naming of Hdl21 parameter-values. 
+
+    "Extends" `pydantic.json.pydantic_encoder` by first checking for 
+    each of the non-serializable Hdl21 types (`Module`, `Instance`, `Generator`, etc.), 
+    then hands everything else off to `pydantic.json.pydantic_encoder`. 
+
+    Note this *does not fully serialize `Module`s and the like - 
+    see `hdl21.to_proto` for this. This JSON-ization is just good enough 
+    to enable unique naming of Hdl-object-value parameters. """
+
+    from .module import Module, ExternalModule, ExternalModuleCall
+    from .instance import Instance
+    from .generator import Generator, GeneratorCall
+
+    if isinstance(obj, (Module, ExternalModule)):
+        # Modules use their qualified class names/paths
+        return obj._qualname()
+    if isinstance(obj, (Instance, Generator, GeneratorCall, ExternalModuleCall)):
+        # Most other Hdl21 objects as parameters are pending, maybe, maybe not, support as parameter-values.
+        raise NotImplementedError
+
+    # Dataclasses also require custom handling, as the default encoder deep-copies them,
+    # often invoking methods not supported on several Hdl21 types.
+    if dataclasses.is_dataclass(obj):
+        return {f.name: getattr(obj, f.name) for f in dataclasses.fields(obj)}
+
+    # Not an Hdl21 type. Hand off to pydantic.
+    return pydantic.json.pydantic_encoder(obj)
 
 
 # Shortcut for parameter-less generators.

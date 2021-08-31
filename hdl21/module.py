@@ -9,8 +9,10 @@ particularly the `@module` (lower-case) decorator-function.
 
 import inspect
 from textwrap import dedent
-from typing import Any, Optional, List, Union, Dict, get_args
+from types import ModuleType
+from typing import Any, Optional, List, Union, Dict, get_args, Tuple, Type
 from pydantic.dataclasses import dataclass
+from dataclasses import field
 
 # Local imports
 from .signal import Signal, Visibility
@@ -41,14 +43,11 @@ class Module:
         self.instarrays = dict()
         self.interfaces = dict()
         self.namespace = dict()  # Combination of all these
-        for fr in inspect.stack():
-            # Find the first frame not from *this* file
-            # Sometimes this will be a Generator. That's OK, they'll figure it out.
-            pymod = inspect.getmodule(fr[0])
-            if pymod.__file__ != __file__:
-                break
-        self._pymodule = pymod  # Reference to the (Python) module where called
+
+        self._pymodule = _caller_pymodule()  #  (Python) module where called
         self._importpath = None  # Optional field set by importers
+        self._moduledata = None  # Optional[ModuleData]
+        self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
         self._initialized = True
 
     def __setattr__(self, key: str, val: Any) -> None:
@@ -58,17 +57,16 @@ class Module:
             # Bootstrapping phase. Pass along to "regular" setattr.
             return super().__setattr__(key, val)
 
-        # Protected attrs - the internal dicts
+        # Protected attrs - the internal dict-names
         banned = [
             "ports",
             "signals",
             "instances",
+            "instarrays",
+            "interfaces",
             "namespace",
             "add",
-            "_interface_ports",
-            "_pymodule",
-            "_importpath",
-            "_initialized",
+            "get",
         ]
         if key in banned:
             raise RuntimeError(
@@ -153,6 +151,8 @@ class Module:
 
     def __getattr__(self, key: str) -> Any:
         """ Include our namespace-worth of HDL objects in dot-access retrievals """
+        if key.startswith("_"):
+            return object.__getattribute__(self, key)
         ns = self.__getattribute__("namespace")
         if key in ns:
             return ns[key]
@@ -188,6 +188,46 @@ class Module:
             return ".".join(self._importpath)
         # Defined the old fashioned way. Use the Python module name.
         return self._pymodule.__name__
+
+    def _qualname(self) -> Optional[str]:
+        """ Helper for exporting. Returns the path-qualified name including 
+        `_defpath` options above, and the `Module.name`. """
+        if self.name is None:
+            return None
+        return self._defpath() + "." + self.name
+
+    def __eq__(self, other: "Module") -> bool:
+        if self.name is None or other.name is None:
+            raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
+        return self._qualname() == other._qualname()
+
+    def __hash__(self):
+        if self.name is None:
+            raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
+        return hash(self._qualname())
+
+    def __getstate__(self):
+        if self.name is None:
+            raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
+        return self._qualname()
+
+    @property
+    def _data(self) -> "_ModuleData":
+        """ Retrieve a `_ModuleData` corresponding to our namespace """
+        if self._updated or self._moduledata is None:
+            ns = self.__getattribute__("namespace")
+            self._moduledata = _ModuleData(name=self.name, namespace=list(ns.values()))
+        return self._moduledata
+
+
+@dataclass(frozen=True)
+class _ModuleData:
+    """ Immutable data-class representation of `Module` content. 
+    Designed for internal use by `Module`, particularly for sake of 
+    hashing, equality testing, and serialization. """
+
+    qualname: str
+    namespace: Tuple  # More specifically Tuple[ModuleAttr], but specifying so triggers a pydantic bug
 
 
 def module(cls: type) -> Module:
@@ -257,18 +297,23 @@ class ExternalModule:
     * Foundry or technology-specific primitives
 
     Unlike `Modules`, `ExternalModules` include parameters to support legacy HDLs.
-    Said parameters may only take on a limited number of datatypes,
-    and may not be nested.
-    Parameter type-requirements *are not* stored by `ExternalModules`.
-    Calling them to create a parametrized instance stores a largely arbitrary
-    dictionary of params.
+    Said parameters may only take on a limited number of datatypes, and may not be nested.
+    Each `ExternalModule` stores a parameter-type field `paramtype`. 
+    Parameter-values are checked to be instances of `paramtype` at creation time. 
     """
 
     name: str
-    desc: str
     port_list: List[Signal]
+    paramtype: Type = object
+    desc: Optional[str] = None  # Description
     domain: Optional[str] = None
-    # FIXME: do we want an optional parameter-types type-thing
+    pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
+    importpath: Optional[List[str]] = field(repr=False, init=False, default=None)
+
+    def __post_init__(self):
+        # Internal tracking data: defining module/import-path
+        self.pymodule = _caller_pymodule()
+        self.importpath = None
 
     def __post_init_post_parse__(self):
         """After type-checking, do some more checks on values"""
@@ -287,18 +332,70 @@ class ExternalModule:
     def ports(self) -> dict:
         return {p.name: p for p in self.port_list}
 
+    def _defpath(self) -> str:
+        """ Helper for exporting. 
+        Returns a string representing "where" this module was defined. 
+        This is generally one of a few things: 
+        * If "normally" defined via Python code, it's the Python module path 
+        * If *imported*, it's the path inferred during import """
+        if self.importpath:  # Imported. Return the period-separated import path.
+            return ".".join(self.importpath)
+        # Defined the old fashioned way. Use the Python module name.
+        return self.pymodule.__name__
+
+    def _qualname(self) -> Optional[str]:
+        """ Helper for exporting. Returns the path-qualified name including 
+        `_defpath` options above, and the `Module.name`. """
+        if self.name is None:
+            return None
+        return self._defpath() + "." + self.name
+
+    def __eq__(self, other: "ExternalModule") -> bool:
+        if self.name is None or other.name is None:
+            raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
+        return self._qualname() == other._qualname()
+
+    def __hash__(self):
+        if self.name is None:
+            raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
+        return hash(self._qualname())
+
+    def __getstate__(self):
+        if self.name is None:
+            raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
+        return self._qualname()
+
 
 @calls_instantiate
 @dataclass
 class ExternalModuleCall:
-    """External Module Call
+    """ External Module Call
     A combination of an `ExternalModule` and its Parameter-values,
-    typically generated by calling the Module."""
+    typically generated by calling the Module. """
 
     module: ExternalModule
-    # params: Dict[str, Union[int, float, str]]
     params: Any
+
+    def __post_init_post_parse__(self):
+        # Type-validate our parameters
+        if not isinstance(self.params, self.module.paramtype):
+            raise TypeError(
+                f"Invalid parameters {self.params} for ExternalModule {self.module}. Must be {self.module.paramtype}"
+            )
 
     @property
     def ports(self) -> dict:
         return self.module.ports
+
+
+def _caller_pymodule():
+    """ Find the first frame not from *this* file
+    Sometimes this will be a Generator. That's OK, they'll figure it out. """
+    for fr in inspect.stack():
+        # Note frames produce an `Optional[ModuleType]`.
+        # (It seems extension modules may not have one.)
+        # So be sure to check for `None`!
+        pymod = inspect.getmodule(fr[0])
+        if pymod is not None and pymod.__file__ != __file__:
+            return pymod
+    raise RuntimeError("Could not find caller module")

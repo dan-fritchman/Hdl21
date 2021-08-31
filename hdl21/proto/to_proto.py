@@ -3,7 +3,7 @@ hdl21 ProtoBuf Export
 """
 
 from textwrap import dedent
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from enum import Enum
 from types import SimpleNamespace
 from typing import Optional, List, Union
@@ -60,7 +60,7 @@ class ProtoExporter:
         """Create and return a unique `QualifiedName` for Module `module`.
         Raises a `RuntimeError` if unique name is taken."""
 
-        mname = module._defpath() + "." + module.name
+        mname = module._qualname()
         if mname in self.module_names:
             conflict = self.module_names[mname]
             raise RuntimeError(
@@ -203,7 +203,15 @@ class ProtoExporter:
                 self.export_external_module(call.module)
                 pinst.module.external.domain = call.module.domain or ""
                 pinst.module.external.name = call.module.name
-                params = call.params
+                # FIXME: while these ExternalModule parameters can ostensibly be anything,
+                # there are really two supported types-of-types:
+                # dictionaries, and dataclasses (which we can turn into dictionaries)
+                if isinstance(call.params, dict):
+                    params = call.params
+                elif is_dataclass(call.params):
+                    params = asdict(call.params)
+                else:
+                    raise TypeError
 
             # Set the parameter-values
             for key, val in params.items():

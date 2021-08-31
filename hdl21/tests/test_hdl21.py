@@ -1016,3 +1016,19 @@ def test_generator_recall():
     assert isinstance(ns.Caller, h.Module)
     assert isinstance(getattr(ns, "CallMeTwice(NoParams())"), h.Module)
 
+
+def test_module_as_param():
+    @h.paramclass
+    class HasModuleParam:
+        m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")
+
+    @h.generator
+    def UsesModuleParam(params: HasModuleParam) -> h.Module:
+        return params.m  # Returns the Module unmodified
+
+    Empty = h.Module(name="Empty")
+    p = HasModuleParam(m=Empty)
+    m = UsesModuleParam(p)
+    m = h.elaborate(m)
+    assert m == Empty
+
