@@ -3,6 +3,7 @@
 """
 
 import inspect
+import pickle
 from dataclasses import field
 from typing import Callable, Union, Any, Optional
 from types import ModuleType
@@ -54,6 +55,19 @@ class GeneratorCall:
         """ Validate that our argument matches the Generator param-type """
         if not isinstance(self.arg, self.gen.Params):
             raise ValidationError
+
+    def __eq__(self, other) -> bool:
+        """ Generator-Call equality requires:
+        * *Identity* between generators, and 
+        * *Equality* between parameter-values. """
+        return self.gen is other.gen and self.arg == other.arg
+
+    def __hash__(self):
+        """ Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its generator, and 
+        * *Value* of its parameters. 
+        The two are joined for hashing as a two-element tuple. """
+        return hash((id(self.gen), pickle.dumps(self.arg)))
 
 
 def generator(f: Callable) -> Generator:

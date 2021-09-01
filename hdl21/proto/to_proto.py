@@ -1,8 +1,11 @@
 """
 hdl21 ProtoBuf Export
 """
+
 from textwrap import dedent
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
+from enum import Enum
+from types import SimpleNamespace
 from typing import Optional, List, Union
 
 # Local imports
@@ -10,23 +13,19 @@ from typing import Optional, List, Union
 from . import circuit_pb2 as protodefs
 
 # HDL
-from ..elab import elaborate, Elabable
+from ..elab import Elabables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
-from ..primitives import Primitive, PrimitiveCall
+from ..primitives import Primitive, PrimitiveCall, PrimitiveType
 from ..instance import Instance
 from .. import signal
 
 
 def to_proto(
-    top: Union[Elabable, List[Elabable]], domain: Optional[str] = None, **kwargs
+    top: Elabables, domain: Optional[str] = None, **kwargs,
 ) -> protodefs.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`"""
-    if not isinstance(top, list):
-        tops = [top]
-    else:
-        tops = top
     # Elaborate all the top-level Modules
-    tops = [elaborate(top=t, **kwargs) for t in tops]
+    tops = elab_all(top)
     exporter = ProtoExporter(tops=tops, domain=domain)
     return exporter.export()
 
@@ -43,7 +42,7 @@ class ProtoExporter:
         self.module_names = dict()  # (Serialized) Module-name to Proto-Module dict
         self.ext_modules = dict()  # ExternalModule-id to Proto-ExternalModule dict
         # Default `domain` AKA package-name is the empty string
-        self.pkg = protodefs.Package(name=domain or "")
+        self.pkg = protodefs.Package(domain=domain or "")
 
     def export(self) -> protodefs.Package:
         """Export starting with every Module in `self.tops`,
@@ -61,10 +60,9 @@ class ProtoExporter:
         """Create and return a unique `QualifiedName` for Module `module`.
         Raises a `RuntimeError` if unique name is taken."""
 
-        mname = module._pymodule.__name__ + "." + module.name
-        qname = protodefs.QualifiedName(domain=self.pkg.name, name=mname)
-        if (qname.domain, qname.name) in self.module_names:
-            conflict = self.module_names[(qname.domain, qname.name)]
+        mname = module._qualname()
+        if mname in self.module_names:
+            conflict = self.module_names[mname]
             raise RuntimeError(
                 dedent(
                     f"""\
@@ -72,7 +70,7 @@ class ProtoExporter:
                     (Was this a generator that didn't get decorated with `@hdl21.generator`?) """
                 )
             )
-        return qname
+        return mname
 
     def export_module(self, module: Module) -> protodefs.Module:
         if id(module) in self.modules:  # Already done
@@ -87,8 +85,7 @@ class ProtoExporter:
         pmod = protodefs.Module()
 
         # Create its serialized name
-        qname = self.export_module_name(module)
-        pmod.name.CopyFrom(qname)
+        pmod.name = self.export_module_name(module)
 
         # Create its Port-objects
         for port in module.ports.values():
@@ -110,7 +107,7 @@ class ProtoExporter:
 
         # Store references to the result, and return it
         self.modules[id(module)] = pmod
-        self.module_names[(qname.domain, qname.name)] = pmod
+        self.module_names[pmod.name] = pmod
         self.pkg.modules.append(pmod)
         return pmod
 
@@ -120,7 +117,8 @@ class ProtoExporter:
             return self.ext_modules[id(emod)]
 
         # Create the Proto-ExternalModule
-        pmod = protodefs.ExternalModule(name=emod.name)
+        qname = protodefs.QualifiedName(name=emod.name, domain=emod.domain)
+        pmod = protodefs.ExternalModule(name=qname)
 
         # Create its Port-objects
         for port in emod.ports.values():
@@ -131,14 +129,39 @@ class ProtoExporter:
         self.pkg.ext_modules.append(pmod)
         return pmod
 
-    def export_port(self, port: signal.Port) -> protodefs.Port:
+    @classmethod
+    def export_primitive(cls, prim: Primitive) -> protodefs.ExternalModule:
+        """Export a `Primitive as a `protodefs.ExternalModule`. 
+        Not typically done as part of serialization, 
+        but solely as an aid to other conversion utilities. """
+
+        # Create the Proto-ExternalModule
+        if prim.primtype == PrimitiveType.PHYSICAL:
+            domain = "hdl21.primitives"
+        elif prim.primtype == PrimitiveType.IDEAL:
+            domain = "hdl21.ideal"
+        else:
+            raise ValueError
+        qname = protodefs.QualifiedName(name=prim.name, domain=domain)
+        pmod = protodefs.ExternalModule(name=qname)
+
+        # Create its Port-objects
+        for port in prim.port_list:
+            pmod.ports.append(cls.export_port(port))
+
+        # And return it
+        return pmod
+
+    @classmethod
+    def export_port(cls, port: signal.Port) -> protodefs.Port:
         pport = protodefs.Port()
-        pport.direction = self.export_port_dir(port)
+        pport.direction = cls.export_port_dir(port)
         pport.signal.name = port.name
         pport.signal.width = port.width
         return pport
 
-    def export_port_dir(self, port: signal.Port) -> protodefs.Port.Direction:
+    @classmethod
+    def export_port_dir(cls, port: signal.Port) -> protodefs.Port.Direction:
         # Convert between Port-Direction Enumerations
         if port.direction == signal.PortDir.INPUT:
             return protodefs.Port.Direction.INPUT
@@ -163,20 +186,32 @@ class ProtoExporter:
         if isinstance(inst._resolved, Module):
             pmod = self.export_module(inst._resolved)
             # Give it a Reference to its Module
-            pinst.module.qn.CopyFrom(pmod.name)
+            pinst.module.local = pmod.name
         elif isinstance(inst._resolved, (PrimitiveCall, ExternalModuleCall)):
             call = inst._resolved
             if isinstance(inst._resolved, PrimitiveCall):
-                # Create a reference to the `hdl21.primitives` namespace
-                pinst.module.qn.domain = "hdl21.primitives"
-                pinst.module.qn.name = call.prim.name
+                # Create a reference to one of the `primitive` namespaces
+                if call.prim.primtype == PrimitiveType.PHYSICAL:
+                    pinst.module.external.domain = "hdl21.primitives"
+                elif call.prim.primtype == PrimitiveType.IDEAL:
+                    pinst.module.external.domain = "hdl21.ideal"
+                else:
+                    raise ValueError
+                pinst.module.external.name = call.prim.name
                 params = asdict(call.params)
             else:  # ExternalModuleCall
                 self.export_external_module(call.module)
-                # External Modules have a blank domain
-                pinst.module.qn.domain = ""
-                pinst.module.qn.name = call.module.name
-                params = call.params
+                pinst.module.external.domain = call.module.domain or ""
+                pinst.module.external.name = call.module.name
+                # FIXME: while these ExternalModule parameters can ostensibly be anything,
+                # there are really two supported types-of-types:
+                # dictionaries, and dataclasses (which we can turn into dictionaries)
+                if isinstance(call.params, dict):
+                    params = call.params
+                elif is_dataclass(call.params):
+                    params = asdict(call.params)
+                else:
+                    raise TypeError
 
             # Set the parameter-values
             for key, val in params.items():
@@ -188,6 +223,9 @@ class ProtoExporter:
                     pinst.parameters[key].double = val
                 elif isinstance(val, str):
                     pinst.parameters[key].string = val
+                elif isinstance(val, Enum):
+                    # Enum-valued parameters are always strings
+                    pinst.parameters[key].string = val.value
                 else:
                     raise TypeError(f"Invalid instance parameter {val} for {inst}")
         else:

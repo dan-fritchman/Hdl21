@@ -1,4 +1,5 @@
 import pytest
+from io import StringIO
 from types import SimpleNamespace
 from enum import Enum, auto
 
@@ -267,6 +268,31 @@ def test_bad_params1():
         class E2(TabError):
             ...
 
+    with pytest.raises(RuntimeError):
+        # Test bad parameter names
+
+        @h.paramclass
+        class P:
+            descriptions = h.Param(dtype=str, desc="", default="BAD!")
+
+    with pytest.raises(RuntimeError):
+        # Test bad parameter names
+
+        @h.paramclass
+        class P:
+            defaults = h.Param(dtype=str, desc="", default="BAD!")
+
+    with pytest.raises(RuntimeError):
+        # Test non-params in `@paramclass`
+
+        @h.paramclass
+        class P:
+            something = 11
+
+    with pytest.raises(RuntimeError):
+        # Test a bad argument type
+        h.params._unique_name(33)
+
 
 def test_array1():
     @h.module
@@ -412,20 +438,20 @@ def test_prim_proto1():
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 1
+    assert ppkg.domain == ""
 
     # Check the proto-Module
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.HasPrims"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.HasPrims"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 2
     assert len(pm.instances) == 5
     assert len(pm.default_parameters) == 0
     for inst in pm.instances:
         assert isinstance(inst, h.proto.Instance)
-        assert inst.module.WhichOneof("to") == "qn"
-        assert inst.module.qn.domain == "hdl21.primitives"
+        assert inst.module.WhichOneof("to") == "external"
+        assert inst.module.external.domain in ["hdl21.ideal", "hdl21.primitives"]
 
     ns = h.from_proto(ppkg)
 
@@ -573,10 +599,10 @@ def test_proto1():
     ppkg = h.to_proto(m)
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 1
+    assert ppkg.domain == ""
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.TestProto1"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.TestProto1"
     assert len(pm.ports) == 0
     assert len(pm.instances) == 0
     assert len(pm.default_parameters) == 0
@@ -600,12 +626,12 @@ def test_proto2():
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 3
+    assert ppkg.domain == ""
 
     # Check the first Module in, Child1
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.Child1"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.Child1"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -614,8 +640,7 @@ def test_proto2():
     # Check the second Module in, Child2
     pm = ppkg.modules[1]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.Child2"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.Child2"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -624,8 +649,7 @@ def test_proto2():
     # And check the parent module
     pm = ppkg.modules[2]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.TestProto2"
-    assert pm.name.domain == ""
+    assert pm.name == "hdl21.tests.test_hdl21.TestProto2"
     assert len(pm.ports) == 0
     assert len(pm.instances) == 2
     assert len(pm.default_parameters) == 0
@@ -642,18 +666,18 @@ def test_proto3():
     M2.s = h.Signal(width=4)
     M2.i = M1()
     M2.i(p1=M2.s[0])
-    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[3:2]))
+    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[2:3]))
 
     ppkg = h.to_proto(M2, domain="test_proto3")
 
     assert isinstance(ppkg, h.proto.Package)
     assert len(ppkg.modules) == 2
+    assert ppkg.domain == "test_proto3"
 
     # Check the child module
     pm = ppkg.modules[0]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.M1"
-    assert pm.name.domain == "test_proto3"
+    assert pm.name == "hdl21.tests.test_hdl21.M1"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
@@ -662,8 +686,7 @@ def test_proto3():
     # And check the parent module
     pm = ppkg.modules[1]
     assert isinstance(pm, h.proto.Module)
-    assert pm.name.name == "hdl21.tests.test_hdl21.M2"
-    assert pm.name.domain == "test_proto3"
+    assert pm.name == "hdl21.tests.test_hdl21.M2"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 1
     assert len(pm.instances) == 1
@@ -838,9 +861,10 @@ def test_signal_slice1():
     assert sl.top == 0
     assert sl.bot == 0
     assert sl.width == 1
+    assert sl.step == 1
     assert sl.signal is sig
 
-    sl = sig[4:0]
+    sl = sig[0:4]
     assert isinstance(sl, h.signal.Slice)
     assert sl.top == 4
     assert sl.bot == 0
@@ -855,9 +879,26 @@ def test_signal_slice1():
     assert sl.signal is sig
 
 
+def test_signal_slice2():
+    # Test slicing advanced features
+    sl = h.Signal(width=11)[-1]
+    assert sl.top == 10
+    assert sl.bot == 10
+    assert sl.width == 1
+
+    sl = h.Signal(width=11)[:-1]
+    assert sl.top == 9
+    assert sl.bot == 0
+    assert sl.width == 10
+
+    sl = h.Signal(width=11)[-2:]
+    assert sl.top == 10
+    assert sl.bot == 9
+    assert sl.width == 2
+
+
 def test_bad_slice1():
     # Test slicing error-cases
-
     with pytest.raises(TypeError):
         h.Signal(width=11)[None]
 
@@ -865,19 +906,10 @@ def test_bad_slice1():
         h.Signal(width=11)[11]
 
     with pytest.raises(ValueError):
-        h.Signal(width=11)[-1]
-
-    with pytest.raises(ValueError):
         h.Signal(width=11)[1:1:1]
 
     with pytest.raises(ValueError):
-        h.Signal(width=11)[1:9]
-
-    with pytest.raises(ValueError):
-        h.Signal(width=11)[:-1]
-
-    with pytest.raises(ValueError):
-        h.Signal(width=11)[-1:]
+        h.Signal(width=11)[9:1]
 
 
 def test_signal_concat1():
@@ -951,3 +983,52 @@ def test_bad_proto_naming():
             ma2 = m2()()
 
         h.to_proto(MaParent)
+
+
+def test_generator_recall():
+    """ Test multi-calling generators """
+
+    @h.generator
+    def CallMeTwice(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    @h.module
+    class Caller:
+        m1 = CallMeTwice(h.NoParams)()
+        m2 = CallMeTwice(h.NoParams)()
+
+    # Convert to proto
+    ppkg = h.to_proto(Caller)
+    assert len(ppkg.modules) == 2
+    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.CallMeTwice(NoParams())"
+    assert ppkg.modules[1].name == "hdl21.tests.test_hdl21.Caller"
+
+    # Convert the proto-package to a netlist, and run some (very basic) checks
+    nl = StringIO()
+    h.netlist(ppkg, nl)
+    nl = nl.getvalue()
+    assert "CallMeTwice_NoParams___" in nl
+    assert "Caller" in nl
+
+    # Round-trip back from Proto to Modules
+    rt = h.from_proto(ppkg)
+    ns = rt.hdl21.tests.test_hdl21
+    assert isinstance(ns.Caller, h.Module)
+    assert isinstance(getattr(ns, "CallMeTwice(NoParams())"), h.Module)
+
+
+def test_module_as_param():
+    @h.paramclass
+    class HasModuleParam:
+        m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")
+
+    @h.generator
+    def UsesModuleParam(params: HasModuleParam) -> h.Module:
+        return params.m  # Returns the Module unmodified
+
+    Empty = h.Module(name="Empty")
+    p = HasModuleParam(m=Empty)
+    m = UsesModuleParam(p)
+    m = h.elaborate(m)
+    assert m == Empty
+
