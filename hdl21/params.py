@@ -35,7 +35,7 @@ class _Default:
 _default = _Default()
 
 
-def paramclass(cls: type):
+def paramclass(cls: type) -> type:
     """ Parameter-Class Creation Decorator 
 
     Transforms a class-definition full of Params into a type-validated dataclass, 
@@ -208,15 +208,22 @@ def hdl21_naming_encoder(obj: Any) -> Any:
     from .instance import Instance
     from .generator import Generator, GeneratorCall
 
+    if isinstance(obj, (Instance, Generator)):
+        # Not supported as parameters
+        raise RuntimeError(f"Invalid `hdl21.paramclass` field {obj}")
     if isinstance(obj, (Module, ExternalModule)):
         # Modules use their qualified class names/paths
         return obj._qualname()
-    if isinstance(obj, (Instance, Generator, GeneratorCall, ExternalModuleCall)):
+    if isinstance(obj, ExternalModuleCall):
+        # Mix the qualified class names/paths with the parameters
+        return obj.module._qualname() + _unique_name(obj.params)
+    if isinstance(obj, GeneratorCall):
         # Most other Hdl21 objects as parameters are pending, maybe, maybe not, support as parameter-values.
         raise NotImplementedError
 
     # Dataclasses also require custom handling, as the default encoder deep-copies them,
     # often invoking methods not supported on several Hdl21 types.
+    # Convert to (shallow) dictionaries instead.
     if dataclasses.is_dataclass(obj):
         return {f.name: getattr(obj, f.name) for f in dataclasses.fields(obj)}
 

@@ -14,7 +14,7 @@ from .connect import connectable, connects
 @connectable
 @dataclass
 class PortRef:
-    """ Port Reference to an Instance or Array """
+    """ Port Reference to an Instance """
 
     inst: Union["Instance", "InstArray", "InterfaceInstance"]
     portname: str
@@ -29,9 +29,8 @@ class PortRef:
         return hash((id(self.inst), self.portname))
 
 
-@connects
-class Instance:
-    """ Hierarchical Instance of another Module or Generator """
+class _Instance:
+    """ Shared base class for Instance-like types (Instance, InstArray) """
 
     _specialcases = [
         "name",
@@ -45,62 +44,44 @@ class Instance:
     ]
 
     def __init__(
-        self,
-        of: Union[
-            "Module",
-            "Generator",
-            "GeneratorCall",
-            "PrimitiveCall",
-            "ExternalModuleCall",
-        ],
-        params: Optional[object] = None,
-        *,
-        name: Optional[str] = None,
+        self, of: "Instantiable", *, name: Optional[str] = None,
     ):
-        from .generator import Generator, GeneratorCall
-        from .module import Module, ExternalModuleCall
-        from .primitives import PrimitiveCall
+        from .instantiable import _is_instantiable
 
-        if isinstance(of, Generator):
-            of = of(params)
-        elif (
-            isinstance(of, (Module, GeneratorCall, PrimitiveCall, ExternalModuleCall))
-            and params is not None
-        ):
-            raise RuntimeError(
-                f"Invalid instance with parameters {params}. Instance parameters can be used with *generator* functions. "
-            )
+        if not _is_instantiable(of):
+            raise RuntimeError(f"Invalid instance of {of}")
+
         self.name = name
         self.of = of
-        self.params = params
         self.conns = dict()
         self.portrefs = dict()
         self._elaborated = False
         self._initialized = True
 
     def __repr__(self):
-        return f"Instance(name={self.name} of={self.of})"
+        return f"{self.__class__.__name__}(name={self.name} of={self.of})"
 
     @property
-    def _resolved(
-        self,
-    ) -> Optional[Union["Module", "PrimitiveCall", "ExternalModuleCall"]]:
+    def _resolved(self,) -> Optional["Instantiable"]:
         """ Property to retrieve the Instance's resolved Module, if complete. 
         Returns `None` if unresolved. """
-        from .module import Module, ExternalModuleCall
         from .generator import GeneratorCall
-        from .primitives import PrimitiveCall
 
-        if isinstance(self.of, (Module, PrimitiveCall, ExternalModuleCall)):
-            return self.of
         if isinstance(self.of, GeneratorCall):
             return self.of.result
-        return None
+        return self.of
 
 
 @connects
-class InstArray:
-    """ Array of Instances """
+class Instance(_Instance):
+    """ Hierarchical Instance of another Module or Generator """
+
+    ...
+
+
+@connects
+class InstArray(_Instance):
+    """ Array of `n` Instances """
 
     _specialcases = [
         "name",
@@ -113,32 +94,10 @@ class InstArray:
     ]
 
     def __init__(
-        self,
-        of: Union["Module", "Generator", "GeneratorCall", "ExternalModuleCall"],
-        n: int,
-        params: Optional[object] = None,
-        *,
-        name: Optional[str] = None,
+        self, of: "Instantiable", n: int, name: Optional[str] = None,
     ):
-        from .generator import Generator, GeneratorCall
-        from .module import Module
-
-        if isinstance(of, Generator):
-            of = of(params)
-        elif isinstance(of, (Module, GeneratorCall)) and params is not None:
-            raise RuntimeError(
-                f"Invalid instance with parameters {params}. Instance parameters can be used with *generator* functions. "
-            )
-        self.name = name
-        self.of = of
-        self.params = params
-        self.conns = dict()
-        self.portrefs = dict()
-
-        # So far, this is the only difference from `Instance`. Better sharing likely awaits.
         self.n = n
-        self._elaborated = False
-        self._initialized = True
+        super().__init__(of=of, name=name)
 
 
 # Get the runtime type-checking to understand the types forward-referenced and then defined here
@@ -149,7 +108,7 @@ PortRef.__pydantic_model__.update_forward_refs()
 
 
 def calls_instantiate(cls: type) -> type:
-    """ Decorator which adds 'calls produce `hdl21.Instances` functionality. """
+    """ Decorator which adds 'calls produce `hdl21.Instance`s' functionality. """
 
     def __call__(self, **kwargs) -> Instance:
         """ Calls Create `hdl21.Instances`, 

@@ -78,7 +78,7 @@ def test_generator1():
         m.i = h.Input(width=params.w)
         return m
 
-    m = h.elaborate(gen1, MyParams(w=3))
+    m = h.elaborate(gen1(MyParams(w=3)))
 
     assert m.name == "gen1(MyParams(w=3))"
     assert isinstance(m.i, h.Signal)
@@ -96,7 +96,7 @@ def test_generator2():
         assert isinstance(ctx, h.Context)
         return h.Module()
 
-    m = h.elaborate(g2, P2())
+    m = h.elaborate(g2(P2()))
 
     assert isinstance(m, h.Module)
     assert m.name == "g2(P2(f=1e-11))"
@@ -375,7 +375,7 @@ def test_gen3():
         Outer.inp = h.Input(width=params.w)
         return Outer
 
-    h.elaborate(MyThirdGenerator, MyParams(1))
+    h.elaborate(MyThirdGenerator(MyParams(1)))
 
     # FIXME: post-elab checks
 
@@ -489,6 +489,7 @@ def test_intf2():
     # Wire up a few Modules via interfaces
 
     MySecondInterface = h.Interface(name="MySecondInterface")
+    MySecondInterface.s = h.Signal()
 
     m1 = h.Module(name="M1")
     m1.i = MySecondInterface(port=True)
@@ -499,16 +500,26 @@ def test_intf2():
     m3 = h.Module(name="M3")
     m3.i1 = m1()
     m3.i2 = m2(i=m3.i1.i)
-    assert "_i2_i__i1_i_" not in m3.namespace
+    assert "_i2_i_i1_i_" not in m3.namespace
 
-    m3e = h.elaborate(m3)
-    assert isinstance(m3e, h.Module)
-    assert isinstance(m3e.i1, h.Instance)
-    assert isinstance(m3e.i2, h.Instance)
-    assert "_i2_i__i1_i_" in m3e.namespace
+    # First run the "implicit interfaces" pass, and see that an explicit one is created
+    from hdl21.elab import ElabPasses
+
+    m3 = h.elaborate(m3, passes=[ElabPasses.IMPLICIT_INTERFACES])
+    assert isinstance(m3, h.Module)
+    assert isinstance(m3.i1, h.Instance)
+    assert isinstance(m3.i2, h.Instance)
+    assert "_i2_i_i1_i_" in m3.namespace
+
+    # Now elaborate it the rest of the way, to scalar signals
+    m3 = h.elaborate(m3)
+    assert "_i2_i_i1_i_" not in m3.namespace
+    assert "__i2_i_i1_i__s_" in m3.namespace
+    assert isinstance(m3.get("__i2_i_i1_i__s_"), h.Signal)
+    assert m3.get("__i2_i_i1_i__s_") in m3.i1.conns.values()
 
 
-def test_inft3():
+def test_intf3():
     # Test the interface-definition decorator
 
     @h.interface
@@ -586,10 +597,24 @@ def test_intf4():
     assert isinstance(System, h.Module)
     assert isinstance(System.host, h.Instance)
     assert isinstance(System.dev_, h.Instance)
-    assert "_dev__port___host_port__" not in System.namespace
+    assert "_dev__port__host_port__" not in System.namespace
 
-    sys = h.elaborate(System)
-    assert "_dev__port___host_port__" in sys.namespace
+    # First run the "implicit interfaces" pass, and see that an explicit one is created
+    from hdl21.elab import ElabPasses
+
+    sys = h.elaborate(System, passes=[ElabPasses.IMPLICIT_INTERFACES])
+    assert "_dev__port__host_port__" in sys.namespace
+
+    # Now expand the rest of the way, down to scalar signals
+    # Check that interface went away, and its constituent signals replaced it
+    sys = h.elaborate(sys)
+    assert "_dev__port__host_port__" not in sys.namespace
+    assert "__dev__port__host_port___tx_" in sys.namespace
+    assert "__dev__port__host_port___rx_" in sys.namespace
+    assert "__dev__port__host_port____txd_p__" in sys.namespace
+    assert "__dev__port__host_port____txd_n__" in sys.namespace
+    assert "__dev__port__host_port____rxd_p__" in sys.namespace
+    assert "__dev__port__host_port____rxd_n__" in sys.namespace
 
 
 def test_proto1():
@@ -793,7 +818,7 @@ def test_proto_roundtrip2():
     assert len(M2.ports) == 3
     assert len(M2.signals) == 2
     assert "s" in M2.signals
-    assert "_i1_i__i0_o_" in M2.signals
+    assert "_i1_i_i0_o_" in M2.signals
 
 
 def test_bigger_interfaces():
@@ -1018,6 +1043,8 @@ def test_generator_recall():
 
 
 def test_module_as_param():
+    """ Test using a `Module` as a parameter-value """
+
     @h.paramclass
     class HasModuleParam:
         m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")

@@ -96,9 +96,9 @@ def rladder(params: RLadderParams) -> h.Module:
 @h.paramclass
 class PassGateParams:
     nmos = h.Param(dtype=h.ExternalModule, desc="NMOS generator")
-    nmos_params = h.Param(dtype=Dict[str, Any], desc="PMOS Parameters")
+    nmos_params = h.Param(dtype=PdkMosParams, desc="PMOS Parameters")
     pmos = h.Param(dtype=h.ExternalModule, desc="PMOS generator")
-    pmos_params = h.Param(dtype=Dict[str, Any], desc="PMOS parameters")
+    pmos_params = h.Param(dtype=PdkMosParams, desc="PMOS parameters")
 
 
 @h.generator
@@ -246,7 +246,7 @@ def generate():
         res_params=dict(w=4, l=10),
         res_conns=dict(PLUS="P", MINUS="N"),
     )
-    proto = h.to_proto(h.elaborate(rladder, params))
+    proto = h.to_proto(h.elaborate(rladder(params)))
     h.netlist(proto, sys.stdout)
 
     params = MuxTreeParams(
@@ -258,7 +258,7 @@ def generate():
             pmos_params=PdkMosParams(l=1),
         ),
     )
-    proto = h.to_proto(h.elaborate(mux_tree, params))
+    proto = h.to_proto(h.elaborate(mux_tree(params)))
     h.netlist(proto, sys.stdout)
 
 

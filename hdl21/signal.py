@@ -20,7 +20,7 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 
 """
 
-from typing import Optional, Any, List, Union
+from typing import Callable, Optional, Any, List
 from enum import Enum
 from dataclasses import field
 from pydantic.dataclasses import dataclass
@@ -93,9 +93,13 @@ class Signal:
                 raise ValueError(f"slice step cannot be zero")
             elif step < 0:
                 top = start
-                bot = start + (-(start - stop) // step) * step  # Align bot with the step
+                bot = (
+                    start + (-(start - stop) // step) * step
+                )  # Align bot with the step
             else:
-                top = start + -(-(stop - start) // step) * step  # Align top with the step
+                top = (
+                    start + -(-(stop - start) // step) * step
+                )  # Align top with the step
                 bot = start
             if top > self.width:
                 raise ValueError(f"Out-of-bounds index {top} into {self}")
@@ -108,9 +112,37 @@ class Signal:
         raise TypeError(f"Invalid slice-type {key} into {self}")
 
 
+def Signals(num: int, **kwargs) -> List[Signal]:
+    """ 
+    Create `num` new Signals.  
+    Typical usage: 
+    ```python
+    @h.module 
+    class UsesSignals:
+        bias, fold, mirror = h.Signals(3)
+    ```
+    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    """
+    return _plural(fn=Signal, num=num, **kwargs)
+
+
 def Input(**kwargs) -> Signal:
     """ Input Port Constructor. Thin wrapper around `hdl21.Signal` """
     return Signal(vis=Visibility.PORT, direction=PortDir.INPUT, **kwargs)
+
+
+def Inputs(num: int, **kwargs) -> List[Signal]:
+    """ 
+    Create `num` new Input Ports.  
+    Typical usage: 
+    ```python
+    @h.module 
+    class UsesInputs:
+        a, b, c, VDD, VSS = h.Inputs(5)
+    ```
+    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    """
+    return _plural(fn=Input, num=num, **kwargs)
 
 
 def Output(**kwargs) -> Signal:
@@ -118,9 +150,37 @@ def Output(**kwargs) -> Signal:
     return Signal(vis=Visibility.PORT, direction=PortDir.OUTPUT, **kwargs)
 
 
+def Outputs(num: int, **kwargs) -> List[Signal]:
+    """ 
+    Create `num` new Output Ports.  
+    Typical usage: 
+    ```python
+    @h.module 
+    class UsesOutputs:
+        tdo, tms, tck = h.Outputs(3)
+    ```
+    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    """
+    return _plural(fn=Output, num=num, **kwargs)
+
+
 def Inout(**kwargs) -> Signal:
     """ Inout Port Constructor. Thin wrapper around `hdl21.Signal` """
     return Signal(vis=Visibility.PORT, direction=PortDir.INOUT, **kwargs)
+
+
+def Inouts(num: int, **kwargs) -> List[Signal]:
+    """ 
+    Create `num` new Inout Ports.  
+    Typical usage: 
+    ```python
+    @h.module 
+    class UsesInouts:
+        gpio1, gpio2 = h.Inouts(2)
+    ```
+    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    """
+    return _plural(fn=Inout, num=num, **kwargs)
 
 
 def Port(direction=PortDir.NONE, **kwargs) -> Signal:
@@ -128,6 +188,28 @@ def Port(direction=PortDir.NONE, **kwargs) -> Signal:
     The `direction` argument sets the Port's direction,
     and defaults to the unknown direction `PortDir.NONE`. """
     return Signal(direction=direction, vis=Visibility.PORT, **kwargs)
+
+
+def Ports(num: int, **kwargs) -> List[Signal]:
+    """ 
+    Create `num` new Ports.  
+    Typical usage: 
+    ```python
+    @h.module 
+    class UsesPorts:
+        inp, out = h.Ports(2)
+    ```
+    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    """
+    return _plural(fn=Port, num=num, **kwargs)
+
+
+def _plural(*, fn: Callable, num: int, **kwargs) -> List[Signal]:
+    """ Internal helper method for creating `num` identical `Signal` objects via callable `fn`. """
+    rv = list()
+    for _ in range(num):
+        rv.append(fn(**kwargs))
+    return rv
 
 
 @connectable
@@ -148,7 +230,7 @@ class Slice:
 @connectable
 class Concat:
     """ Signal Concatenation
-    Uses *HDL-convention* ordering, in which *MSBs* are specified first. """
+    Uses *Python-convention* ordering, in which "LSBs", i.e. index 0, are specified first. """
 
     def __init__(self, *parts):
         for p in parts:

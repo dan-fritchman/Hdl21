@@ -76,10 +76,9 @@ class Netlister:
 
         # Now do the real stuff,
         # Creating netlist entries for each package-defined Module
-        netlist = ""
         for mod in self.pkg.modules:
-            self.get_module_definition(mod)
-        self.write(netlist)  # FIXME: distribute this throughout
+            self.write_module_definition(mod)
+        # And ensure all output makes it to `self.dest`
         self.dest.flush()
 
     def write(self, s: str) -> None:
@@ -96,14 +95,14 @@ class Netlister:
             raise RuntimeError(f"Invalid doubly-defined external module {emod}")
         self.ext_modules[key] = emod
 
-    def get_module_definition(self, module: protodefs.Module) -> str:
+    def write_module_definition(self, module: protodefs.Module) -> None:
         raise NotImplementedError
 
     @classmethod
     def get_signal_definition(cls, signals: List[str]) -> str:
         raise NotImplementedError
 
-    def get_instance(self, pinst: protodefs.Instance) -> str:
+    def write_instance(self, pinst: protodefs.Instance) -> str:
         raise NotImplementedError
 
     @classmethod
@@ -143,7 +142,7 @@ class SpectreNetlister(Netlister):
                 name = name.replace(ch, "_")
         return name
 
-    def get_module_definition(self, module: protodefs.Module) -> str:
+    def write_module_definition(self, module: protodefs.Module) -> None:
         """ Create a Spectre-format definition for proto-Module `module` """
 
         # Create the module name
@@ -181,7 +180,7 @@ class SpectreNetlister(Netlister):
 
         # Create its instances
         for pinst in module.instances:
-            self.write(self.get_instance(pinst))
+            self.write_instance(pinst)
         self.write("\n")
 
         # Close up the sub-circuit
@@ -223,7 +222,9 @@ class SpectreNetlister(Netlister):
         if psig.width == 1:  # width==1, i.e. a scalar signal
             return psig.name
         # Vector/ multi "bit" Signal. Creates several spice signals.
-        return " ".join([rf"{psig.name}\[{k}\]" for k in reversed(range(psig.width))])
+        return " ".join(
+            [f"{psig.name}{cls.bus_bit(k)}" for k in reversed(range(psig.width))]
+        )
 
     @classmethod
     def get_signal_slice(cls, pslice: protodefs.Slice) -> str:
@@ -232,19 +233,25 @@ class SpectreNetlister(Netlister):
         indices = list(reversed(range(pslice.bot, pslice.top + 1)))
         if not len(indices):
             raise RuntimeError(f"Attempting to netlist empty slice {pslice}")
-        return " ".join([rf"{base}\[{k}\]" for k in indices])
+        return " ".join([f"{base}{cls.bus_bit(k)}" for k in indices])
 
-    def get_instance(self, pinst: protodefs.Instance) -> str:
+    @classmethod
+    def bus_bit(cls, index: Union[int, str]) -> str:
+        """ Format-specific string-representation of a bus bit-index"""
+        # Spectre netlisting uses an underscore prefix, e.g. `bus_0`
+        return "_" + str(index)
+
+    def write_instance(self, pinst: protodefs.Instance) -> None:
         """Create and return a netlist-string for Instance `pinst`"""
 
         # Create the instance name
-        out = f"{pinst.name}\n"
+        self.write(pinst.name + "\n")
 
         # Get its Module or ExternalModule definition, primarily for sake of port-order
         module, module_name = self.resolve_reference(pinst.module)
 
         if module.ports:
-            out += "+  ( "
+            self.write("+  ( ")
             # Get `module`'s port-order
             port_order = [pport.signal.name for pport in module.ports]
             # And write the Instance ports, in that order
@@ -252,27 +259,25 @@ class SpectreNetlister(Netlister):
                 pconn = pinst.connections.get(pname, None)
                 if pconn is None:
                     raise RuntimeError(f"Unconnected Port {pname} on {pinst.name}")
-                out += self.get_connection(pconn) + " "
-            out += " ) \n"
+                self.write(self.get_connection(pconn) + " ")
+            self.write(" ) \n")
         else:
-            out += "+  // No ports \n"
+            self.write("+  // No ports \n")
 
         # Write the module-name
-        out += "+  " + module_name + " \n"
+        self.write("+  " + module_name + " \n")
 
-        if pinst.parameters:
-            out += "+  "
-            # Write the parameter-values
+        if pinst.parameters:  # Write the parameter-values
+            self.write("+  ")
             for pname, pparam in pinst.parameters.items():
                 pval = self.get_parameter_val(pparam)
-                out += f"{pname}={pval} "
-            out += " \n"
+                self.write(f"{pname}={pval} ")
+            self.write(" \n")
         else:
-            out += "+  // No parameters \n"
+            self.write("+  // No parameters \n")
 
-        # Close it, and return the result
-        out += "\n"
-        return out
+        # And add a post-instance blank line
+        self.write("\n")
 
     def resolve_reference(self, ref: protodefs.Reference) -> Tuple[ModuleLike, str]:
         """ Resolve the `ModuleLike` referent of `ref`, along with its name. """
@@ -353,7 +358,7 @@ class VerilogNetlister(Netlister):
     enum = NetlistFormat.VERILOG  # Class attr of the `NetlistFormat` enum
 
     @classmethod
-    def get_module_definition(
+    def write_module_definition(
         cls,
         name: str,
         ports: List[protodefs.Port],
@@ -366,7 +371,7 @@ class VerilogNetlister(Netlister):
         return ""
 
     @classmethod
-    def get_instance_statement(
+    def write_instance(
         cls,
         name: str,
         module: str,

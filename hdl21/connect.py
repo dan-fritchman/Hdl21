@@ -19,7 +19,7 @@ def is_connectable(obj: Any) -> bool:
 
 def connects(cls: type) -> type:
     """ Decorator to add 'connect by call' and 'connect by setattr' semantics. 
-    Applied to hdl21 internal types such as `Instance`, `InstArray` and `Interface`. 
+    Applied to hdl21 internal types such as `Instance`, `InstArray` and `InterfaceInstance`. 
     
     `connects` classes have a few more subtle requirements, including that they 
     indicate when their constructors complete via an `_initialized` field, 
@@ -27,10 +27,11 @@ def connects(cls: type) -> type:
 
     # First check and fail if any of the methods to be defined here are already defined elsewhere
     defined_here = ["__call__", "__setattr__", "__getattr__", "connect"]
-    if any([key in cls.__dict__ for key in defined_here]):
-        raise RuntimeError(
-            f"Invalid modification of {cls} with `@hdl21.connects`: {key} is already defined, and will not be over-written."
-        )
+    for key in defined_here:
+        if key in cls.__dict__:
+            raise RuntimeError(
+                f"Invalid modification of {cls} with `@hdl21.connects`: {key} is already defined, and will not be over-written."
+            )
 
     def __call__(self, **kwargs):
         """ Connect-by-call """
@@ -90,5 +91,6 @@ def connects(cls: type) -> type:
     cls.__setattr__ = __setattr__
     cls.__getattr__ = __getattr__
     cls.connect = connect
+
     # And don't forget to return it!
     return cls

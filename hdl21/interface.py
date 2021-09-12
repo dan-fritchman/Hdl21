@@ -1,15 +1,70 @@
 from textwrap import dedent
 from enum import Enum, EnumMeta
-from typing import Optional
+from typing import Optional, Union, Any, get_args
 
 from .instance import connects, connectable
+from .signal import Signal
+
+
+@connects
+@connectable
+class InterfaceInstance:
+    """ Instance of an Interface, 
+    Generally in a Module or another Interface """
+
+    _specialcases = [
+        "name",
+        "of",
+        "port",
+        "role",
+        "src",
+        "dest",
+        "conns",
+        "portrefs",
+        "_elaborated",
+        "_initialized",
+    ]
+
+    def __init__(
+        self,
+        *,
+        name: Optional[str] = None,
+        of: "Interface",
+        port: bool = False,
+        role: Optional[Enum] = None,
+        src: Optional[Enum] = None,
+        dest: Optional[Enum] = None,
+    ):
+        self.name = name
+        self.of = of
+        self.port = port
+        self.role = role
+        self.src = src
+        self.dest = dest
+        self.conns = dict()
+        self.portrefs = dict()
+        self._elaborated = False
+        self._initialized = True
+
+    @property
+    def _resolved(self,) -> "Interface":
+        return self.of
+
+
+# Type-alias for HDL objects storable as `Module` attributes
+InterfaceAttr = Union[Signal, InterfaceInstance]
+
+
+def _is_interface_attr(val: Any) -> bool:
+    """ Boolean indication of whether `val` is a valid `hdl21.Interface` attribute. """
+    return isinstance(val, get_args(InterfaceAttr))
 
 
 class Interface:
     """ 
     # hdl21 Interface
     
-    Interfaces are hierarchical connection objects which include Signals and other Interfaces. 
+    Interfaces are structured hierarchical connection objects which include Signals and other Interfaces. 
     """
 
     def __init__(self, *, name=None):
@@ -74,51 +129,20 @@ class Interface:
             )
         )
 
+    def add(self, val: InterfaceAttr, *, name: Optional[str] = None) -> InterfaceAttr:
+        raise NotImplementedError
+
+    def get(self, name: str) -> Optional[InterfaceAttr]:
+        """ Get module-attribute `name`. Returns `None` if not present. 
+        Note unlike Python built-ins such as `getattr`, `get` returns solely 
+        from the HDL namespace-worth of `InterfaceAttr`s. """
+        ns = self.__getattribute__("namespace")
+        return ns.get(name, None)
+
     @property
     def Roles(self):
-        # Roles often look like a class; give them a class-style name-accessor
+        # Roles often look like a class, so they have a class-style name-accessor
         return self.roles
-
-
-@connects
-@connectable
-class InterfaceInstance:
-    """ Instance of an Interface, 
-    Generally in a Module or another Interface """
-
-    _specialcases = [
-        "name",
-        "of",
-        "port",
-        "role",
-        "src",
-        "dest",
-        "conns",
-        "portrefs",
-        "_elaborated",
-        "_initialized",
-    ]
-
-    def __init__(
-        self,
-        *,
-        name: Optional[str] = None,
-        of: Interface,
-        port: bool = False,
-        role: Optional[Enum] = None,
-        src: Optional[Enum] = None,
-        dest: Optional[Enum] = None,
-    ):
-        self.name = name
-        self.of = of
-        self.port = port
-        self.role = role
-        self.src = src
-        self.dest = dest
-        self.conns = dict()
-        self.portrefs = dict()
-        self._elaborated = False
-        self._initialized = True
 
 
 def interface(cls: type) -> Interface:
