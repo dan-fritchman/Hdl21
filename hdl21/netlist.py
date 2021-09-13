@@ -292,9 +292,9 @@ class SpectreNetlister(Netlister):
 
             # First check the priviledged/ internally-defined domains
             if ref.external.domain == "hdl21.primitives":
-                raise RuntimeError(
-                    f"Direct netlisting of `hdl21.primitive` {ref.external.name} not (yet) supported"
-                )
+                msg = f"Invalid direct-netlisting of physical `hdl21.Primitive` `{ref.external.name}`. "
+                msg += "Either compile to a target technology, or replace with an `ExternalModule`. "
+                raise RuntimeError(msg)
             if ref.external.domain == "hdl21.ideal":
                 # Ideal elements
                 name = ref.external.name

@@ -10,7 +10,7 @@ particularly the `@module` (lower-case) decorator-function.
 import inspect
 from textwrap import dedent
 from types import ModuleType
-from typing import Any, Optional, List, Union, Dict, get_args, Tuple, Type
+from typing import Any, Optional, List, Union, get_args, Tuple, Type
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 
@@ -81,7 +81,7 @@ class Module:
 
         # Checks out! Name `val` and add it to our type-based containers.
         val.name = key
-        _ = self._add(val)
+        self._add(val)
         return None
 
     def add(self, val: ModuleAttr, *, name: Optional[str] = None) -> ModuleAttr:
@@ -174,9 +174,16 @@ class Module:
         return f"Module(_anon_)"
 
     @property
-    def _interface_ports(self) -> dict:
+    def interface_ports(self) -> dict:
         """ Port-Exposed Interface Instances """
         return {name: intf for name, intf in self.interfaces.items() if intf.port}
+
+    @property
+    def io(self) -> dict:
+        """ Combined Dictionary of `Signal`-valued and `Interface`-valued ports """
+        rv = self.interface_ports
+        rv.update(self.ports)
+        return rv
 
     def _defpath(self) -> str:
         """ Helper for exporting. 

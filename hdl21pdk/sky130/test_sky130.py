@@ -43,5 +43,6 @@ def test_netlist():
 
     # Netlist it for the PDK
     pkg = h.to_proto(hasmos)
-    sky130.netlist(pkg, open("scratch/whatever.scs", "w"), "spectre")
+    pkg = sky130.compile(pkg)
+    h.netlist(pkg, open("scratch/whatever.scs", "w"), "spectre")
 

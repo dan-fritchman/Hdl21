@@ -33,14 +33,14 @@ def connects(cls: type) -> type:
                 f"Invalid modification of {cls} with `@hdl21.connects`: {key} is already defined, and will not be over-written."
             )
 
-    def __call__(self, **kwargs):
+    def __call__(self, **kwargs) -> "Self":
         """ Connect-by-call """
         for key, val in kwargs.items():
             self.connect(key, val)
         # Don't forget to retain ourselves at the call-site!
         return self
 
-    def __setattr__(self, key: str, val: Any):
+    def __setattr__(self, key: str, val: Any) -> None:
         """ Connect-by-setattr """
         if not getattr(self, "_initialized", False) or key.startswith("_"):
             # Bootstrapping phase: do regular setattrs to get started
@@ -49,21 +49,24 @@ def connects(cls: type) -> type:
             return object.__setattr__(self, key, val)
         self.connect(key, val)
 
-    def connect(self, portname: str, signal: Union["Signal", "PortRef"]) -> None:
+    def connect(self, portname: str, signal: Union["Signal", "PortRef"]) -> "Self":
         """ Connect Signal `signal` to port (name) `portname`. 
         Called by both by-call and by-assignment convenience methods, and usable directly. 
         Direct calls to `connect` will generally be required for ports with otherwise illegal names, 
         e.g. Python language keywords (`in`, `from`, etc.), 
-        or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.). """
+        or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.). 
+        Returns `self` to aid in method-chaining use-cases. """
         if not is_connectable(signal):
             raise TypeError(f"{self} attempting to connect non-connectable {signal}")
         self.conns[portname] = signal
+        return self
 
-    def __getattr__(self, key: str):
+    def __getattr__(self, key: str) -> Any:
         """ Port access by getattr """
         if not self.__getattribute__("_initialized") or key.startswith("_"):
             # Bootstrapping phase: do regular getattrs to get started
             return object.__getattribute__(self, key)
+
         if key in self.__getattribute__("_specialcases"):  # Special case(s)
             return object.__getattribute__(self, key)
 
@@ -74,11 +77,16 @@ def connects(cls: type) -> type:
                 return conns[key]
             raise AttributeError(f"No attribute {key} for {self}")
 
+        # Return a `PortRef`, creating one if necessary
+        return self.port_ref(key)
+
+    def port_ref(self, key: str) -> "PortRef":
+        """ Return a port-reference to name `key`, creating it if necessary. """
         from .instance import PortRef
 
         # Check in our existing port-references
         port_refs = self.__getattribute__("portrefs")
-        if key in port_refs.keys():
+        if key in port_refs:
             return port_refs[key]
 
         # New reference; create, add, and return it
@@ -91,6 +99,7 @@ def connects(cls: type) -> type:
     cls.__setattr__ = __setattr__
     cls.__getattr__ = __getattr__
     cls.connect = connect
+    cls.port_ref = port_ref
 
     # And don't forget to return it!
     return cls

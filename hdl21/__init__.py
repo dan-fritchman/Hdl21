@@ -9,6 +9,7 @@ from .instance import *
 from .signal import *
 from .module import *
 from .generator import *
+from .generators import *
 from .primitives import *
 from .interface import *
 from .netlist import *

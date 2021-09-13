@@ -1,14 +1,13 @@
 """ 
-Sky130 PDK Transformer 
+Sky130 Open-Source PDK Modules and Transformations 
 """
 
-import sys, copy
-from typing import Union, IO
+import copy
+from typing import Union
+from types import SimpleNamespace
 
-import hdl21pdk
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
-from hdl21.netlist import NetlistFormat
 
 
 @h.paramclass
@@ -21,16 +20,32 @@ class Sky130MosParams:
     mult = h.Param(dtype=int, desc="(Another?) Multiplier", default=1)
 
 
+# Collected ExternalModules are stored in the `modules` namespace
+modules = SimpleNamespace()
+
+# Create each Mos `ExternalModule`
+for tp in ("n", "p"):
+    for vtname in ("short", "hv"):
+        modname = tp + vtname
+        mod = h.ExternalModule(
+            domain="sky130",
+            name=modname,
+            desc=f"Sky130 PDK Mos {modname}",
+            port_list=copy.copy(Mos.port_list),
+            paramtype=Sky130MosParams,
+        )
+        # Add it to the modules namespace
+        setattr(modules, modname, mod)
+
+
 class Sky130Walker(h.HierarchyWalker):
-    """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
+    """ Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s. """
 
     def __init__(self):
-        self.sources = set()
-        self.mos_modules = dict()
         self.mos_modcalls = dict()
 
     def visit_instance(self, inst: h.Instance):
-        """Replace instances of `h.Primitive` with our `ExternalModule`s"""
+        """ Replace instances of `h.Primitive` with our `ExternalModule`s """
         if isinstance(inst.of, h.PrimitiveCall):
             inst.of = self.replace_primitive(inst.of)
             return
@@ -47,16 +62,10 @@ class Sky130Walker(h.HierarchyWalker):
         return primcall
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
-        """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
-        # First check our cache
-        key = (params.tp, params.vth)
-        if key in self.mos_modules:
-            return self.mos_modules[key]
+        """ Retrieve or create an `ExternalModule` for a MOS of parameters `params`. """
 
-        # Not yet encountered. Create a new `ExternalModule`.
-        # First sort out its name.
+        # Convert its parameters to a module-name
         modname = "n" if params.tp == MosType.NMOS else "p"
-
         if params.vth == MosVth.STD:
             modname += "short"
         elif params.vth == MosVth.HIGH:
@@ -64,17 +73,10 @@ class Sky130Walker(h.HierarchyWalker):
         else:
             raise ValueError(f"Invalid or unsupported MosVth {params.vth}")
 
-        # Create the module definition
-        mod = h.ExternalModule(
-            domain="sky130",
-            name=modname,
-            desc=f"Sky130 PDK {modname}",
-            port_list=copy.copy(Mos.port_list),
-            paramtype=Sky130MosParams,
-        )
-        # Store it in our cache
-        self.mos_modules[key] = mod
-        # And return it
+        # And retrieve it from the `modules` namespace
+        mod = getattr(modules, modname, None)
+        if mod is None:
+            raise RuntimeError(f"No Mos module {modname}")
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
@@ -101,30 +103,7 @@ class Sky130Walker(h.HierarchyWalker):
 
 
 def compile(src: h.proto.Package) -> h.proto.Package:
-    """Compile proto-Package `src` to Sky130"""
+    """ Compile proto-Package `src` to Sky130 """
     ns = h.from_proto(src)
     Sky130Walker().visit_namespace(ns)
     return h.to_proto(ns)
-
-
-def netlist(src: h.proto.Package, target: IO, fmt: NetlistFormat) -> None:
-    ns = h.from_proto(src)
-    walker = Sky130Walker()
-    walker.visit_namespace(ns)
-    compiled = h.to_proto(ns)
-
-    # Cheating for now, gotta figure out sad netlist things like library-corners
-    ext_sources = set()
-    for emod in walker.mos_modules.values():
-        ext_sources.add(source(emod, fmt))
-    for esrc in ext_sources:
-        target.write(f'include "{esrc}" section=tt_fet \n')
-    target.write(f"\n\n")
-
-    h.netlist(compiled, target, fmt)
-
-
-def source(emod: h.ExternalModule, fmt: NetlistFormat) -> str:
-    """ Get the (external) source for Module `emod` in format `fmt`. """
-    return "NotImplemented (safely) sorry"  # FIXME!
-

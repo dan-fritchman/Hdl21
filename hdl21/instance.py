@@ -32,17 +32,6 @@ class PortRef:
 class _Instance:
     """ Shared base class for Instance-like types (Instance, InstArray) """
 
-    _specialcases = [
-        "name",
-        "of",
-        "conns",
-        "portrefs",
-        "connect",
-        "_resolved",
-        "_elaborated",
-        "_initialized",
-    ]
-
     def __init__(
         self, of: "Instantiable", *, name: Optional[str] = None,
     ):
@@ -76,7 +65,17 @@ class _Instance:
 class Instance(_Instance):
     """ Hierarchical Instance of another Module or Generator """
 
-    ...
+    _specialcases = [
+        "name",
+        "of",
+        "conns",
+        "portref",
+        "portrefs",
+        "connect",
+        "_resolved",
+        "_elaborated",
+        "_initialized",
+    ]
 
 
 @connects
@@ -87,6 +86,7 @@ class InstArray(_Instance):
         "name",
         "of",
         "conns",
+        "portref",
         "portrefs",
         "connect",
         "_elaborated",

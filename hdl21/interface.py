@@ -47,7 +47,7 @@ class InterfaceInstance:
         self._initialized = True
 
     @property
-    def _resolved(self,) -> "Interface":
+    def _resolved(self) -> "Interface":
         return self.of
 
 

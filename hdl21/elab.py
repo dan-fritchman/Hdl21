@@ -498,7 +498,7 @@ class ImplicitInterfaces(_Elaborator):
                 # Create the Signal, looking up all its properties from the last Instance's Module
                 # (If other instances are inconsistent, later stages will flag them)
                 lastmod = portref.inst._resolved
-                sig = lastmod._interface_ports.get(portref.portname, None)
+                sig = lastmod.interface_ports.get(portref.portname, None)
                 if sig is not None:
                     sig = copy.copy(sig)
                     sig.port = False

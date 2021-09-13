@@ -137,13 +137,12 @@ class MosParams:
 
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
-    nser = Param(dtype=int, desc="Number of series fingers", default=1)
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
 
     def __post_init_post_parse__(self):
-        """Value Checks"""
+        """ Value Checks """
         if self.w <= 0:
             raise ValueError(f"MosParams with invalid width {self.w}")
         if self.l <= 0:
@@ -158,22 +157,24 @@ class MosParams:
             )
 
 
+MosPorts = [Port(name="d"), Port(name="g"), Port(name="s"), Port(name="b")]
+
 Mos = Primitive(
     name="Mos",
     desc="Mos Transistor",
-    port_list=[Port(name="d"), Port(name="g"), Port(name="s"), Port(name="b")],
+    port_list=MosPorts,
     paramtype=MosParams,
     primtype=PrimitiveType.PHYSICAL,
 )
 
 
 def Nmos(params: MosParams) -> Primitive:
-    """Nmos Constructor. A thin wrapper around `hdl21.primitives.Mos`"""
+    """ Nmos Constructor. A thin wrapper around `hdl21.primitives.Mos` """
     return Mos(replace(params, tp=MosType.NMOS))
 
 
 def Pmos(params: MosParams) -> Primitive:
-    """Pmos Constructor. A thin wrapper around `hdl21.primitives.Mos`"""
+    """ Pmos Constructor. A thin wrapper around `hdl21.primitives.Mos` """
     return Mos(replace(params, tp=MosType.PMOS))
 
 
@@ -181,7 +182,6 @@ def Pmos(params: MosParams) -> Primitive:
 class DiodeParams:
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
-
     # FIXME: will likely want a similar type-switch, at least eventually
     # tp = Param(dtype=Tbd!, desc="Diode type specifier")
 
