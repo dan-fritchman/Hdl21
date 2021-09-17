@@ -1140,6 +1140,15 @@ def test_instance_mult():
     assert Parent.child.n == 5
     assert Parent.child.of is Child
 
+    # Test elaboration
+    h.elaborate(Parent)
+
+    # Post-elaboration checks
+    assert len(Parent.instances) == 5
+    assert len(Parent.instarrays) == 0
+    for inst in Parent.instances.values():
+        assert inst.of is Child
+
     # Create another, this time via right-mul
     Parent = h.Module(name="Parent")
     Parent.child = 11 * Child()  # Getting even more kids
@@ -1149,8 +1158,14 @@ def test_instance_mult():
     assert Parent.child.n == 11
     assert Parent.child.of is Child
 
-    # Test elaboration FIXME: include instance flattening
+    # Test elaboration
     h.elaborate(Parent)
+
+    # Post-elaboration checks
+    assert len(Parent.instances) == 11
+    assert len(Parent.instarrays) == 0
+    for inst in Parent.instances.values():
+        assert inst.of is Child
 
 
 def test_instance_mult2():

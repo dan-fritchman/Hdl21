@@ -106,7 +106,7 @@ class Signal:
             if bot > top:
                 raise ValueError(f"Invalid slice ({bot} > {top}) {key} into {self}")
             return Slice(signal=self, top=top, bot=bot, step=step)
-        print(key)
+            
         raise TypeError(f"Invalid slice-type {key} into {self}")
 
 

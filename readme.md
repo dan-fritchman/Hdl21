@@ -17,6 +17,12 @@ In other words:
 
 ## Modules
 
+Hdl21 `Modules` are type-specific containers of just a handful of `hdl21` types. They can include: 
+
+* Instances of other `Modules`
+* Connections between them defined by `Signals` and `Ports`
+* Structured connections defined by `Interfaces` 
+
 An example of creating a `Module`:
 
 ```python
@@ -29,14 +35,7 @@ m.s = h.Signal()
 m.a = AnotherModule()
 ```
 
-`Modules` are type-specific containers of just a handful of `hdl21` types. They can include: 
-
-* Instances of other `Modules`
-* IO defined by a set of `Ports`
-* Internal `Signals`
-* Structured connections defined by `Interfaces` 
-
-In addition to the procedural-mode shown above, `Modules` can also be defined through a `class`-based syntax. 
+In addition to the procedural-syntax shown above, `Modules` can also be defined through a `class`-based syntax by applying the `hdl21.module` decorator to a class-definition. 
 
 ```python
 import hdl21 as h 
@@ -49,34 +48,47 @@ class MyModule:
     a = AnotherModule()
 ```
 
-This class-based syntax produces identical results as the procedural code-block above. Its declarative style can be much more natural and expressive in many contexts, including for designers familiar with popular HDLs. 
+This class-based syntax produces identical results to the procedural code-block above. Its declarative style can be much more natural and expressive in many contexts, including for designers familiar with popular HDLs. 
+
+Creation of `Module` signal-attributes is generally performed by the built-in `Signal`, `Port`, `Input`, and `Output` constructors. Each comes with a "plural version" (`Input*s*` etc.) which creates several identical objects at once:
+
+```python
+import hdl21 as h
+
+@h.module
+class MyModule:
+    a, b = h.Inputs(2)
+    c, d, e = h.Outputs(3, width=16)
+    f, g, h, i = h.Signals(4)
+```
 
 ## Connections 
 
 Popular HDLs generally feature one of two forms of connection semantics. Verilog, VHDL, and most dedicated HDLs use "connect by call" semantics, in which signal-objects are first declared, then passed as function-call-style arguments to instances of other modules. 
 
 ```verilog
-// Declare signals 
-logic a, b, c;
-// Verilog Instance
-another_module i1 (a, b, c);
-// Verilog Connect-by-Name Instance 
-another_module i2 (.a(a), .b(b), .c(c));
+module my_module();
+  logic a, b, c;                              // Declare signals 
+  another_module i1 (a, b, c);                // Create an instance
+  another_module i2 (.a(a), .b(b), .c(c));    // Another instance, connected by-name
+endmodule
 ```
 
 Chisel, in contrast, uses "connection by assignment" - more literally using the walrus `:=` operator. Instances of child modules are created first, and their ports are directly walrus-connected to one another. No local-signal objects ever need be declared in the instantiating parent module. 
 
 ```scala
-// Create Module Instances
-val i1 = Module(new AnotherModule)
-val i2 = Module(new AnotherModule)
-// Wire them directly to one another 
-i1.io.a := i2.io.a
-i1.io.b := i2.io.b
-i1.io.c := i2.io.c
+class MyModule extends Module {
+  // Create Module Instances
+  val i1 = Module(new AnotherModule)
+  val i2 = Module(new AnotherModule)
+  // Wire them directly to one another 
+  i1.io.a := i2.io.a
+  i1.io.b := i2.io.b
+  i1.io.c := i2.io.c
+}
 ```
 
-Each can be more concise and expressive depending on context. Hdl21 `Modules` support both connect-by-call and connect-by-assignment forms. 
+Each can be more concise and expressive depending on context. Hdl21 `Modules` support **both** connect-by-call and connect-by-assignment forms. 
 
 Connections-by-assignment are performed by assigning either a `Signal` or another instance's `Port` to an attribute of a Module-Instance. 
 
@@ -190,7 +202,7 @@ Note in the latter example, the Module `Inner` is defined solely inside the gene
 
 ## Parameters 
 
-`Generator` function-arguments allow for a few use-cases. The primary-such case is shown in each of the prior examples: `Generators` typically take a single argument `params`, which is a collection of `hdl21.Params`. Parameters are strongly type-checked at runtime. Each requires a data-type `dtype` and description-string `desc`. Optional parameters include a default-value, which must be an instance of `dtype`.
+`Generators` typically take a single argument `params` which is a collection of `hdl21.Params`. Generator parameters are strongly type-checked at runtime. Each requires a data-type `dtype` and description-string `desc`. Optional parameters include a default-value, which must be an instance of `dtype`.
 
 ```python
 npar = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
@@ -263,13 +275,91 @@ Hdl21 `Generators` have parameters. `Modules` do not.
 
 This is a deliberate decision, which in this sense makes `hdl21.Module` less feature-rich than the analogous `module` concepts in existing HDLs (Verilog, VHDL, and even SPICE). These languages support what might be called "static parameters" - relatively simple relationships between parent and child-module parameterization. Setting, for example, the width of a signal or number of instances in an array is straightforward. But more elaborate parametrization-cases are either highly cumbersome or altogether impossible to create. (As an example, try using Verilog parametrization to make a programmable-depth binary tree.) Hdl21, in contrast, exposes all parametrization to the full Python-power of its generators. 
 
+## Primitives and External Modules
+
+The leaf-nodes of each hierarchical Hdl21 circuit are generally defined in one of two places: 
+
+* `Primitive` elements, typically defined by simulation tools and other EDA software. These include transistors, resistors, capacitors, and other irreducible components. Hdl21 defines a library of such elements in its `hdl21.primitives` module.
+* Outside Hdl21, via `ExternalModules`
+
+Hdl21 `Primitives` come in *ideal* and *physical* flavors. The difference is most frequently relevant for passive elements, which can represent either (a) technology-specific passives, e.g. a MIM or MOS capacitor, or (b) an *ideal*  capacitor. Some element-types have solely physical implementations, some are solely ideal, and others include both. A summary of the `hdl21.Primitives` and their flavors:
+
+| Physical             | Ideal            | Alias(es)         | 
+| ------------------   | ---------------- | ----------------- | 
+| `PhysicalResistor`   | `IdealResistor`  | `R`, `Res`, `Resistor`  | 
+| `PhysicalInductor`   | `IdealInductor`  | `L`, `Ind`, `Inductor`  | 
+| `PhysicalCapacitor`  | `IdealCapacitor` | `C`, `Cap`, `Capacitor` | 
+| `PhysicalShort`      | `IdealShort`     | `Short`                 | 
+|                      | `VoltageSource`  | `Vsrc`, `V`             | 
+|                      | `CurrentSource`  | `Isrc`, `I`             | 
+| `Mos`                |                  |                         | 
+| `Diode`              |                  | `D`                     | 
+
+Alternately Hdl21 includes an `ExternalModule` type which defines the interface to a module-implementation outside Hdl21. These external definitions are common for instantiating technology-specific modules and libraries. (They might analogously be called *black boxes*.) An example `ExternalModule`: 
+
+```python
+import hdl21 as h 
+
+@h.paramclass 
+class BandGapParams:
+    self_destruct = h.Param(
+        dtype=bool, 
+        desc="Whether to include the self-destruction feature", 
+        default=True
+    )
+
+BandGap = h.ExternalModule(
+    name="BandGap",
+    desc="Example ExternalModule, defined outside Hdl21",
+    port_list=[h.Port("vref"), h.Port("enable")],
+    paramtype=BandGapParams
+)
+```
+
+Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few other pieces of metadata, but no internal implementation: no internal signals, and no instances of other modules. Unlike `Modules`, both *do* have parameters. `Primitives` each have an associated `paramclass`, while `ExternalModules` can optionally declare one via their `paramtype` attribute. Their parameter-types are typically limited to scalar numeric types (`int`, `float`) and `str` (a small subset of those possible for `Generators`) - primarily limited by the need to need to provide them to legacy HDLs. 
+
+`Primitives` and `ExternalModules` can be instantiated and connectd in all the same styles as `Modules`: 
+
+```python
+import hdl21 as h
+
+params = BandGapParams(self_destruct=False)  # Watch out there! 
+
+@h.module
+class BandGapPlus:
+    vref, enable = h.Signals(2)
+    bg = BandGap(params)          # Instantiate the `ExternalModule` defined above
+    bg(vref=vref, enable=enable)  # And call to connect it
+    # ... Everything else ...
+
+params = h.primitives.DiodeParams(isat=1e-15)
+
+@h.module
+class DiodePlus:
+    p, n = h.Signals(2)
+    d = h.primitives.D(params)(p=p, n=n)  # Instantiate the Primitive Diode
+    # ... Everything else ...
+```
+
+## Process Technologies
+
+Designing for a specific implementation technology (or "process development kit", or PDK) with Hdl21 can use either of (or a combination of) two routes: 
+
+* Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its tech-specific transistor and passive modules, and potentially larger cells, for example from a cell library. 
+* Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21pdk` converter. 
+
+Hdl21 PDKs are Python packages which generally include two primary elements: 
+
+* (a) A library `ExternalModules` describing the technology's cells, and 
+* (b) A `compile` conversion-method which transforms a hierarchical Hdl21 tree, mapping generic `hdl21.Primitives` into the tech-specific `ExternalModules`.
+
 
 ---
 ## Why Use Python?
 
 Custom IC design is a complicated field. Its practitioners have to know a | lot | of | stuff, independent of any programming background. Many have little or no programming experience at all. Python is reknowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like. 
 
-HDL21 exposes the ideas they're used to - `Modules`, `Ports`, `Signals` - via as simple of a Python interface as it can. `Generators` are just functions. For many, this fact alone is enough to create powerfully reusable hardware.
+Hdl21 exposes the ideas they're used to - `Modules`, `Ports`, `Signals` - via as simple of a Python interface as it can. `Generators` are just functions. For many, this fact alone is enough to create powerfully reusable hardware.
 
 ## Why *Not* Use {X}?
 
@@ -285,7 +375,7 @@ Take all of the shortcomings listed for schematics above, and add to them an und
 
 ### (System)Verilog, VHDL, other Existing Dedicated HDLs
 
-The industry's primary, 80s-born digital HDLs Verilog and VHDL have more of the good stuff we want here - notably a more reasonable level of parametrization. And they have the desirable trait of being primary input to the core EDA tools. They nonetheless lack the levels of programmability present here. And they generally require one of those EDA tools to execute and do, well, much of anything. Parsing and manipulating them is well-reknowned for requiring a high pain tolerance. Again Hdl21 sees these as export formats. 
+The industry's primary, 80s-born digital HDLs Verilog and VHDL have more of the good stuff we want here - notably an open, text-based format, and a more reasonable level of parametrization. And they have the desirable trait of being primary input to the EDA industry's core tools. They nonetheless lack the levels of programmability present here. And they generally require one of those EDA tools to execute and do, well, much of anything. Parsing and manipulating them is well-reknowned for requiring a high pain tolerance. Again Hdl21 sees these as export formats. 
 
 ### Chisel
 
@@ -296,11 +386,11 @@ The Chisel library's primary goal is producing a compiler-style intermediate rep
 Next, Chisel targets *RTL-level* hardware. This includes lots of things that would need something like a logic-synthesis tool to resolve to the structural circuits targeted by Hdl21. For example in Chisel (as well as Verilog and VHDL), it's semantically valid to perform an operation like `Signal + Signal`. In custom-circuit-land, it's much harder to say what that addition-operator would mean. Should it infer a digital adder? Short two currents together? Stick two capacitors in series? 
 Many custom-circuit primitives such as individual transistors actively fight the signal-flow/RTL modeling style assumed by the Chisel semantics and compiler. Again, it's in the way. Perhaps more important, many of Chisel's abstractions actively hide much of the detail custom circuits are designed to explicitly create. Implicit clock and reset signals serve as prominent examples. 
 
-Above all - Chisel is embedded in Scala. It's niche, it's complicated, it's subtle, it requires dragging around a JVM. It's not a language anyone would recommend to expert-designer/novice-programmers for any reason other than using Chisel. For Hdl21's goals, Scala itself is Chisel's biggest burden.
+Above all - Chisel is embedded in Scala. It's niche, it's complicated, it's subtle, it requires dragging around a JVM. It's not a language anyone would recommend to expert-designer/ novice-programmers for any reason other than using Chisel. For Hdl21's goals, Scala itself is Chisel's biggest burden.
 
 ### Other Fancy Modern HDLs
 
-There are lots of other very cool hardware-description projects out there which take Hdl21's big-picture approach (embed the hardware idioms as a library in a modern programming languare). All focus on logical and/or RTL-level descriptions, unlike Hdl21's structural/ custom/ analog stuff. We recommend checking them out: 
+There are lots of other very cool hardware-description projects out there which take Hdl21's big-picture approach - embedding hardware idioms as a library in a modern programming languare. All focus on logical and/or RTL-level descriptions, unlike Hdl21's structural/ custom/ analog focus. We recommend checking them out: 
 
 - [SpinalHDL](https://github.com/SpinalHDL/SpinalHDL)
 - [MyHDL](http://www.myhdl.org/)
