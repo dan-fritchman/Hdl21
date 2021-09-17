@@ -13,12 +13,13 @@ from pydantic.dataclasses import dataclass
 
 # Local imports
 from .module import Module, ExternalModuleCall
-from .instance import Instance, PortRef
+from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
 from .interface import Interface, InterfaceInstance
 from .signal import PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
 from .params import _unique_name
+from .instantiable import Instantiable
 
 
 class Context:
@@ -61,6 +62,11 @@ class _Elaborator:
         # Only the generator-elaborator can handle generator calls; default it to error on others.
         raise RuntimeError(f"Invalid call to elaborate GeneratorCall by {self}")
 
+    def elaborate_module(self, module: Module) -> Module:
+        """ Elaborate a Module """
+        # Required for all passes. Defaults to `NotImplementedError`.
+        raise NotImplementedError
+
     def elaborate_external_module(self, call: ExternalModuleCall) -> ExternalModuleCall:
         """ Elaborate an ExternalModuleCall """
         # Default: nothing to see here, carry on
@@ -81,20 +87,34 @@ class _Elaborator:
         # Default: nothing to see here, carry on
         return intf
 
-    def elaborate_instance(self, inst: Instance) -> Union[Module, PrimitiveCall]:
+    def elaborate_instance_array(self, array: InstArray) -> Instantiable:
+        """ Elaborate an InstArray """
+        # Turn off `PortRef` magic
+        array._elaborated = True
+        # And visit the Instance's target
+        return self.elaborate_instantiable(array._resolved)
+
+    def elaborate_instance(self, inst: Instance) -> Instantiable:
         """ Elaborate a Module Instance. """
-        # This version of `elaborate_instance` is the "post-generators" version used by *most* passes.
+        # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
         # The Generator-elaborator is different, and overrides it.
 
+        # Turn off `PortRef` magic
         inst._elaborated = True
-        if not inst._resolved:
-            raise RuntimeError(f"Error elaborating undefined Instance {inst}")
-        if isinstance(inst._resolved, Module):
-            return self.elaborate_module(inst._resolved)
-        if isinstance(inst._resolved, PrimitiveCall):
-            return self.elaborate_primitive_call(inst._resolved)
-        if isinstance(inst._resolved, ExternalModuleCall):
-            return self.elaborate_external_module(inst._resolved)
+        # And visit the Instance's target
+        return self.elaborate_instantiable(inst._resolved)
+
+    def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
+        # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
+        # The Generator-elaborator is different, and overrides it.
+        if not of:
+            raise RuntimeError(f"Error elaborating undefined Instance-target {of}")
+        if isinstance(of, Module):
+            return self.elaborate_module(of)
+        if isinstance(of, PrimitiveCall):
+            return self.elaborate_primitive_call(of)
+        if isinstance(of, ExternalModuleCall):
+            return self.elaborate_external_module(of)
         raise TypeError
 
     @staticmethod
@@ -134,9 +154,8 @@ class GeneratorElaborator(_Elaborator):
             return self.elaborate_module(self.top)
         if isinstance(self.top, GeneratorCall):
             return self.elaborate_generator_call(self.top)
-        raise TypeError(
-            f"Invalid Elaboration top-level {self.top}, must be a Module or Generator"
-        )
+        msg = f"Invalid Elaboration top-level {self.top}, must be a Module or Generator"
+        raise TypeError(msg)
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate Generator-function-call `call`. Returns the generated Module. """
@@ -181,9 +200,9 @@ class GeneratorElaborator(_Elaborator):
         return self.elaborate_module(m)
 
     def elaborate_module(self, module: Module) -> Module:
-        """Elaborate Module `module`. First depth-first elaborates its Instances,
+        """ Elaborate Module `module`. First depth-first elaborates its Instances,
         before creating any implicit Signals and connecting them.
-        Finally checks for connection-consistency with each Instance."""
+        Finally checks for connection-consistency with each Instance. """
         if id(module) in self.modules:  # Already done!
             return module
 
@@ -191,35 +210,80 @@ class GeneratorElaborator(_Elaborator):
             raise RuntimeError(
                 f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
             )
+
+        # Flatten Instance arrays
+        while module.instarrays:
+            name, array = module.instarrays.popitem()
+            module.namespace.pop(name)
+            # Visit the array's target
+            target = self.elaborate_instance_array(array)
+
+            # And do the real work: flattening it.
+            if array.n < 1:
+                raise RuntimeError(f"Invalid InstArray {array} with size {array.n}")
+            # Create the new, flat Instances
+            new_insts = []
+            for k in range(array.n):
+                name = self.flatname(
+                    segments=[array.name, str(k)], avoid=module.namespace
+                )
+                inst = module.add(Instance(of=target, name=name))
+                new_insts.append(inst)
+            # And connect them
+            for portname, conn in array.conns.items():
+                if isinstance(conn, InterfaceInstance):
+                    # All new instances get the same InterfaceInstance
+                    for inst in new_insts:
+                        inst.connect(portname, conn)
+                elif isinstance(conn, Signal):
+                    # Get the target-module port, particularly for its width
+                    port = target.get(portname)
+                    if not isinstance(port, Signal):
+                        msg = f"Invalid port connection to {portname} in InstArray {array}"
+                        raise RuntimeError(msg)
+
+                    if port.width == conn.width:
+                        # All new instances get the same signal
+                        for inst in new_insts:
+                            inst.connect(portname, conn)
+                    elif port.width * array.n == conn.width:
+                        # Each new instance gets a one-wide slice
+                        for k, inst in enumerate(new_insts):
+                            slize = conn[k]
+                            inst.connect(portname, slize)
+                    else:  # All other values are invalid
+                        msg = f"Invalid connection between {conn} of width {conn.width} and {array.n}"
+                        raise RuntimeError(msg)
+                else:
+                    msg = f"Invalid connection to {conn} in InstArray {array}"
+                    raise TypeError(msg)
+
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
             self.elaborate_instance(inst)
         # Also visit interface instances, turning off their pre-elab magic
-        for inst in module.interfaces.values():
-            self.elaborate_interface_instance(inst)
+        for intf in module.interfaces.values():
+            self.elaborate_interface_instance(intf)
 
         # Store a reference to the now-expanded Module in our cache, and return it
         self.modules[id(module)] = module
         return module
 
-    def elaborate_instance(self, inst: Instance) -> Module:
-        """ Elaborate a Module Instance.
-        Largely pushes through depth-first definition of the target-Module.
-        Connections, port-direction checking and the like are performed in `elaborate_module`. """
+    def elaborate_instance(self, inst: Instance) -> Instantiable:
+        """ Elaborate a Module Instance. """
+        # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
+        # instead of the resolved version `inst._resolved`.
 
-        # Turn off the instance's pre-elaboration magic
+        # Turn off `PortRef` magic
         inst._elaborated = True
+        # And visit the Instance's target
+        return self.elaborate_instantiable(inst.of)
 
-        # And call its type-specific elaboration method
-        if isinstance(inst.of, GeneratorCall):
-            return self.elaborate_generator_call(call=inst.of)
-        if isinstance(inst.of, Module):
-            return self.elaborate_module(inst.of)
-        if isinstance(inst.of, PrimitiveCall):
-            return self.elaborate_primitive_call(inst.of)
-        if isinstance(inst.of, ExternalModuleCall):
-            return self.elaborate_external_module(inst.of)
-        raise TypeError(f"Invalid Instance of {inst.of}")
+    def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
+        """ Elaborate an Instance target. Adds the capacity to call `GeneratorCall`s to the more-common base-case. """
+        if isinstance(of, GeneratorCall):
+            return self.elaborate_generator_call(call=of)
+        return super().elaborate_instantiable(of)
 
 
 class ImplicitSignals(_Elaborator):

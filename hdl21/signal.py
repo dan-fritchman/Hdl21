@@ -26,7 +26,7 @@ from dataclasses import field
 from pydantic.dataclasses import dataclass
 
 # Local imports
-from .connect import connectable
+from .connect import connectable, is_connectable
 
 
 class PortDir(Enum):
@@ -41,8 +41,8 @@ class PortDir(Enum):
 class Visibility(Enum):
     """ Port-Visibility Enumeration """
 
-    INTERNAL = 0
-    PORT = 1
+    INTERNAL = 0  # Internal, Module-private Signal
+    PORT = 1  # Exposed as a Port
 
 
 @connectable
@@ -92,23 +92,21 @@ class Signal:
             if step == 0:
                 raise ValueError(f"slice step cannot be zero")
             elif step < 0:
+                # Align bot with the step
                 top = start
-                bot = (
-                    start + (-(start - stop) // step) * step
-                )  # Align bot with the step
+                bot = start + (-(start - stop) // step) * step
             else:
-                top = (
-                    start + -(-(stop - start) // step) * step
-                )  # Align top with the step
+                # Align top with the step
+                top = start + -(-(stop - start) // step) * step
                 bot = start
             if top > self.width:
                 raise ValueError(f"Out-of-bounds index {top} into {self}")
             if bot > self.width:
                 raise ValueError(f"Out-of-bounds index {bot} into {self}")
-            if bot >= top:
-                raise ValueError(f"Invalid slice ({bot} <= {top}) {key} into {self}")
+            if bot > top:
+                raise ValueError(f"Invalid slice ({bot} > {top}) {key} into {self}")
             return Slice(signal=self, top=top, bot=bot, step=step)
-
+        print(key)
         raise TypeError(f"Invalid slice-type {key} into {self}")
 
 
@@ -217,14 +215,26 @@ def _plural(*, fn: Callable, num: int, **kwargs) -> List[Signal]:
 class Slice:
     """ Signal Slice, comprising a subset of its width """
 
-    signal: Signal
-    top: int
-    bot: int
-    step: int
+    signal: Signal  # Parent Signal
+    top: int  # Top index (inclusive)
+    bot: int  # Bottom index (inclusive)
+    step: int  # Index step size
 
     @property
-    def width(self):
+    def width(self) -> int:
+        """ Slice width """
+        if self.step != 1:
+            raise NotImplementedError  # FIXME!
         return 1 + self.top - self.bot
+
+    def __eq__(self, other) -> bool:
+        """ Slice equality requires *identity* between parent Signals """
+        return (
+            self.signal is other.signal
+            and self.top == other.top
+            and self.bot == other.bot
+            and self.step == other.step
+        )
 
 
 @connectable
@@ -234,13 +244,23 @@ class Concat:
 
     def __init__(self, *parts):
         for p in parts:
-            if not isinstance(p, (Signal, Slice, Concat)):
-                raise TypeError
+            if not is_connectable(p):
+                raise TypeError(f"Signal-concatenating unconnectable object {p}")
         self.parts = parts
 
     @property
     def width(self):
         return sum([s.width for s in self.parts])
+
+    def __eq__(self, _other) -> bool:
+        # Concat-equality can be implemented, but has plenty of edge cases
+        # not yet worked through. For example slicing and re-concatenation:
+        # ```python
+        # s = h.Signal(width=2)      # Create a 2-bit signal
+        # s == h.Concat(s[0], s[1])  # Slice and re-concatenate it
+        # # Should that be True of False?
+        # ```
+        raise NotImplementedError
 
 
 @connectable

@@ -139,6 +139,8 @@ class Module:
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
 
+        # Give it a reference to us
+        val._parent_module = self
         # And return our newly-added attribute
         return val
 

@@ -29,6 +29,24 @@ class PortRef:
         return hash((id(self.inst), self.portname))
 
 
+@connects
+@dataclass
+class InstanceRef:
+    """ Instance Reference from an Array or Group """
+
+    parent: "InstArray"
+    name: Union[int, str]
+
+    def __eq__(self, other) -> bool:
+        """ Equality requires *identity* between parents 
+        (and of course equality of name). """
+        return self.parent is other.parent and self.name == other.name
+
+    def __hash__(self):
+        """ Hash references as the tuple of their instance-address and name """
+        return hash((id(self.parent), self.name))
+
+
 class _Instance:
     """ Shared base class for Instance-like types (Instance, InstArray) """
 
@@ -44,6 +62,7 @@ class _Instance:
         self.of = of
         self.conns = dict()
         self.portrefs = dict()
+        self._parent_module = None  # Instantiating module
         self._elaborated = False
         self._initialized = True
 
@@ -72,10 +91,35 @@ class Instance(_Instance):
         "portref",
         "portrefs",
         "connect",
+        "_module",
         "_resolved",
         "_elaborated",
         "_initialized",
     ]
+
+    def _mult(self, other: int) -> "InstArray":
+        """ Instance by integer multiplication. 
+        Creates an Instance Array of size `other`. """
+        if not isinstance(other, int):
+            return NotImplemented
+        return self._to_array(num=other)
+
+    __mul__ = __rmul__ = _mult  # Apply `_mult` on both left and right
+
+    def _to_array(self, num: int) -> "InstArray":
+        """ Create an Instance Array from an Instance """
+        # Several contraints asserted here which may eventually be relaxed.
+        # * No port-references (yet)
+        # * Not a member of a module (yet)
+        if len(self.portrefs) > 0:
+            msg = f"Cannot convert Instance {self} with outstanding port-references {self.portrefs} to Array"
+            raise RuntimeError(msg)
+        if self._parent_module is not None:
+            msg = f"Cannot convert Instance {self} already inserted in Module {self._parent_module} to Array"
+            raise RuntimeError(msg)
+
+        # Checks out. Create the array.
+        return InstArray(of=self.of, n=num, name=self.name)(**self.conns)
 
 
 @connects
@@ -88,16 +132,24 @@ class InstArray(_Instance):
         "conns",
         "portref",
         "portrefs",
+        "instrefs",
         "connect",
         "_elaborated",
         "_initialized",
+        "_module",
     ]
 
     def __init__(
         self, of: "Instantiable", n: int, name: Optional[str] = None,
     ):
+        self.instrefs = dict()
         self.n = n
         super().__init__(of=of, name=name)
+
+    def __getitem__(self, idx: int) -> InstanceRef:
+        if not isinstance(idx, int):
+            return RuntimeError(f"Illegal indexing into {self} with non-integer {idx}")
+        raise NotImplementedError  # FIXME: coming soon!
 
 
 # Get the runtime type-checking to understand the types forward-referenced and then defined here
@@ -118,8 +170,7 @@ def calls_instantiate(cls: type) -> type:
 
     # Check for an existing __call__ method, and if there is one, bail
     if "__call__" in cls.__dict__:
-        raise RuntimeError(
-            f"Hdl21 Internal Error: Invalid conflict between `calls_instantiate` decorator and explicit `__call__` method on {cls}"
-        )
+        msg = f"Hdl21 Internal Error: Invalid conflict between `calls_instantiate` decorator and explicit `__call__` method on {cls}"
+        raise RuntimeError(msg)
     cls.__call__ = __call__
     return cls

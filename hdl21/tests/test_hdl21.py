@@ -930,11 +930,13 @@ def test_bad_slice1():
     with pytest.raises(ValueError):
         h.Signal(width=11)[11]
 
+    h.Signal(width=11)[2:1:-1]  # OK
     with pytest.raises(ValueError):
-        h.Signal(width=11)[1:1:1]
+        h.Signal(width=11)[2:1:1]  # Not OK
 
+    h.Signal(width=11)[1:9]  # OK
     with pytest.raises(ValueError):
-        h.Signal(width=11)[9:1]
+        h.Signal(width=11)[9:1]  # Not OK
 
 
 def test_signal_concat1():
@@ -1122,4 +1124,81 @@ def test_series_parallel_generator():
 
     ppkg = h.to_proto(m)
     assert isinstance(ppkg, h.proto.Package)
+
+
+def test_instance_mult():
+    """ Initial tests of instance-array-generation by multiplication """
+
+    Child = h.Module(name="Child")
+    Parent = h.Module(name="Parent")
+
+    # Create an array via multiplication
+    Parent.child = Child() * 5  # Lotta kids here
+
+    # Check that the array is created correctly
+    assert isinstance(Parent.child, h.InstArray)
+    assert Parent.child.n == 5
+    assert Parent.child.of is Child
+
+    # Create another, this time via right-mul
+    Parent = h.Module(name="Parent")
+    Parent.child = 11 * Child()  # Getting even more kids
+
+    # Check that the array is created correctly
+    assert isinstance(Parent.child, h.InstArray)
+    assert Parent.child.n == 11
+    assert Parent.child.of is Child
+
+    # Test elaboration FIXME: include instance flattening
+    h.elaborate(Parent)
+
+
+def test_instance_mult2():
+    """ Test connecting to multiplication-generated InstArrays """
+
+    @h.module
+    class Child:
+        p = h.Port()
+
+    @h.module
+    class Parent:
+        a = h.Signal(width=3)
+        child = (Child() * 3)(p=a)
+
+    h.elaborate(Parent)
+
+    # Check that array-flattening completed correctly
+    assert len(Parent.instances) == 3
+    assert len(Parent.instarrays) == 0
+    assert Parent.get("_child_0_").of is Child
+    assert Parent.get("_child_1_").of is Child
+    assert Parent.get("_child_2_").of is Child
+    assert Parent.get("_child_0_").conns["p"] == Parent.a[0]
+    assert Parent.get("_child_1_").conns["p"] == Parent.a[1]
+    assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
+
+
+def test_instance_mult3():
+    """ Test connecting to an "already connected" Instance """
+
+    @h.module
+    class Child:
+        p = h.Port()
+
+    @h.module
+    class Parent:
+        a = h.Signal(width=3)
+        child = 3 * Child(p=a)  # <= this the one diff here from test_instance_mult2
+
+    h.elaborate(Parent)
+
+    # Check that array-flattening completed correctly
+    assert len(Parent.instances) == 3
+    assert len(Parent.instarrays) == 0
+    assert Parent.get("_child_0_").of is Child
+    assert Parent.get("_child_1_").of is Child
+    assert Parent.get("_child_2_").of is Child
+    assert Parent.get("_child_0_").conns["p"] == Parent.a[0]
+    assert Parent.get("_child_1_").conns["p"] == Parent.a[1]
+    assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
 
