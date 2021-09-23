@@ -1,6 +1,7 @@
 import pytest
 from io import StringIO
 from types import SimpleNamespace
+from textwrap import dedent
 from enum import Enum, auto
 
 # Import the PUT (package under test)
@@ -1216,4 +1217,54 @@ def test_instance_mult3():
     assert Parent.get("_child_0_").conns["p"] == Parent.a[0]
     assert Parent.get("_child_1_").conns["p"] == Parent.a[1]
     assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
+
+
+def test_netlist_fmts():
+    """ Test netlisting basic types to several formats """
+
+    @h.module
+    class Bot:
+        s = h.Input(width=3)
+        p = h.Output()
+
+    @h.module
+    class Top:
+        s = h.Signal(width=3)
+        p = h.Output()
+        b = Bot(s=s, p=p)
+
+    # Convert to proto
+    ppkg = h.to_proto(Top)
+    assert len(ppkg.modules) == 2
+    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.Bot"
+    assert ppkg.modules[1].name == "hdl21.tests.test_hdl21.Top"
+
+    # Convert the proto-package to a netlist
+    nl = StringIO()
+    h.netlist(ppkg, nl, "spectre")
+    nl = nl.getvalue()
+
+    # Basic checks on its contents
+    assert "subckt Bot" in nl
+    assert "+  s_2 s_1 s_0 p" in nl
+    assert "subckt Top" in nl
+    assert "b\n" in nl
+    assert "+  ( s_2 s_1 s_0 p  )" in nl
+    assert "+  p" in nl
+    assert "+  Bot " in nl
+
+    # Convert the proto-package to another netlist format
+    nl = StringIO()
+    h.netlist(ppkg, nl, "verilog")
+    nl = nl.getvalue()
+
+    # Basic checks on its contents
+    assert "module Bot" in nl
+    assert "input wire [2:0] s," in nl
+    assert "output wire p" in nl
+    assert "endmodule // Bot" in nl
+    assert "module Top" in nl
+    assert ".s(s)" in nl
+    assert ".p(p)" in nl
+    assert "endmodule // Top" in nl
 
