@@ -5,13 +5,18 @@ Defines the primary `elaborate` method used to flesh out an in-memory `Module` o
 Internally defines and uses a number of hierarchical visitor-classes which traverse the hardware hierarchy, 
 performing one or more transformation-passes.  
 """
+
+# Std-Lib Imports 
 import copy
-from enum import Enum, auto
+from enum import Enum
 from types import SimpleNamespace
 from typing import Union, Any, Dict, List, Optional
+
+# PyPi
 from pydantic.dataclasses import dataclass
 
 # Local imports
+from .connect import connectable
 from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
@@ -239,7 +244,7 @@ class GeneratorElaborator(_Elaborator):
                     # Get the target-module port, particularly for its width
                     port = target.get(portname)
                     if not isinstance(port, Signal):
-                        msg = f"Invalid port connection to {portname} in InstArray {array}"
+                        msg = f"Invalid port connection of `{portname}` {port} to {conn} in InstArray {array}"
                         raise RuntimeError(msg)
 
                     if port.width == conn.width:
@@ -581,6 +586,121 @@ class ImplicitInterfaces(_Elaborator):
         return module
 
 
+class InterfaceConnTypes(_Elaborator):
+    """ Check for connection-type-validity on each Interface-valued connection. 
+    Note this stage *does not* perform port-direction checking or modification. 
+    """
+
+    def elaborate_module(self, module: Module) -> Module:
+        """ Check each Instance's connections in `module` """
+
+        # Depth-first traverse instances, checking them first.
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+
+        # And then check each Instance
+        for inst in module.instances.values():
+            self.check_instance(module, inst)
+
+        # No errors means it checked out, return the Module unchanged
+        return module
+
+    def check_instance(self, module: Module, inst: Instance) -> None:
+        """ Check the connections of `inst` in parent `module` """
+
+        # Get the Instance's resolve target, and its interface-valued IO
+        targ = inst._resolved
+        if hasattr(targ, "interface_ports"):
+            io = copy.copy(targ.interface_ports)
+        else:
+            # Still check on no-interface Instances (e.g. Primitives),
+            # Mostly to ensure no *connections* are errantly Interface-valued.
+            io = []
+        # And filter out the interface-valued connections
+        conns = {
+            k: v for k, v in inst.conns.items() if isinstance(v, InterfaceInstance)
+        }
+
+        for portname, conn in conns.items():
+            # Pop the port from our list
+            port = io.pop(portname, None)
+            if port is None:
+                msg = f"Connection to invalid interface port {portname} on {inst.name} in {module.name}"
+                raise RuntimeError(msg)
+
+            if (  # Check its Interface type
+                not isinstance(conn, InterfaceInstance)
+                or not isinstance(port, InterfaceInstance)
+                or conn.of is not port.of
+            ):
+                msg = f"Invalid Interface Connection between {conn} and {port} on {inst.name} in {module.name}"
+                raise RuntimeError(msg)
+
+        if len(io):  # Check for anything lef over
+            msg = f"Unconnected Interface Port(s) {io} on {inst.name} in {module.name}"
+            raise RuntimeError(msg)
+
+
+class SignalConnTypes(_Elaborator):
+    """ Check for connection-type-validity between each Instance and its connections. 
+    "Connection type validity" includes: 
+    * All connections must be Signal-like or Interface-like
+    * Signal-valued ports must be connected to Signals of the same width
+    * Interface-valued ports must be connected to Interfaces of the same type 
+    Note this stage may be run after Interfaces have been flattened, in which case the Interface-checks perform no-ops. 
+    They are left in place nonetheless. 
+    Note this stage *does not* perform port-direction checking or modification. 
+    """
+
+    def elaborate_module(self, module: Module) -> Module:
+        """ Check each Instance's connections in `module` """
+
+        # Depth-first traverse instances, checking them first.
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+
+        # And then check each Instance
+        for inst in module.instances.values():
+            self.check_instance(module, inst)
+
+        # No errors means it checked out, return the Module unchanged
+        return module
+
+    def check_instance(self, module: Module, inst: Instance) -> None:
+        """ Check the connections of `inst` in parent `module` """
+
+        # Get the Instance's resolve target, and its IO
+        targ = inst._resolved
+        # FIXME: make this `io` method Module-like-wide
+        io = copy.copy(targ.ports)
+        if hasattr(targ, "interface_ports"):
+            io.update(copy.copy(targ.interface_ports))
+
+        for portname, conn in inst.conns.items():
+            # Pop the port from our list
+            port = io.pop(portname, None)
+            if port is None:
+                msg = f"Connection to invalid port {portname} on {inst.name} in {module.name}"
+                raise RuntimeError(msg)
+            # Checks
+            if isinstance(conn, InterfaceInstance):
+                # Identity-check the target Interface
+                if conn.of is not port.of:
+                    msg = f"Invalid Interface Connection between {conn} and {port} on {inst.name} in {module.name}"
+                    raise RuntimeError(msg)
+            elif connectable(conn):
+                # For scalar Signals, check that widths match up
+                if conn.width != port.width:
+                    msg = f"Invalid Connection between {conn} of width {conn.width} and {port} of widht {port.width} on {inst.name} in {module.name}"
+                    raise RuntimeError(msg)
+            else:
+                msg = f"Invalid connection {conn} on {inst.name} in {module.name}"
+                raise TypeError(msg)
+
+        if len(io):  # Check for anything lef over
+            raise RuntimeError(f"Unconnected IO {io} on {inst.name} in {module.name}")
+
+
 class SetList:
     """ A common combination of a hash-set and ordered list of the same items. 
     Used for keeping ordered items while maintaining quick membership testing. """
@@ -602,7 +722,7 @@ class SetList:
         return self.list
 
 
-class ElabPasses(Enum):
+class ElabPass(Enum):
     """ Enumerated Elaborator Passes
     Each has a `value` attribute which is an Elaborator-pass, 
     and a `name` attribute which is a (Python-enum-style) capitalized name. 
@@ -610,8 +730,16 @@ class ElabPasses(Enum):
 
     RUN_GENERATORS = GeneratorElaborator
     IMPLICIT_INTERFACES = ImplicitInterfaces
+    INTERFACE_CONN_TYPES = InterfaceConnTypes
     FLATTEN_INTERFACES = InterfaceFlattener
     IMPLICIT_SIGNALS = ImplicitSignals
+    SIGNAL_CONN_TYPES = SignalConnTypes
+
+    @classmethod
+    def default(cls) -> List["ElabPass"]:
+        """ Return the default ordered Elaborator Passes. """
+        # Returns each in definition order
+        return list(ElabPass)
 
 
 def elab_all(top: Elabables, **kwargs) -> List[Elabable]:
@@ -646,11 +774,11 @@ def elaborate(
     top: Elabable,
     *,
     ctx: Optional[Context] = None,
-    passes: Optional[List[ElabPasses]] = None,
+    passes: Optional[List[ElabPass]] = None,
 ) -> Module:
     """ In-Memory Elaboration of Generator or Module `top`. 
     
-    Optional `passes` lists the ordered `ElabPass`es to run. By default it runs all passes in the `ElabPass` enumeration, in definition order. 
+    Optional `passes` lists the ordered `ElabPass`es to run. By default it runs the order specified by `ElabPass.default`. 
     Note the order of passes is important; many depend upon others to have completed before they can successfully run. 
 
     Optional `Context` field `ctx` is not yet supported. 
@@ -660,7 +788,7 @@ def elaborate(
     """
     # Expand default values
     ctx = ctx or Context()
-    passes = passes or ElabPasses
+    passes = passes or ElabPass.default()
 
     # Pass `top` through each of our passes, in order
     res = top
