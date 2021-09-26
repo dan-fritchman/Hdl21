@@ -67,7 +67,16 @@ class Signal:
 
     def __getitem__(self, key: Any) -> "Slice":
         """ Square-Bracket Slicing into Signals, returning Signal-Slices.
-        Does python style slicing
+
+        FIXME: this commentary reflects what *should* happen, not totally what *is* yet: 
+
+        Signal slices are indexed "Python style", in the senses that: 
+        * Negative indices are supported, and count from the "end" of the Signal.
+        * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index. 
+        * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
+        Popular HDLs commonly use different signal-indexing conventions. 
+        Hdl21's own primary exchange format (in ProtoBuf) does as well, 
+        eschewing adopting inclusive-endpoints and eschewing negative-indexing.
         """
 
         if isinstance(key, int):
@@ -106,7 +115,7 @@ class Signal:
             if bot > top:
                 raise ValueError(f"Invalid slice ({bot} > {top}) {key} into {self}")
             return Slice(signal=self, top=top, bot=bot, step=step)
-            
+
         raise TypeError(f"Invalid slice-type {key} into {self}")
 
 
@@ -227,8 +236,10 @@ class Slice:
             raise NotImplementedError  # FIXME!
         return 1 + self.top - self.bot
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: "Slice") -> bool:
         """ Slice equality requires *identity* between parent Signals """
+        if not isinstance(other, Slice):
+            return NotImplemented
         return (
             self.signal is other.signal
             and self.top == other.top

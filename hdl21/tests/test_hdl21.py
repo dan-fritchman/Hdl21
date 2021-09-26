@@ -1309,6 +1309,36 @@ def test_instance_mult3():
     assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
 
 
+def test_instance_mult4():
+    """ Test connecting non-unit-width Arrays """
+
+    @h.module
+    class Child:
+        a = h.Port(width=11)
+        b = h.Port(width=16)
+
+    @h.module
+    class Parent:
+        a = h.Signal(width=11)
+        b = h.Signal(width=48)
+        child = 3 * Child(a=a, b=b)
+
+    h.elaborate(Parent)
+
+    # Check that array-flattening completed correctly
+    assert len(Parent.instances) == 3
+    assert len(Parent.instarrays) == 0
+    assert Parent.get("_child_0_").of is Child
+    assert Parent.get("_child_1_").of is Child
+    assert Parent.get("_child_2_").of is Child
+    assert Parent.get("_child_0_").conns["a"] == Parent.a
+    assert Parent.get("_child_1_").conns["a"] == Parent.a
+    assert Parent.get("_child_2_").conns["a"] == Parent.a
+    assert Parent.get("_child_0_").conns["b"] == Parent.b[0:15]
+    assert Parent.get("_child_1_").conns["b"] == Parent.b[16:31]
+    assert Parent.get("_child_2_").conns["b"] == Parent.b[32:47]
+
+
 def test_netlist_fmts():
     """ Test netlisting basic types to several formats """
 

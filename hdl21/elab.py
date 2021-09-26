@@ -6,7 +6,7 @@ Internally defines and uses a number of hierarchical visitor-classes which trave
 performing one or more transformation-passes.  
 """
 
-# Std-Lib Imports 
+# Std-Lib Imports
 import copy
 from enum import Enum
 from types import SimpleNamespace
@@ -21,7 +21,7 @@ from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
 from .interface import Interface, InterfaceInstance
-from .signal import PortDir, Signal, Visibility
+from .signal import Concat, PortDir, Signal, Visibility, Slice
 from .generator import Generator, GeneratorCall
 from .params import _unique_name
 from .instantiable import Instantiable
@@ -205,16 +205,15 @@ class GeneratorElaborator(_Elaborator):
         return self.elaborate_module(m)
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. First depth-first elaborates its Instances,
-        before creating any implicit Signals and connecting them.
-        Finally checks for connection-consistency with each Instance. """
+        """ Elaborate Module `module`. 
+        Primarily performs flattening of Instance Arrays, 
+        and re-connecting to the resultant flattened instances  """
         if id(module) in self.modules:  # Already done!
             return module
 
         if not module.name:
-            raise RuntimeError(
-                f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
-            )
+            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
+            raise RuntimeError(msg)
 
         # Flatten Instance arrays
         while module.instarrays:
@@ -252,13 +251,19 @@ class GeneratorElaborator(_Elaborator):
                         for inst in new_insts:
                             inst.connect(portname, conn)
                     elif port.width * array.n == conn.width:
-                        # Each new instance gets a one-wide slice
+                        # Each new instance gets a slice, equal to its own width
                         for k, inst in enumerate(new_insts):
-                            slize = conn[k]
+                            # FIXME: will be impacted by slice-indices changes!
+                            slize = conn[k * port.width : (k + 1) * port.width - 1]
+                            if slize.width != port.width:
+                                msg = f"Width mismatch connecting {slize} to {port}"
+                                raise RuntimeError(msg)
                             inst.connect(portname, slize)
                     else:  # All other values are invalid
                         msg = f"Invalid connection between {conn} of width {conn.width} and {array.n}"
                         raise RuntimeError(msg)
+                elif isinstance(conn, (Slice, Concat)):
+                    raise NotImplementedError  # COMING SOON!
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     raise TypeError(msg)
@@ -691,7 +696,7 @@ class SignalConnTypes(_Elaborator):
             elif connectable(conn):
                 # For scalar Signals, check that widths match up
                 if conn.width != port.width:
-                    msg = f"Invalid Connection between {conn} of width {conn.width} and {port} of widht {port.width} on {inst.name} in {module.name}"
+                    msg = f"Invalid Connection between {conn} of width {conn.width} and {port} of width {port.width} on {inst.name} in {module.name}"
                     raise RuntimeError(msg)
             else:
                 msg = f"Invalid connection {conn} on {inst.name} in {module.name}"
