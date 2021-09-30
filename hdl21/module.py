@@ -15,6 +15,7 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 
 # Local imports
+from .params import NoParams, HasNoParams
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, Instance, InstArray
 from .interface import InterfaceInstance
@@ -301,9 +302,9 @@ class ExternalModule:
     Parameter-values are checked to be instances of `paramtype` at creation time. 
     """
 
-    name: str
-    port_list: List[Signal]
-    paramtype: Type = object
+    name: str  # Module name. Used *directly* when exporting.
+    port_list: List[Signal]  # Ordered Ports
+    paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None
     pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
@@ -323,7 +324,7 @@ class ExternalModule:
                 msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
                 raise ValueError(msg)
 
-    def __call__(self, params) -> "ExternalModuleCall":
+    def __call__(self, params: Any = NoParams) -> "ExternalModuleCall":
         return ExternalModuleCall(module=self, params=params)
 
     @property
