@@ -115,9 +115,8 @@ def paramclass(cls: type) -> type:
     cls = pydantic.dataclasses.dataclass(cls, frozen=True)
     # Pydantic seems to want to add this one *after* class-creation
     def _brick_subclassing_(cls, *_, **__):
-        raise RuntimeError(
-            f"Error: attempt to sub-class `hdl21.paramclass` {cls} is not supported"
-        )
+        msg = f"Error: attempt to sub-class `hdl21.paramclass` {cls} is not supported"
+        raise RuntimeError(msg)
 
     cls.__init_subclass__ = classmethod(_brick_subclassing_)
     # And don't forget to return it!

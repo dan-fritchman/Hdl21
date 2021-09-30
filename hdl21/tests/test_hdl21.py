@@ -1420,3 +1420,36 @@ def test_bad_intf_conn():
 
     with pytest.raises(RuntimeError):
         h.elaborate(q)
+
+
+def test_illegal_module_attrs():
+    """ Test attempting to add illegal attributes """
+    m = h.Module()
+    with pytest.raises(TypeError):
+        m.a = list()
+
+    with pytest.raises(TypeError):
+
+        @h.module
+        class M:
+            a = list()
+
+    @h.module
+    class C:
+        ...
+
+    with pytest.raises(TypeError):
+        C.b = TabError
+
+    # Use combinations of legal attributes
+
+    m = h.Module(name="m")
+    with pytest.raises(TypeError):
+        m.p = 5
+    with pytest.raises(TypeError):
+        m.z = dict(a=h.Signal())
+    with pytest.raises(TypeError):
+        m.q = [h.Port()]
+    with pytest.raises(TypeError):
+        m.p = (h.Input(), h.Output())
+
