@@ -237,7 +237,7 @@ def external_factory(
     )
 
 
-def generate():
+def main():
     """ Main function, generating an `rladder` and `mux_tree` and netlisting each. """
 
     params = RLadderParams(
@@ -263,4 +263,4 @@ def generate():
 
 
 if __name__ == "__main__":
-    generate()
+    main()
