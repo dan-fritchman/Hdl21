@@ -1,5 +1,5 @@
 """
-# Hdl21 Differential Interface and Facilities for Differential Circuits 
+# Hdl21 Differential Bundle and Facilities for Differential Circuits 
 
 """
 
@@ -7,13 +7,13 @@ from pydantic.dataclasses import dataclass
 
 # Local imports
 from .signal import Signal
-from .interface import interface
+from .bundle import bundle
 from .instantiable import Instantiable
 
 
-@interface
+@bundle
 class DiffSomething:
-    """ Differential Interface """
+    """ Differential Bundle """
 
     p = Signal(width=1, desc="Positive")
     n = Signal(width=1, desc="Negative")

@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from .module import Module, ExternalModuleCall
 from .instance import Instance
 from .primitives import PrimitiveCall
-from .interface import Interface, InterfaceInstance
+from .bundle import Bundle, BundleInstance
 from .signal import Port, PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
 
@@ -33,8 +33,8 @@ class HierarchyWalker:
     def visit_module(self, module: Module):
         for inst in module.instances.values():
             self.visit_instance(inst)
-        for inst in module.interfaces.values():
-            self.visit_interface_instance(inst)
+        for inst in module.bundles.values():
+            self.visit_bundle_instance(inst)
 
     def visit_external_module(self, call: ExternalModuleCall):
         return
@@ -42,7 +42,7 @@ class HierarchyWalker:
     def visit_primitive_call(self, call: PrimitiveCall):
         return
 
-    def visit_interface_instance(self, inst: InterfaceInstance):
+    def visit_bundle_instance(self, inst: BundleInstance):
         return
 
     def visit_instance(self, inst: Instance):

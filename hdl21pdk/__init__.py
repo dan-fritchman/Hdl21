@@ -1,7 +1,7 @@
 """ 
-# Hdl21 "PDK" Interface 
+# Hdl21 "PDK" Bundle 
 
-Hdl21 "process development kit" (PDK) packages provide the interface between the Python HDL and fabricatable process technologies. 
+Hdl21 "process development kit" (PDK) packages provide the bundle between the Python HDL and fabricatable process technologies. 
 PDK packages typically include: 
 
 * (a) Definitions of technology-specific `ExternalModule`s, commonly including transistors and passive components, and 

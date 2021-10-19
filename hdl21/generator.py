@@ -26,7 +26,7 @@ class Generator:
     func: Callable  # The generator function
     paramtype: type  # Parameter type
     usecontext: bool  # Boolean indication of `Context` usage
-    pymodule: ModuleType  # Python module where function defined
+    pymodule: "ModuleType"  # Python module where function defined
 
     def __call__(self, arg: Any):
         """ Calls to Generators create GeneratorCall-objects
@@ -37,6 +37,11 @@ class Generator:
     def Params(self) -> type:
         """ Parameter-Type Property """
         return self.paramtype
+
+
+Generator.__pydantic_model__.Config.arbitrary_types_allowed = True
+Generator.__pydantic_model__.update_forward_refs()
+
 
 
 @calls_instantiate

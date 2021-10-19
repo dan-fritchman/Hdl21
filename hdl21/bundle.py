@@ -1,16 +1,25 @@
+""" 
+# `hdl21.Bundle` and Related Classes 
+
+Structured connection objects, instances thereof, and associated utilities.
+"""
+
 from textwrap import dedent
 from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args
+
+from hdl21.connect import has_port_refs
 
 from .instance import connects, connectable
 from .signal import Signal
 
 
 @connects
+@has_port_refs
 @connectable
-class InterfaceInstance:
-    """ Instance of an Interface, 
-    Generally in a Module or another Interface """
+class BundleInstance:
+    """ Instance of an Bundle, 
+    Generally in a Module or another Bundle """
 
     _specialcases = [
         "name",
@@ -21,6 +30,7 @@ class InterfaceInstance:
         "dest",
         "conns",
         "portrefs",
+        "_port_ref",
         "_elaborated",
         "_initialized",
     ]
@@ -29,7 +39,7 @@ class InterfaceInstance:
         self,
         *,
         name: Optional[str] = None,
-        of: "Interface",
+        of: "Bundle",
         port: bool = False,
         role: Optional[Enum] = None,
         src: Optional[Enum] = None,
@@ -47,31 +57,31 @@ class InterfaceInstance:
         self._initialized = True
 
     @property
-    def _resolved(self) -> "Interface":
+    def _resolved(self) -> "Bundle":
         return self.of
 
 
 # Type-alias for HDL objects storable as `Module` attributes
-InterfaceAttr = Union[Signal, InterfaceInstance]
+BundleAttr = Union[Signal, BundleInstance]
 
 
-def _is_interface_attr(val: Any) -> bool:
-    """ Boolean indication of whether `val` is a valid `hdl21.Interface` attribute. """
-    return isinstance(val, get_args(InterfaceAttr))
+def _is_bundle_attr(val: Any) -> bool:
+    """ Boolean indication of whether `val` is a valid `hdl21.Bundle` attribute. """
+    return isinstance(val, get_args(BundleAttr))
 
 
-class Interface:
+class Bundle:
     """ 
-    # hdl21 Interface
+    # hdl21 Bundle
     
-    Interfaces are structured hierarchical connection objects which include Signals and other Interfaces. 
+    Bundles are structured hierarchical connection objects which include Signals and other Bundles. 
     """
 
     def __init__(self, *, name=None):
         self.name = name
         self.roles = None
         self.signals = dict()
-        self.interfaces = dict()
+        self.bundles = dict()
         self.namespace = dict()  # Combination of all these
         self._elaborated = False
         self._initialized = True
@@ -84,17 +94,17 @@ class Interface:
             return super().__setattr__(key, val)
 
         # Protected attrs - the internal dicts
-        banned = ["signals", "interfaces", "namespace"]
+        banned = ["signals", "bundles", "namespace"]
         if key in banned:
             raise RuntimeError(
-                f"Error attempting to over-write protected attribute {key} of Interface {self}"
+                f"Error attempting to over-write protected attribute {key} of Bundle {self}"
             )
         # Special case(s)
         if key == "name":
             return super().__setattr__(key, val)
         if key == "roles":
             if not isinstance(val, EnumMeta):
-                raise TypeError(f"Interface roles must be an `enum.Enum`")
+                raise TypeError(f"Bundle roles must be an `enum.Enum`")
             return super().__setattr__(key, val)
 
         # Type-based organization
@@ -102,12 +112,12 @@ class Interface:
             val.name = key
             self.namespace[key] = val
             self.signals[key] = val
-        elif isinstance(val, InterfaceInstance):
+        elif isinstance(val, BundleInstance):
             val.name = key
-            self.interfaces[key] = val
+            self.bundles[key] = val
             self.namespace[key] = val
         else:
-            raise TypeError(f"Invalid Interface attribute {val} for {self}")
+            raise TypeError(f"Invalid Bundle attribute {val} for {self}")
 
     def __getattr__(self, key):
         ns = self.__getattribute__("namespace")
@@ -116,8 +126,8 @@ class Interface:
         return object.__getattribute__(self, key)
 
     def __call__(self, **kwargs):
-        """ Calls to Interfaces return Interface Instances """
-        return InterfaceInstance(of=self, **kwargs)
+        """ Calls to Bundles return Bundle Instances """
+        return BundleInstance(of=self, **kwargs)
 
     def __init_subclass__(cls, *_args, **_kwargs):
         """ Sub-Classing Disable-ization """
@@ -125,47 +135,48 @@ class Interface:
             dedent(
                 f"""\
                 Error attempting to create {cls.__name__}
-                Sub-Typing hdl21.Interface is not supported. """
+                Sub-Typing hdl21.Bundle is not supported. """
             )
         )
 
-    def add(self, val: InterfaceAttr, *, name: Optional[str] = None) -> InterfaceAttr:
+    def add(self, val: BundleAttr, *, name: Optional[str] = None) -> BundleAttr:
         raise NotImplementedError
 
-    def get(self, name: str) -> Optional[InterfaceAttr]:
+    def get(self, name: str) -> Optional[BundleAttr]:
         """ Get module-attribute `name`. Returns `None` if not present. 
         Note unlike Python built-ins such as `getattr`, `get` returns solely 
-        from the HDL namespace-worth of `InterfaceAttr`s. """
+        from the HDL namespace-worth of `BundleAttr`s. """
         ns = self.__getattribute__("namespace")
         return ns.get(name, None)
 
     @property
     def Roles(self):
+        """ Roles-Enumeration Accessor Property """
         # Roles often look like a class, so they have a class-style name-accessor
         return self.roles
 
 
-def interface(cls: type) -> Interface:
-    """ # Interface Definition Decorator 
+def bundle(cls: type) -> Bundle:
+    """ # Bundle Definition Decorator 
     
-    Converts a class-body full of Interface-storable attributes (Signals, other Interfaces) to an `hdl21.Interface`. 
+    Converts a class-body full of Bundle-storable attributes (Signals, other Bundles) to an `hdl21.Bundle`. 
     Example Usage: 
 
     ```python
     import hdl21 as h
 
-    @h.interface
+    @h.bundle
     class Diff:
         p = h.Signal()
         n = h.Signal()
 
-    @h.interface
+    @h.bundle
     class DisplayPort:
         main_link = Diff()
         aux = h.Signal()
     ```
 
-    Interfaces may also define a `Roles` enumeration, inline within this class-body. 
+    Bundles may also define a `Roles` enumeration, inline within this class-body. 
     `Roles` are optional pieces of enumerated endpoint-labels which aid in dictating `Signal` directions. 
     Each `Signal` accepts optional source (`src`) and destination (`dst`) fields which (if set) must be one of these roles. 
     
@@ -173,7 +184,7 @@ def interface(cls: type) -> Interface:
     import hdl21 as h
     from enum import Enum, auto
 
-    @h.interface
+    @h.bundle
     class HasRoles:
         class Roles(Enum):
             HOST = auto()
@@ -185,19 +196,19 @@ def interface(cls: type) -> Interface:
 
     """
     if cls.__bases__ != (object,):
-        raise RuntimeError(f"Invalid @hdl21.interface inheriting from {cls.__bases__}")
+        raise RuntimeError(f"Invalid @hdl21.bundle inheriting from {cls.__bases__}")
 
-    # Create the Interface object
-    intf = Interface(name=cls.__name__)
+    # Create the Bundle object
+    intf = Bundle(name=cls.__name__)
 
-    protected_names = ["signals", "interfaces"]
+    protected_names = ["signals", "bundles"]
     dunders = dict()
     unders = dict()
 
-    # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the interface
+    # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the bundle
     for key, val in cls.__dict__.items():
         if key in protected_names:
-            raise RuntimeError(f"Invalid field name {key} in interface {cls}")
+            raise RuntimeError(f"Invalid field name {key} in bundle {cls}")
         elif key.startswith("__"):
             dunders[key] = val
         elif key.startswith("_"):
@@ -207,5 +218,5 @@ def interface(cls: type) -> Interface:
             setattr(intf, "roles", val)
         else:
             setattr(intf, key, val)
-    # And return the interface
+    # And return the bundle
     return intf

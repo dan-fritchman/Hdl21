@@ -15,7 +15,7 @@ from pydantic.dataclasses import dataclass
 from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
-from .interface import Interface, InterfaceInstance
+from .bundle import Bundle, BundleInstance
 from .signal import PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
 from .params import _unique_name
@@ -77,13 +77,13 @@ class _Elaborator:
         # Default: nothing to see here, carry on
         return call
 
-    def elaborate_interface_instance(self, inst: InterfaceInstance) -> None:
-        """ Elaborate an InterfaceInstance """
-        # Annotate each InterfaceInstance so that its pre-elaboration `PortRef` magic is disabled.
+    def elaborate_bundle_instance(self, inst: BundleInstance) -> None:
+        """ Elaborate an BundleInstance """
+        # Annotate each BundleInstance so that its pre-elaboration `PortRef` magic is disabled.
         inst._elaborated = True
 
-    def elaborate_interface(self, intf: Interface) -> Interface:
-        """ Elaborate an Interface """
+    def elaborate_bundle(self, intf: Bundle) -> Bundle:
+        """ Elaborate an Bundle """
         # Default: nothing to see here, carry on
         return intf
 
@@ -231,8 +231,8 @@ class GeneratorElaborator(_Elaborator):
                 new_insts.append(inst)
             # And connect them
             for portname, conn in array.conns.items():
-                if isinstance(conn, InterfaceInstance):
-                    # All new instances get the same InterfaceInstance
+                if isinstance(conn, BundleInstance):
+                    # All new instances get the same BundleInstance
                     for inst in new_insts:
                         inst.connect(portname, conn)
                 elif isinstance(conn, Signal):
@@ -261,9 +261,9 @@ class GeneratorElaborator(_Elaborator):
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
             self.elaborate_instance(inst)
-        # Also visit interface instances, turning off their pre-elab magic
-        for intf in module.interfaces.values():
-            self.elaborate_interface_instance(intf)
+        # Also visit bundle instances, turning off their pre-elab magic
+        for intf in module.bundles.values():
+            self.elaborate_bundle_instance(intf)
 
         # Store a reference to the now-expanded Module in our cache, and return it
         self.modules[id(module)] = module
@@ -294,13 +294,13 @@ class ImplicitSignals(_Elaborator):
         """Elaborate Module `module`. First depth-first elaborates its Instances,
         before creating any implicit Signals and connecting them."""
 
-        # FIXME: much of this can and should be shared with `ImplicitInterfaces`
+        # FIXME: much of this can and should be shared with `ImplicitBundles`
 
-        # Interfaces must be flattened before this point.
+        # Bundles must be flattened before this point.
         # Throw an error if not.
-        if len(module.interfaces):
+        if len(module.bundles):
             raise RuntimeError(
-                f"ImplicitSignals elaborator invalidly invoked on Module {module} with Interfaces {module.interfaces}"
+                f"ImplicitSignals elaborator invalidly invoked on Module {module} with Bundles {module.bundles}"
             )
 
         # Depth-first traverse instances, ensuring their targets are defined
@@ -313,7 +313,7 @@ class ImplicitSignals(_Elaborator):
         for inst in module.instances.values():
             for port, conn in inst.conns.items():
                 if isinstance(conn, PortRef):
-                    internal_ref = PortRef(inst, port)
+                    internal_ref = PortRef.new(inst, port)
                     portconns[internal_ref] = conn
 
         # Now walk through them, assigning each set to a net
@@ -377,26 +377,26 @@ class ImplicitSignals(_Elaborator):
 
 
 @dataclass
-class FlatInterfaceInst:
-    """ Flattened Hierarchical Interface, resolved to constituent Signals """
+class FlatBundleInst:
+    """ Flattened Hierarchical Bundle, resolved to constituent Signals """
 
-    inst_name: str  # Interface Instance name
-    src: Interface  # Source/ Original Interface
+    inst_name: str  # Bundle Instance name
+    src: Bundle  # Source/ Original Bundle
     # Flattened signals-dict, keyed by *original* signal name
     signals: Dict[str, Signal]
 
 
-class InterfaceFlattener(_Elaborator):
-    """ Interface-Flattening Elaborator Pass """
+class BundleFlattener(_Elaborator):
+    """ Bundle-Flattening Elaborator Pass """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.modules = dict()
-        self.replacements = dict()  # Interface replacement-dicts by Module (id)
+        self.replacements = dict()  # Bundle replacement-dicts by Module (id)
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Flatten Module `module`s Interfaces, replacing them with newly-created Signals.
-        Reconnect the flattened Signals to any Instances connected to said Interfaces. """
+        """ Flatten Module `module`s Bundles, replacing them with newly-created Signals.
+        Reconnect the flattened Signals to any Instances connected to said Bundles. """
         if id(module) in self.modules:
             return module  # Already done!
 
@@ -406,15 +406,15 @@ class InterfaceFlattener(_Elaborator):
         for inst in module.instances.values():
             self.elaborate_instance(inst)
 
-        # Start a dictionary of interface-replacements
+        # Start a dictionary of bundle-replacements
         replacements = dict()
 
-        while module.interfaces:
-            # Remove the interface-instance from the module
-            name, intf = module.interfaces.popitem()
+        while module.bundles:
+            # Remove the bundle-instance from the module
+            name, intf = module.bundles.popitem()
             module.namespace.pop(name)
             # Flatten it
-            flat = self.flatten_interface(intf)
+            flat = self.flatten_bundle(intf)
             replacements[name] = flat
 
             # And add each flattened Signal
@@ -449,18 +449,18 @@ class InterfaceFlattener(_Elaborator):
                         for flatname, flatsig in flat.signals.items():
                             inst_signame = inst_flat.signals[flatname].name
                             inst.conns[inst_signame] = flatsig
-                        # And remove the connection to the original Interface(s)
+                        # And remove the connection to the original Bundle(s)
                         inst.conns.pop(portname)
 
             # Re-connect any PortRefs it has given out, as in the form:
-            # i = SomeInterface()    # Theoretical Interface with signal-attribute `s`
+            # i = SomeBundle()    # Theoretical Bundle with signal-attribute `s`
             # x = SomeModule(s=i.s)  # Connects `PortRef` `i.s`
-            # FIXME: this needs to happen for hierarchical interfaces too
+            # FIXME: this needs to happen for hierarchical bundles too
             for portref in intf.portrefs.values():
                 flatsig = flat.signals.get(portref.portname, None)
                 if flatsig is None:
                     raise RuntimeError(
-                        f"Port {portref.portname} not found in Interface {intf.of.name}"
+                        f"Port {portref.portname} not found in Bundle {intf.of.name}"
                     )
                 # Walk through our Instances, replacing any connections to this `PortRef` with `flatsig`
                 for inst in module.instances.values():
@@ -472,18 +472,18 @@ class InterfaceFlattener(_Elaborator):
         self.replacements[id(module)] = replacements
         return module
 
-    def flatten_interface(self, intf: InterfaceInstance) -> FlatInterfaceInst:
-        """ Convert nested Interface `intf` into a flattened `FlatInterfaceInst` of scalar Signals. 
-        Flattening and the underlying Signal-cloning is applied to each Interface *instance*, 
-        so each Module-visit need not re-clone the signals of the returned `FlatInterfaceInst`. """
+    def flatten_bundle(self, intf: BundleInstance) -> FlatBundleInst:
+        """ Convert nested Bundle `intf` into a flattened `FlatBundleInst` of scalar Signals. 
+        Flattening and the underlying Signal-cloning is applied to each Bundle *instance*, 
+        so each Module-visit need not re-clone the signals of the returned `FlatBundleInst`. """
 
         # Create the flattened version, initializing it with `intf`s scalar Signals
-        flat = FlatInterfaceInst(
+        flat = FlatBundleInst(
             inst_name=intf.name, src=intf.of, signals=copy.deepcopy(intf.of.signals)
         )
-        # Depth-first walk any interface-instance's definitions, flattening them
-        for i in intf.of.interfaces.values():
-            iflat = self.flatten_interface(i)
+        # Depth-first walk any bundle-instance's definitions, flattening them
+        for i in intf.of.bundles.values():
+            iflat = self.flatten_bundle(i)
             for sig in iflat.signals.values():
                 # Rename the signal, and store it in our flat-intf
                 signame = self.flatname([i.name, sig.name], avoid=flat.signals)
@@ -492,13 +492,13 @@ class InterfaceFlattener(_Elaborator):
         return flat
 
 
-class ImplicitInterfaces(_Elaborator):
-    """ Create explicit `InterfaceInstance`s for any implicit ones, 
+class ImplicitBundles(_Elaborator):
+    """ Create explicit `BundleInstance`s for any implicit ones, 
     i.e. those created through port-to-port connections. """
 
     def elaborate_module(self, module: Module) -> Module:
         """ Elaborate Module `module`. First depth-first elaborates its Instances,
-        before creating any implicit `InterfaceInstance`s and connecting them. """
+        before creating any implicit `BundleInstance`s and connecting them. """
 
         # FIXME: much of this can and should be shared with `ImplicitSignals`
 
@@ -507,18 +507,18 @@ class ImplicitInterfaces(_Elaborator):
             self.elaborate_instance(inst)
 
         # Now work through expanding any implicit-ish connections, such as those from port to port.
-        # Start by building an adjacency graph of every interface-valued `PortRef` that's been instantiated.
+        # Start by building an adjacency graph of every bundle-valued `PortRef` that's been instantiated.
         portconns = dict()
         for inst in module.instances.values():
             for port, conn in inst.conns.items():
                 if isinstance(conn, PortRef) and isinstance(
-                    conn.inst._resolved, (Module, Interface)
+                    conn.inst._resolved, (Module, Bundle)
                 ):
                     other_port = conn.inst._resolved.get(conn.portname)
                     if other_port is None:
                         raise RuntimeError
-                    if isinstance(other_port, InterfaceInstance):
-                        internal_ref = PortRef(inst, port)
+                    if isinstance(other_port, BundleInstance):
+                        internal_ref = PortRef.new(inst, port)
                         portconns[internal_ref] = conn
 
         # Now walk through them, assigning each set to a net
@@ -544,7 +544,7 @@ class ImplicitInterfaces(_Elaborator):
             sig = None
             for portref in net:
                 portconn = portref.inst.conns.get(portref.portname, None)
-                if isinstance(portconn, InterfaceInstance):
+                if isinstance(portconn, BundleInstance):
                     if sig is not None and portconn is not sig:
                         # Ruh roh! shorted between things
                         raise RuntimeError(
@@ -562,7 +562,7 @@ class ImplicitInterfaces(_Elaborator):
                 # Create the Signal, looking up all its properties from the last Instance's Module
                 # (If other instances are inconsistent, later stages will flag them)
                 lastmod = portref.inst._resolved
-                sig = lastmod.interface_ports.get(portref.portname, None)
+                sig = lastmod.bundle_ports.get(portref.portname, None)
                 if sig is not None:
                     sig = copy.copy(sig)
                     sig.port = False
@@ -609,8 +609,8 @@ class ElabPasses(Enum):
     Specifying  """
 
     RUN_GENERATORS = GeneratorElaborator
-    IMPLICIT_INTERFACES = ImplicitInterfaces
-    FLATTEN_INTERFACES = InterfaceFlattener
+    IMPLICIT_BUNDLES = ImplicitBundles
+    FLATTEN_BUNDLES = BundleFlattener
     IMPLICIT_SIGNALS = ImplicitSignals
 
 

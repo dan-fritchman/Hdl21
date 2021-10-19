@@ -76,9 +76,9 @@ class ProtoExporter:
         if id(module) in self.modules:  # Already done
             return self.modules[id(module)]
 
-        if module.interfaces:  # Can't handle these, at least for now
+        if module.bundles:  # Can't handle these, at least for now
             raise RuntimeError(
-                f"Invalid attribute for Proto export: Module {module.name} with Interfaces {list(module.interfaces.keys())}"
+                f"Invalid attribute for Proto export: Module {module.name} with Bundles {list(module.bundles.keys())}"
             )
 
         # Create the Proto-Module
@@ -249,7 +249,7 @@ class ProtoExporter:
             else:
                 raise TypeError
             # Assign it into the connections dict.
-            # The proto interface requires copying it along the way
+            # The proto bundle requires copying it along the way
             pinst.connections[pname].CopyFrom(pconn)
 
         return pinst

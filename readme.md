@@ -21,7 +21,7 @@ Hdl21 `Modules` are type-specific containers of just a handful of `hdl21` types.
 
 * Instances of other `Modules`
 * Connections between them defined by `Signals` and `Ports`
-* Structured connections defined by `Interfaces` 
+* Structured connections defined by `Bundles` 
 
 An example of creating a `Module`:
 

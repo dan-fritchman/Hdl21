@@ -4,20 +4,47 @@
 Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
-from pydantic.dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict, Any
 
 # Local imports
-from .connect import connectable, connects
+from .connect import connectable, connects, has_port_refs
 
 
+@connects
+@has_port_refs
 @connectable
-@dataclass
 class PortRef:
-    """ Port Reference to an Instance """
+    """ Reference to a Port 
+    Created from a combination of a parent `inst` and a port-name. """
 
-    inst: Union["Instance", "InstArray", "InterfaceInstance"]
-    portname: str
+    _specialcases = [
+        "inst",
+        "conns",
+        "portref",
+        "portrefs",
+        "connect",
+        "_port_ref",
+        "_module",
+        "_resolved",
+        "_elaborated",
+        "_initialized",
+    ]
+
+    def __init__(
+        self,
+        inst: Union["Instance", "InstArray", "BundleInstance", "PortRef"],
+        portname: str,
+    ):
+        self.inst = inst
+        self.portname = portname
+        self.portrefs = dict()
+        self.conns = dict()
+        self._elaborated = False
+        self._initialized = True
+
+    @classmethod
+    def new(cls, inst, portname: str) -> "PortRef":
+        return PortRef(inst=inst, portname=portname)
 
     def __eq__(self, other) -> bool:
         """ Port-reference equality requires *identity* between instances 
@@ -28,23 +55,28 @@ class PortRef:
         """ Hash references as the tuple of their instance-address and name """
         return hash((id(self.inst), self.portname))
 
+    @property
+    def _specialcases(self) -> List[str]:
+        return ["inst", "portname", "portrefs"]
 
-@connects
-@dataclass
-class InstanceRef:
-    """ Instance Reference from an Array or Group """
 
-    parent: "InstArray"
-    name: Union[int, str]
+# @connects
+# @has_port_refs
+# @dataclass
+# class InstanceRef:
+#     """ Instance Reference from an Array or Group """
 
-    def __eq__(self, other) -> bool:
-        """ Equality requires *identity* between parents 
-        (and of course equality of name). """
-        return self.parent is other.parent and self.name == other.name
+#     parent: "InstArray"
+#     name: Union[int, str]
 
-    def __hash__(self):
-        """ Hash references as the tuple of their instance-address and name """
-        return hash((id(self.parent), self.name))
+#     def __eq__(self, other) -> bool:
+#         """ Equality requires *identity* between parents
+#         (and of course equality of name). """
+#         return self.parent is other.parent and self.name == other.name
+
+#     def __hash__(self):
+#         """ Hash references as the tuple of their instance-address and name """
+#         return hash((id(self.parent), self.name))
 
 
 class _Instance:
@@ -81,6 +113,7 @@ class _Instance:
 
 
 @connects
+@has_port_refs
 class Instance(_Instance):
     """ Hierarchical Instance of another Module or Generator """
 
@@ -91,6 +124,7 @@ class Instance(_Instance):
         "portref",
         "portrefs",
         "connect",
+        "_port_ref",
         "_module",
         "_resolved",
         "_elaborated",
@@ -123,6 +157,7 @@ class Instance(_Instance):
 
 
 @connects
+@has_port_refs
 class InstArray(_Instance):
     """ Array of `n` Instances """
 
@@ -132,6 +167,7 @@ class InstArray(_Instance):
         "conns",
         "portref",
         "portrefs",
+        "_port_ref",
         "instrefs",
         "connect",
         "_elaborated",
@@ -146,17 +182,10 @@ class InstArray(_Instance):
         self.n = n
         super().__init__(of=of, name=name)
 
-    def __getitem__(self, idx: int) -> InstanceRef:
+    def __getitem__(self, idx: int) -> "InstanceRef":
         if not isinstance(idx, int):
             return RuntimeError(f"Illegal indexing into {self} with non-integer {idx}")
         raise NotImplementedError  # FIXME: coming soon!
-
-
-# Get the runtime type-checking to understand the types forward-referenced and then defined here
-from .interface import InterfaceInstance
-
-PortRef.__pydantic_model__.Config.arbitrary_types_allowed = True
-PortRef.__pydantic_model__.update_forward_refs()
 
 
 def calls_instantiate(cls: type) -> type:

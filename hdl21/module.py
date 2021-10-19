@@ -13,14 +13,15 @@ from types import ModuleType
 from typing import Any, Optional, List, Union, get_args, Tuple, Type
 from pydantic.dataclasses import dataclass
 from dataclasses import field
+import dataclasses 
 
 # Local imports
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, Instance, InstArray
-from .interface import InterfaceInstance
+from .bundle import BundleInstance
 
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, Instance, InstArray, InterfaceInstance]
+ModuleAttr = Union[Signal, Instance, InstArray, BundleInstance]
 
 
 def _is_module_attr(val: Any) -> bool:
@@ -41,7 +42,7 @@ class Module:
         self.signals = dict()
         self.instances = dict()
         self.instarrays = dict()
-        self.interfaces = dict()
+        self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
         self._pymodule = _caller_pymodule()  #  (Python) module where called
@@ -63,7 +64,7 @@ class Module:
             "signals",
             "instances",
             "instarrays",
-            "interfaces",
+            "bundles",
             "namespace",
             "add",
             "get",
@@ -133,8 +134,8 @@ class Module:
         elif isinstance(val, InstArray):
             self.instarrays[val.name] = val
             self.namespace[val.name] = val
-        elif isinstance(val, InterfaceInstance):
-            self.interfaces[val.name] = val
+        elif isinstance(val, BundleInstance):
+            self.bundles[val.name] = val
             self.namespace[val.name] = val
         else:
             raise TypeError(f"Invalid Module attribute {val} for {self}")
@@ -176,14 +177,14 @@ class Module:
         return f"Module(_anon_)"
 
     @property
-    def interface_ports(self) -> dict:
-        """ Port-Exposed Interface Instances """
-        return {name: intf for name, intf in self.interfaces.items() if intf.port}
+    def bundle_ports(self) -> dict:
+        """ Port-Exposed Bundle Instances """
+        return {name: intf for name, intf in self.bundles.items() if intf.port}
 
     @property
     def io(self) -> dict:
-        """ Combined Dictionary of `Signal`-valued and `Interface`-valued ports """
-        rv = self.interface_ports
+        """ Combined Dictionary of `Signal`-valued and `Bundle`-valued ports """
+        rv = self.bundle_ports
         rv.update(self.ports)
         return rv
 
@@ -229,14 +230,14 @@ class Module:
         return self._moduledata
 
 
-@dataclass(frozen=True)
-class _ModuleData:
-    """ Immutable data-class representation of `Module` content. 
-    Designed for internal use by `Module`, particularly for sake of 
-    hashing, equality testing, and serialization. """
-
-    qualname: str
-    namespace: Tuple  # More specifically Tuple[ModuleAttr], but specifying so triggers a pydantic bug
+# @dataclass(frozen=True)
+# class _ModuleData:
+#     """ Immutable data-class representation of `Module` content.
+#     Designed for internal use by `Module`, particularly for sake of
+#     hashing, equality testing, and serialization. """
+#
+#     qualname: str
+#     namespace: Tuple  # More specifically Tuple[ModuleAttr], but specifying so triggers a pydantic bug
 
 
 def module(cls: type) -> Module:
@@ -263,7 +264,7 @@ def module(cls: type) -> Module:
     `hdl21.Modules` are strongly-typed containers of other hardware objects:
     * `Signals` and `Ports`
     * Instances of other `Modules`
-    * Structured connections via `Interfaces`
+    * Structured connections via `Bundles`
 
     Attempts to set module attributes of any other types will raise a `TypeError`.
     Notably this includes any behavioral elements implemented by Python functions.
@@ -284,7 +285,7 @@ def module(cls: type) -> Module:
     dunders = dict()
     unders = dict()
 
-    # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the interface
+    # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the bundle
     for key, val in cls.__dict__.items():
         if key.startswith("__"):
             dunders[key] = val
@@ -296,7 +297,7 @@ def module(cls: type) -> Module:
     return module
 
 
-@dataclass
+@dataclasses.dataclass
 class ExternalModule:
     """
     # External Module
@@ -375,8 +376,12 @@ class ExternalModule:
         return self._qualname()
 
 
+# ExternalModule.__pydantic_model__.Config.arbitrary_types_allowed = True
+# ExternalModule.__pydantic_model__.update_forward_refs()
+
+
 @calls_instantiate
-@dataclass
+@dataclasses.dataclass
 class ExternalModuleCall:
     """ External Module Call
     A combination of an `ExternalModule` and its Parameter-values,
@@ -395,6 +400,10 @@ class ExternalModuleCall:
     @property
     def ports(self) -> dict:
         return self.module.ports
+
+
+# ExternalModuleCall.__pydantic_model__.Config.arbitrary_types_allowed = True
+# ExternalModuleCall.__pydantic_model__.update_forward_refs()
 
 
 def _caller_pymodule():

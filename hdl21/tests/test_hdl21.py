@@ -1,10 +1,15 @@
+""" 
+# hdl21 Unit Tests 
+"""
+
 import pytest
 from io import StringIO
 from types import SimpleNamespace
-from enum import Enum, auto
+from enum import Enum, EnumMeta, auto
 
 # Import the PUT (package under test)
 import hdl21 as h
+from hdl21.bundle import BundleInstance
 
 
 def test_version():
@@ -469,32 +474,32 @@ def test_prim_proto1():
 
 
 def test_intf1():
-    # Create an interface
+    # Create an bundle
 
-    i1 = h.Interface(name="MyFirstInterface")
+    i1 = h.Bundle(name="MyFirstBundle")
     i1.s1 = h.Signal()
     i1.s2 = h.Signal()
 
-    assert isinstance(i1, h.Interface)
+    assert isinstance(i1, h.Bundle)
     assert isinstance(i1.s1, h.Signal)
     assert isinstance(i1.s2, h.Signal)
 
     ii1 = i1()
-    assert isinstance(ii1, h.InterfaceInstance)
+    assert isinstance(ii1, h.BundleInstance)
     assert ii1.role is None
     assert ii1.port == False
 
 
 def test_intf2():
-    # Wire up a few Modules via interfaces
+    # Wire up a few Modules via bundles
 
-    MySecondInterface = h.Interface(name="MySecondInterface")
-    MySecondInterface.s = h.Signal()
+    MySecondBundle = h.Bundle(name="MySecondBundle")
+    MySecondBundle.s = h.Signal()
 
     m1 = h.Module(name="M1")
-    m1.i = MySecondInterface(port=True)
+    m1.i = MySecondBundle(port=True)
     m2 = h.Module(name="M2")
-    m2.i = MySecondInterface(port=True)
+    m2.i = MySecondBundle(port=True)
 
     # Now create a parent Module connecting the two
     m3 = h.Module(name="M3")
@@ -502,10 +507,10 @@ def test_intf2():
     m3.i2 = m2(i=m3.i1.i)
     assert "_i2_i_i1_i_" not in m3.namespace
 
-    # First run the "implicit interfaces" pass, and see that an explicit one is created
+    # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPasses
 
-    m3 = h.elaborate(m3, passes=[ElabPasses.IMPLICIT_INTERFACES])
+    m3 = h.elaborate(m3, passes=[ElabPasses.IMPLICIT_BUNDLES])
     assert isinstance(m3, h.Module)
     assert isinstance(m3.i1, h.Instance)
     assert isinstance(m3.i2, h.Instance)
@@ -520,42 +525,57 @@ def test_intf2():
 
 
 def test_intf3():
-    # Test the interface-definition decorator
+    # Test the bundle-definition decorator
 
-    @h.interface
-    class Diff:  # Differential Signal Interface
+    @h.bundle
+    class Diff:  # Differential Signal Bundle
         p = h.Signal()
         n = h.Signal()
 
-    @h.interface
+    @h.bundle
     class DisplayPort:  # DisplayPort, kinda
         main_link = Diff()
         aux = h.Signal()
 
-    assert isinstance(DisplayPort, h.Interface)
-    assert isinstance(DisplayPort(), h.InterfaceInstance)
-    assert isinstance(DisplayPort.main_link, h.InterfaceInstance)
+    assert isinstance(DisplayPort, h.Bundle)
+    assert isinstance(DisplayPort(), h.BundleInstance)
+    assert isinstance(DisplayPort.main_link, h.BundleInstance)
     assert isinstance(DisplayPort.main_link.p, h.PortRef)
     assert isinstance(DisplayPort.main_link.n, h.PortRef)
     assert isinstance(DisplayPort.aux, h.Signal)
-    assert isinstance(Diff, h.Interface)
-    assert isinstance(Diff(), h.InterfaceInstance)
+    assert isinstance(Diff, h.Bundle)
+    assert isinstance(Diff(), h.BundleInstance)
     assert isinstance(Diff.p, h.Signal)
     assert isinstance(Diff.n, h.Signal)
 
+    # Instantiate one in a Module
+    m = h.Module(name="M")
+    m.dp = DisplayPort()
+    assert isinstance(m.dp, h.BundleInstance)
+    assert len(m.bundles) == 1
+    assert len(m.signals) == 0
+
+    # And elaborate it
+    h.elaborate(m)
+
+    assert not hasattr(m, "dp")
+    assert len(m.bundles) == 0
+    assert len(m.signals) == 3
+    assert isinstance(m.get("_dp_aux_"), h.Signal)
+    assert isinstance(m.get("_dp__main_link_p__"), h.Signal)
+    assert isinstance(m.get("_dp__main_link_n__"), h.Signal)
+
 
 def test_intf4():
-    # Test interface roles
+    # Test bundle roles
 
-    from enum import Enum, EnumMeta, auto
-
-    @h.interface
-    class Diff:  # Differential Signal Interface
+    @h.bundle
+    class Diff:  # Differential Signal Bundle
         p = h.Signal()
         n = h.Signal()
 
-    @h.interface
-    class HasRoles:  # An Interface with Roles
+    @h.bundle
+    class HasRoles:  # An Bundle with Roles
         class Roles(Enum):  # USB-Style Role Nomenclature
             HOST = auto()
             DEVICE = auto()
@@ -569,23 +589,23 @@ def test_intf4():
         rxd = Diff(src=Roles.DEVICE, dest=Roles.HOST)
 
     hr = HasRoles()
-    assert isinstance(HasRoles, h.Interface)
+    assert isinstance(HasRoles, h.Bundle)
     assert isinstance(HasRoles.roles, EnumMeta)
     assert isinstance(HasRoles.Roles, EnumMeta)
-    assert isinstance(hr, h.InterfaceInstance)
+    assert isinstance(hr, h.BundleInstance)
     assert isinstance(HasRoles.tx, h.Signal)
     assert isinstance(HasRoles.rx, h.Signal)
-    assert isinstance(HasRoles.txd, h.InterfaceInstance)
-    assert isinstance(HasRoles.rxd, h.InterfaceInstance)
+    assert isinstance(HasRoles.txd, h.BundleInstance)
+    assert isinstance(HasRoles.rxd, h.BundleInstance)
 
     @h.module
     class Host:
-        # A thing with a HOST-roled interface-port
+        # A thing with a HOST-roled bundle-port
         port_ = HasRoles(port=True, role=HasRoles.Roles.HOST)
 
     @h.module
     class Device:
-        # A thing with a DEVICE-roled interface-port
+        # A thing with a DEVICE-roled bundle-port
         port_ = HasRoles(port=True, role=HasRoles.Roles.DEVICE)
 
     @h.module
@@ -599,14 +619,14 @@ def test_intf4():
     assert isinstance(System.dev_, h.Instance)
     assert "_dev__port__host_port__" not in System.namespace
 
-    # First run the "implicit interfaces" pass, and see that an explicit one is created
+    # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPasses
 
-    sys = h.elaborate(System, passes=[ElabPasses.IMPLICIT_INTERFACES])
+    sys = h.elaborate(System, passes=[ElabPasses.IMPLICIT_BUNDLES])
     assert "_dev__port__host_port__" in sys.namespace
 
     # Now expand the rest of the way, down to scalar signals
-    # Check that interface went away, and its constituent signals replaced it
+    # Check that bundle went away, and its constituent signals replaced it
     sys = h.elaborate(sys)
     assert "_dev__port__host_port__" not in sys.namespace
     assert "__dev__port__host_port___tx_" in sys.namespace
@@ -821,32 +841,48 @@ def test_proto_roundtrip2():
     assert "_i1_i_i0_o_" in M2.signals
 
 
-def test_bigger_interfaces():
-    # Test a slightly more elaborate Interface-based system
+def test_bigger_bundles():
+    """ Test a slightly more elaborate Bundle-based system """
 
     class MsRoles(Enum):
+        # A two-role bus, in which one named "MS" is nominally dictates the action,
+        # and the other named "SL" nominally does what it says to do.
         MS = auto()
         SL = auto()
 
-    @h.interface
+    @h.bundle
     class Jtag:
+        # Jtag Bundle
+
         roles = MsRoles
-        tck = h.Signal(src=roles.MS, dest=roles.SL)
-        tdi = h.Signal(src=roles.MS, dest=roles.SL)
-        tms = h.Signal(src=roles.MS, dest=roles.SL)
+        tck, tdi, tms = h.Signals(3, src=roles.MS, dest=roles.SL)
         tdo = h.Signal(src=roles.SL, dest=roles.MS)
 
-    @h.interface
+    @h.bundle
+    class Uart:
+        # Uart Bundle
+        class Roles(Enum):
+            # Uart roles are essentially peers, here named `ME` and `YOU`.
+            # Essentially everything will use the role `ME`,
+            # except for interconnect which swaps between the two.
+            ME = auto()
+            YOU = auto()
+
+        tx = h.Signal(src=Roles.ME, dest=Roles.YOU)
+        rx = h.Signal(src=Roles.YOU, dest=Roles.ME)
+
+    @h.bundle
     class Spi:
+        # Spi Bundle
         roles = MsRoles
-        sck = h.Signal(src=roles.MS, dest=roles.SL)
-        cs = h.Signal(src=roles.MS, dest=roles.SL)
+        sck, cs = h.Signals(2, src=roles.MS, dest=roles.SL)
         dq = h.Signal(src=roles.SL, dest=roles.MS, width=4)
 
     @h.module
     class Chip:
         spi = Spi(role=MsRoles.MS, port=True)
         jtag = Jtag(role=MsRoles.SL, port=True)
+        uart = Uart(role=Uart.Roles.ME, port=True)
         ...  # Actual internal content, which likely connects these down *many* levels of hierarchy
 
     @h.module
@@ -865,16 +901,38 @@ def test_bigger_interfaces():
     class Tester:
         # A typical test-widget with a JTAG port
         jtag = Jtag(role=MsRoles.MS, port=True)
+        uart = Uart(role=Uart.Roles.ME, port=True)
 
     @h.module
     class TestSystem:
         # A system in which `Tester` can test `Board`
         jtag = Jtag()
+
         tester = Tester(jtag=jtag)
         board = Board(jtag=jtag)
 
-    sys = h.elaborate(TestSystem)
+        # Do UART TX/RX interconnect-swapping
+        tester.uart.tx = board.uart.rx
+        tester.uart.rx = board.uart.tx
+
+    assert isinstance(TestSystem.jtag, h.BundleInstance)
+    assert isinstance(TestSystem.tester, h.Instance)
+    assert isinstance(TestSystem.board, h.Instance)
+
+    assert isinstance(TestSystem.tester.uart, h.PortRef)
+    assert isinstance(TestSystem.tester.uart.tx, h.PortRef)
+    assert isinstance(TestSystem.tester.uart.rx, h.PortRef)
+    assert isinstance(TestSystem.board.uart, h.PortRef)
+    assert isinstance(TestSystem.board.uart.tx, h.PortRef)
+    assert isinstance(TestSystem.board.uart.rx, h.PortRef)
+
+    h.elaborate(TestSystem)
     # FIXME: more post-elabortion tests
+
+    assert isinstance(TestSystem.tester, h.Instance)
+    assert isinstance(TestSystem.board, h.Instance)
+    assert not hasattr(TestSystem, "jtag")
+    assert "_tester_uart_tx_board_uart_rx_" in TestSystem.namespace
 
 
 def test_signal_slice1():

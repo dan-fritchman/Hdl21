@@ -33,15 +33,15 @@ class SerdesShared:
     ...  # So far, empty
 
 
-@h.interface
+@h.bundle
 class TxData:
-    """ Transmit Data Interface """
+    """ Transmit Data Bundle """
 
     parallel_data = h.Input(width=10)  # Serial Data Input
     parallel_clk = h.Output()  # Internally-Generated Parallel-Domain Clock
 
 
-@h.interface
+@h.bundle
 class TxIo:
     """ Transmit Lane IO """
 
