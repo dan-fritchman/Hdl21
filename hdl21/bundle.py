@@ -199,7 +199,7 @@ def bundle(cls: type) -> Bundle:
         raise RuntimeError(f"Invalid @hdl21.bundle inheriting from {cls.__bases__}")
 
     # Create the Bundle object
-    intf = Bundle(name=cls.__name__)
+    bundle = Bundle(name=cls.__name__)
 
     protected_names = ["signals", "bundles"]
     dunders = dict()
@@ -215,8 +215,8 @@ def bundle(cls: type) -> Bundle:
             unders[key] = val
         elif key == "Roles":
             # Special-case the upper-cased `Roles`, as it'll often be a class-def
-            setattr(intf, "roles", val)
+            setattr(bundle, "roles", val)
         else:
-            setattr(intf, key, val)
+            setattr(bundle, key, val)
     # And return the bundle
-    return intf
+    return bundle

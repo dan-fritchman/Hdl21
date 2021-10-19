@@ -187,6 +187,9 @@ class InstArray(_Instance):
             return RuntimeError(f"Illegal indexing into {self} with non-integer {idx}")
         raise NotImplementedError  # FIXME: coming soon!
 
+    def __setitem__(self, _idx: Any, _val: Any) -> "InstanceRef":
+        return RuntimeError(f"Illegal indexing into Array {self}")
+
 
 def calls_instantiate(cls: type) -> type:
     """ Decorator which adds 'calls produce `hdl21.Instance`s' functionality. """

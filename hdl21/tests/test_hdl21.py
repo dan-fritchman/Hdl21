@@ -125,14 +125,30 @@ def test_generator3():
     p3b = P3(width=5)
 
     @h.module
-    class HasGeneratorInstances:
+    class HasGen:
         a = g3a(p3a)()
         b = g3b(p3b)()
         c = M()
 
-    h.elaborate(HasGeneratorInstances)
+    # Elaborate the top module
+    h.elaborate(HasGen)
 
-    # FIXME: post-elab tests
+    # Post-elab checks
+    assert isinstance(HasGen.a, h.Instance)
+    assert isinstance(HasGen.a.of, h.GeneratorCall)
+    assert HasGen.a.of.gen is g3a
+    assert HasGen.a.of.arg == P3()
+    assert isinstance(HasGen.a.of.result, h.Module)
+    assert HasGen.a.of.result.name == "g3a(P3(width=1))"
+    assert isinstance(HasGen.b, h.Instance)
+    assert isinstance(HasGen.b.of, h.GeneratorCall)
+    assert isinstance(HasGen.b.of.result, h.Module)
+    assert HasGen.b.of.result.name == "g3b(P3(width=5))"
+    assert HasGen.b.of.gen is g3b
+    assert HasGen.b.of.arg == P3(width=5)
+    assert isinstance(HasGen.c, h.Instance)
+    assert isinstance(HasGen.c.of, h.Module)
+    assert HasGen.c.of is M
 
 
 def test_params1():
@@ -316,7 +332,10 @@ def test_array1():
 
 
 def test_array2():
+    """ Basic Instance-Array Test """
     a = h.Module(name="a")
+    a.inp = h.Port(width=1)
+    a.out = h.Port(width=1)
 
     @h.module
     class HasArray2:
@@ -324,10 +343,20 @@ def test_array2():
         s2 = h.Signal(width=1)
         arr = h.InstArray(a, 8)(inp=s1, out=s2)
 
-    # FIXME: some real checks here plz
+    assert len(HasArray2.instances) == 0
+    assert len(HasArray2.instarrays) == 1
+
+    # Elaborate, flattening arrays along the way
+    h.elaborate(HasArray2)
+
+    # Post-elab checks
+    assert len(HasArray2.instances) == 8
+    assert len(HasArray2.instarrays) == 0
 
 
 def test_cycle1():
+    """ Test cyclical connection-graphs, i.e. a back-to-back pair of instances """
+
     @h.module
     class Thing:
         inp = h.Input()
@@ -348,15 +377,24 @@ def test_cycle1():
     # Doing the same thing in procedural code
     b2 = h.Module(name="BackToBack2")
     b2.t1 = Thing()
-    b2.t2 = Thing(inp=b2.t1.out, out=b2.t1.inp)
-    b2.t1(inp=b2.t2.out, out=b2.t2.inp)
+    b2.t2 = Thing()
+    b2.t2.inp = b2.t1.out
+    b2.t2.out = b2.t1.inp
 
-    assert isinstance(b.t1.inp, h.Signal)
-    assert isinstance(b.t1.out, h.Signal)
-    assert isinstance(b.t2.inp, h.Signal)
-    assert isinstance(b.t2.out, h.Signal)
+    assert isinstance(b2.t1.inp, h.PortRef)
+    assert isinstance(b2.t1.out, h.PortRef)
+    assert isinstance(b2.t2.inp, h.PortRef)
+    assert isinstance(b2.t2.out, h.PortRef)
 
-    # FIXME: better post-elaboration checks that this works out
+    b2 = h.elaborate(b2)
+
+    assert len(b2.instances) == 2
+    assert len(b2.instarrays) == 0
+    assert len(b2.bundles) == 0
+    assert len(b2.ports) == 0
+    assert len(b2.signals) == 2
+    assert "_t2_inp_t1_out_" in b2.signals
+    assert "_t2_out_t1_inp_" in b2.signals
 
 
 def test_gen3():
@@ -374,7 +412,9 @@ def test_gen3():
         # Instantiate that in another Module
         @h.module
         class Outer:
-            inner = Inner()
+            i = h.Signal(width=params.w)
+            o = h.Signal(width=2 * params.w)
+            inner = Inner(i=i, o=o)
 
         # And manipulate that some more too
         Outer.inp = h.Input(width=params.w)
@@ -473,7 +513,7 @@ def test_prim_proto1():
         assert isinstance(inst._resolved, h.primitives.PrimitiveCall)
 
 
-def test_intf1():
+def test_bundle1():
     # Create an bundle
 
     i1 = h.Bundle(name="MyFirstBundle")
@@ -490,7 +530,7 @@ def test_intf1():
     assert ii1.port == False
 
 
-def test_intf2():
+def test_bundle2():
     # Wire up a few Modules via bundles
 
     MySecondBundle = h.Bundle(name="MySecondBundle")
@@ -508,9 +548,9 @@ def test_intf2():
     assert "_i2_i_i1_i_" not in m3.namespace
 
     # First run the "implicit bundles" pass, and see that an explicit one is created
-    from hdl21.elab import ElabPasses
+    from hdl21.elab import ElabPass
 
-    m3 = h.elaborate(m3, passes=[ElabPasses.IMPLICIT_BUNDLES])
+    m3 = h.elaborate(m3, passes=[ElabPass.IMPLICIT_BUNDLES])
     assert isinstance(m3, h.Module)
     assert isinstance(m3.i1, h.Instance)
     assert isinstance(m3.i2, h.Instance)
@@ -524,7 +564,7 @@ def test_intf2():
     assert m3.get("__i2_i_i1_i__s_") in m3.i1.conns.values()
 
 
-def test_intf3():
+def test_bundle3():
     # Test the bundle-definition decorator
 
     @h.bundle
@@ -566,7 +606,7 @@ def test_intf3():
     assert isinstance(m.get("_dp__main_link_n__"), h.Signal)
 
 
-def test_intf4():
+def test_bundle4():
     # Test bundle roles
 
     @h.bundle
@@ -620,9 +660,9 @@ def test_intf4():
     assert "_dev__port__host_port__" not in System.namespace
 
     # First run the "implicit bundles" pass, and see that an explicit one is created
-    from hdl21.elab import ElabPasses
+    from hdl21.elab import ElabPass
 
-    sys = h.elaborate(System, passes=[ElabPasses.IMPLICIT_BUNDLES])
+    sys = h.elaborate(System, passes=[ElabPass.IMPLICIT_BUNDLES])
     assert "_dev__port__host_port__" in sys.namespace
 
     # Now expand the rest of the way, down to scalar signals
@@ -893,7 +933,7 @@ def test_bigger_bundles():
     @h.module
     class Board:
         # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
-        jtag = Jtag(role=MsRoles.SL)
+        jtag = Jtag(role=MsRoles.SL, port=True)
         chip = Chip(jtag=jtag)
         flash = SpiFlash(spi=chip.spi)
 
@@ -926,8 +966,56 @@ def test_bigger_bundles():
     assert isinstance(TestSystem.board.uart.tx, h.PortRef)
     assert isinstance(TestSystem.board.uart.rx, h.PortRef)
 
+    # Run this through elaboration
     h.elaborate(TestSystem)
-    # FIXME: more post-elabortion tests
+
+    # Post-elab checks
+    assert not hasattr(TestSystem, "jtag")
+    assert len(TestSystem.ports) == 0
+    assert len(TestSystem.signals) == 4
+    assert len(TestSystem.instances) == 2
+    assert TestSystem.tester.of is Tester
+    assert TestSystem.board.of is Board
+    assert isinstance(TestSystem.get("_jtag_tck_"), h.Signal)
+    assert isinstance(TestSystem.get("_jtag_tdi_"), h.Signal)
+    assert isinstance(TestSystem.get("_jtag_tdo_"), h.Signal)
+    assert isinstance(TestSystem.get("_jtag_tms_"), h.Signal)
+    assert isinstance(Tester.get("_jtag_tck_"), h.Signal)
+    assert len(Tester.ports) == 4
+    assert len(Tester.signals) == 0
+    assert len(Tester.instances) == 0
+    assert Tester.get("_jtag_tck_").vis == h.signal.Visibility.PORT
+    assert Tester.get("_jtag_tdo_").vis == h.signal.Visibility.PORT
+    assert Tester.get("_jtag_tdi_").vis == h.signal.Visibility.PORT
+    assert Tester.get("_jtag_tms_").vis == h.signal.Visibility.PORT
+    assert len(Board.ports) == 4
+    assert len(Board.signals) == 3  # SPI signals
+    assert len(Board.instances) == 2
+    assert Board.chip.of is Chip
+    assert Board.flash.of is SpiFlash
+    assert Board.get("_jtag_tck_").vis == h.signal.Visibility.PORT
+    assert Board.get("_jtag_tdo_").vis == h.signal.Visibility.PORT
+    assert Board.get("_jtag_tdi_").vis == h.signal.Visibility.PORT
+    assert Board.get("_jtag_tms_").vis == h.signal.Visibility.PORT
+    assert Board.get("__flash_spi_chip_spi__sck_").vis == h.signal.Visibility.INTERNAL
+    assert Board.get("__flash_spi_chip_spi__cs_").vis == h.signal.Visibility.INTERNAL
+    assert Board.get("__flash_spi_chip_spi__dq_").vis == h.signal.Visibility.INTERNAL
+    assert len(Chip.ports) == 7
+    assert len(Chip.signals) == 0
+    assert len(Chip.instances) == 0
+    assert Chip.get("_jtag_tck_").vis == h.signal.Visibility.PORT
+    assert Chip.get("_jtag_tdo_").vis == h.signal.Visibility.PORT
+    assert Chip.get("_jtag_tdi_").vis == h.signal.Visibility.PORT
+    assert Chip.get("_jtag_tms_").vis == h.signal.Visibility.PORT
+    assert Chip.get("_spi_sck_").vis == h.signal.Visibility.PORT
+    assert Chip.get("_spi_cs_").vis == h.signal.Visibility.PORT
+    assert Chip.get("_spi_dq_").vis == h.signal.Visibility.PORT
+    assert len(SpiFlash.ports) == 3
+    assert len(SpiFlash.signals) == 0
+    assert len(SpiFlash.instances) == 0
+    assert SpiFlash.get("_spi_sck_").vis == h.signal.Visibility.PORT
+    assert SpiFlash.get("_spi_cs_").vis == h.signal.Visibility.PORT
+    assert SpiFlash.get("_spi_dq_").vis == h.signal.Visibility.PORT
 
     assert isinstance(TestSystem.tester, h.Instance)
     assert isinstance(TestSystem.board, h.Instance)
@@ -1238,6 +1326,9 @@ def test_instance_mult2():
         a = h.Signal(width=3)
         child = (Child() * 3)(p=a)
 
+    assert len(Parent.instances) == 0
+    assert len(Parent.instarrays) == 1
+
     h.elaborate(Parent)
 
     # Check that array-flattening completed correctly
@@ -1274,4 +1365,149 @@ def test_instance_mult3():
     assert Parent.get("_child_0_").conns["p"] == Parent.a[0]
     assert Parent.get("_child_1_").conns["p"] == Parent.a[1]
     assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
+
+
+def test_instance_mult4():
+    """ Test connecting non-unit-width Arrays """
+
+    @h.module
+    class Child:
+        a = h.Port(width=11)
+        b = h.Port(width=16)
+
+    @h.module
+    class Parent:
+        a = h.Signal(width=11)
+        b = h.Signal(width=48)
+        child = 3 * Child(a=a, b=b)
+
+    h.elaborate(Parent)
+
+    # Check that array-flattening completed correctly
+    assert len(Parent.instances) == 3
+    assert len(Parent.instarrays) == 0
+    assert Parent.get("_child_0_").of is Child
+    assert Parent.get("_child_1_").of is Child
+    assert Parent.get("_child_2_").of is Child
+    assert Parent.get("_child_0_").conns["a"] == Parent.a
+    assert Parent.get("_child_1_").conns["a"] == Parent.a
+    assert Parent.get("_child_2_").conns["a"] == Parent.a
+    assert Parent.get("_child_0_").conns["b"] == Parent.b[0:15]
+    assert Parent.get("_child_1_").conns["b"] == Parent.b[16:31]
+    assert Parent.get("_child_2_").conns["b"] == Parent.b[32:47]
+
+
+def test_netlist_fmts():
+    """ Test netlisting basic types to several formats """
+
+    @h.module
+    class Bot:
+        s = h.Input(width=3)
+        p = h.Output()
+
+    @h.module
+    class Top:
+        s = h.Signal(width=3)
+        p = h.Output()
+        b = Bot(s=s, p=p)
+
+    # Convert to proto
+    ppkg = h.to_proto(Top)
+    assert len(ppkg.modules) == 2
+    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.Bot"
+    assert ppkg.modules[1].name == "hdl21.tests.test_hdl21.Top"
+
+    # Convert the proto-package to a netlist
+    nl = StringIO()
+    h.netlist(ppkg, nl, "spectre")
+    nl = nl.getvalue()
+
+    # Basic checks on its contents
+    assert "subckt Bot" in nl
+    assert "+  s_2 s_1 s_0 p" in nl
+    assert "subckt Top" in nl
+    assert "b\n" in nl
+    assert "+  ( s_2 s_1 s_0 p  )" in nl
+    assert "+  p" in nl
+    assert "+  Bot " in nl
+
+    # Convert the proto-package to another netlist format
+    nl = StringIO()
+    h.netlist(ppkg, nl, "verilog")
+    nl = nl.getvalue()
+
+    # Basic checks on its contents
+    assert "module Bot" in nl
+    assert "input wire [2:0] s," in nl
+    assert "output wire p" in nl
+    assert "endmodule // Bot" in nl
+    assert "module Top" in nl
+    assert ".s(s)" in nl
+    assert ".p(p)" in nl
+    assert "endmodule // Top" in nl
+
+
+def test_bad_width_conn():
+    """ Test invalid connection-widths """
+    c = h.Module(name="c")
+    c.p = h.Port(width=3)  # Width-3 Port
+    q = h.Module(name="q")
+    q.s = h.Signal(width=5)  # Width-5 Signal
+    q.c = c(p=q.s)  # <= Bad connection here
+
+    with pytest.raises(RuntimeError):
+        h.elaborate(q)
+
+
+def test_bad_bundle_conn():
+    """ Test invalid Bundle connections """
+
+    @h.bundle
+    class P:
+        p = h.Signal(width=3)
+
+    @h.bundle
+    class R:
+        z = h.Signal(width=11)
+
+    c = h.Module(name="c")
+    c.p = P(port=True)  # `P`-type Bundle
+    q = h.Module(name="q")
+    q.r = R()  # `R`-type Bundle
+    q.c = c(p=q.r)  # <= Bad connection here
+
+    with pytest.raises(RuntimeError):
+        h.elaborate(q)
+
+
+def test_illegal_module_attrs():
+    """ Test attempting to add illegal attributes """
+    m = h.Module()
+    with pytest.raises(TypeError):
+        m.a = list()
+
+    with pytest.raises(TypeError):
+
+        @h.module
+        class M:
+            a = list()
+
+    @h.module
+    class C:
+        ...
+
+    with pytest.raises(TypeError):
+        C.b = TabError
+
+    # Use combinations of legal attributes
+
+    m = h.Module(name="m")
+    with pytest.raises(TypeError):
+        m.p = 5
+    with pytest.raises(TypeError):
+        m.z = dict(a=h.Signal())
+    with pytest.raises(TypeError):
+        m.q = [h.Port()]
+    with pytest.raises(TypeError):
+        m.p = (h.Input(), h.Output())
 

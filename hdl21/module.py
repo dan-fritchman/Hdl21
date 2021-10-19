@@ -13,20 +13,16 @@ from types import ModuleType
 from typing import Any, Optional, List, Union, get_args, Tuple, Type
 from pydantic.dataclasses import dataclass
 from dataclasses import field
-import dataclasses 
+import dataclasses
 
 # Local imports
+from .params import NoParams, HasNoParams
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, Instance, InstArray
 from .bundle import BundleInstance
 
 # Type-alias for HDL objects storable as `Module` attributes
 ModuleAttr = Union[Signal, Instance, InstArray, BundleInstance]
-
-
-def _is_module_attr(val: Any) -> bool:
-    """ Boolean indication of whether `val` is a valid `hdl21.Module` attribute. """
-    return isinstance(val, get_args(ModuleAttr))
 
 
 @calls_instantiate
@@ -70,15 +66,14 @@ class Module:
             "get",
         ]
         if key in banned:
-            raise RuntimeError(
-                f"Error attempting to over-write protected attribute {key} of Module {self}"
-            )
+            msg = f"Error attempting to over-write protected attribute {key} of Module {self}"
+            raise RuntimeError(msg)
         # Special case(s)
         if key == "name":
             return super().__setattr__(key, val)
 
-        if not _is_module_attr(val):
-            raise TypeError(f"Invalid Module attribute {val} for {self}")
+        # Check it's a valid attribute-type
+        _assert_module_attr(self, val)
 
         # Checks out! Name `val` and add it to our type-based containers.
         val.name = key
@@ -97,21 +92,19 @@ class Module:
         ``` 
         and similar. """
 
-        if not _is_module_attr(val):
-            raise TypeError(f"Invalid Module attribute {val} for {self}")
+        # Check it's a valid attribute-type
+        _assert_module_attr(self, val)
 
         # Now sort out naming. We get two name-sources:
         # (a) the function-argument `name` and (b) the value's `name` attribute.
         # One or the other (and not both) must be set.
-        if name is None and val.name is None:
-            raise RuntimeError(
-                f"Invalid anonymous attribute {val} cannot be added to Module {self.name}"
-            )
-        if name is not None and val.name is not None:
-            raise RuntimeError(
-                f"Conflicting names {name} and {val.name} cannot be added to Module {self.name}"
-            )
-        if name is not None:
+        if name is None and val.name is None:  # Neither set, fail.
+            msg = f"Anonymous attribute {val} cannot be added to Module {self.name}"
+            raise RuntimeError(msg)
+        if name is not None and val.name is not None:  # Both set, fail.
+            msg = f"{val} with conflicting names {name} and {val.name} cannot be added to Module {self.name}"
+            raise RuntimeError(msg)
+        if name is not None:  # One or the other set - great.
             val.name = name
 
         # Now `val.name` is set appropriately.
@@ -138,7 +131,9 @@ class Module:
             self.bundles[val.name] = val
             self.namespace[val.name] = val
         else:
-            raise TypeError(f"Invalid Module attribute {val} for {self}")
+            # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
+            # Nonetheless gotta raise an error if we get here, somehow.
+            self._attr_type_error(val)
 
         # Give it a reference to us
         val._parent_module = self
@@ -163,13 +158,8 @@ class Module:
 
     def __init_subclass__(cls, *_, **__):
         """ Sub-Classing Disable-ization """
-        raise RuntimeError(
-            dedent(
-                f"""\
-                Error attempting to create {cls.__name__}
-                Sub-Typing hdl21.Module is not supported. """
-            )
-        )
+        msg = f"Error attempting to create {cls.__name__}. Sub-Typing {cls} is not supported."
+        raise RuntimeError(msg)
 
     def __repr__(self) -> str:
         if self.name:
@@ -179,7 +169,7 @@ class Module:
     @property
     def bundle_ports(self) -> dict:
         """ Port-Exposed Bundle Instances """
-        return {name: intf for name, intf in self.bundles.items() if intf.port}
+        return {name: bundle for name, bundle in self.bundles.items() if bundle.port}
 
     @property
     def io(self) -> dict:
@@ -220,14 +210,6 @@ class Module:
         if self.name is None:
             raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
         return self._qualname()
-
-    @property
-    def _data(self) -> "_ModuleData":
-        """ Retrieve a `_ModuleData` corresponding to our namespace """
-        if self._updated or self._moduledata is None:
-            ns = self.__getattribute__("namespace")
-            self._moduledata = _ModuleData(name=self.name, namespace=list(ns.values()))
-        return self._moduledata
 
 
 # @dataclass(frozen=True)
@@ -297,7 +279,7 @@ def module(cls: type) -> Module:
     return module
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass  # FIXME
 class ExternalModule:
     """
     # External Module
@@ -312,9 +294,9 @@ class ExternalModule:
     Parameter-values are checked to be instances of `paramtype` at creation time. 
     """
 
-    name: str
-    port_list: List[Signal]
-    paramtype: Type = object
+    name: str  # Module name. Used *directly* when exporting.
+    port_list: List[Signal]  # Ordered Ports
+    paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None
     pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
@@ -331,11 +313,10 @@ class ExternalModule:
             if not p.name:
                 raise ValueError(f"Unnamed Primitive Port {p} for {self.name}")
             if p.vis != Visibility.PORT:
-                raise ValueError(
-                    f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
-                )
+                msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
+                raise ValueError(msg)
 
-    def __call__(self, params) -> "ExternalModuleCall":
+    def __call__(self, params: Any = NoParams) -> "ExternalModuleCall":
         return ExternalModuleCall(module=self, params=params)
 
     @property
@@ -381,7 +362,7 @@ class ExternalModule:
 
 
 @calls_instantiate
-@dataclasses.dataclass
+@dataclasses.dataclass # FIXME
 class ExternalModuleCall:
     """ External Module Call
     A combination of an `ExternalModule` and its Parameter-values,
@@ -393,9 +374,8 @@ class ExternalModuleCall:
     def __post_init_post_parse__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.module.paramtype):
-            raise TypeError(
-                f"Invalid parameters {self.params} for ExternalModule {self.module}. Must be {self.module.paramtype}"
-            )
+            msg = f"Invalid parameters {self.params} for ExternalModule {self.module}. Must be {self.module.paramtype}"
+            raise TypeError(msg)
 
     @property
     def ports(self) -> dict:
@@ -405,9 +385,32 @@ class ExternalModuleCall:
 # ExternalModuleCall.__pydantic_model__.Config.arbitrary_types_allowed = True
 # ExternalModuleCall.__pydantic_model__.update_forward_refs()
 
+""" 
+(Python) Module-Level Functions
+
+Could be methods, but are generally kept here to prevent expanding the `Module` namespace.
+"""
+
+
+def _is_module_attr(val: Any) -> bool:
+    """ Boolean indication of whether `val` is a valid `hdl21.Module` attribute. """
+    return isinstance(val, get_args(ModuleAttr))
+
+
+def _assert_module_attr(m: Module, val: Any) -> None:
+    """ Raise a TypeError if `val` is not a valid Module attribute. """
+    if not _is_module_attr(val):
+        _attr_type_error(m, val)
+
+
+def _attr_type_error(m: Module, val: Any) -> None:
+    """ Raise a `TypeError` with debug info for invalid attribute `val`. """
+    msg = f"Invalid Module attribute {val} of type {type(val)} for {m}. Valid `Module` attributes are of types: {list(get_args(ModuleAttr))}"
+    raise TypeError(msg)
+
 
 def _caller_pymodule():
-    """ Find the first frame not from *this* file
+    """ Find the first python-stack-frame not from *this* file. 
     Sometimes this will be a Generator. That's OK, they'll figure it out. """
     for fr in inspect.stack():
         # Note frames produce an `Optional[ModuleType]`.

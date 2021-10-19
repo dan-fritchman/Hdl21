@@ -5,13 +5,18 @@ Defines the primary `elaborate` method used to flesh out an in-memory `Module` o
 Internally defines and uses a number of hierarchical visitor-classes which traverse the hardware hierarchy, 
 performing one or more transformation-passes.  
 """
+
+# Std-Lib Imports
 import copy
-from enum import Enum, auto
+from enum import Enum
 from types import SimpleNamespace
 from typing import Union, Any, Dict, List, Optional
+
+# PyPi
 from pydantic.dataclasses import dataclass
 
 # Local imports
+from .connect import connectable
 from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
@@ -82,10 +87,10 @@ class _Elaborator:
         # Annotate each BundleInstance so that its pre-elaboration `PortRef` magic is disabled.
         inst._elaborated = True
 
-    def elaborate_bundle(self, intf: Bundle) -> Bundle:
+    def elaborate_bundle(self, bundle: Bundle) -> Bundle:
         """ Elaborate an Bundle """
         # Default: nothing to see here, carry on
-        return intf
+        return bundle
 
     def elaborate_instance_array(self, array: InstArray) -> Instantiable:
         """ Elaborate an InstArray """
@@ -200,16 +205,15 @@ class GeneratorElaborator(_Elaborator):
         return self.elaborate_module(m)
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. First depth-first elaborates its Instances,
-        before creating any implicit Signals and connecting them.
-        Finally checks for connection-consistency with each Instance. """
+        """ Elaborate Module `module`. 
+        Primarily performs flattening of Instance Arrays, 
+        and re-connecting to the resultant flattened instances  """
         if id(module) in self.modules:  # Already done!
             return module
 
         if not module.name:
-            raise RuntimeError(
-                f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
-            )
+            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
+            raise RuntimeError(msg)
 
         # Flatten Instance arrays
         while module.instarrays:
@@ -239,7 +243,7 @@ class GeneratorElaborator(_Elaborator):
                     # Get the target-module port, particularly for its width
                     port = target.get(portname)
                     if not isinstance(port, Signal):
-                        msg = f"Invalid port connection to {portname} in InstArray {array}"
+                        msg = f"Invalid port connection of `{portname}` {port} to {conn} in InstArray {array}"
                         raise RuntimeError(msg)
 
                     if port.width == conn.width:
@@ -247,13 +251,19 @@ class GeneratorElaborator(_Elaborator):
                         for inst in new_insts:
                             inst.connect(portname, conn)
                     elif port.width * array.n == conn.width:
-                        # Each new instance gets a one-wide slice
+                        # Each new instance gets a slice, equal to its own width
                         for k, inst in enumerate(new_insts):
-                            slize = conn[k]
+                            # FIXME: will be impacted by slice-indices changes!
+                            slize = conn[k * port.width : (k + 1) * port.width - 1]
+                            if slize.width != port.width:
+                                msg = f"Width mismatch connecting {slize} to {port}"
+                                raise RuntimeError(msg)
                             inst.connect(portname, slize)
                     else:  # All other values are invalid
                         msg = f"Invalid connection between {conn} of width {conn.width} and {array.n}"
                         raise RuntimeError(msg)
+                elif isinstance(conn, (Slice, Concat)):
+                    raise NotImplementedError  # COMING SOON!
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     raise TypeError(msg)
@@ -262,8 +272,8 @@ class GeneratorElaborator(_Elaborator):
         for inst in module.instances.values():
             self.elaborate_instance(inst)
         # Also visit bundle instances, turning off their pre-elab magic
-        for intf in module.bundles.values():
-            self.elaborate_bundle_instance(intf)
+        for bundle in module.bundles.values():
+            self.elaborate_bundle_instance(bundle)
 
         # Store a reference to the now-expanded Module in our cache, and return it
         self.modules[id(module)] = module
@@ -397,6 +407,7 @@ class BundleFlattener(_Elaborator):
     def elaborate_module(self, module: Module) -> Module:
         """ Flatten Module `module`s Bundles, replacing them with newly-created Signals.
         Reconnect the flattened Signals to any Instances connected to said Bundles. """
+
         if id(module) in self.modules:
             return module  # Already done!
 
@@ -411,22 +422,22 @@ class BundleFlattener(_Elaborator):
 
         while module.bundles:
             # Remove the bundle-instance from the module
-            name, intf = module.bundles.popitem()
+            name, bundle = module.bundles.popitem()
             module.namespace.pop(name)
             # Flatten it
-            flat = self.flatten_bundle(intf)
+            flat = self.flatten_bundle(bundle)
             replacements[name] = flat
 
             # And add each flattened Signal
             for sig in flat.signals.values():
-                signame = self.flatname([intf.name, sig.name], avoid=module.namespace)
-                if intf.port:
+                signame = self.flatname([bundle.name, sig.name], avoid=module.namespace)
+                if bundle.port:
                     vis_ = Visibility.PORT
-                    if intf.role is None:
+                    if bundle.role is None:
                         dir_ = PortDir.NONE
-                    elif intf.role == sig.src:
+                    elif bundle.role == sig.src:
                         dir_ = PortDir.OUTPUT
-                    elif intf.role == sig.dest:
+                    elif bundle.role == sig.dest:
                         dir_ = PortDir.INPUT
                     else:
                         dir_ = PortDir.NONE
@@ -443,7 +454,7 @@ class BundleFlattener(_Elaborator):
             # Replace connections to any connected instances
             for inst in module.instances.values():
                 for portname in list(inst.conns.keys()):
-                    if inst.conns[portname] is intf:
+                    if inst.conns[portname] is bundle:
                         inst_replacements = self.replacements[id(inst._resolved)]
                         inst_flat = inst_replacements[portname]
                         for flatname, flatsig in flat.signals.items():
@@ -456,11 +467,11 @@ class BundleFlattener(_Elaborator):
             # i = SomeBundle()    # Theoretical Bundle with signal-attribute `s`
             # x = SomeModule(s=i.s)  # Connects `PortRef` `i.s`
             # FIXME: this needs to happen for hierarchical bundles too
-            for portref in intf.portrefs.values():
+            for portref in bundle.portrefs.values():
                 flatsig = flat.signals.get(portref.portname, None)
                 if flatsig is None:
                     raise RuntimeError(
-                        f"Port {portref.portname} not found in Bundle {intf.of.name}"
+                        f"Port {portref.portname} not found in Bundle {bundle.of.name}"
                     )
                 # Walk through our Instances, replacing any connections to this `PortRef` with `flatsig`
                 for inst in module.instances.values():
@@ -472,20 +483,22 @@ class BundleFlattener(_Elaborator):
         self.replacements[id(module)] = replacements
         return module
 
-    def flatten_bundle(self, intf: BundleInstance) -> FlatBundleInst:
-        """ Convert nested Bundle `intf` into a flattened `FlatBundleInst` of scalar Signals. 
+    def flatten_bundle(self, bundle: BundleInstance) -> FlatBundleInst:
+        """ Convert nested Bundle `bundle` into a flattened `FlatBundleInst` of scalar Signals. 
         Flattening and the underlying Signal-cloning is applied to each Bundle *instance*, 
         so each Module-visit need not re-clone the signals of the returned `FlatBundleInst`. """
 
-        # Create the flattened version, initializing it with `intf`s scalar Signals
+        # Create the flattened version, initializing it with `bundle`s scalar Signals
         flat = FlatBundleInst(
-            inst_name=intf.name, src=intf.of, signals=copy.deepcopy(intf.of.signals)
+            inst_name=bundle.name,
+            src=bundle.of,
+            signals=copy.deepcopy(bundle.of.signals),
         )
         # Depth-first walk any bundle-instance's definitions, flattening them
-        for i in intf.of.bundles.values():
+        for i in bundle.of.bundles.values():
             iflat = self.flatten_bundle(i)
             for sig in iflat.signals.values():
-                # Rename the signal, and store it in our flat-intf
+                # Rename the signal, and store it in our flat-bundle
                 signame = self.flatname([i.name, sig.name], avoid=flat.signals)
                 sig.name = signame
                 flat.signals[signame] = sig
@@ -581,6 +594,119 @@ class ImplicitBundles(_Elaborator):
         return module
 
 
+class BundleConnTypes(_Elaborator):
+    """ Check for connection-type-validity on each Bundle-valued connection. 
+    Note this stage *does not* perform port-direction checking or modification. 
+    """
+
+    def elaborate_module(self, module: Module) -> Module:
+        """ Check each Instance's connections in `module` """
+
+        # Depth-first traverse instances, checking them first.
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+
+        # And then check each Instance
+        for inst in module.instances.values():
+            self.check_instance(module, inst)
+
+        # No errors means it checked out, return the Module unchanged
+        return module
+
+    def check_instance(self, module: Module, inst: Instance) -> None:
+        """ Check the connections of `inst` in parent `module` """
+
+        # Get the Instance's resolve target, and its bundle-valued IO
+        targ = inst._resolved
+        if hasattr(targ, "bundle_ports"):
+            io = copy.copy(targ.bundle_ports)
+        else:
+            # Still check on no-bundle Instances (e.g. Primitives),
+            # Mostly to ensure no *connections* are errantly Bundle-valued.
+            io = []
+        # And filter out the bundle-valued connections
+        conns = {k: v for k, v in inst.conns.items() if isinstance(v, BundleInstance)}
+
+        for portname, conn in conns.items():
+            # Pop the port from our list
+            port = io.pop(portname, None)
+            if port is None:
+                msg = f"Connection to invalid bundle port {portname} on {inst.name} in {module.name}"
+                raise RuntimeError(msg)
+
+            if (  # Check its Bundle type
+                not isinstance(conn, BundleInstance)
+                or not isinstance(port, BundleInstance)
+                or conn.of is not port.of
+            ):
+                msg = f"Invalid Bundle Connection between {conn} and {port} on {inst.name} in {module.name}"
+                raise RuntimeError(msg)
+
+        if len(io):  # Check for anything lef over
+            msg = f"Unconnected Bundle Port(s) {io} on {inst.name} in {module.name}"
+            raise RuntimeError(msg)
+
+
+class SignalConnTypes(_Elaborator):
+    """ Check for connection-type-validity between each Instance and its connections. 
+    "Connection type validity" includes: 
+    * All connections must be Signal-like or Bundle-like
+    * Signal-valued ports must be connected to Signals of the same width
+    * Bundle-valued ports must be connected to Bundles of the same type 
+    Note this stage may be run after Bundles have been flattened, in which case the Bundle-checks perform no-ops. 
+    They are left in place nonetheless. 
+    Note this stage *does not* perform port-direction checking or modification. 
+    """
+
+    def elaborate_module(self, module: Module) -> Module:
+        """ Check each Instance's connections in `module` """
+
+        # Depth-first traverse instances, checking them first.
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+
+        # And then check each Instance
+        for inst in module.instances.values():
+            self.check_instance(module, inst)
+
+        # No errors means it checked out, return the Module unchanged
+        return module
+
+    def check_instance(self, module: Module, inst: Instance) -> None:
+        """ Check the connections of `inst` in parent `module` """
+
+        # Get the Instance's resolve target, and its IO
+        targ = inst._resolved
+        # FIXME: make this `io` method Module-like-wide
+        io = copy.copy(targ.ports)
+        if hasattr(targ, "bundle_ports"):
+            io.update(copy.copy(targ.bundle_ports))
+
+        for portname, conn in inst.conns.items():
+            # Pop the port from our list
+            port = io.pop(portname, None)
+            if port is None:
+                msg = f"Connection to invalid port {portname} on {inst.name} in {module.name}"
+                raise RuntimeError(msg)
+            # Checks
+            if isinstance(conn, BundleInstance):
+                # Identity-check the target Bundle
+                if conn.of is not port.of:
+                    msg = f"Invalid Bundle Connection between {conn} and {port} on {inst.name} in {module.name}"
+                    raise RuntimeError(msg)
+            elif connectable(conn):
+                # For scalar Signals, check that widths match up
+                if conn.width != port.width:
+                    msg = f"Invalid Connection between {conn} of width {conn.width} and {port} of width {port.width} on {inst.name} in {module.name}"
+                    raise RuntimeError(msg)
+            else:
+                msg = f"Invalid connection {conn} on {inst.name} in {module.name}"
+                raise TypeError(msg)
+
+        if len(io):  # Check for anything lef over
+            raise RuntimeError(f"Unconnected IO {io} on {inst.name} in {module.name}")
+
+
 class SetList:
     """ A common combination of a hash-set and ordered list of the same items. 
     Used for keeping ordered items while maintaining quick membership testing. """
@@ -602,7 +728,7 @@ class SetList:
         return self.list
 
 
-class ElabPasses(Enum):
+class ElabPass(Enum):
     """ Enumerated Elaborator Passes
     Each has a `value` attribute which is an Elaborator-pass, 
     and a `name` attribute which is a (Python-enum-style) capitalized name. 
@@ -610,8 +736,16 @@ class ElabPasses(Enum):
 
     RUN_GENERATORS = GeneratorElaborator
     IMPLICIT_BUNDLES = ImplicitBundles
+    BUNDLE_CONN_TYPES = BundleConnTypes
     FLATTEN_BUNDLES = BundleFlattener
     IMPLICIT_SIGNALS = ImplicitSignals
+    SIGNAL_CONN_TYPES = SignalConnTypes
+
+    @classmethod
+    def default(cls) -> List["ElabPass"]:
+        """ Return the default ordered Elaborator Passes. """
+        # Returns each in definition order
+        return list(ElabPass)
 
 
 def elab_all(top: Elabables, **kwargs) -> List[Elabable]:
@@ -646,11 +780,11 @@ def elaborate(
     top: Elabable,
     *,
     ctx: Optional[Context] = None,
-    passes: Optional[List[ElabPasses]] = None,
+    passes: Optional[List[ElabPass]] = None,
 ) -> Module:
     """ In-Memory Elaboration of Generator or Module `top`. 
     
-    Optional `passes` lists the ordered `ElabPass`es to run. By default it runs all passes in the `ElabPass` enumeration, in definition order. 
+    Optional `passes` lists the ordered `ElabPass`es to run. By default it runs the order specified by `ElabPass.default`. 
     Note the order of passes is important; many depend upon others to have completed before they can successfully run. 
 
     Optional `Context` field `ctx` is not yet supported. 
@@ -660,7 +794,7 @@ def elaborate(
     """
     # Expand default values
     ctx = ctx or Context()
-    passes = passes or ElabPasses
+    passes = passes or ElabPass.default()
 
     # Pass `top` through each of our passes, in order
     res = top
