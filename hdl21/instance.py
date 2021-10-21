@@ -182,12 +182,10 @@ class InstArray(_Instance):
         self.n = n
         super().__init__(of=of, name=name)
 
-    def __getitem__(self, idx: int) -> "InstanceRef":
-        if not isinstance(idx, int):
-            return RuntimeError(f"Illegal indexing into {self} with non-integer {idx}")
-        raise NotImplementedError  # FIXME: coming soon!
+    def __getitem__(self, idx: int):
+        return RuntimeError(f"Illegal indexing into Array {self}")
 
-    def __setitem__(self, _idx: Any, _val: Any) -> "InstanceRef":
+    def __setitem__(self, _idx: Any, _val: Any):
         return RuntimeError(f"Illegal indexing into Array {self}")
 
 

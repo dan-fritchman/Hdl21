@@ -322,10 +322,6 @@ class ImplicitSignals(_Elaborator):
 
         # Now work through expanding any implicit-ish connections, such as those from port to port.
         # Start by building an adjacency graph of every `PortRef` that's been instantiated
-
-        if module.name == "TestSystem":
-            print(5)
-
         portconns = dict()
         for inst in module.instances.values():
             for port, conn in inst.conns.items():
@@ -548,10 +544,10 @@ class BundleFlattener(_Elaborator):
                         # Destructure the hierarchical and flat versions that come back
                         _hier_bundle_port, flat_bundle_port = t
                         # Replace the connection to each flattened Signal
-                        for path, flat_port in flat_bundle_port.signals.items():
+                        for pathstr, flat_port in flat_bundle_port.signals.items():
                             # Note `flat_port.name` will be `inst`'s name, i.e. `_mybus_clk_`
                             # Whereas its `path` will line up to `flat`'s namespace, i.e. `['bus']`
-                            inst.conns[flat_port.name] = flat.signals[path]
+                            inst.conns[flat_port.name] = flat.signals[pathstr]
                         inst.conns.pop(portname)
 
             # Re-connect any PortRefs that `bundle` has given out, as in the form:
@@ -572,22 +568,25 @@ class BundleFlattener(_Elaborator):
 
         # Go through each Instance, replacing `AnonymousBundle`s with their referents
         for inst in module.instances.values():
-            for portname, conn in inst.conns.items():
+            for portname in list(inst.conns.keys()):
+                conn = inst.conns[portname]
                 if isinstance(conn, AnonymousBundle):
-                    raise NotImplementedError
-                    # Get the flattened version
-                    flat = self.anon_replacements.get(id(conn), None)
-                    if flat is None:
-                        flat = self.flatten_anonymous_bundle(conn)
-                        self.anon_replacements[id(conn)] = flat
-                    for flatname, flatsig in flat.signals.items():
-                        inst_signame = inst_flat.signals[flatname].name
-                        inst.conns[inst_signame] = flatsig
-                    # And remove the connection to the original Bundle(s)
+                    # FIXME: hierarchical `AnonymousBundle`s are not handled here
+                    if len(conn.bundles):
+                        raise NotImplementedError(f"Nested AnonymousBundle")
+                    # `module.portname` must be in our `module_attrs` by now (or fail)
+                    t = self.module_attrs.get((id(inst._resolved), portname), None)
+                    if t is None:
+                        msg = f"Invalid Port Connection to {portname} on Instance {inst} in Module {module}"
+                        raise RuntimeError(msg)
+                    # Destructure the hierarchical and flat versions that come back
+                    _hier_bundle_port, flat_bundle_port = t
+                    # Replace the connection to each flattened Signal
+                    for pathstr, flat_port in flat_bundle_port.signals.items():
+                        # Note `flat_port.name` will be `inst`'s name, i.e. `_mybus_clk_`
+                        # Whereas its `path` will line up to `flat`'s namespace, i.e. `['bus']`
+                        inst.conns[flat_port.name] = conn.signals[pathstr.val]
                     inst.conns.pop(portname)
-
-                    raise NotImplementedError
-                    # inst.conns[portname] = conn_replacements[conn.name][portname]
 
         # Store results in our cache
         self.modules[id(module)] = module

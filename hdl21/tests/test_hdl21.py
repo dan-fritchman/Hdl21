@@ -881,23 +881,20 @@ def test_proto_roundtrip2():
     assert "i1_i_i0_o" in M2.signals
 
 
-@pytest.mark.xfail(reason="FIXME: AnonymousBundle in progress")
 def test_bigger_bundles():
     """ Test a slightly more elaborate Bundle-based system """
 
-    class MsRoles(Enum):
-        # A two-role bus, in which one named "MS" is nominally dictates the action,
-        # and the other named "SL" nominally does what it says to do.
-        MS = auto()
-        SL = auto()
+    class HostDevice(Enum):
+        HOST = auto()
+        DEVICE = auto()
 
     @h.bundle
     class Jtag:
         # Jtag Bundle
 
-        roles = MsRoles
-        tck, tdi, tms = h.Signals(3, src=roles.MS, dest=roles.SL)
-        tdo = h.Signal(src=roles.SL, dest=roles.MS)
+        roles = HostDevice
+        tck, tdi, tms = h.Signals(3, src=roles.HOST, dest=roles.DEVICE)
+        tdo = h.Signal(src=roles.DEVICE, dest=roles.HOST)
 
     @h.bundle
     class Uart:
@@ -915,26 +912,26 @@ def test_bigger_bundles():
     @h.bundle
     class Spi:
         # Spi Bundle
-        roles = MsRoles
-        sck, cs = h.Signals(2, src=roles.MS, dest=roles.SL)
-        dq = h.Signal(src=roles.SL, dest=roles.MS, width=4)
+        roles = HostDevice
+        sck, cs = h.Signals(2, src=roles.HOST, dest=roles.DEVICE)
+        dq = h.Signal(src=roles.DEVICE, dest=roles.HOST, width=4)
 
     @h.module
     class Chip:
-        spi = Spi(role=MsRoles.MS, port=True)
-        jtag = Jtag(role=MsRoles.SL, port=True)
+        spi = Spi(role=HostDevice.HOST, port=True)
+        jtag = Jtag(role=HostDevice.DEVICE, port=True)
         uart = Uart(role=Uart.Roles.ME, port=True)
         ...  # Actual internal content, which likely connects these down *many* levels of hierarchy
 
     @h.module
     class SpiFlash:
         # A typical flash memory with a SPI port
-        spi = Spi(role=MsRoles.SL, port=True)
+        spi = Spi(role=HostDevice.DEVICE, port=True)
 
     @h.module
     class Board:
         # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
-        jtag = Jtag(role=MsRoles.SL, port=True)
+        jtag = Jtag(role=HostDevice.DEVICE, port=True)
         uart = Uart(role=Uart.Roles.ME, port=True)
 
         chip = Chip(jtag=jtag, uart=uart)
@@ -943,7 +940,7 @@ def test_bigger_bundles():
     @h.module
     class Tester:
         # A typical test-widget with a JTAG port
-        jtag = Jtag(role=MsRoles.MS, port=True)
+        jtag = Jtag(role=HostDevice.HOST, port=True)
         uart = Uart(role=Uart.Roles.ME, port=True)
 
     @h.module
@@ -955,11 +952,9 @@ def test_bigger_bundles():
         board = Board(jtag=jtag)
 
         # Connect UART, swapping `rx` and `tx`
-        uart_tester_to_board, uart_board_to_tester = h.Signals(2)
-        board.uart = h.AnonymousBundle(tx=uart_board_to_tester, rx=uart_tester_to_board)
-        tester.uart = h.AnonymousBundle(
-            rx=uart_board_to_tester, tx=uart_tester_to_board
-        )
+        u0, u1 = h.Signals(2)
+        board.uart = h.AnonymousBundle(tx=u0, rx=u1)
+        tester.uart = h.AnonymousBundle(rx=u0, tx=u1)
 
     assert isinstance(TestSystem.jtag, h.BundleInstance)
     assert isinstance(TestSystem.tester, h.Instance)
@@ -976,25 +971,39 @@ def test_bigger_bundles():
     h.elaborate(TestSystem)
 
     # Post-elab checks
-    assert not hasattr(TestSystem, "jtag")
-    assert len(TestSystem.ports) == 0
-    assert len(TestSystem.signals) == 4
-    assert len(TestSystem.instances) == 2
+    # TestSystem
+    assert isinstance(TestSystem.tester, h.Instance)
+    assert isinstance(TestSystem.board, h.Instance)
     assert TestSystem.tester.of is Tester
     assert TestSystem.board.of is Board
+    assert not hasattr(TestSystem, "jtag")
+    assert not hasattr(TestSystem, "uart")
+    assert "u0" in TestSystem.namespace
+    assert "u1" in TestSystem.namespace
+    assert len(TestSystem.ports) == 0
+    assert len(TestSystem.signals) == 6
+    assert len(TestSystem.instances) == 2
+    assert isinstance(TestSystem.get("u0"), h.Signal)
+    assert isinstance(TestSystem.get("u1"), h.Signal)
     assert isinstance(TestSystem.get("jtag_tck"), h.Signal)
     assert isinstance(TestSystem.get("jtag_tdi"), h.Signal)
     assert isinstance(TestSystem.get("jtag_tdo"), h.Signal)
     assert isinstance(TestSystem.get("jtag_tms"), h.Signal)
-    assert isinstance(Tester.get("jtag_tck"), h.Signal)
-    assert len(Tester.ports) == 4
+
+    # Tester
+    assert len(Tester.ports) == 6
     assert len(Tester.signals) == 0
     assert len(Tester.instances) == 0
+    assert isinstance(Tester.get("jtag_tck"), h.Signal)
     assert Tester.get("jtag_tck").vis == h.signal.Visibility.PORT
     assert Tester.get("jtag_tdo").vis == h.signal.Visibility.PORT
     assert Tester.get("jtag_tdi").vis == h.signal.Visibility.PORT
     assert Tester.get("jtag_tms").vis == h.signal.Visibility.PORT
-    assert len(Board.ports) == 4
+    assert Tester.get("uart_tx").vis == h.signal.Visibility.PORT
+    assert Tester.get("uart_rx").vis == h.signal.Visibility.PORT
+
+    # Board
+    assert len(Board.ports) == 6
     assert len(Board.signals) == 3  # SPI signals
     assert len(Board.instances) == 2
     assert Board.chip.of is Chip
@@ -1003,10 +1012,14 @@ def test_bigger_bundles():
     assert Board.get("jtag_tdo").vis == h.signal.Visibility.PORT
     assert Board.get("jtag_tdi").vis == h.signal.Visibility.PORT
     assert Board.get("jtag_tms").vis == h.signal.Visibility.PORT
+    assert Board.get("uart_tx").vis == h.signal.Visibility.PORT
+    assert Board.get("uart_rx").vis == h.signal.Visibility.PORT
     assert Board.get("flash_spi_chip_spi_sck").vis == h.signal.Visibility.INTERNAL
     assert Board.get("flash_spi_chip_spi_cs").vis == h.signal.Visibility.INTERNAL
     assert Board.get("flash_spi_chip_spi_dq").vis == h.signal.Visibility.INTERNAL
-    assert len(Chip.ports) == 7
+
+    # Chip
+    assert len(Chip.ports) == 9
     assert len(Chip.signals) == 0
     assert len(Chip.instances) == 0
     assert Chip.get("jtag_tck").vis == h.signal.Visibility.PORT
@@ -1016,17 +1029,16 @@ def test_bigger_bundles():
     assert Chip.get("spi_sck").vis == h.signal.Visibility.PORT
     assert Chip.get("spi_cs").vis == h.signal.Visibility.PORT
     assert Chip.get("spi_dq").vis == h.signal.Visibility.PORT
+    assert Chip.get("uart_tx").vis == h.signal.Visibility.PORT
+    assert Chip.get("uart_rx").vis == h.signal.Visibility.PORT
+
+    # SpiFlash
     assert len(SpiFlash.ports) == 3
     assert len(SpiFlash.signals) == 0
     assert len(SpiFlash.instances) == 0
     assert SpiFlash.get("spi_sck").vis == h.signal.Visibility.PORT
     assert SpiFlash.get("spi_cs").vis == h.signal.Visibility.PORT
     assert SpiFlash.get("spi_dq").vis == h.signal.Visibility.PORT
-
-    assert isinstance(TestSystem.tester, h.Instance)
-    assert isinstance(TestSystem.board, h.Instance)
-    assert not hasattr(TestSystem, "jtag")
-    assert "tester_uart_tx_board_uart_rx" in TestSystem.namespace
 
 
 def test_signal_slice1():

@@ -240,10 +240,12 @@ class AnonymousBundle:
 
         if isinstance(val, Signal):
             self.signals[name] = val
-        elif isinstance(val, BundleInstance):
-            self.bundles[name] = val
-        elif isinstance(val, AnonymousBundle):
-            self.anons[name] = val
+        elif isinstance(val, (BundleInstance, AnonymousBundle)):
+            raise NotImplementedError(f"Nested Anonymous Bundle")
+        # elif isinstance(val, BundleInstance): # FIXME: NO
+        #     self.bundles[name] = val
+        # elif isinstance(val, AnonymousBundle):
+        #     self.anons[name] = val
         # elif isinstance(val, PortRef): # FIXME: whether to enable these. Currently not supported.
         #     self.portrefs[name] = val
         else:
