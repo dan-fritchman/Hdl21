@@ -2,7 +2,7 @@
 # hdl21 Unit Tests 
 """
 
-import pytest
+import copy, pytest
 from io import StringIO
 from types import SimpleNamespace
 from enum import Enum, EnumMeta, auto
@@ -393,8 +393,8 @@ def test_cycle1():
     assert len(b2.bundles) == 0
     assert len(b2.ports) == 0
     assert len(b2.signals) == 2
-    assert "_t2_inp_t1_out_" in b2.signals
-    assert "_t2_out_t1_inp_" in b2.signals
+    assert "t2_inp_t1_out" in b2.signals
+    assert "t2_out_t1_inp" in b2.signals
 
 
 def test_gen3():
@@ -545,7 +545,7 @@ def test_bundle2():
     m3 = h.Module(name="M3")
     m3.i1 = m1()
     m3.i2 = m2(i=m3.i1.i)
-    assert "_i2_i_i1_i_" not in m3.namespace
+    assert "i2_i_i1_i" not in m3.namespace
 
     # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPass
@@ -554,14 +554,14 @@ def test_bundle2():
     assert isinstance(m3, h.Module)
     assert isinstance(m3.i1, h.Instance)
     assert isinstance(m3.i2, h.Instance)
-    assert "_i2_i_i1_i_" in m3.namespace
+    assert "i2_i_i1_i" in m3.namespace
 
     # Now elaborate it the rest of the way, to scalar signals
     m3 = h.elaborate(m3)
-    assert "_i2_i_i1_i_" not in m3.namespace
-    assert "__i2_i_i1_i__s_" in m3.namespace
-    assert isinstance(m3.get("__i2_i_i1_i__s_"), h.Signal)
-    assert m3.get("__i2_i_i1_i__s_") in m3.i1.conns.values()
+    assert "i2_i_i1_i" not in m3.namespace
+    assert "i2_i_i1_i_s" in m3.namespace
+    assert isinstance(m3.get("i2_i_i1_i_s"), h.Signal)
+    assert m3.get("i2_i_i1_i_s") in m3.i1.conns.values()
 
 
 def test_bundle3():
@@ -601,9 +601,9 @@ def test_bundle3():
     assert not hasattr(m, "dp")
     assert len(m.bundles) == 0
     assert len(m.signals) == 3
-    assert isinstance(m.get("_dp_aux_"), h.Signal)
-    assert isinstance(m.get("_dp__main_link_p__"), h.Signal)
-    assert isinstance(m.get("_dp__main_link_n__"), h.Signal)
+    assert isinstance(m.get("dp_aux"), h.Signal)
+    assert isinstance(m.get("dp_main_link_p"), h.Signal)
+    assert isinstance(m.get("dp_main_link_n"), h.Signal)
 
 
 def test_bundle4():
@@ -641,40 +641,40 @@ def test_bundle4():
     @h.module
     class Host:
         # A thing with a HOST-roled bundle-port
-        port_ = HasRoles(port=True, role=HasRoles.Roles.HOST)
+        hr = HasRoles(port=True, role=HasRoles.Roles.HOST)
 
     @h.module
     class Device:
         # A thing with a DEVICE-roled bundle-port
-        port_ = HasRoles(port=True, role=HasRoles.Roles.DEVICE)
+        hr = HasRoles(port=True, role=HasRoles.Roles.DEVICE)
 
     @h.module
     class System:
         # Parent system-module including a host and device
         host = Host()
-        dev_ = Device(port_=host.port_)
+        devc = Device(hr=host.hr)
 
     assert isinstance(System, h.Module)
     assert isinstance(System.host, h.Instance)
-    assert isinstance(System.dev_, h.Instance)
-    assert "_dev__port__host_port__" not in System.namespace
+    assert isinstance(System.devc, h.Instance)
+    assert "devc_hr_host_hr" not in System.namespace
 
     # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPass
 
     sys = h.elaborate(System, passes=[ElabPass.IMPLICIT_BUNDLES])
-    assert "_dev__port__host_port__" in sys.namespace
+    assert "devc_hr_host_hr" in sys.namespace
 
     # Now expand the rest of the way, down to scalar signals
     # Check that bundle went away, and its constituent signals replaced it
     sys = h.elaborate(sys)
-    assert "_dev__port__host_port__" not in sys.namespace
-    assert "__dev__port__host_port___tx_" in sys.namespace
-    assert "__dev__port__host_port___rx_" in sys.namespace
-    assert "__dev__port__host_port____txd_p__" in sys.namespace
-    assert "__dev__port__host_port____txd_n__" in sys.namespace
-    assert "__dev__port__host_port____rxd_p__" in sys.namespace
-    assert "__dev__port__host_port____rxd_n__" in sys.namespace
+    assert "devc_hr_host_hr" not in sys.namespace
+    assert "devc_hr_host_hr_tx" in sys.namespace
+    assert "devc_hr_host_hr_rx" in sys.namespace
+    assert "devc_hr_host_hr_txd_p" in sys.namespace
+    assert "devc_hr_host_hr_txd_n" in sys.namespace
+    assert "devc_hr_host_hr_rxd_p" in sys.namespace
+    assert "devc_hr_host_hr_rxd_n" in sys.namespace
 
 
 def test_proto1():
@@ -878,9 +878,10 @@ def test_proto_roundtrip2():
     assert len(M2.ports) == 3
     assert len(M2.signals) == 2
     assert "s" in M2.signals
-    assert "_i1_i_i0_o_" in M2.signals
+    assert "i1_i_i0_o" in M2.signals
 
 
+@pytest.mark.xfail(reason="FIXME: AnonymousBundle in progress")
 def test_bigger_bundles():
     """ Test a slightly more elaborate Bundle-based system """
 
@@ -934,7 +935,9 @@ def test_bigger_bundles():
     class Board:
         # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
         jtag = Jtag(role=MsRoles.SL, port=True)
-        chip = Chip(jtag=jtag)
+        uart = Uart(role=Uart.Roles.ME, port=True)
+
+        chip = Chip(jtag=jtag, uart=uart)
         flash = SpiFlash(spi=chip.spi)
 
     @h.module
@@ -951,9 +954,12 @@ def test_bigger_bundles():
         tester = Tester(jtag=jtag)
         board = Board(jtag=jtag)
 
-        # Do UART TX/RX interconnect-swapping
-        tester.uart.tx = board.uart.rx
-        tester.uart.rx = board.uart.tx
+        # Connect UART, swapping `rx` and `tx`
+        uart_tester_to_board, uart_board_to_tester = h.Signals(2)
+        board.uart = h.AnonymousBundle(tx=uart_board_to_tester, rx=uart_tester_to_board)
+        tester.uart = h.AnonymousBundle(
+            rx=uart_board_to_tester, tx=uart_tester_to_board
+        )
 
     assert isinstance(TestSystem.jtag, h.BundleInstance)
     assert isinstance(TestSystem.tester, h.Instance)
@@ -976,51 +982,51 @@ def test_bigger_bundles():
     assert len(TestSystem.instances) == 2
     assert TestSystem.tester.of is Tester
     assert TestSystem.board.of is Board
-    assert isinstance(TestSystem.get("_jtag_tck_"), h.Signal)
-    assert isinstance(TestSystem.get("_jtag_tdi_"), h.Signal)
-    assert isinstance(TestSystem.get("_jtag_tdo_"), h.Signal)
-    assert isinstance(TestSystem.get("_jtag_tms_"), h.Signal)
-    assert isinstance(Tester.get("_jtag_tck_"), h.Signal)
+    assert isinstance(TestSystem.get("jtag_tck"), h.Signal)
+    assert isinstance(TestSystem.get("jtag_tdi"), h.Signal)
+    assert isinstance(TestSystem.get("jtag_tdo"), h.Signal)
+    assert isinstance(TestSystem.get("jtag_tms"), h.Signal)
+    assert isinstance(Tester.get("jtag_tck"), h.Signal)
     assert len(Tester.ports) == 4
     assert len(Tester.signals) == 0
     assert len(Tester.instances) == 0
-    assert Tester.get("_jtag_tck_").vis == h.signal.Visibility.PORT
-    assert Tester.get("_jtag_tdo_").vis == h.signal.Visibility.PORT
-    assert Tester.get("_jtag_tdi_").vis == h.signal.Visibility.PORT
-    assert Tester.get("_jtag_tms_").vis == h.signal.Visibility.PORT
+    assert Tester.get("jtag_tck").vis == h.signal.Visibility.PORT
+    assert Tester.get("jtag_tdo").vis == h.signal.Visibility.PORT
+    assert Tester.get("jtag_tdi").vis == h.signal.Visibility.PORT
+    assert Tester.get("jtag_tms").vis == h.signal.Visibility.PORT
     assert len(Board.ports) == 4
     assert len(Board.signals) == 3  # SPI signals
     assert len(Board.instances) == 2
     assert Board.chip.of is Chip
     assert Board.flash.of is SpiFlash
-    assert Board.get("_jtag_tck_").vis == h.signal.Visibility.PORT
-    assert Board.get("_jtag_tdo_").vis == h.signal.Visibility.PORT
-    assert Board.get("_jtag_tdi_").vis == h.signal.Visibility.PORT
-    assert Board.get("_jtag_tms_").vis == h.signal.Visibility.PORT
-    assert Board.get("__flash_spi_chip_spi__sck_").vis == h.signal.Visibility.INTERNAL
-    assert Board.get("__flash_spi_chip_spi__cs_").vis == h.signal.Visibility.INTERNAL
-    assert Board.get("__flash_spi_chip_spi__dq_").vis == h.signal.Visibility.INTERNAL
+    assert Board.get("jtag_tck").vis == h.signal.Visibility.PORT
+    assert Board.get("jtag_tdo").vis == h.signal.Visibility.PORT
+    assert Board.get("jtag_tdi").vis == h.signal.Visibility.PORT
+    assert Board.get("jtag_tms").vis == h.signal.Visibility.PORT
+    assert Board.get("flash_spi_chip_spi_sck").vis == h.signal.Visibility.INTERNAL
+    assert Board.get("flash_spi_chip_spi_cs").vis == h.signal.Visibility.INTERNAL
+    assert Board.get("flash_spi_chip_spi_dq").vis == h.signal.Visibility.INTERNAL
     assert len(Chip.ports) == 7
     assert len(Chip.signals) == 0
     assert len(Chip.instances) == 0
-    assert Chip.get("_jtag_tck_").vis == h.signal.Visibility.PORT
-    assert Chip.get("_jtag_tdo_").vis == h.signal.Visibility.PORT
-    assert Chip.get("_jtag_tdi_").vis == h.signal.Visibility.PORT
-    assert Chip.get("_jtag_tms_").vis == h.signal.Visibility.PORT
-    assert Chip.get("_spi_sck_").vis == h.signal.Visibility.PORT
-    assert Chip.get("_spi_cs_").vis == h.signal.Visibility.PORT
-    assert Chip.get("_spi_dq_").vis == h.signal.Visibility.PORT
+    assert Chip.get("jtag_tck").vis == h.signal.Visibility.PORT
+    assert Chip.get("jtag_tdo").vis == h.signal.Visibility.PORT
+    assert Chip.get("jtag_tdi").vis == h.signal.Visibility.PORT
+    assert Chip.get("jtag_tms").vis == h.signal.Visibility.PORT
+    assert Chip.get("spi_sck").vis == h.signal.Visibility.PORT
+    assert Chip.get("spi_cs").vis == h.signal.Visibility.PORT
+    assert Chip.get("spi_dq").vis == h.signal.Visibility.PORT
     assert len(SpiFlash.ports) == 3
     assert len(SpiFlash.signals) == 0
     assert len(SpiFlash.instances) == 0
-    assert SpiFlash.get("_spi_sck_").vis == h.signal.Visibility.PORT
-    assert SpiFlash.get("_spi_cs_").vis == h.signal.Visibility.PORT
-    assert SpiFlash.get("_spi_dq_").vis == h.signal.Visibility.PORT
+    assert SpiFlash.get("spi_sck").vis == h.signal.Visibility.PORT
+    assert SpiFlash.get("spi_cs").vis == h.signal.Visibility.PORT
+    assert SpiFlash.get("spi_dq").vis == h.signal.Visibility.PORT
 
     assert isinstance(TestSystem.tester, h.Instance)
     assert isinstance(TestSystem.board, h.Instance)
     assert not hasattr(TestSystem, "jtag")
-    assert "_tester_uart_tx_board_uart_rx_" in TestSystem.namespace
+    assert "tester_uart_tx_board_uart_rx" in TestSystem.namespace
 
 
 def test_signal_slice1():
@@ -1180,7 +1186,7 @@ def test_generator_recall():
     nl = StringIO()
     h.netlist(ppkg, nl)
     nl = nl.getvalue()
-    assert "CallMeTwice_NoParams___" in nl
+    assert "CallMeTwice_NoParams" in nl
     assert "Caller" in nl
 
     # Round-trip back from Proto to Modules
@@ -1230,7 +1236,7 @@ def test_mos_generator():
     assert m.instances["unit0"].of.params == h.primitives.MosParams()
     assert m.instances["unit1"].of.params == h.primitives.MosParams()
     assert len(m.signals) == 1
-    assert "_unit1_s_unit0_d_" in m.signals
+    assert "unit1_s_unit0_d" in m.signals
 
     ppkg = h.to_proto(m)
     assert isinstance(ppkg, h.proto.Package)
@@ -1265,8 +1271,8 @@ def test_series_parallel_generator():
     for inst in m.instances.values():
         assert inst.of is M
     assert len(m.signals) == 2
-    assert "_unit_0_1_a_unit_0_0_b_" in m.signals
-    assert "_unit_1_1_a_unit_1_0_b_" in m.signals
+    assert "unit_0_1_a_unit_0_0_b" in m.signals
+    assert "unit_1_1_a_unit_1_0_b" in m.signals
 
     ppkg = h.to_proto(m)
     assert isinstance(ppkg, h.proto.Package)
@@ -1334,12 +1340,12 @@ def test_instance_mult2():
     # Check that array-flattening completed correctly
     assert len(Parent.instances) == 3
     assert len(Parent.instarrays) == 0
-    assert Parent.get("_child_0_").of is Child
-    assert Parent.get("_child_1_").of is Child
-    assert Parent.get("_child_2_").of is Child
-    assert Parent.get("_child_0_").conns["p"] == Parent.a[0]
-    assert Parent.get("_child_1_").conns["p"] == Parent.a[1]
-    assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
+    assert Parent.get("child_0").of is Child
+    assert Parent.get("child_1").of is Child
+    assert Parent.get("child_2").of is Child
+    assert Parent.get("child_0").conns["p"] == Parent.a[0]
+    assert Parent.get("child_1").conns["p"] == Parent.a[1]
+    assert Parent.get("child_2").conns["p"] == Parent.a[2]
 
 
 def test_instance_mult3():
@@ -1359,12 +1365,12 @@ def test_instance_mult3():
     # Check that array-flattening completed correctly
     assert len(Parent.instances) == 3
     assert len(Parent.instarrays) == 0
-    assert Parent.get("_child_0_").of is Child
-    assert Parent.get("_child_1_").of is Child
-    assert Parent.get("_child_2_").of is Child
-    assert Parent.get("_child_0_").conns["p"] == Parent.a[0]
-    assert Parent.get("_child_1_").conns["p"] == Parent.a[1]
-    assert Parent.get("_child_2_").conns["p"] == Parent.a[2]
+    assert Parent.get("child_0").of is Child
+    assert Parent.get("child_1").of is Child
+    assert Parent.get("child_2").of is Child
+    assert Parent.get("child_0").conns["p"] == Parent.a[0]
+    assert Parent.get("child_1").conns["p"] == Parent.a[1]
+    assert Parent.get("child_2").conns["p"] == Parent.a[2]
 
 
 def test_instance_mult4():
@@ -1386,15 +1392,15 @@ def test_instance_mult4():
     # Check that array-flattening completed correctly
     assert len(Parent.instances) == 3
     assert len(Parent.instarrays) == 0
-    assert Parent.get("_child_0_").of is Child
-    assert Parent.get("_child_1_").of is Child
-    assert Parent.get("_child_2_").of is Child
-    assert Parent.get("_child_0_").conns["a"] == Parent.a
-    assert Parent.get("_child_1_").conns["a"] == Parent.a
-    assert Parent.get("_child_2_").conns["a"] == Parent.a
-    assert Parent.get("_child_0_").conns["b"] == Parent.b[0:15]
-    assert Parent.get("_child_1_").conns["b"] == Parent.b[16:31]
-    assert Parent.get("_child_2_").conns["b"] == Parent.b[32:47]
+    assert Parent.get("child_0").of is Child
+    assert Parent.get("child_1").of is Child
+    assert Parent.get("child_2").of is Child
+    assert Parent.get("child_0").conns["a"] == Parent.a
+    assert Parent.get("child_1").conns["a"] == Parent.a
+    assert Parent.get("child_2").conns["a"] == Parent.a
+    assert Parent.get("child_0").conns["b"] == Parent.b[0:15]
+    assert Parent.get("child_1").conns["b"] == Parent.b[16:31]
+    assert Parent.get("child_2").conns["b"] == Parent.b[32:47]
 
 
 def test_netlist_fmts():
@@ -1470,14 +1476,17 @@ def test_bad_bundle_conn():
     class R:
         z = h.Signal(width=11)
 
-    c = h.Module(name="c")
-    c.p = P(port=True)  # `P`-type Bundle
-    q = h.Module(name="q")
-    q.r = R()  # `R`-type Bundle
-    q.c = c(p=q.r)  # <= Bad connection here
+    @h.module
+    class C:
+        p = P(port=True)  # `P`-type Bundle
+
+    @h.module
+    class Q:
+        r = R()  # `R`-type Bundle
+        c = C(p=r)  # <= Bad connection here
 
     with pytest.raises(RuntimeError):
-        h.elaborate(q)
+        h.elaborate(Q)
 
 
 def test_illegal_module_attrs():
@@ -1511,3 +1520,41 @@ def test_illegal_module_attrs():
     with pytest.raises(TypeError):
         m.p = (h.Input(), h.Output())
 
+
+def test_copy_signal():
+    """ Copying a Signal """
+    copy.copy(h.Signal())
+
+
+def test_copy_bundle_instance():
+    """ Copying a BundleInstance """
+    # This generally fails when run in the debugger, but seems alright stand-alone (?)
+    copy.copy(h.BundleInstance(name="inst", of=h.Bundle()))
+
+
+def test_bundle_destructure():
+    """ Test de-structuring bundles to individual Signals """
+
+    @h.bundle
+    class B:
+        w1 = h.Signal(width=1)
+        w3 = h.Signal(width=3)
+
+    @h.module
+    class Child:
+        w1 = h.Port(width=1)
+        w3 = h.Port(width=3)
+
+    @h.module
+    class Parent:
+        b = B()  # `B`-type Bundle instance
+        c = Child(w1=b.w1, w3=b.w3)  # `Child`-type instance, connected to `b`
+
+    h.elaborate(Parent)
+
+    assert len(Parent.instances) == 1
+    assert len(Parent.signals) == 2
+    assert "b_w1" in Parent.signals
+    assert "b_w3" in Parent.signals
+    assert Parent.c.conns["w1"] is Parent.signals["b_w1"]
+    assert Parent.c.conns["w3"] is Parent.signals["b_w3"]

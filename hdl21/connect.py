@@ -3,7 +3,7 @@
 
 Decorators which add a number of connection-related facilities onto classes to which they are applied. 
 """
-from typing import Any, Union
+from typing import Any, Union, Dict
 
 
 def connectable(cls: type) -> type:
@@ -12,9 +12,12 @@ def connectable(cls: type) -> type:
     return cls
 
 
-def is_connectable(obj: Any) -> bool:
+def _is_connectable(obj: Any) -> bool:
     """ Boolean indication of connect-ability """
     return getattr(obj, "__connectable__", False)
+
+
+Connectable = Union["Signal", "PortRef", "BundleInstance", "AnonymousBundle"]
 
 
 def connects(cls: type) -> type:
@@ -48,16 +51,20 @@ def connects(cls: type) -> type:
             return object.__setattr__(self, key, val)
         self.connect(key, val)
 
-    def connect(self, portname: str, signal: Union["Signal", "PortRef"]) -> "Self":
-        """ Connect Signal `signal` to port (name) `portname`. 
+    def connect(self, portname: str, conn: Connectable) -> "Self":
+        """ Connect `conn` to port (name) `portname`. 
         Called by both by-call and by-assignment convenience methods, and usable directly. 
         Direct calls to `connect` will generally be required for ports with otherwise illegal names, 
         e.g. Python language keywords (`in`, `from`, etc.), 
         or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.). 
         Returns `self` to aid in method-chaining use-cases. """
-        if not is_connectable(signal):
-            raise TypeError(f"{self} attempting to connect non-connectable {signal}")
-        self.conns[portname] = signal
+        from .bundle import AnonymousBundle
+
+        if isinstance(conn, Dict):
+            conn = AnonymousBundle(**conn)
+        if not _is_connectable(conn):
+            raise TypeError(f"{self} attempting to connect non-connectable {conn}")
+        self.conns[portname] = conn
         return self
 
     def __getattr__(self, key: str) -> Any:

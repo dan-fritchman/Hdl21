@@ -26,7 +26,7 @@ from dataclasses import field
 from pydantic.dataclasses import dataclass
 
 # Local imports
-from .connect import connectable, is_connectable
+from .connect import connectable, _is_connectable
 
 
 class PortDir(Enum):
@@ -255,7 +255,7 @@ class Concat:
 
     def __init__(self, *parts):
         for p in parts:
-            if not is_connectable(p):
+            if not _is_connectable(p):
                 raise TypeError(f"Signal-concatenating unconnectable object {p}")
         self.parts = parts
 

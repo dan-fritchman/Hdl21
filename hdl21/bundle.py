@@ -6,7 +6,7 @@ Structured connection objects, instances thereof, and associated utilities.
 
 from textwrap import dedent
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args
+from typing import Optional, Union, Any, get_args, Dict
 
 from hdl21.connect import has_port_refs
 
@@ -131,13 +131,8 @@ class Bundle:
 
     def __init_subclass__(cls, *_args, **_kwargs):
         """ Sub-Classing Disable-ization """
-        raise RuntimeError(
-            dedent(
-                f"""\
-                Error attempting to create {cls.__name__}
-                Sub-Typing hdl21.Bundle is not supported. """
-            )
-        )
+        msg = f"Error attempting to create {cls.__name__}. Sub-Typing hdl21.Bundle is not supported."
+        raise RuntimeError(msg)
 
     def add(self, val: BundleAttr, *, name: Optional[str] = None) -> BundleAttr:
         raise NotImplementedError
@@ -220,3 +215,75 @@ def bundle(cls: type) -> Bundle:
             setattr(bundle, key, val)
     # And return the bundle
     return bundle
+
+
+@connectable
+class AnonymousBundle:
+    """ # Anonymous Connection Bundle 
+    Commonly used for "collecting" Signals into `h.Bundle`s, 
+    or for re-jiggering connections between `h.Bundle`s. """
+
+    def __init__(self, **kwargs: Dict[str, "Connectable"]):
+        # Create our internal structures
+        self.signals = dict()
+        self.bundles = dict()
+        self.anons = dict()
+        self.portrefs = dict()
+
+        # And add each keyword-arg
+        for key, val in kwargs.items():
+            self.add(key, val)
+
+    def add(self, name: str, val: BundleAttr) -> BundleAttr:
+        """ Add attribute `val`. """
+        from .instance import PortRef
+
+        if isinstance(val, Signal):
+            self.signals[name] = val
+        elif isinstance(val, BundleInstance):
+            self.bundles[name] = val
+        elif isinstance(val, AnonymousBundle):
+            self.anons[name] = val
+        # elif isinstance(val, PortRef): # FIXME: whether to enable these. Currently not supported.
+        #     self.portrefs[name] = val
+        else:
+            raise TypeError
+        return val
+
+
+def _check_compatible(bundle: Bundle, other: Union[BundleInstance, AnonymousBundle]):
+    """ Assert that `bundle` is compatible for connection with `other`. 
+    Raises a `RuntimeError` if not compatible. 
+    This includes key-matching and Signal-width matching, but *does not* examine Signal directions. 
+    """
+
+    if isinstance(other, BundleInstance):
+        other = other.of
+        if other is bundle:
+            return None  # Same types, we good
+        # Check the key-names of Signals and Bundles match
+        if sorted(bundle.signals.keys()) != sorted(other.signals.keys()):
+            msg = f"Signal names do not match: {bundle.signals.keys()} != {other.signals.keys()}"
+            raise RuntimeError(msg)
+        if sorted(bundle.bundles.keys()) != sorted(other.bundles.keys()):
+            msg = f"Bundle names do not match: {bundle.signals.keys()} != {other.signals.keys()}"
+            raise RuntimeError(msg)
+        # Check that each Signal is compatible
+        for key, val in bundle.signals.items():
+            # FIXME: maybe make this something like _signal_compatible
+            if val.width != other.signals[key].width:
+                msg = f"Signal {key} width mismatch: {val.width} != {other.signals[key].width}"
+                raise RuntimeError(msg)
+        # Recursively check that each Bundle is compatible
+        for key, val in bundle.bundles.items():
+            _check_compatible(val.of, other.bundles[key].of)
+        return None  # Checks out, we good
+
+    if isinstance(other, AnonymousBundle):
+        # FIXME: checks on port-refs, signal-widths, etc.
+        # For now this just returns success; later checks may often fail where this (eventually) should.
+        return None
+
+    msg = f"Invalid connection-compatibility check between {bundle} and {other}"
+    raise TypeError(msg)
+

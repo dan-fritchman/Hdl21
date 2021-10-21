@@ -8,12 +8,10 @@ particularly the `@module` (lower-case) decorator-function.
 """
 
 import inspect
-from textwrap import dedent
 from types import ModuleType
-from typing import Any, Optional, List, Union, get_args, Tuple, Type
+from typing import Any, Optional, List, Union, get_args, Type
 from pydantic.dataclasses import dataclass
 from dataclasses import field
-import dataclasses
 
 # Local imports
 from .params import NoParams, HasNoParams
@@ -279,7 +277,7 @@ def module(cls: type) -> Module:
     return module
 
 
-@dataclasses.dataclass  # FIXME
+@dataclass
 class ExternalModule:
     """
     # External Module
@@ -357,12 +355,8 @@ class ExternalModule:
         return self._qualname()
 
 
-# ExternalModule.__pydantic_model__.Config.arbitrary_types_allowed = True
-# ExternalModule.__pydantic_model__.update_forward_refs()
-
-
 @calls_instantiate
-@dataclasses.dataclass # FIXME
+@dataclass
 class ExternalModuleCall:
     """ External Module Call
     A combination of an `ExternalModule` and its Parameter-values,
@@ -381,9 +375,6 @@ class ExternalModuleCall:
     def ports(self) -> dict:
         return self.module.ports
 
-
-# ExternalModuleCall.__pydantic_model__.Config.arbitrary_types_allowed = True
-# ExternalModuleCall.__pydantic_model__.update_forward_refs()
 
 """ 
 (Python) Module-Level Functions

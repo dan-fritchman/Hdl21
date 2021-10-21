@@ -10,7 +10,7 @@ performing one or more transformation-passes.
 import copy
 from enum import Enum
 from types import SimpleNamespace
-from typing import Union, Any, Dict, List, Optional
+from typing import Union, Any, Dict, List, Optional, Tuple
 
 # PyPi
 from pydantic.dataclasses import dataclass
@@ -20,7 +20,7 @@ from .connect import connectable
 from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
-from .bundle import Bundle, BundleInstance
+from .bundle import AnonymousBundle, Bundle, BundleInstance, _check_compatible
 from .signal import PortDir, Signal, Visibility
 from .generator import Generator, GeneratorCall
 from .params import _unique_name
@@ -123,22 +123,27 @@ class _Elaborator:
         raise TypeError
 
     @staticmethod
-    def flatname(segments: List[str], *, avoid: dict, maxlen: int = 511) -> str:
+    def flatname(
+        segments: List[str], *, avoid: Optional[Dict] = None, maxlen: int = 511
+    ) -> str:
         """ Create a attribute-name merging string-list `segments`, while avoiding all keys in dictionary `avoid`.
         Commonly re-used while flattening  nested objects and while creating explicit attributes from implicit ones. 
         Raises a `RunTimeError` if no such name can be found of length less than `maxlen`. 
         The default max-length is 511 characters, a value representative of typical limits in target EDA formats. """
 
-        # The default format and result is of the form "_seg0_seg1_".
-        # If that is (somehow) in the avoid-keys, append and prepend underscores until it's not.
-        name = "_" + "_".join(segments) + "_"
+        if avoid is None:
+            avoid = {}
+
+        # The default format and result is of the form "seg0_seg1".
+        # If that is in the avoid-keys, append underscores until it's not, or fails.
+        name = "_".join(segments)
         while True:
             if len(name) > maxlen:
                 msg = f"Could not generate a flattened name for {segments}: (trying {name})"
                 raise RuntimeError(msg)
             if name not in avoid:  # Done!
                 break
-            name = "_" + name + "_"  # Collision; append and prepend underscores
+            name += "_"  # Collision; append underscore
         return name
 
 
@@ -186,9 +191,8 @@ class GeneratorElaborator(_Elaborator):
             m = self.elaborate_generator_call(m)
         # Ultimately they've gotta resolve to Modules, or they fail.
         if not isinstance(m, Module):
-            raise TypeError(
-                f"Generator {call.gen.func.__name__} returned {type(m)}, must return Module."
-            )
+            msg = f"Generator {call.gen.func.__name__} returned {type(m)}, must return Module."
+            raise TypeError(msg)
 
         # Give the GeneratorCall a reference to its result, and store it in our local dict
         call.result = m
@@ -309,9 +313,8 @@ class ImplicitSignals(_Elaborator):
         # Bundles must be flattened before this point.
         # Throw an error if not.
         if len(module.bundles):
-            raise RuntimeError(
-                f"ImplicitSignals elaborator invalidly invoked on Module {module} with Bundles {module.bundles}"
-            )
+            msg = f"ImplicitSignals elaborator invalidly invoked on Module {module} with Bundles {module.bundles}"
+            raise RuntimeError(msg)
 
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
@@ -319,6 +322,10 @@ class ImplicitSignals(_Elaborator):
 
         # Now work through expanding any implicit-ish connections, such as those from port to port.
         # Start by building an adjacency graph of every `PortRef` that's been instantiated
+
+        if module.name == "TestSystem":
+            print(5)
+
         portconns = dict()
         for inst in module.instances.values():
             for port, conn in inst.conns.items():
@@ -387,13 +394,68 @@ class ImplicitSignals(_Elaborator):
 
 
 @dataclass
-class FlatBundleInst:
-    """ Flattened Hierarchical Bundle, resolved to constituent Signals """
+class Path:
+    """ Hierarchical String-Valued Path """
 
-    inst_name: str  # Bundle Instance name
-    src: Bundle  # Source/ Original Bundle
-    # Flattened signals-dict, keyed by *original* signal name
-    signals: Dict[str, Signal]
+    segs: List[str]  # List of path segments
+
+    @classmethod
+    def concat(cls, prefix: str, suffix: "Path") -> "Path":
+        return cls([prefix] + suffix.segs[:])
+
+    def to_name(self) -> str:
+        return "_".join(self.segs)
+
+
+# The path-separator used in PathStrings.
+# Hopefully never actually used in a real name.
+_MAGIC_PATH_SEP = "~!@#$%^&*()"
+
+
+@dataclass(frozen=True)
+class PathStr:
+    """ Single-String Representation of `Path` """
+
+    val: str
+
+    def to_path(self) -> Path:
+        return Path(self.val.split(_MAGIC_PATH_SEP))
+
+    def to_name(self) -> str:
+        return self.to_path().to_name()
+
+    @classmethod
+    def concat(cls, prefix: str, suffix: "PathStr") -> "PathStr":
+        return cls(prefix + _MAGIC_PATH_SEP + suffix.val)
+
+    @classmethod
+    def from_path(cls, path: Path) -> "PathStr":
+        s = _MAGIC_PATH_SEP.join(path.segs)
+        return cls(s)
+
+    @classmethod
+    def from_list(cls, ls: List[str]) -> "PathStr":
+        return cls.from_path(Path(ls))
+
+
+@dataclass
+class FlatBundleDef:
+    """ Flattened Bundle Definition """
+
+    # Source/ Original Bundle
+    src: Bundle
+    # Flattened signals-dict, keyed by Path
+    signals: Dict[PathStr, Signal]
+
+
+@dataclass
+class FlatBundleInst:
+    """ Flattened Bundle Instance """
+
+    # Source/ Original Bundle
+    src: BundleInstance
+    # Flattened signals-dict, keyed by Path
+    signals: Dict[PathStr, Signal]
 
 
 class BundleFlattener(_Elaborator):
@@ -402,7 +464,18 @@ class BundleFlattener(_Elaborator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.modules = dict()
-        self.replacements = dict()  # Bundle replacement-dicts by Module (id)
+        # Bundle (definition) replacements, id(Bundle) => FlatBundle
+        self.bundle_defs: Dict[int, FlatBundleDef] = dict()
+        # BundleInstance replacements, id(BundleInst) => FlatBundleInst
+        self.bundle_insts: Dict[int, FlatBundleInst] = dict()
+        # AnonymousBundle replacements, id(AnonBundle) => FlatBundleFlatBundleInst
+        self.anon_replacements: Dict[int, FlatBundleInst] = dict()
+        # Connection replacement-dicts, Module (id) => Connections Dict
+        self.conn_replacements: Dict[int, Dict[str, FlatBundleInst]] = dict()
+        # Replacement-values by Module and attribute-name.
+        self.module_attrs: Dict[
+            Tuple[int, str], Tuple[BundleInstance, FlatBundleInst]
+        ] = dict()
 
     def elaborate_module(self, module: Module) -> Module:
         """ Flatten Module `module`s Bundles, replacing them with newly-created Signals.
@@ -413,31 +486,44 @@ class BundleFlattener(_Elaborator):
 
         # Depth-first traverse our instances first.
         # After this loop, each Instance's Module can have newly-expanded ports -
-        # but will not have modified its `conns` dict.
+        # but *will not* have modified its `conns` dict.
         for inst in module.instances.values():
             self.elaborate_instance(inst)
 
-        # Start a dictionary of bundle-replacements
-        replacements = dict()
+        # Start a dictionary of bundle-conn_replacements
+        conn_replacements: Dict[str, FlatBundleInst] = dict()
 
         while module.bundles:
             # Remove the bundle-instance from the module
-            name, bundle = module.bundles.popitem()
+            name, bundle_inst = module.bundles.popitem()
             module.namespace.pop(name)
+            # Check we haven't (somehow) already flattened it
+            if id(bundle_inst) in self.bundle_insts:
+                msg = f"Bundle Instance {bundle_inst} in Module {module} flattened more than once. Was it actually part of another Module?"
+                raise RuntimeError(msg)
             # Flatten it
-            flat = self.flatten_bundle(bundle)
-            replacements[name] = flat
+            flat = self.flatten_bundle_inst(bundle_inst)
+            # And store the result
+            self.bundle_insts[id(bundle_inst)] = flat
+            self.module_attrs[(id(module), name)] = (bundle_inst, flat)
+            conn_replacements[name] = flat
 
-            # And add each flattened Signal
-            for sig in flat.signals.values():
-                signame = self.flatname([bundle.name, sig.name], avoid=module.namespace)
-                if bundle.port:
+            # Add each flattened Signal. Note flattened Signals are modified in-place.
+            for pathstr, sig in flat.signals.items():
+                # Rename the signal, prepending the bundle-instance's name
+                # path = Path.concat(bundle_inst.name, pathstr.to_path())
+                sig.name = self.flatname(
+                    segments=[bundle_inst.name, pathstr.to_name()],
+                    avoid=module.namespace,
+                )
+                # Sort out the new Signal's visibility and direction
+                if bundle_inst.port:
                     vis_ = Visibility.PORT
-                    if bundle.role is None:
+                    if bundle_inst.role is None:
                         dir_ = PortDir.NONE
-                    elif bundle.role == sig.src:
+                    elif bundle_inst.role == sig.src:
                         dir_ = PortDir.OUTPUT
-                    elif bundle.role == sig.dest:
+                    elif bundle_inst.role == sig.dest:
                         dir_ = PortDir.INPUT
                     else:
                         dir_ = PortDir.NONE
@@ -445,7 +531,6 @@ class BundleFlattener(_Elaborator):
                     vis_ = Visibility.INTERNAL
                     dir_ = PortDir.NONE
                 # Apply all these attributes to our new Signal
-                sig.name = signame
                 sig.vis = vis_
                 sig.direction = dir_
                 # And add it to the Module namespace
@@ -454,24 +539,30 @@ class BundleFlattener(_Elaborator):
             # Replace connections to any connected instances
             for inst in module.instances.values():
                 for portname in list(inst.conns.keys()):
-                    if inst.conns[portname] is bundle:
-                        inst_replacements = self.replacements[id(inst._resolved)]
-                        inst_flat = inst_replacements[portname]
-                        for flatname, flatsig in flat.signals.items():
-                            inst_signame = inst_flat.signals[flatname].name
-                            inst.conns[inst_signame] = flatsig
-                        # And remove the connection to the original Bundle(s)
+                    # Operate on connections to *this* bundle instance
+                    if inst.conns[portname] is bundle_inst:
+                        t = self.module_attrs.get((id(inst._resolved), portname), None)
+                        if t is None:
+                            msg = f"Invalid Port Connection to {portname} on Instance {inst} in Module {module}"
+                            raise RuntimeError(msg)
+                        # Destructure the hierarchical and flat versions that come back
+                        _hier_bundle_port, flat_bundle_port = t
+                        # Replace the connection to each flattened Signal
+                        for path, flat_port in flat_bundle_port.signals.items():
+                            # Note `flat_port.name` will be `inst`'s name, i.e. `_mybus_clk_`
+                            # Whereas its `path` will line up to `flat`'s namespace, i.e. `['bus']`
+                            inst.conns[flat_port.name] = flat.signals[path]
                         inst.conns.pop(portname)
 
-            # Re-connect any PortRefs it has given out, as in the form:
-            # i = SomeBundle()    # Theoretical Bundle with signal-attribute `s`
+            # Re-connect any PortRefs that `bundle` has given out, as in the form:
+            # i = SomeBundle()       # Theoretical Bundle with signal-attribute `s`
             # x = SomeModule(s=i.s)  # Connects `PortRef` `i.s`
             # FIXME: this needs to happen for hierarchical bundles too
-            for portref in bundle.portrefs.values():
-                flatsig = flat.signals.get(portref.portname, None)
+            for portref in bundle_inst.portrefs.values():
+                flatsig = flat.signals.get(PathStr(portref.portname), None)
                 if flatsig is None:
                     raise RuntimeError(
-                        f"Port {portref.portname} not found in Bundle {bundle.of.name}"
+                        f"Port {portref.portname} not found in Bundle {bundle_inst.of.name}"
                     )
                 # Walk through our Instances, replacing any connections to this `PortRef` with `flatsig`
                 for inst in module.instances.values():
@@ -479,14 +570,85 @@ class BundleFlattener(_Elaborator):
                         if conn is portref:
                             inst.conns[portname] = flatsig
 
+        # Go through each Instance, replacing `AnonymousBundle`s with their referents
+        for inst in module.instances.values():
+            for portname, conn in inst.conns.items():
+                if isinstance(conn, AnonymousBundle):
+                    raise NotImplementedError
+                    # Get the flattened version
+                    flat = self.anon_replacements.get(id(conn), None)
+                    if flat is None:
+                        flat = self.flatten_anonymous_bundle(conn)
+                        self.anon_replacements[id(conn)] = flat
+                    for flatname, flatsig in flat.signals.items():
+                        inst_signame = inst_flat.signals[flatname].name
+                        inst.conns[inst_signame] = flatsig
+                    # And remove the connection to the original Bundle(s)
+                    inst.conns.pop(portname)
+
+                    raise NotImplementedError
+                    # inst.conns[portname] = conn_replacements[conn.name][portname]
+
+        # Store results in our cache
         self.modules[id(module)] = module
-        self.replacements[id(module)] = replacements
+        self.conn_replacements[id(module)] = conn_replacements
         return module
 
-    def flatten_bundle(self, bundle: BundleInstance) -> FlatBundleInst:
+    def flatten_bundle_def(self, bundle: Bundle) -> FlatBundleDef:
+        """ Flatten a `Bundle` (definition). 
+        Note Signals *are not* copied upon `FlatBundleDef` creation, 
+        but must be while unrolling to each `FlatBundleInst`. """
+
+        if id(bundle) in self.bundle_defs:
+            return self.bundle_defs[id(bundle)]  # Already done!
+
+        # Create the flattened version, initializing it with `bundle`s scalar Signals,
+        # Converting their keys to `Path` elements
+        flat = FlatBundleDef(
+            src=bundle,
+            signals={
+                PathStr.from_list([sig.name]): sig for sig in bundle.signals.values()
+            },
+        )
+        # Depth-first walk any bundle-instance's definitions, flattening them
+        for i in bundle.bundles.values():
+            iflat = self.flatten_bundle_def(i.of)
+            for path_suffix, sig in iflat.signals.items():
+                # Pre-pend the bundle name to its path, and add to our Signals-dict
+                pathstr = PathStr.concat(i.name, path_suffix)
+                if pathstr in flat.signals:
+                    raise RuntimeError(
+                        f"Error Flattening {bundle}: colliding flattened Signal names for {sig} and {flat.signals[pathstr]}"
+                    )
+                flat.signals[pathstr] = sig
+
+        # Store it in our cache, and return
+        self.bundle_defs[id(bundle)] = flat
+        return flat
+
+    def flatten_bundle_inst(self, bundle: BundleInstance) -> FlatBundleInst:
         """ Convert nested Bundle `bundle` into a flattened `FlatBundleInst` of scalar Signals. 
-        Flattening and the underlying Signal-cloning is applied to each Bundle *instance*, 
-        so each Module-visit need not re-clone the signals of the returned `FlatBundleInst`. """
+        Signals are copied in the creation of each `BundleInstance`, so no further copying is required at the Module-level. """
+
+        # Get the (flattened) Bundle-definition
+        flatdef = self.flatten_bundle_def(bundle.of)
+
+        # Copy and rename its signals
+        signals = dict()
+        for pathstr, sig in flatdef.signals.items():
+            sig = copy.deepcopy(sig)
+            sig.name = pathstr.to_name()
+            signals[pathstr] = sig
+
+        # And return a new `FlatBundleInst`
+        return FlatBundleInst(src=bundle, signals=signals)
+
+    def flatten_anonymous_bundle(self, bundle: AnonymousBundle) -> FlatBundleInst:
+        """ Flatten an `AnonymousBundle`. 
+        Differs from bundle-class instances in that each attribute of anonymous-bundles 
+        are generally "references", owned by something else, commonly a Module. """
+
+        raise NotImplementedError
 
         # Create the flattened version, initializing it with `bundle`s scalar Signals
         flat = FlatBundleInst(
@@ -577,9 +739,10 @@ class ImplicitBundles(_Elaborator):
                 lastmod = portref.inst._resolved
                 sig = lastmod.bundle_ports.get(portref.portname, None)
                 if sig is not None:
-                    sig = copy.copy(sig)
-                    sig.port = False
-                    sig.role = None
+                    # Copy the bundle, removing port and role fields.
+                    sig = BundleInstance(
+                        name=sig.name, of=sig.of, port=False, role=None,
+                    )
                 else:
                     raise RuntimeError(
                         f"Invalid port {portref.portname} on Instance {portref.inst.name} in Module {module.name}"
@@ -623,9 +786,13 @@ class BundleConnTypes(_Elaborator):
         else:
             # Still check on no-bundle Instances (e.g. Primitives),
             # Mostly to ensure no *connections* are errantly Bundle-valued.
-            io = []
+            io = dict()
         # And filter out the bundle-valued connections
-        conns = {k: v for k, v in inst.conns.items() if isinstance(v, BundleInstance)}
+        conns = {
+            k: v
+            for k, v in inst.conns.items()
+            if isinstance(v, (BundleInstance, AnonymousBundle))
+        }
 
         for portname, conn in conns.items():
             # Pop the port from our list
@@ -634,17 +801,31 @@ class BundleConnTypes(_Elaborator):
                 msg = f"Connection to invalid bundle port {portname} on {inst.name} in {module.name}"
                 raise RuntimeError(msg)
 
-            if (  # Check its Bundle type
-                not isinstance(conn, BundleInstance)
+            if (  # Check its Bundle type.
+                not isinstance(conn, (BundleInstance, AnonymousBundle))
                 or not isinstance(port, BundleInstance)
-                or conn.of is not port.of
+                # or conn.of is not port.of ## FIXME: this is the "exact type equivalence" so heavily debated. Disabled.
             ):
                 msg = f"Invalid Bundle Connection between {conn} and {port} on {inst.name} in {module.name}"
                 raise RuntimeError(msg)
+            # Check its connection-compatibility
+            _check_compatible(port.of, conn)
 
-        if len(io):  # Check for anything lef over
-            msg = f"Unconnected Bundle Port(s) {io} on {inst.name} in {module.name}"
+        # Check for anything left over.
+        bad = dict()
+        while io:
+            # Unconnected bundle-ports are not *necessarily* an error, since they can be connected signal-by-signal.
+            # Check whether each remaining `io` has a corresponding `PortRef`, an indication of a connection.
+            # More-specific checking of their validity will come later, with other Signals.
+            name, conn = io.popitem()
+            if name not in inst.portrefs:
+                bad[name] = conn
+
+        if len(bad):  # Now, anything left over is an error.
+            msg = f"Unconnected Bundle Port(s) {list(bad.keys())} on Instance {inst.name} in Module {module.name}"
             raise RuntimeError(msg)
+
+        return module
 
 
 class SignalConnTypes(_Elaborator):
@@ -703,7 +884,7 @@ class SignalConnTypes(_Elaborator):
                 msg = f"Invalid connection {conn} on {inst.name} in {module.name}"
                 raise TypeError(msg)
 
-        if len(io):  # Check for anything lef over
+        if len(io):  # Check for anything left over
             raise RuntimeError(f"Unconnected IO {io} on {inst.name} in {module.name}")
 
 
