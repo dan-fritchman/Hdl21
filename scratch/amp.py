@@ -1,7 +1,7 @@
 import sys
 
 import hdl21 as h
-from hdl21.diff import Diff, diff_inst
+from hdl21.diff import Diff
 
 
 @h.paramclass
@@ -23,29 +23,41 @@ def FoldedCascode(params: AmpParams) -> h.Module:
         out = h.Output()
         VDD, VSS, ibias = h.Inputs(3)
         # Internal Signals
-        outm = h.Signal()
+        outm, s1, s2, g1 = h.Signals(4)
 
-        # Input pair and bias
-        nibias = 2 * nmos(s=VSS, b=VSS)
-        ninp = diff_inst(nmos)(g=inp, s=nibias.d, b=VSS)
-        pild = diff_inst(pmos)(d=ninp.d, s=VDD, b=VDD)
-
+        # Bias Mirrors. Traditional cascode (for now).
+        # NMOS Gate Bias
+        nbias = Stack(
+            ncasc=nmos(g=ibias, d=ibias),  # Top Cascode Diode
+            nsrc=nmos(g=s1, d=s1),  # Bottom Bias Diode
+        )
+        # PMOS Gate Bias
+        pbias = Stack(
+            psrc=pmos(g=s2, d=s2),  # PMOS Source
+            pcasc=pmos(g=g1, d=g1),  # PMOS Cascode
+            ncasc=nmos(g=nbias.ncasc.g),
+            nsrc=nmos(g=nbias.nsrc.g),
+        )
         # Cascode Stack
-        psrc = diff_inst(pmos)(d=ninp.d, s=VDD, b=VDD)
-        pcas = diff_inst(pmos)(d=[out, outm], s=psrc.d, b=VDD)
-        ncas = diff_inst(nmos)(d=[out, outm], b=VSS)
-        nsrc = diff_inst(nmos)(d=ncas.s, g=outm, s=VSS, b=VSS)
-
-        # Bias mirrors
-        ncd = nmos(g=ibias, d=ibias, b=VSS)
-        nsd = nmos(g=ncd.s, d=ncd.s, s=VSS, b=VSS)
-        ncas.g = ncd.g
-        nsrc.g = nibias.g = nsd.g
-        nbm = nmos(g=ibias, s=VSS, b=VSS)
-        pcd = pmos(d=nbm.d, g=nbm.d, b=VDD)
-        pcas.g = pcd.g
-        psd = pmos(d=pcd.s, g=pcd.s, s=VDD, b=VDD)
-        psrc.g = psd.g
+        ostack = Diffn(
+            Stack(
+                psrc=2 * pmos(g=pbias.psrc.g),  # PMOS Source
+                pcasc=pmos(g=pbias.pcasc.g, d=h.AnonymousBundle(p=out, n=outm)),
+                ncasc=nmos(g=nbias.ncasc.g, d=h.AnonymousBundle(p=out, n=outm)),
+                nsrc=nmos(g=outm),  # NMOS Mirror
+            )
+        )
+        # Input Stack
+        istack = Stack(
+            # Differential Input Pair
+            nin=Diffn(nmos(g=inp, d=ostack.psrc.d)),
+            # Cascoded Bias
+            ncasc=2 * nmos(g=nbias.ncasc.g),  # NMOS Cascode
+            nsrc=2 * nmos(g=nbias.nsrc.g),  # NMOS Source
+        )
+        # Matching Constraints (in addition to differential-ness)
+        Matched(nbias.ncasc, pbias.ncasc, ostack.ncasc, istack.ncasc)
+        Matched(nbias.nsrc, pbias.nsrc, ostack.nsrc, istack.nsrc)
 
     return FoldedCascode
 
@@ -100,7 +112,23 @@ PdkPmos = h.ExternalModule(
 )
 
 
-def generate():
+def Matched(*args, **kwargs):
+    ...
+
+
+def Stack(*args, **kwargs):
+    ...
+
+
+def Split(*args, **kwargs):
+    ...
+
+
+def Diffn(*args, **kwargs):
+    ...
+
+
+def main():
     """ Main function, generating and netlisting. """
 
     params = AmpParams(nmos=PdkNmos(h.NoParams), pmos=PdkPmos(h.NoParams),)
@@ -109,4 +137,4 @@ def generate():
 
 
 if __name__ == "__main__":
-    generate()
+    main()
