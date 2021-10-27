@@ -1570,3 +1570,59 @@ def test_bundle_destructure():
     assert "b_w3" in Parent.signals
     assert Parent.c.conns["w1"] is Parent.signals["b_w1"]
     assert Parent.c.conns["w3"] is Parent.signals["b_w3"]
+
+
+def test_orphanage():
+    """ Test that orphaned Module-attributes fail at elaboration """
+    m1 = h.Module(name="m1")
+    m1.s = h.Signal()  # Signal `s` is now "parented" by `m1`
+
+    m2 = h.Module(name="m2")
+    m2.y = m1.s  # Now `s` has been "orphaned" (or perhaps "cradle-robbed") by `m2`
+
+    # Note elaborating `m2` continues to work
+    h.elaborate(m2)
+
+    with pytest.raises(RuntimeError):
+        # Elaborating `m1` should fail, since `s` is orphaned
+        h.elaborate(m1)
+
+
+def test_orphanage2():
+    """ Test orphaning a bundle instance """
+
+    @h.bundle
+    class B:
+        bb = h.Signal(width=1)
+
+    b = B()  # Instance of `B`-type Bundle, to be orphaned
+
+    m1 = h.Module(name="m1")
+    m1.b = b
+    m2 = h.Module(name="m2")
+    m2.b = b
+
+    # Note elaborating `m2` continues to work
+    h.elaborate(m2)
+
+    with pytest.raises(RuntimeError):
+        # Elaborating `m1` should fail, since `s` is orphaned
+        h.elaborate(m1)
+
+
+def test_orphanage3():
+    """ Test orphaning an instance """
+    I = h.Module(name="I")
+    i = I()  # Instance to be orphaned
+
+    m1 = h.Module(name="m1")
+    m1.i = i
+    m2 = h.Module(name="m2")
+    m2.i = i
+
+    # Note elaborating `m2` continues to work
+    h.elaborate(m2)
+
+    with pytest.raises(RuntimeError):
+        # Elaborating `m1` should fail, since `s` is orphaned
+        h.elaborate(m1)

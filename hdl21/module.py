@@ -2,9 +2,9 @@
 # hdl21.module 
 The `Module` module (get it?)
 
-This module primarily defines the core circuit-reuse element `hdl21.Module`. 
-It also includes the fun machinery for class-syntax creation of `Module`s, 
-particularly the `@module` (lower-case) decorator-function. 
+This module primarily defines: 
+* The core circuit-reuse element `hdl21.Module`. 
+* The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 
 import inspect
@@ -25,9 +25,30 @@ ModuleAttr = Union[Signal, Instance, InstArray, BundleInstance]
 
 @calls_instantiate
 class Module:
-    """
-    # Module
+    """ # Module
+    
     The central element of hardware re-use.
+    Hdl21 `Module`s are static combinations of HDL objects such as `Signal`s, `Instance`s of other `Module`s, and `Bundle`s. 
+
+    Two primary methods (directly) create `Module`s. The `Module` (capital M) class-constructor accepts a single optional `name` field. 
+    This serves as the name of an initially-empty Module-definition. Attributes can then be added programmatically. 
+    ```
+    m = Module(name="MyModule")
+    m.inp = h.Input(width=5)
+    m.add(h.Output(name="out", width=4))
+    ```
+
+    The `hdl21.module` (lower-case m) decorator-function is a convenient way to create a `Module` from a Python class-definition.
+    Each attribute in the class-body is converted to a module attribute, and the class name is used as the module's name.
+    ```
+    @h.module 
+    class MyModule:
+        inp = h.Input(width=5)
+        out = h.Output(width=4)
+    ```
+
+    Hdl21 Modules *do not* contain behavior in the sense of procedural HDLs. Nor do they contain parameters. 
+    Parametric hardware is produced through Hdl21's `generator` facility, which defines python functions which create and return `Module`s. 
     """
 
     def __init__(self, *, name: Optional[str] = None):
@@ -79,16 +100,22 @@ class Module:
         return None
 
     def add(self, val: ModuleAttr, *, name: Optional[str] = None) -> ModuleAttr:
-        """ Add a named HDL object into one of our internal dictionaries.
+        """ Add a Module attribute.
 
-        This allows for programmatic insertion of attributes whose names are not legal Python identifiers,
+        `Module.add` allows for programmatic insertion of attributes whose names are not legal Python identifiers,
         such as keywords ('in', 'from') and those including invalid characters.
 
         The added object `val` is also provided as the return value, enabling chaining-style usages such as
         ```python
         instance.inp = MyModule.add(h.Input(name="in", width=5))
         ``` 
-        and similar. """
+        and similar. 
+
+        Attribute naming comes from one of either: 
+        * `val`'s `name` attribute, if it has one, or 
+        * The optional `name` argument.
+        Only one of the two name-sources is allowed per call. 
+        """
 
         # Check it's a valid attribute-type
         _assert_module_attr(self, val)
@@ -110,8 +137,8 @@ class Module:
         return self._add(val)
 
     def _add(self, val: ModuleAttr) -> ModuleAttr:
-        """ Internal `add` and `setattr` implementation. 
-        Primarily sort `val` into one of our type-based containers. """
+        """ Internal `add` and `setattr` implementation. Primarily sort `val` into one of our type-based containers. 
+        Layers above `_add` must ensure that `val` has its `name` attribute before calling this method. """
 
         if isinstance(val, Signal):
             self.namespace[val.name] = val
@@ -133,8 +160,22 @@ class Module:
             # Nonetheless gotta raise an error if we get here, somehow.
             self._attr_type_error(val)
 
-        # Give it a reference to us
+        # Give it a reference to us.
+        #
+        # ## Note:
+        # Parent-testing *can* be done here instead of at elaboration time.
+        # It's not clear that this would be a good idea though.
+        # Attributes which are *copied* (for example) keep the `_parent_module` member, which is often helpful to just over-write.
+        # Nonetheless if "setattr-time" failure is desired, this is where it will go:
+        #
+        # _parent = getattr(val, "_parent_module", None) # Note many attributes will not have this member, until this assignment.
+        # if _parent is not None and _parent is not self:
+        #     msg = f"{val.name} being added to {self} already has a parent-module {val._parent_module}"
+        #     raise RuntimeError(msg)
+        #
+        # Ok, now actually give it a reference to us:
         val._parent_module = self
+
         # And return our newly-added attribute
         return val
 
@@ -208,16 +249,6 @@ class Module:
         if self.name is None:
             raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
         return self._qualname()
-
-
-# @dataclass(frozen=True)
-# class _ModuleData:
-#     """ Immutable data-class representation of `Module` content.
-#     Designed for internal use by `Module`, particularly for sake of
-#     hashing, equality testing, and serialization. """
-#
-#     qualname: str
-#     namespace: Tuple  # More specifically Tuple[ModuleAttr], but specifying so triggers a pydantic bug
 
 
 def module(cls: type) -> Module:
@@ -400,9 +431,19 @@ def _attr_type_error(m: Module, val: Any) -> None:
     raise TypeError(msg)
 
 
-def _caller_pymodule():
-    """ Find the first python-stack-frame not from *this* file. 
-    Sometimes this will be a Generator. That's OK, they'll figure it out. """
+def _caller_pymodule() -> Optional[ModuleType]:
+    """ # Caller Py-Module
+    Find the (python) module of the first python-stack-frame not from *this* file. 
+    
+    Sometimes this will be `hdl21.generator`. That's OK, `Generator`s know how to figure it out. 
+
+    Returns `None` if *no* python modules are in the call-stack. 
+    This can happen, for example when running `python -c "import hdl21 as h; h.Module()"`, 
+    or (probably) through other interactive interpreter setups. 
+
+    These "(python) module-less Modules" will generally fail in later steps 
+    such as exporting to ProtoBuf and netlists, but can be created in-memory. 
+    """
     for fr in inspect.stack():
         # Note frames produce an `Optional[ModuleType]`.
         # (It seems extension modules may not have one.)
@@ -410,4 +451,6 @@ def _caller_pymodule():
         pymod = inspect.getmodule(fr[0])
         if pymod is not None and pymod.__file__ != __file__:
             return pymod
-    raise RuntimeError("Could not find caller module")
+    # No caller module found, anywhere in the call-stack.
+    return None
+
