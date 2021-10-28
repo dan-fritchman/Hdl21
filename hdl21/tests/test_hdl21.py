@@ -1626,3 +1626,74 @@ def test_orphanage3():
     with pytest.raises(RuntimeError):
         # Elaborating `m1` should fail, since `s` is orphaned
         h.elaborate(m1)
+
+
+@pytest.mark.xfail(reason="#6")
+def test_wrong_decorator():
+    """ Mistake `Module` for `module` """
+
+    with pytest.raises(RuntimeError):
+
+        @h.Module  # Bad!
+        class M:
+            ...
+
+
+@pytest.mark.xfail(reason="#7")
+def test_elab_noconn():
+    """ Initial test of elaborating a `NoConn` """
+
+    @h.module
+    class Inner:
+        p = h.Port()
+
+    @h.module
+    class HasNoConn:
+        i1 = Inner()
+        i1.p = h.NoConn()
+
+    h.elaborate(HasNoConn)
+
+    assert len(HasNoConn.signals) == 1
+
+
+@pytest.mark.xfail(reason="#7")
+def test_bad_noconn():
+    """ Test that a doubly-connected `NoConn` should fail """
+
+    @h.module
+    class Inner:
+        p = h.Port()
+
+    @h.module
+    class Bad:
+        # Create two instances of `Inner`
+        i1 = Inner()
+        i2 = Inner()
+
+        # Connect the first to a `NoConn`
+        i1.p = h.NoConn()
+        # And then connect the second to the first.
+        # Herein lies the "problem"
+        i2.p = i1.p
+
+    with pytest.raises(RuntimeError):
+        h.elaborate(Bad)
+
+
+@pytest.mark.xfail(reason="#8")
+def test_array_concat_conn():
+    """ Test connecting a `Concat` to an `InstArray` """
+
+    Child = h.Module(name="Child")
+    Child.p3 = h.Port(width=3)
+    Child.p5 = h.Port(width=5)
+
+    Parent = h.Module(name="Parent")
+    Parent.s = h.Signal(width=5)
+    Parent.c = 11 * Child()
+    Parent.c.p3 = Parent.s[:3]
+    Parent.c.p5 = h.Concat(Parent.s[3:], Parent.s[:3])
+
+    h.elaborate(Parent)
+
