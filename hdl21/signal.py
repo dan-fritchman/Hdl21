@@ -20,13 +20,85 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 
 """
 
-from typing import Callable, Optional, Any, List
+from typing import Callable, Optional, Any, List, Union
 from enum import Enum
 from dataclasses import field
 from pydantic.dataclasses import dataclass
 
 # Local imports
 from .connect import connectable, is_connectable
+
+
+def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
+    """ Square-bracket slicing into Signals, Concatenations, and Slices. 
+    Assuming valid inputs, returns a signal-`Slice`. 
+
+    FIXME: this commentary reflects what *should* happen, not totally what *is* yet: 
+
+    Signal slices are indexed "Python style", in the senses that: 
+    * Negative indices are supported, and count from the "end" of the Signal.
+    * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index. 
+    * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
+    Popular HDLs commonly use different signal-indexing conventions. 
+    Hdl21's own primary exchange format (in ProtoBuf) does as well, 
+    eschewing adopting inclusive-endpoints and eschewing negative-indexing.
+    """
+
+    if isinstance(key, int):
+        if key >= parent.width:
+            raise ValueError(f"Out-of-bounds index {key} into {parent}")
+        if key < 0:
+            key = key + parent.width
+        return Slice(signal=parent, top=key, bot=key, step=1)
+
+    if isinstance(key, slice):
+        # Note these `slice` attributes are descriptor-things, and they get weird, fast.
+        # Extracting their three key fields the most-hardest way via `__getattribute__` seems to work cleanest.
+        start = slice.__getattribute__(key, "start")
+        stop = slice.__getattribute__(key, "stop")
+        step = slice.__getattribute__(key, "step")
+        start = 0 if start is None else start
+        stop = parent.width - 1 if stop is None else stop
+        step = 1 if step is None else step
+        # Wrap around the start and stop to allow for negative slicing
+        start = start if start >= 0 else parent.width + start
+        stop = stop if stop >= 0 else parent.width + stop - 1
+        if step == 0:
+            raise ValueError(f"slice step cannot be zero")
+        elif step < 0:
+            # Align bot with the step
+            top = start
+            bot = start + (-(start - stop) // step) * step
+        else:
+            # Align top with the step
+            top = start + -(-(stop - start) // step) * step
+            bot = start
+        if top > parent.width:
+            raise ValueError(f"Out-of-bounds index {top} into {parent}")
+        if bot > parent.width:
+            raise ValueError(f"Out-of-bounds index {bot} into {parent}")
+        if bot > top:
+            raise ValueError(f"Invalid slice ({bot} > {top}) {key} into {parent}")
+        return Slice(signal=parent, top=top, bot=bot, step=step)
+
+    raise TypeError(f"Invalid slice-type {key} into {parent}")
+
+
+def slices(cls: type) -> type:
+    """ Decorator to add the 'square-bracket indexing produces `Slice`s' behavior. """
+
+    if getattr(cls, "__getitem__", None) is not None:
+        msg = f"Internal hdl21 Error: invavlid `slices`-decoration of {cls} with existing __getitem__"
+        raise RuntimeError(msg)
+
+    def __getitem__(self, key: Any) -> "Slice":
+        return _slice_(parent=self, key=key)
+
+    # Add the new behavior to the class
+    cls.__getitem__ = __getitem__
+    cls.__getitem__.__doc__ = _slice_.__doc__
+    # And don't forget to return that class!
+    return cls
 
 
 class PortDir(Enum):
@@ -45,6 +117,7 @@ class Visibility(Enum):
     PORT = 1  # Exposed as a Port
 
 
+@slices
 @connectable
 @dataclass
 class Signal:
@@ -64,59 +137,6 @@ class Signal:
     def __post_init_post_parse__(self):
         if self.width < 1:
             raise ValueError
-
-    def __getitem__(self, key: Any) -> "Slice":
-        """ Square-Bracket Slicing into Signals, returning Signal-Slices.
-
-        FIXME: this commentary reflects what *should* happen, not totally what *is* yet: 
-
-        Signal slices are indexed "Python style", in the senses that: 
-        * Negative indices are supported, and count from the "end" of the Signal.
-        * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index. 
-        * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
-        Popular HDLs commonly use different signal-indexing conventions. 
-        Hdl21's own primary exchange format (in ProtoBuf) does as well, 
-        eschewing adopting inclusive-endpoints and eschewing negative-indexing.
-        """
-
-        if isinstance(key, int):
-            if key >= self.width:
-                raise ValueError(f"Out-of-bounds index {key} into {self}")
-            if key < 0:
-                key = key + self.width
-            return Slice(signal=self, top=key, bot=key, step=1)
-
-        if isinstance(key, slice):
-            # Note these `slice` attributes are descriptor-things, and they get weird, fast.
-            # Extracting their three key fields the most-hardest way via `__getattribute__` seems to work cleanest.
-            start = slice.__getattribute__(key, "start")
-            stop = slice.__getattribute__(key, "stop")
-            step = slice.__getattribute__(key, "step")
-            start = 0 if start is None else start
-            stop = self.width - 1 if stop is None else stop
-            step = 1 if step is None else step
-            # Wrap around the start and stop to allow for negative slicing
-            start = start if start >= 0 else self.width + start
-            stop = stop if stop >= 0 else self.width + stop - 1
-            if step == 0:
-                raise ValueError(f"slice step cannot be zero")
-            elif step < 0:
-                # Align bot with the step
-                top = start
-                bot = start + (-(start - stop) // step) * step
-            else:
-                # Align top with the step
-                top = start + -(-(stop - start) // step) * step
-                bot = start
-            if top > self.width:
-                raise ValueError(f"Out-of-bounds index {top} into {self}")
-            if bot > self.width:
-                raise ValueError(f"Out-of-bounds index {bot} into {self}")
-            if bot > top:
-                raise ValueError(f"Invalid slice ({bot} > {top}) {key} into {self}")
-            return Slice(signal=self, top=top, bot=bot, step=step)
-
-        raise TypeError(f"Invalid slice-type {key} into {self}")
 
 
 def Signals(num: int, **kwargs) -> List[Signal]:
@@ -219,35 +239,7 @@ def _plural(*, fn: Callable, num: int, **kwargs) -> List[Signal]:
     return rv
 
 
-@connectable
-@dataclass
-class Slice:
-    """ Signal Slice, comprising a subset of its width """
-
-    signal: Signal  # Parent Signal
-    top: int  # Top index (inclusive)
-    bot: int  # Bottom index (inclusive)
-    step: int  # Index step size
-
-    @property
-    def width(self) -> int:
-        """ Slice width """
-        if self.step != 1:
-            raise NotImplementedError  # FIXME!
-        return 1 + self.top - self.bot
-
-    def __eq__(self, other: "Slice") -> bool:
-        """ Slice equality requires *identity* between parent Signals """
-        if not isinstance(other, Slice):
-            return NotImplemented
-        return (
-            self.signal is other.signal
-            and self.top == other.top
-            and self.bot == other.bot
-            and self.step == other.step
-        )
-
-
+@slices
 @connectable
 class Concat:
     """ Signal Concatenation
@@ -274,6 +266,39 @@ class Concat:
         raise NotImplementedError
 
 
+@slices
+@connectable
+@dataclass
+class Slice:
+    """ Signal Slice, comprising a subset of its width """
+
+    signal: Union[Signal, Concat, "Slice"]  # Parent Signal
+    top: int  # Top index (inclusive)
+    bot: int  # Bottom index (inclusive)
+    step: int  # Index step size
+
+    @property
+    def width(self) -> int:
+        """ Slice width """
+        if self.step != 1:
+            raise NotImplementedError  # FIXME!
+        return 1 + self.top - self.bot
+
+    def __eq__(self, other: "Slice") -> bool:
+        """ Slice equality requires *identity* between parent Signals """
+        if not isinstance(other, Slice):
+            return NotImplemented
+        return (
+            self.signal is other.signal
+            and self.top == other.top
+            and self.bot == other.bot
+            and self.step == other.step
+        )
+
+
+Slice.__pydantic_model__.update_forward_refs()
+
+
 @connectable
 @dataclass
 class NoConn:
@@ -288,3 +313,58 @@ class NoConn:
     """
 
     name: Optional[str] = None
+
+
+def _resolve_slice(slice: Slice) -> List[Slice]:
+    """ Resolve a Slice's `parent` to a concrete Signal or Signals. 
+    Returns a list of Slices, where each element in the list has a concrete Signal for its parent. 
+    
+    Slices of other Slices, and Slices of Concats are both valid design-time constructions. 
+    For example: 
+    ```python
+    h.Concat(sig1, sig2, sig3)[1] # Slice of a Concat
+    sig4[0:2][1] # Slice of a Slice
+    ```
+    As some point their parents must be resolved to their original Signals, 
+    at minimum before export-level name resolution. 
+
+    Resolving Concatenations can generally resolve to more than one Slice, as in: 
+    ```python
+    h.Concat(sig1[0], sig2[0], sig3[0])[0:1] # Requires slices of `sig1` and `sig2`
+    ``` """
+
+    # FIXME: some combination of this and elaboration needs to recognize "full slices", at least in naming
+    # e.g. `sig[:]`'s name for a width-one signal should resolve to `sig`, not `sig_0`
+
+    if isinstance(slice.signal, Signal):
+        # Already all good! Just make a one-element list.
+        return [slice]
+
+    if isinstance(slice.signal, Concat):
+        # Slice a concatenation.
+        # Trick here is we make a list of single-bit slices, then use Python-native slicing-syntax into lists to subset it.
+        # Creating those single-bit slices generally requires recursive calls into this method.
+        bits = list()
+        for part in slice.signal.parts:
+            for bitnum in range(0, part.width):
+                bits.extend(_resolve_slice(part[bitnum]))
+
+        # Now python-slice into that list
+        # FIXME: #1 Python-style slicing will remove the `+1`. Also, whether abs(step) is the best idea here
+        return bits[slice.bot : slice.top + 1 : abs(slice.step)]
+
+    if isinstance(slice.signal, Slice):
+        if slice.step < 0:
+            raise NotImplementedError("Nested negative slice steps not yet supported")
+
+        # Recursively peel off a bit at a time.
+        if slice.width == 1:
+            # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
+            parent = slice.signal  # Note this is also a Slice
+            return _resolve_slice(parent.signal[parent.bot + slice.bot])
+        # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
+        return _resolve_slice(slice.signal[slice.bot]) + _resolve_slice(
+            slice.signal[slice.bot + slice.step : slice.top : slice.step]
+        )
+
+    raise TypeError(f"Invalid attempt to resolve slicing on {slice}")

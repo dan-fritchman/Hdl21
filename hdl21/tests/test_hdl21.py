@@ -1422,7 +1422,6 @@ def test_bad_intf_conn():
         h.elaborate(q)
 
 
-@pytest.mark.xfail(reason="#8")
 def test_array_concat_conn():
     """ Test connecting a `Concat` to an `InstArray` """
 
@@ -1437,4 +1436,43 @@ def test_array_concat_conn():
     Parent.c.p5 = h.Concat(Parent.s[3:], Parent.s[:3])
 
     h.elaborate(Parent)
+
+
+def test_slice_resolution():
+    """ Test resolutions of slice combinations """
+
+    from hdl21.signal import _resolve_slice
+
+    # Slice of a Signal
+    s = h.Signal(width=5)
+    assert _resolve_slice(s[0]) == [s[0]]
+
+    # Slice of a Concat
+    s1 = h.Signal(name="s1", width=5)
+    s2 = h.Signal(name="s2", width=5)
+    c = h.Concat(s1, s2)
+    assert _resolve_slice(c[0]) == [s1[0]]
+    assert _resolve_slice(c[1]) == [s1[1]]
+    assert _resolve_slice(c[2]) == [s1[2]]
+    assert _resolve_slice(c[3]) == [s1[3]]
+    assert _resolve_slice(c[4]) == [s1[4]]
+    assert _resolve_slice(c[5]) == [s2[0]]
+    assert _resolve_slice(c[6]) == [s2[1]]
+    assert _resolve_slice(c[7]) == [s2[2]]
+    assert _resolve_slice(c[8]) == [s2[3]]
+    assert _resolve_slice(c[9]) == [s2[4]]
+
+    # Slice of a Slice
+    sa = h.Signal(name="sa", width=5)
+    assert _resolve_slice(sa[2:5][0]) == [sa[2]]
+    assert _resolve_slice(sa[2:5][1]) == [sa[3]]
+    assert _resolve_slice(sa[2:5][2]) == [sa[4]]
+
+    assert _resolve_slice(sa[:][0]) == [sa[0]]
+    assert _resolve_slice(sa[:][1]) == [sa[1]]
+    assert _resolve_slice(sa[:][2]) == [sa[2]]
+    assert _resolve_slice(sa[:][3]) == [sa[3]]
+    assert _resolve_slice(sa[:][4]) == [sa[4]]
+
+    assert _resolve_slice(sa[:][0:4]) == [sa[0], sa[1], sa[2], sa[3], sa[4]]
 
