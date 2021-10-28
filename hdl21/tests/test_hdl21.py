@@ -1420,3 +1420,21 @@ def test_bad_intf_conn():
 
     with pytest.raises(RuntimeError):
         h.elaborate(q)
+
+
+@pytest.mark.xfail(reason="#8")
+def test_array_concat_conn():
+    """ Test connecting a `Concat` to an `InstArray` """
+
+    Child = h.Module(name="Child")
+    Child.p3 = h.Port(width=3)
+    Child.p5 = h.Port(width=5)
+
+    Parent = h.Module(name="Parent")
+    Parent.s = h.Signal(width=5)
+    Parent.c = 11 * Child()
+    Parent.c.p3 = Parent.s[:3]
+    Parent.c.p5 = h.Concat(Parent.s[3:], Parent.s[:3])
+
+    h.elaborate(Parent)
+
