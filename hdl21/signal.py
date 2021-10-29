@@ -249,7 +249,7 @@ class Concat:
         for p in parts:
             if not is_connectable(p):
                 raise TypeError(f"Signal-concatenating unconnectable object {p}")
-        self.parts = parts
+        self.parts = tuple(parts)
 
     @property
     def width(self):
@@ -264,6 +264,9 @@ class Concat:
         # # Should that be True of False?
         # ```
         raise NotImplementedError
+
+    def __repr__(self):
+        return f"Concat(width={self.width}, parts={len(self.parts)})"
 
 
 @slices
@@ -313,58 +316,3 @@ class NoConn:
     """
 
     name: Optional[str] = None
-
-
-def _resolve_slice(slice: Slice) -> List[Slice]:
-    """ Resolve a Slice's `parent` to a concrete Signal or Signals. 
-    Returns a list of Slices, where each element in the list has a concrete Signal for its parent. 
-    
-    Slices of other Slices, and Slices of Concats are both valid design-time constructions. 
-    For example: 
-    ```python
-    h.Concat(sig1, sig2, sig3)[1] # Slice of a Concat
-    sig4[0:2][1] # Slice of a Slice
-    ```
-    As some point their parents must be resolved to their original Signals, 
-    at minimum before export-level name resolution. 
-
-    Resolving Concatenations can generally resolve to more than one Slice, as in: 
-    ```python
-    h.Concat(sig1[0], sig2[0], sig3[0])[0:1] # Requires slices of `sig1` and `sig2`
-    ``` """
-
-    # FIXME: some combination of this and elaboration needs to recognize "full slices", at least in naming
-    # e.g. `sig[:]`'s name for a width-one signal should resolve to `sig`, not `sig_0`
-
-    if isinstance(slice.signal, Signal):
-        # Already all good! Just make a one-element list.
-        return [slice]
-
-    if isinstance(slice.signal, Concat):
-        # Slice a concatenation.
-        # Trick here is we make a list of single-bit slices, then use Python-native slicing-syntax into lists to subset it.
-        # Creating those single-bit slices generally requires recursive calls into this method.
-        bits = list()
-        for part in slice.signal.parts:
-            for bitnum in range(0, part.width):
-                bits.extend(_resolve_slice(part[bitnum]))
-
-        # Now python-slice into that list
-        # FIXME: #1 Python-style slicing will remove the `+1`. Also, whether abs(step) is the best idea here
-        return bits[slice.bot : slice.top + 1 : abs(slice.step)]
-
-    if isinstance(slice.signal, Slice):
-        if slice.step < 0:
-            raise NotImplementedError("Nested negative slice steps not yet supported")
-
-        # Recursively peel off a bit at a time.
-        if slice.width == 1:
-            # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
-            parent = slice.signal  # Note this is also a Slice
-            return _resolve_slice(parent.signal[parent.bot + slice.bot])
-        # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
-        return _resolve_slice(slice.signal[slice.bot]) + _resolve_slice(
-            slice.signal[slice.bot + slice.step : slice.top : slice.step]
-        )
-
-    raise TypeError(f"Invalid attempt to resolve slicing on {slice}")

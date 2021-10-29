@@ -8,7 +8,7 @@ import hdl21 as h
 
 
 def test_version():
-    assert h.__version__ == "0.1.0"
+    assert h.__version__ == "0.1.1"
 
 
 def test_module1():
@@ -779,10 +779,12 @@ def test_proto3():
     assert inst.conns["p1"].top == 0
     assert inst.conns["p1"].bot == 0
     assert isinstance(inst.conns["p8"], h.signal.Concat)
-    assert len(inst.conns["p8"].parts) == 3
+    assert len(inst.conns["p8"].parts) == 4
     assert inst.conns["p8"].parts[0] is M2.s
-    assert isinstance(inst.conns["p8"].parts[1], h.signal.Concat)
+    assert isinstance(inst.conns["p8"].parts[0], h.signal.Signal)
+    assert isinstance(inst.conns["p8"].parts[1], h.signal.Slice)
     assert isinstance(inst.conns["p8"].parts[2], h.signal.Slice)
+    assert isinstance(inst.conns["p8"].parts[3], h.signal.Slice)
 
 
 def test_proto_roundtrip():
@@ -1426,53 +1428,57 @@ def test_array_concat_conn():
     """ Test connecting a `Concat` to an `InstArray` """
 
     Child = h.Module(name="Child")
-    Child.p3 = h.Port(width=3)
-    Child.p5 = h.Port(width=5)
+    Child.p3 = h.Input(width=3)
+    Child.p5 = h.Input(width=5)
 
     Parent = h.Module(name="Parent")
-    Parent.s = h.Signal(width=5)
-    Parent.c = 11 * Child()
-    Parent.c.p3 = Parent.s[:3]
-    Parent.c.p5 = h.Concat(Parent.s[3:], Parent.s[:3])
+    Parent.s5 = h.Signal(width=5)
+    Parent.s9 = h.Signal(width=9)
+    Parent.c = 2 * Child()
+    Parent.c.p3 = Parent.s5[0:2]
+    Parent.c.p5 = h.Concat(Parent.s5[3], Parent.s9)
 
-    h.elaborate(Parent)
+    import sys
+
+    h.netlist(h.to_proto(Parent), sys.stdout, "verilog")
 
 
 def test_slice_resolution():
     """ Test resolutions of slice combinations """
 
-    from hdl21.signal import _resolve_slice
+    from hdl21.elab import _resolve_slice
 
     # Slice of a Signal
     s = h.Signal(width=5)
-    assert _resolve_slice(s[0]) == [s[0]]
+    assert _resolve_slice(s[0]) == s[0]
 
     # Slice of a Concat
     s1 = h.Signal(name="s1", width=5)
     s2 = h.Signal(name="s2", width=5)
     c = h.Concat(s1, s2)
-    assert _resolve_slice(c[0]) == [s1[0]]
-    assert _resolve_slice(c[1]) == [s1[1]]
-    assert _resolve_slice(c[2]) == [s1[2]]
-    assert _resolve_slice(c[3]) == [s1[3]]
-    assert _resolve_slice(c[4]) == [s1[4]]
-    assert _resolve_slice(c[5]) == [s2[0]]
-    assert _resolve_slice(c[6]) == [s2[1]]
-    assert _resolve_slice(c[7]) == [s2[2]]
-    assert _resolve_slice(c[8]) == [s2[3]]
-    assert _resolve_slice(c[9]) == [s2[4]]
+    assert _resolve_slice(c[0]) == s1[0]
+    assert _resolve_slice(c[1]) == s1[1]
+    assert _resolve_slice(c[2]) == s1[2]
+    assert _resolve_slice(c[3]) == s1[3]
+    assert _resolve_slice(c[4]) == s1[4]
+    assert _resolve_slice(c[5]) == s2[0]
+    assert _resolve_slice(c[6]) == s2[1]
+    assert _resolve_slice(c[7]) == s2[2]
+    assert _resolve_slice(c[8]) == s2[3]
+    assert _resolve_slice(c[9]) == s2[4]
 
     # Slice of a Slice
     sa = h.Signal(name="sa", width=5)
-    assert _resolve_slice(sa[2:5][0]) == [sa[2]]
-    assert _resolve_slice(sa[2:5][1]) == [sa[3]]
-    assert _resolve_slice(sa[2:5][2]) == [sa[4]]
+    assert _resolve_slice(sa[2:5][0]) == sa[2]
+    assert _resolve_slice(sa[2:5][1]) == sa[3]
+    assert _resolve_slice(sa[2:5][2]) == sa[4]
 
-    assert _resolve_slice(sa[:][0]) == [sa[0]]
-    assert _resolve_slice(sa[:][1]) == [sa[1]]
-    assert _resolve_slice(sa[:][2]) == [sa[2]]
-    assert _resolve_slice(sa[:][3]) == [sa[3]]
-    assert _resolve_slice(sa[:][4]) == [sa[4]]
+    assert _resolve_slice(sa[:][0]) == sa[0]
+    assert _resolve_slice(sa[:][1]) == sa[1]
+    assert _resolve_slice(sa[:][2]) == sa[2]
+    assert _resolve_slice(sa[:][3]) == sa[3]
+    assert _resolve_slice(sa[:][4]) == sa[4]
 
-    assert _resolve_slice(sa[:][0:4]) == [sa[0], sa[1], sa[2], sa[3], sa[4]]
+    # Check a concatenation case. Note `Concat` does not support equality, so compare parts.
+    assert _resolve_slice(sa[:][0:4]).parts == (sa[0], sa[1], sa[2], sa[3], sa[4])
 
