@@ -2,7 +2,14 @@
 # Hdl21 Hardware Description Library 
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+
+
+# Before any real importing, ensure we can instantiate non-pydantic types in type-checked dataclasses.
+# This `Config` seems to be shared for *all* pydantic types, even when not applied to `BaseModel`.
+from pydantic import BaseModel
+
+BaseModel.Config.arbitrary_types_allowed = True
 
 
 # Before any real importing, ensure we can instantiate non-pydantic types in type-checked dataclasses.

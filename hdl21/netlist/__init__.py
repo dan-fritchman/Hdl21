@@ -619,23 +619,9 @@ class VerilogNetlister(Netlister):
     @classmethod
     def format_signal_slice(cls, pslice: protodefs.Slice) -> str:
         """ Format Signal-Slice `pslice` """
-        base = pslice.signal
-        indices = list(reversed(range(pslice.bot, pslice.top + 1)))
-        if not len(indices):
-            raise RuntimeError(f"Attempting to netlist empty slice {pslice}")
-        return " ".join([f"{base}{cls.format_bus_bit(k)}" for k in indices])
-
-    @classmethod
-    def format_bus_bit(cls, index: Union[int, str]) -> str:
-        """ Format-specific string-representation of a bus bit-index"""
-        # Spectre netlisting uses an underscore prefix, e.g. `bus_0`
-        return "_" + str(index)
-
-    @classmethod
-    def format_bus_bit(cls, index: Union[int, str]) -> str:
-        """ Format-specific string-representation of a bus bit-index"""
-        # Square-bracket notation, e.g. `signal[0]`
-        return "[" + str(index) + "]"
+        if pslice.top == pslice.bot:  # Single-bit slice
+            return f"{pslice.signal}[{pslice.top}]"
+        return f"{pslice.signal}[{pslice.top}:{pslice.bot}]"  # Multi-bit slice
 
 
 def netlist(

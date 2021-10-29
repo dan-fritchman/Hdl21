@@ -211,7 +211,8 @@ class ProtoExporter:
                 elif is_dataclass(call.params):
                     params = asdict(call.params)
                 else:
-                    raise TypeError
+                    msg = f"Invalid ExternalModule parameter-type for export: {call.params}"
+                    raise TypeError(msg)
 
             # Set the parameter-values
             for key, val in params.items():
@@ -233,48 +234,43 @@ class ProtoExporter:
 
         # Create its connections mapping
         for pname, sig in inst.conns.items():
-            # Create a proto-Connection
-            pconn = protodefs.Connection()
-
-            if isinstance(sig, signal.Signal):
-                pconn.sig.name = sig.name
-                pconn.sig.width = sig.width
-            elif isinstance(sig, signal.Slice):
-                pconn.slice.signal = sig.signal.name
-                pconn.slice.bot = sig.bot
-                pconn.slice.top = sig.top
-            elif isinstance(sig, signal.Concat):
-                pconc = self.export_concat(sig)
-                pconn.concat.CopyFrom(pconc)
-            else:
-                raise TypeError
-            # Assign it into the connections dict.
-            # The proto bundle requires copying it along the way
-            pinst.connections[pname].CopyFrom(pconn)
+            # Assign each item into the connections dict.
+            # The proto interface requires copying it along the way
+            pinst.connections[pname].CopyFrom(self.export_conn(sig))
 
         return pinst
 
+    def export_conn(
+        self, sig: Union[signal.Signal, signal.Slice, signal.Concat]
+    ) -> protodefs.Connection:
+        """ Export a proto Connection """
+
+        pconn = protodefs.Connection()  # Create a proto-Connection
+        if isinstance(sig, signal.Signal):
+            pconn.sig.name = sig.name
+            pconn.sig.width = sig.width
+        elif isinstance(sig, signal.Slice):
+            pslice = self.export_slice(sig)
+            pconn.slice.CopyFrom(pslice)
+        elif isinstance(sig, signal.Concat):
+            pconc = self.export_concat(sig)
+            pconn.concat.CopyFrom(pconc)
+        else:
+            raise TypeError(f"Invalid argument to `ProtoExporter.export_conn`: {sig}")
+        return pconn
+
+    def export_slice(self, slize: signal.Slice) -> protodefs.Slice:
+        """ Export a signal-`Slice`. 
+        Fails if the parent is not a concrete `Signal`, 
+        i.e. it is a `Concat` or another `Slice`. """
+        if not isinstance(slize.signal, signal.Signal):
+            msg = f"Export error: {slize} has a parent {slize.signal} which is not a concrete Signal"
+            raise RuntimeError(msg)
+        return protodefs.Slice(signal=slize.signal.name, top=slize.top, bot=slize.bot)
+
     def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
-        """Export (potentially recursive) Signal Concatenations"""
+        """ Export (potentially recursive) Signal Concatenations """
         pconc = protodefs.Concat()
         for part in concat.parts:
-            if isinstance(part, signal.Signal):
-                psig = protodefs.Signal(name=part.name, width=part.width)
-                pconn = protodefs.Connection()
-                pconn.sig.CopyFrom(psig)
-                pconc.parts.append(pconn)
-            elif isinstance(part, signal.Slice):
-                psig = protodefs.Slice(
-                    signal=part.signal.name, top=part.top, bot=part.bot
-                )
-                pconn = protodefs.Connection()
-                pconn.slice.CopyFrom(psig)
-                pconc.parts.append(pconn)
-            elif isinstance(part, signal.Concat):
-                sub_pconc = self.export_concat(part)
-                pconn = protodefs.Connection()
-                pconn.concat.CopyFrom(sub_pconc)
-                pconc.parts.append(pconn)
-            else:
-                raise TypeError
+            pconc.parts.append(self.export_conn(part))
         return pconc

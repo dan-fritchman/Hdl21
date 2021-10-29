@@ -243,7 +243,7 @@ class GeneratorElaborator(_Elaborator):
                     # All new instances get the same BundleInstance
                     for inst in new_insts:
                         inst.connect(portname, conn)
-                elif isinstance(conn, Signal):
+                elif isinstance(conn, (Signal, Slice, Concat)):
                     # Get the target-module port, particularly for its width
                     port = target.get(portname)
                     if not isinstance(port, Signal):
@@ -263,11 +263,10 @@ class GeneratorElaborator(_Elaborator):
                                 msg = f"Width mismatch connecting {slize} to {port}"
                                 raise RuntimeError(msg)
                             inst.connect(portname, slize)
-                    else:  # All other values are invalid
-                        msg = f"Invalid connection between {conn} of width {conn.width} and {array.n}"
+                    else:  # All other width-values are invalid
+                        msg = f"Invalid connection of {conn} of width {conn.width} to port {portname} on Array {array.name} of width {port.width}. "
+                        msg += f"Valid widths are either {port.width} (broadcasting across instances) and {port.width * array.n} (individually wiring to each)."
                         raise RuntimeError(msg)
-                elif isinstance(conn, (Slice, Concat)):
-                    raise NotImplementedError  # COMING SOON!
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     raise TypeError(msg)
@@ -933,6 +932,154 @@ class Orphanage(_Elaborator):
         return module
 
 
+class SliceResolver(_Elaborator):
+    """ Elaboration pass to resolve slices and concatenations to concrete signals. 
+    Modifies connections to any nested slices, nested concatenations, or combinations thereof. """
+
+    def elaborate_module(self, module: Module) -> Module:
+        # Depth-first traverse instances, covering their targets first.
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+
+        # Then do the real work, updating any necessary connections on each instance
+        for inst in module.instances.values():
+            self.update_instance(module, inst)
+
+        # No errors means it checked out, return the Module unchanged
+        return module
+
+    def update_instance(self, module: Module, inst: Instance) -> None:
+        """ Update all `Slice` and `Concat` valued connections to remove nested `Slice`s """
+        for portname in inst.conns.keys():
+            conn = inst.conns[portname]
+
+            if isinstance(conn, Slice):
+                # Resolve the slice-parent(s) to concrete signals
+                inst.conns[portname] = _resolve_slice(conn)
+
+            elif isinstance(conn, Concat):
+                # Resolve the concatenation to flat parts
+                inst.conns[portname] = _resolve_concat(conn)
+
+            # All other connection-types (Signals, Interfaces) are fine
+
+
+def _list_slice(slize: Slice) -> List[Slice]:
+    """ Internal recursive helper for `resolve_slice`. 
+    Returns a list of Slices in which each element has a concrete Signal for its parent. """
+
+    # FIXME: some combination of this and elaboration needs to recognize "full slices", at least in naming
+    # e.g. `sig[:]`'s name for a width-one signal should resolve to `sig`, not `sig_0`
+
+    if isinstance(slize.signal, Signal):
+        # Already all good! Just make a one-element list.
+        return [slize]
+
+    if isinstance(slize.signal, Concat):
+        # Slice a concatenation.
+        # Trick here is we make a list of single-bit slices, then use Python-native slicing-syntax into lists to subset it.
+        # Creating those single-bit slices generally requires recursive calls into this method.
+        bits = list()
+        for part in slize.signal.parts:
+            for bitnum in range(0, part.width):
+                bits.extend(_list_slice(part[bitnum]))
+
+        # Now python-slice into that list
+        # FIXME: #1 Python-style slicing will remove the `+1`. Also, whether abs(step) is the best idea here
+        return bits[slize.bot : slize.top + 1 : abs(slize.step)]
+
+    if isinstance(slize.signal, Slice):
+        if slize.step < 0:
+            raise NotImplementedError("Nested negative slice steps not yet supported")
+
+        # Recursively peel off a bit at a time.
+        if slize.width == 1:
+            # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
+            parent = slize.signal  # Note this is also a Slice
+            return _list_slice(parent.signal[parent.bot + slize.bot])
+        # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
+        return _list_slice(slize.signal[slize.bot]) + _list_slice(
+            slize.signal[slize.bot + slize.step : slize.top : slize.step]
+        )
+
+    raise TypeError(f"Invalid attempt to resolve slicing on {slize}")
+
+
+def _resolve_slice(slize: Slice) -> Union[Slice, Concat]:
+    """ Resolve a `Slice` to one or more with "conrete" `Signal`s as parents. 
+    
+    Slices of other Slices and Slices of Concats are both valid design-time constructions. 
+    For example: 
+    ```python
+    h.Concat(sig1, sig2, sig3)[1] # Slice of a Concat
+    sig4[0:2][1] # Slice of a Slice
+    ```
+
+    While these may not frequently be created by designers, they are (at least) often created by array broadcasting. 
+    As some point their parents must be resolved to their original Signals, at minimum before export-level name resolution. 
+
+    Resolving Concatenations can generally resolve to more than one Slice, as in: 
+    ```python
+    h.Concat(sig1[0], sig2[0], sig3[0])[0:1] # Requires slices of `sig1` and `sig2`
+    ``` 
+    Such cases create and return a Concatenation. """
+
+    ls = _list_slice(slize)
+    if len(ls) == 1:  # Resolved to single parent-Signal
+        return ls[0]
+    elif len(ls) > 1:  # Multiple parts required - concatenate them
+        return Concat(*ls)
+
+    raise RuntimeError(f"Error resolving Slice {slize}")
+
+
+def _resolve_concat(conc: Concat) -> Concat:
+    """ Resolve a Concatenation into (a) concrete Signals and (b) Slices of concrete Signals. 
+    Removes nested concatenations and resolves slices along the way. """
+
+    if not len(conc.parts):
+        raise RuntimeError("Concatenation with no parts")
+
+    if all(_flat_concatable(p) for p in conc.parts):
+        return conc  # Already all good!
+
+    if isinstance(conc.parts[0], Concat):
+        # Recursively cover the first element, and all others
+        first = _resolve_concat(conc.parts[0])
+        rest = _resolve_concat(Concat(*conc.parts[1:]))
+        return Concat(*(first.parts + rest.parts))
+
+    if isinstance(conc.parts[0], Slice):
+        # Resolve everything within the Slice to a list of concrete-Signal slices
+        first = _resolve_slice(conc.parts[0])
+        # Pass everything else recursively back to this method
+        rest = _resolve_concat(Concat(*conc.parts[1:]))
+        # And concatenate the two
+        return Concat(*(first + rest.parts))
+
+    # Otherwise peel off as many Signals and concrete-Signal Slices as we can
+    for idx in range(len(conc.parts)):
+        if _flat_concatable(conc.parts[idx]):
+            continue
+        # Hit our first "compound" entry. Split the list here.
+        first = conc.parts[:idx]
+        rest = _resolve_concat(Concat(*conc.parts[idx:]))
+        return Concat(*(first + rest.parts))
+
+    raise RuntimeError("Unable to resolve concatenation")
+
+
+def _flat_concatable(s: Union[Signal, Slice, Concat]) -> bool:
+    """ Boolean indication of whether `s` is suitable for flattened Concatenations. 
+    Such objects must be either: 
+    * (a) A Signal, or
+    * (b) A Slice into a Signal
+    Notable exceptions include Concats and nested Slices of Concats and other Slices. """
+    return isinstance(s, Signal) or (
+        isinstance(s, Slice) and isinstance(s.signal, Signal)
+    )
+
+
 class SetList:
     """ A common combination of a hash-set and ordered list of the same items. 
     Used for keeping ordered items while maintaining quick membership testing. """
@@ -967,6 +1114,7 @@ class ElabPass(Enum):
     FLATTEN_BUNDLES = BundleFlattener
     IMPLICIT_SIGNALS = ImplicitSignals
     SIGNAL_CONN_TYPES = SignalConnTypes
+    RESOLVE_SLICES = SliceResolver
 
     @classmethod
     def default(cls) -> List["ElabPass"]:

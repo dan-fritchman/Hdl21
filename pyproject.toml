@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hdl21"
-version = "0.1.0"
+version = "0.2.0"
 description = "Hardware Description Library"
 authors = ["Dan Fritchman <dan@fritch.mn>"]
 license = "BSD-3-Clause"
