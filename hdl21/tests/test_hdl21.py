@@ -2,7 +2,7 @@
 # hdl21 Unit Tests 
 """
 
-import copy, pytest
+import sys, copy, pytest
 from io import StringIO
 from types import SimpleNamespace
 from enum import Enum, EnumMeta, auto
@@ -750,7 +750,7 @@ def test_proto3():
     M2.s = h.Signal(width=4)
     M2.i = M1()
     M2.i(p1=M2.s[0])
-    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[2:3]))
+    M2.i(p8=h.Concat(M2.s, h.Concat(M2.s[0], M2.s[1]), M2.s[2:4]))
 
     ppkg = h.to_proto(M2, domain="test_proto3")
 
@@ -795,8 +795,9 @@ def test_proto3():
     inst = M2.i
     assert isinstance(inst.conns["p1"], h.signal.Slice)
     assert inst.conns["p1"].signal is M2.s
-    assert inst.conns["p1"].top == 0
+    assert inst.conns["p1"].top == 1
     assert inst.conns["p1"].bot == 0
+    assert inst.conns["p1"].width == 1
     assert isinstance(inst.conns["p8"], h.signal.Concat)
     assert len(inst.conns["p8"].parts) == 4
     assert inst.conns["p8"].parts[0] is M2.s
@@ -1048,42 +1049,47 @@ def test_signal_slice1():
     sig = h.Signal(width=10)
     sl = sig[0]
     assert isinstance(sl, h.signal.Slice)
-    assert sl.top == 0
+    assert sl.top == 1
     assert sl.bot == 0
     assert sl.width == 1
-    assert sl.step == 1
+    assert sl.step is None
     assert sl.signal is sig
 
-    sl = sig[0:4]
+    sl = sig[0:5]
     assert isinstance(sl, h.signal.Slice)
-    assert sl.top == 4
+    assert sl.top == 5
     assert sl.bot == 0
     assert sl.width == 5
+    assert sl.step is None
     assert sl.signal is sig
 
     sl = sig[:]
     assert isinstance(sl, h.signal.Slice)
-    assert sl.top == 9
+    assert sl.top == 10
     assert sl.bot == 0
     assert sl.width == 10
+    assert sl.step is None
     assert sl.signal is sig
 
 
 def test_signal_slice2():
     # Test slicing advanced features
     sl = h.Signal(width=11)[-1]
-    assert sl.top == 10
+    assert sl.top == 11
     assert sl.bot == 10
+    assert sl.step is None
     assert sl.width == 1
 
     sl = h.Signal(width=11)[:-1]
-    assert sl.top == 9
+    assert sl.top == 10
     assert sl.bot == 0
+    assert sl.step is None
     assert sl.width == 10
 
     sl = h.Signal(width=11)[-2:]
-    assert sl.top == 10
+    assert sl.top == 11
     assert sl.bot == 9
+    assert sl.step is None
     assert sl.width == 2
 
 
@@ -1411,9 +1417,9 @@ def test_instance_mult4():
     assert Parent.get("child_0").conns["a"] == Parent.a
     assert Parent.get("child_1").conns["a"] == Parent.a
     assert Parent.get("child_2").conns["a"] == Parent.a
-    assert Parent.get("child_0").conns["b"] == Parent.b[0:15]
-    assert Parent.get("child_1").conns["b"] == Parent.b[16:31]
-    assert Parent.get("child_2").conns["b"] == Parent.b[32:47]
+    assert Parent.get("child_0").conns["b"] == Parent.b[0:16]
+    assert Parent.get("child_1").conns["b"] == Parent.b[16:32]
+    assert Parent.get("child_2").conns["b"] == Parent.b[32:48]
 
 
 def test_netlist_fmts():
@@ -1693,7 +1699,7 @@ def test_array_concat_conn():
     Parent.s5 = h.Signal(width=5)
     Parent.s9 = h.Signal(width=9)
     Parent.c = 2 * Child()
-    Parent.c.p3 = Parent.s5[0:2]
+    Parent.c.p3 = Parent.s5[0:3]
     Parent.c.p5 = h.Concat(Parent.s5[3], Parent.s9)
 
     h.netlist(h.to_proto(Parent), StringIO(), "verilog")
@@ -1736,5 +1742,18 @@ def test_slice_resolution():
     assert _resolve_slice(sa[:][4]) == sa[4]
 
     # Check a concatenation case. Note `Concat` does not support equality, so compare parts.
-    assert _resolve_slice(sa[:][0:4]).parts == (sa[0], sa[1], sa[2], sa[3], sa[4])
+    assert _resolve_slice(sa[:][0:4]).parts == (sa[0], sa[1], sa[2], sa[3])
 
+
+@pytest.mark.xfail(reason="#1")
+def test_export_strides():
+    """ Test exporting connections with non-unit Slice-strides """
+
+    c = h.Module(name="c")
+    c.p = h.Input(width=2)
+
+    p = h.Module(name="p")
+    p.s = h.Signal(width=20)
+    p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
+
+    h.netlist(h.to_proto(p), sys.stdout, "verilog")

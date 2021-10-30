@@ -261,12 +261,19 @@ class ProtoExporter:
 
     def export_slice(self, slize: signal.Slice) -> protodefs.Slice:
         """ Export a signal-`Slice`. 
-        Fails if the parent is not a concrete `Signal`, 
-        i.e. it is a `Concat` or another `Slice`. """
+        Fails if the parent is not a concrete `Signal`, i.e. it is a `Concat` or another `Slice`. 
+        Fails for non-unit step-sizes, which should be converted to `Concat`s upstream. """
         if not isinstance(slize.signal, signal.Signal):
             msg = f"Export error: {slize} has a parent {slize.signal} which is not a concrete Signal"
             raise RuntimeError(msg)
-        return protodefs.Slice(signal=slize.signal.name, top=slize.top, bot=slize.bot)
+        if slize.step is not None and slize.step != 1:
+            msg = f"Export error: {slize} has non-unit step"
+            raise RuntimeError(msg)
+
+        # Move to HDL-style indexing, with inclusive `top` index.
+        return protodefs.Slice(
+            signal=slize.signal.name, top=slize.top - 1, bot=slize.bot
+        )
 
     def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
         """ Export (potentially recursive) Signal Concatenations """

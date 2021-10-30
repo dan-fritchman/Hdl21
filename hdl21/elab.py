@@ -21,7 +21,7 @@ from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
 from .primitives import PrimitiveCall
 from .bundle import AnonymousBundle, Bundle, BundleInstance, _check_compatible
-from .signal import PortDir, Signal, Visibility, Slice, Concat
+from .signal import PortDir, Signal, Visibility, Slice, Concat, Sliceable
 from .generator import Generator, GeneratorCall
 from .params import _unique_name
 from .instantiable import Instantiable
@@ -257,8 +257,7 @@ class GeneratorElaborator(_Elaborator):
                     elif port.width * array.n == conn.width:
                         # Each new instance gets a slice, equal to its own width
                         for k, inst in enumerate(new_insts):
-                            # FIXME: will be impacted by slice-indices changes!
-                            slize = conn[k * port.width : (k + 1) * port.width - 1]
+                            slize = conn[k * port.width : (k + 1) * port.width]
                             if slize.width != port.width:
                                 msg = f"Width mismatch connecting {slize} to {port}"
                                 raise RuntimeError(msg)
@@ -934,7 +933,10 @@ class Orphanage(_Elaborator):
 
 class SliceResolver(_Elaborator):
     """ Elaboration pass to resolve slices and concatenations to concrete signals. 
-    Modifies connections to any nested slices, nested concatenations, or combinations thereof. """
+    Modifies connections to any nested slices, nested concatenations, or combinations thereof. 
+    "Full-width" `Slice`s e.g. `sig[:]` are replaced with their parent `Signal`s.
+
+    TODO: `Slice`s with non-unit `step` are converted to `Concat`s. """
 
     def elaborate_module(self, module: Module) -> Module:
         # Depth-first traverse instances, covering their targets first.
@@ -945,68 +947,76 @@ class SliceResolver(_Elaborator):
         for inst in module.instances.values():
             self.update_instance(module, inst)
 
-        # No errors means it checked out, return the Module unchanged
         return module
 
     def update_instance(self, module: Module, inst: Instance) -> None:
         """ Update all `Slice` and `Concat` valued connections to remove nested `Slice`s """
-        for portname in inst.conns.keys():
-            conn = inst.conns[portname]
 
-            if isinstance(conn, Slice):
-                # Resolve the slice-parent(s) to concrete signals
-                inst.conns[portname] = _resolve_slice(conn)
-
-            elif isinstance(conn, Concat):
-                # Resolve the concatenation to flat parts
-                inst.conns[portname] = _resolve_concat(conn)
-
+        for portname, conn in inst.conns.items():
+            if isinstance(conn, (Slice, Concat)):
+                inst.conns[portname] = _resolve_sliceable(conn)
             # All other connection-types (Signals, Interfaces) are fine
+
+
+def _resolve_sliceable(conn: Sliceable) -> Sliceable:
+    """ Resolve a `Sliceable` to flat-concatenation-amenable elements. """
+    if isinstance(conn, Signal):
+        return conn  # Nothing to do
+    if isinstance(conn, Slice):
+        return _resolve_slice(conn)
+    if isinstance(conn, Concat):
+        return _resolve_concat(conn)
+    raise TypeError(f"Invalid attempt to resolve slicing on {conn}")
 
 
 def _list_slice(slize: Slice) -> List[Slice]:
     """ Internal recursive helper for `resolve_slice`. 
     Returns a list of Slices in which each element has a concrete Signal for its parent. """
 
-    # FIXME: some combination of this and elaboration needs to recognize "full slices", at least in naming
-    # e.g. `sig[:]`'s name for a width-one signal should resolve to `sig`, not `sig_0`
+    # Resolve "full-width" slices to their parent Signals
+    if slize.width == slize.signal.width:
+        # Return a single-element list, after resolution
+        return [_resolve_sliceable(slize.signal)]
 
     if isinstance(slize.signal, Signal):
-        # Already all good! Just make a one-element list.
-        return [slize]
+        return [slize]  # Already all good! Just make a one-element list.
 
-    if isinstance(slize.signal, Concat):
-        # Slice a concatenation.
-        # Trick here is we make a list of single-bit slices, then use Python-native slicing-syntax into lists to subset it.
-        # Creating those single-bit slices generally requires recursive calls into this method.
-        bits = list()
-        for part in slize.signal.parts:
-            for bitnum in range(0, part.width):
-                bits.extend(_list_slice(part[bitnum]))
+    # Do some actual work. Recursively peel off a bit at a time.
+    if slize.width == 1:
+        # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
 
-        # Now python-slice into that list
-        # FIXME: #1 Python-style slicing will remove the `+1`. Also, whether abs(step) is the best idea here
-        return bits[slize.bot : slize.top + 1 : abs(slize.step)]
-
-    if isinstance(slize.signal, Slice):
-        if slize.step < 0:
-            raise NotImplementedError("Nested negative slice steps not yet supported")
-
-        # Recursively peel off a bit at a time.
-        if slize.width == 1:
-            # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
+        if isinstance(slize.signal, Slice):
             parent = slize.signal  # Note this is also a Slice
             return _list_slice(parent.signal[parent.bot + slize.bot])
-        # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
-        return _list_slice(slize.signal[slize.bot]) + _list_slice(
-            slize.signal[slize.bot + slize.step : slize.top : slize.step]
-        )
 
-    raise TypeError(f"Invalid attempt to resolve slicing on {slize}")
+        if isinstance(slize.signal, Concat):
+            idx = 0  # Find the `part` including our index
+            for part in slize.signal.parts:
+                if part.width + idx > slize.bot:
+                    return _list_slice(part[slize.bot - idx])
+                idx += part.width
+            msg = f"Slice {slize} is out of bounds of Concat {slize.signal}"
+            raise RuntimeError(msg)
+
+        raise TypeError(f"Invalid attempt to resolve slicing on {slize}")
+
+    # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
+
+    if slize.step is not None and slize.step < 0:  # Negative step, begin from `top`
+        first = _list_slice(slize.signal[slize.top])
+        rest = slize.signal[slize.top + slize.step : slize.bot : slize.step]
+        rest = _list_slice(rest)
+
+    else:  # Positive step, begin from `bot`
+        step = slize.step if slize.step is not None else 1
+        first = _list_slice(slize.signal[slize.bot])
+        rest = _list_slice(slize.signal[slize.bot + step : slize.top : slize.step])
+
+    return first + rest
 
 
-def _resolve_slice(slize: Slice) -> Union[Slice, Concat]:
-    """ Resolve a `Slice` to one or more with "conrete" `Signal`s as parents. 
+def _resolve_slice(slize: Slice) -> Sliceable:
+    """ Resolve a `Slice` to one or more with "concrete" `Signal`s as parents. 
     
     Slices of other Slices and Slices of Concats are both valid design-time constructions. 
     For example: 
@@ -1024,8 +1034,10 @@ def _resolve_slice(slize: Slice) -> Union[Slice, Concat]:
     ``` 
     Such cases create and return a Concatenation. """
 
+    # Break out the slice elements in a list
     ls = _list_slice(slize)
-    if len(ls) == 1:  # Resolved to single parent-Signal
+    # And convert to either a single element or Concat
+    if len(ls) == 1:  # Resolved to single Slice
         return ls[0]
     elif len(ls) > 1:  # Multiple parts required - concatenate them
         return Concat(*ls)
@@ -1041,7 +1053,7 @@ def _resolve_concat(conc: Concat) -> Concat:
         raise RuntimeError("Concatenation with no parts")
 
     if all(_flat_concatable(p) for p in conc.parts):
-        return conc  # Already all good!
+        return Concat(*[_resolve_sliceable(p) for p in conc.parts])
 
     if isinstance(conc.parts[0], Concat):
         # Recursively cover the first element, and all others
@@ -1069,7 +1081,7 @@ def _resolve_concat(conc: Concat) -> Concat:
     raise RuntimeError("Unable to resolve concatenation")
 
 
-def _flat_concatable(s: Union[Signal, Slice, Concat]) -> bool:
+def _flat_concatable(s: Sliceable) -> bool:
     """ Boolean indication of whether `s` is suitable for flattened Concatenations. 
     Such objects must be either: 
     * (a) A Signal, or

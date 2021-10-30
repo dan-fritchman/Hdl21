@@ -48,8 +48,10 @@ def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
         if key >= parent.width:
             raise ValueError(f"Out-of-bounds index {key} into {parent}")
         if key < 0:
-            key = key + parent.width
-        return Slice(signal=parent, top=key, bot=key, step=1)
+            key += parent.width
+        return Slice(
+            signal=parent, top=key + 1, bot=key, start=key, stop=None, step=None
+        )
 
     if isinstance(key, slice):
         # Note these `slice` attributes are descriptor-things, and they get weird, fast.
@@ -57,29 +59,44 @@ def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
         start = slice.__getattribute__(key, "start")
         stop = slice.__getattribute__(key, "stop")
         step = slice.__getattribute__(key, "step")
-        start = 0 if start is None else start
-        stop = parent.width - 1 if stop is None else stop
-        step = 1 if step is None else step
-        # Wrap around the start and stop to allow for negative slicing
-        start = start if start >= 0 else parent.width + start
-        stop = stop if stop >= 0 else parent.width + stop - 1
-        if step == 0:
+
+        stepsz = 1 if step is None else step
+        if stepsz == 0:
             raise ValueError(f"slice step cannot be zero")
-        elif step < 0:
+        elif stepsz < 0:
+            # Here `top` gets a "+1" since `start` is *inclusive*, while `bot` gets "+1" as `stop` is *exclusive*.
+            top = (
+                parent.width
+                if start is None
+                else start + 1
+                if start >= 0
+                else parent.width + start + 1
+            )
+            bot = (
+                0
+                if stop is None
+                else stop + 1
+                if stop >= 0
+                else parent.width + stop + 1
+            )
             # Align bot with the step
-            top = start
-            bot = start + (-(start - stop) // step) * step
+            bot += (top - bot) % abs(stepsz)
         else:
+            # Here `start` and `stop` match `top` and `bot`'s inclsive/ exclusivity.
+            # No need to add any offsets.
+            top = (
+                parent.width
+                if stop is None
+                else stop
+                if stop >= 0
+                else parent.width + stop
+            )
+            bot = 0 if start is None else start if start >= 0 else parent.width + start
             # Align top with the step
-            top = start + -(-(stop - start) // step) * step
-            bot = start
-        if top > parent.width:
-            raise ValueError(f"Out-of-bounds index {top} into {parent}")
-        if bot > parent.width:
-            raise ValueError(f"Out-of-bounds index {bot} into {parent}")
-        if bot > top:
-            raise ValueError(f"Invalid slice ({bot} > {top}) {key} into {parent}")
-        return Slice(signal=parent, top=top, bot=bot, step=step)
+            top -= (top - bot) % stepsz
+
+        # Create and return our Slice. More checks are done in its constructor.
+        return Slice(signal=parent, top=top, bot=bot, step=step, start=start, stop=stop)
 
     raise TypeError(f"Invalid slice-type {key} into {parent}")
 
@@ -250,6 +267,8 @@ class Concat:
             if not _is_connectable(p):
                 raise TypeError(f"Signal-concatenating unconnectable object {p}")
         self.parts = tuple(parts)
+        if self.width < 1:
+            raise ValueError(f"Invalid Zero-Width Concat of {self.parts}")
 
     @property
     def width(self):
@@ -263,7 +282,7 @@ class Concat:
         # s == h.Concat(s[0], s[1])  # Slice and re-concatenate it
         # # Should that be True of False?
         # ```
-        raise NotImplementedError
+        return NotImplemented
 
     def __repr__(self):
         return f"Concat(width={self.width}, parts={len(self.parts)})"
@@ -276,16 +295,26 @@ class Slice:
     """ Signal Slice, comprising a subset of its width """
 
     signal: Union[Signal, Concat, "Slice"]  # Parent Signal
-    top: int  # Top index (inclusive)
+    top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
-    step: int  # Index step size
+    start: Optional[int]  # Python-convention-style start index
+    stop: Optional[int]  # Python-convention-style stop index
+    step: Optional[int]  # Python-convention-style step size
+
+    def __post_init_post_parse__(self):
+        if self.step is not None and self.step == 0:
+            raise ValueError(f"Invalid Slice into {self.signal}: step==0")
+        if self.width < 1:
+            raise ValueError(f"Invalid Slice into {self.signal}: width={self.width}")
+        if self.top <= self.bot:
+            msg = f"Invalid Slice into {self.signal}: top={self.top} <= bot={self.bot}"
+            raise ValueError(msg)
 
     @property
     def width(self) -> int:
-        """ Slice width """
-        if self.step != 1:
-            raise NotImplementedError  # FIXME!
-        return 1 + self.top - self.bot
+        """ Slice Width Accessor """
+        step = 1 if self.step is None else abs(self.step)
+        return (self.top - self.bot) // step
 
     def __eq__(self, other: "Slice") -> bool:
         """ Slice equality requires *identity* between parent Signals """
@@ -300,6 +329,9 @@ class Slice:
 
 
 Slice.__pydantic_model__.update_forward_refs()
+
+# Slice-compatible type aliases
+Sliceable = Union[Signal, Concat, Slice]
 
 
 @connectable
