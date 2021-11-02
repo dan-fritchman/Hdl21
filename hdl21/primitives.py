@@ -5,11 +5,11 @@ Primitives are leaf-level Modules typically defined not by users,
 but by simulation tools or device fabricators. 
 Prominent examples include MOS transistors, diodes, resistors, and capacitors. 
 
-Primitives divide in two classes, `physical` and `ideal`, 
-indicated by their `primtype` attribute. 
+Primitives divide in two classes, `physical` and `ideal`, indicated by their `primtype` attribute. 
 `PrimitiveType.IDEAL` primitives specify circuit-theoretic ideal elements 
 e.g. resistors, capacitors, inductors, and notably aphysical elements 
 such as ideal voltage and current sources. 
+
 `PrimitiveType.PHYSICAL` primitives in contrast specify abstract versions 
 of ultimately physically-realizable elements such as transistors and diodes. 
 These elements typically require some external translation, e.g. by a process-technology 
@@ -22,28 +22,34 @@ in physical length and width. Capacitors are similarly specified in physical ter
 often adding metal layers or other physical features. The component-value (R,C,L, etc.) 
 for these physically-specified cells is commonly suggestive or optional. 
 
-| Physical           | Ideal          | Alias(es)         | 
-| ------------------ | -------------- | ----------------- | 
-| PhysicalResistor   | IdealResistor  | R, Res, Resistor  | 
-| PhysicalInductor   | IdealInductor  | L, Ind, Inductor  | 
-| PhysicalCapacitor  | IdealCapacitor | C, Cap, Capacitor | 
-| PhysicalShort      | IdealShort     | Short             | 
-|                    | VoltageSource  | Vsrc, V           | 
-|                    | CurrentSource  | Isrc, I           | 
-| Mos                |                |                   | 
-| Diode              |                | D                 | 
+| Ideal          | Alias(es)         | Physical           | Alias(es)      |
+| -------------- | ----------------- | ------------------ | -------------- |
+| IdealResistor  | R, Res, Resistor  | PhysicalResistor   |                |
+| IdealInductor  | L, Ind, Inductor  | PhysicalInductor   |                |
+| IdealCapacitor | C, Cap, Capacitor | PhysicalCapacitor  |                |
+| IdealShort     | Short             | PhysicalShort      |                |
+| VoltageSource  | Vsrc, V           |                    |                |
+| CurrentSource  | Isrc, I           |                    |                |
+|                |                   | Mos                | Nmos, Pmos     |
+|                |                   | Bipolar            | Bjt, Npn, Pnp  |
+|                |                   | Diode              | D              |
 
 """
 
-from pydantic.dataclasses import dataclass
+import copy
 from dataclasses import replace
 from enum import Enum
 from typing import Optional, Any, List, Type, Union
+from pydantic.dataclasses import dataclass
 
 # Local imports
 from .params import paramclass, Param, isparamclass, HasNoParams, NoParams
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
+
+# Type alias for many scalar parameters
+ScalarParam = Union[int, float, str]
+ScalarOption = Optional[ScalarParam]
 
 
 class PrimitiveType(Enum):
@@ -55,32 +61,30 @@ class PrimitiveType(Enum):
 
 @dataclass
 class Primitive:
-    """# hdl21 Primitive Component
+    """ # Hdl21 Primitive Component
 
     Primitives are leaf-level Modules typically defined not by users,
     but by simulation tools or device fabricators.
     Prominent examples include MOS transistors, diodes, resistors, and capacitors.
     """
 
-    name: str
-    desc: str
-    port_list: List[Signal]
-    paramtype: Type
-    primtype: PrimitiveType
+    name: str  # Primitive Name
+    desc: str  # String Description
+    port_list: List[Signal]  # Ordered Port List
+    paramtype: Type  # Class/ Type of valid Parameters
+    primtype: PrimitiveType  # Ideal vs Physical Primitive-Type
 
     def __post_init_post_parse__(self):
-        """After type-checking, do plenty more checks on values"""
+        """ After type-checking, do plenty more checks on values """
         if not isparamclass(self.paramtype):
-            raise TypeError(
-                f"Invalid Primitive param-type {self.paramtype} for {self.name}, must be an `hdl21.paramclass`"
-            )
+            msg = f"Invalid Primitive param-type {self.paramtype} for {self.name}, must be an `hdl21.paramclass`"
+            raise TypeError(msg)
         for p in self.port_list:
             if not p.name:
                 raise ValueError(f"Unnamed Primitive Port {p} for {self.name}")
             if p.vis != Visibility.PORT:
-                raise ValueError(
-                    f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
-                )
+                msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
+                raise ValueError(msg)
 
     def __call__(self, params: Any = NoParams) -> "PrimitiveCall":
         return PrimitiveCall(prim=self, params=params)
@@ -97,9 +101,9 @@ class Primitive:
 @calls_instantiate
 @dataclass
 class PrimitiveCall:
-    """Primitive Call
+    """ Primitive Call
     A combination of a Primitive and its Parameter-values,
-    typically generated by calling the Primitive."""
+    typically generated by calling the Primitive. """
 
     prim: Primitive
     params: Any = NoParams
@@ -107,24 +111,28 @@ class PrimitiveCall:
     def __post_init_post_parse__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.prim.paramtype):
-            raise TypeError(
-                f"Invalid parameters {self.params} for Primitive {self.prim}. Must be {self.prim.paramtype}"
-            )
+            msg = f"Invalid parameters {self.params} for Primitive {self.prim}. Must be {self.prim.paramtype}"
+            raise TypeError(msg)
 
     @property
     def ports(self) -> dict:
         return self.prim.ports
 
 
+""" 
+Mos Transistor Section 
+"""
+
+
 class MosType(Enum):
-    """NMOS/PMOS Type Enumeration"""
+    """ NMOS/PMOS Type Enumeration """
 
     NMOS = "NMOS"
     PMOS = "PMOS"
 
 
 class MosVth(Enum):
-    """MOS Threshold Enumeration"""
+    """ MOS Threshold Enumeration """
 
     STD = "STD"
     LOW = "LOW"
@@ -133,13 +141,14 @@ class MosVth(Enum):
 
 @paramclass
 class MosParams:
-    """MOS Transistor Parameters"""
+    """ MOS Transistor Parameters """
 
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None) # FIXME: whether to include
 
     def __post_init_post_parse__(self):
         """ Value Checks """
@@ -148,13 +157,8 @@ class MosParams:
         if self.l <= 0:
             raise ValueError(f"MosParams with invalid length {self.l}")
         if self.npar <= 0:
-            raise ValueError(
-                f"MosParams with invalid number parallel fingers {self.npar}"
-            )
-        if self.nser <= 0:
-            raise ValueError(
-                f"MosParams with invalid number series fingers {self.nser}"
-            )
+            msg = f"MosParams with invalid number parallel fingers {self.npar}"
+            raise ValueError(msg)
 
 
 MosPorts = [Port(name="d"), Port(name="g"), Port(name="s"), Port(name="b")]
@@ -162,7 +166,7 @@ MosPorts = [Port(name="d"), Port(name="g"), Port(name="s"), Port(name="b")]
 Mos = Primitive(
     name="Mos",
     desc="Mos Transistor",
-    port_list=MosPorts,
+    port_list=copy.deepcopy(MosPorts),
     paramtype=MosParams,
     primtype=PrimitiveType.PHYSICAL,
 )
@@ -182,8 +186,7 @@ def Pmos(params: MosParams) -> Primitive:
 class DiodeParams:
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
-    # FIXME: will likely want a similar type-switch, at least eventually
-    # tp = Param(dtype=Tbd!, desc="Diode type specifier")
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None) # FIXME: whether to include
 
 
 Diode = Primitive(
@@ -197,6 +200,10 @@ Diode = Primitive(
 
 # Common alias(es)
 D = Diode
+
+""" 
+Passives
+"""
 
 
 @paramclass
@@ -321,9 +328,9 @@ IdealShort = Primitive(
 Short = IdealShort
 
 
-# Type alias for many scalar parameters
-ScalarParam = Union[int, float, str]
-ScalarOption = Optional[ScalarParam]
+""" 
+Sources
+"""
 
 
 @paramclass
@@ -366,3 +373,54 @@ CurrentSource = Primitive(
 
 I = Isrc = CurrentSource
 
+
+""" 
+Bipolar Section 
+"""
+
+
+class BipolarType(Enum):
+    """ Bipolar Junction Transistor NPN/PNP Type Enumeration """
+
+    NPN = "NPN"
+    PNP = "PNP"
+
+
+@paramclass
+class BipolarParams:
+    """ Bipolar Transistor Parameters """
+
+    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    tp = Param(
+        dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
+    )
+
+    def __post_init_post_parse__(self):
+        """ Value Checks """
+        if self.w <= 0:
+            raise ValueError(f"BipolarParams with invalid width {self.w}")
+        if self.l <= 0:
+            raise ValueError(f"BipolarParams with invalid length {self.l}")
+
+
+Bipolar = Primitive(
+    name="Bipolar",
+    desc="Bipolar Transistor",
+    port_list=[Port(name="c"), Port(name="b"), Port(name="e")],
+    paramtype=BipolarParams,
+    primtype=PrimitiveType.PHYSICAL,
+)
+
+# Common alias(es)
+Bjt = Bipolar
+
+
+def Npn(params: BipolarParams) -> Primitive:
+    """ Npn Constructor. A thin wrapper around `hdl21.primitives.Bipolar` """
+    return Bipolar(replace(params, tp=BipolarType.NPN))
+
+
+def Pnp(params: BipolarParams) -> Primitive:
+    """ Pnp Constructor. A thin wrapper around `hdl21.primitives.Bipolar` """
+    return Bipolar(replace(params, tp=BipolarType.PNP))

@@ -1,61 +1,38 @@
 """ 
 
-# Hdl21 + SkyWater 130nm Open-Source PDK Modules and Transformations 
+# Hdl21 + ASAP7 PDK Modules and Transformations 
 
-Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the SkyWater 130nm open-source PDK, '
+Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the ASAP7 predictive-technology PDK, 
+defined at https://github.com/The-OpenROAD-Project/asap7, 
 and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
 
-The complete 130nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`. 
-They include: 
-
-* "Core" Mos transistors `sky130_fd_pr__{nfet,pfet}_01v8{,_lvt,_hvt}
-
-And may in the near future also include: 
-
-* Resistors `sky130_fd_pr__res_*`
-* Capacitors `sky130_fd_pr__cap_*`
-* Bipolar Transistors `sky130_fd_pr__{npn,pnp}_*`
-* Diodes, which the PDK provides as SPICE `.model` statements alone, and will correspondingly need to be `hdl21.Module`s. 
-
-Many of the latter include a variety of "de-parameterization" steps not yet tested by this package's authors.  
-
-Remaining devices can be added to user-projects as `hdl21.ExternalModule`s, 
-or added to this package via pull request.  
+FIXME!: The primitive components of the ASAP7 PDK are comprised solely of core Mos transistors `{n,p}mos_{rvt,lvt,slvt,sram}`. 
+Unlike the common subckt-based models provided by physical PDKs, the ASAP7 transistors are provided solely 
+as BSIM-CMG `.model` definitions. 
 
 """
 
 import copy
 from typing import Union
 from types import SimpleNamespace
+from dataclasses import asdict
 
 import hdl21 as h
-from hdl21.module import ExternalModule
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
-
-
-@h.paramclass
-class Sky130MosParams:
-    """ Parameters for the PDK MOS transistor modules """
-
-    # l = 1 w = 1 ad = 0 as = 0 pd = 0 ps = 0 nrd = 0 nrs = 0 sa = 0 sb = 0 sd = 0 mult = 1 nf = 1.0
-
-    w = h.Param(dtype=str, desc="Width, in PDK Units (microns)", default=1)
-    l = h.Param(dtype=str, desc="Length, in PDK Units (microns)", default=1)
-    nf = h.Param(dtype=int, desc="Number of Fingers", default=1)
-    mult = h.Param(dtype=int, desc="Multiplier", default=1)
 
 
 # Collected `ExternalModule`s are stored in the `modules` namespace
 modules = SimpleNamespace()
 
 _mos_typenames = {
-    MosType.NMOS: "nfet",
-    MosType.PMOS: "pfet",
+    MosType.NMOS: "n",
+    MosType.PMOS: "p",
 }
 _mos_vtnames = {
+    MosVth.STD: "_rvt",
     MosVth.LOW: "_lvt",
-    MosVth.STD: "",
-    MosVth.HIGH: "_hvt",
+    "SLVT": "_slvt",
+    "SRAM": "_sram",
 }
 # Create a lookup table from `MosParams` attributes to `ExternalModule`s
 _mos_modules = dict()  # `Dict[(MosType, MosVth), ExternalModule]`, if that worked
@@ -64,13 +41,13 @@ _mos_modules = dict()  # `Dict[(MosType, MosVth), ExternalModule]`, if that work
 for tp, tpname in _mos_typenames.items():
     for vt, vtname in _mos_vtnames.items():
 
-        modname = f"sky130_fd_pr__{tp}_01v8{vtname}"
+        modname = f"{tp}mos{vtname}"
         mod = h.ExternalModule(
-            domain="sky130",
+            domain="asap7",
             name=modname,
-            desc=f"Sky130 PDK Mos {modname}",
+            desc=f"ASAP7 PDK Mos {modname}",
             port_list=copy.deepcopy(Mos.port_list),
-            paramtype=Sky130MosParams,
+            paramtype=object,
         )
 
         # Add it to the `params => ExternalModules` lookup table
@@ -80,7 +57,7 @@ for tp, tpname in _mos_typenames.items():
         setattr(modules, modname, mod)
 
 
-class Sky130Walker(h.HierarchyWalker):
+class Asap7Walker(h.HierarchyWalker):
     """ Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s. """
 
     def __init__(self):
@@ -120,13 +97,10 @@ class Sky130Walker(h.HierarchyWalker):
         # First retrieve the `ExternalModule`.
         mod = self.mos_module(params)
 
-        # Convert to `mod`s parameter-space
-        # Note this silly PDK keeps parameter-values in *microns* rather than SI meters.
-        w = "650n" if params.w is None else params.w
-        l = "150n" if params.l is None else params.l
-        modparams = Sky130MosParams(
-            w=f"({w} * 1e6)", l=f"({l} * 1e6)", nf=params.npar, mult=1,
-        )
+        # Translate its parameters
+        # FIXME: further parameter transformations likely to come
+        modparams = asdict(params)
+        modparams.pop("vth", None)
 
         # Combine the two into a call, cache and return it
         modcall = mod(modparams)
@@ -135,7 +109,7 @@ class Sky130Walker(h.HierarchyWalker):
 
 
 def compile(src: h.proto.Package) -> h.proto.Package:
-    """ Compile proto-Package `src` to the SkyWater 130nm technology """
+    """ Compile proto-Package `src` to the ASAP7 technology """
     ns = h.from_proto(src)
-    Sky130Walker().visit_namespace(ns)
+    Asap7Walker().visit_namespace(ns)
     return h.to_proto(ns)
