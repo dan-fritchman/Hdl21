@@ -1,14 +1,14 @@
 """ 
-
 # Hdl21 + ASAP7 PDK Modules and Transformations 
 
 Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the ASAP7 predictive-technology PDK, 
 defined at https://github.com/The-OpenROAD-Project/asap7, 
 and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
 
-FIXME!: The primitive components of the ASAP7 PDK are comprised solely of core Mos transistors `{n,p}mos_{rvt,lvt,slvt,sram}`. 
-Unlike the common subckt-based models provided by physical PDKs, the ASAP7 transistors are provided solely 
-as BSIM-CMG `.model` definitions. 
+The primitive components of the ASAP7 PDK are comprised solely of core Mos transistors `{n,p}mos_{rvt,lvt,slvt,sram}`. 
+
+FIXME!: Unlike the common subckt-based models provided by physical PDKs, the ASAP7 transistors are provided solely 
+as BSIM-CMG `.model` definitions. These are represented in the `vlsir` proto-schema as (FIXME: ...)
 
 """
 

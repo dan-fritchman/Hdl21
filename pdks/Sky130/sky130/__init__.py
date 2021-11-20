@@ -1,7 +1,7 @@
-import hdl21pdk
+from hdl21.pdk import register
 
 # Grab our primary PDK-definition module
 from . import sky130
 
 # And register as a PDK module
-hdl21pdk.register(sky130)
+register(sky130)

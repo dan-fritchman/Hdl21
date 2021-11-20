@@ -45,8 +45,7 @@ class ProtoImporter:
         return self.ns
 
     def get_namespace(self, path: List[str]) -> SimpleNamespace:
-        # Get a (potentially nested) namespace at `path`,
-        # creating levels along the way if necessary.
+        """ Get a (potentially nested) namespace at `path`, creating levels along the way if necessary ."""
         ns = self.ns
         for part in path:
             attr = getattr(ns, part, None)
@@ -63,13 +62,14 @@ class ProtoImporter:
 
     def import_external_module(self, pmod: protodefs.ExternalModule) -> ExternalModule:
         """ Convert Proto-Module `emod` to an `hdl21.ExternalModule` """
-        # Check out cache for whether a module by the same name has been imported
+
+        # Check our cache for whether a module by the same name has been imported
         key = (pmod.name.domain, pmod.name.name)
         if key in self.ext_modules:
             conflict = self.ext_modules[key]
-            raise RuntimeError(
-                f"Cannot import conflicting definitions of {pmod} and {conflict}"
-            )
+            msg = f"Cannot import conflicting definitions of {pmod} and {conflict}"
+            raise RuntimeError(msg)
+
         # Create the ExternalModule
         emod = ExternalModule(
             name=pmod.name.name,
@@ -127,44 +127,6 @@ class ProtoImporter:
         setattr(ns, module.name, module)
         return module
 
-    def import_connection(
-        self, pconn: protodefs.Connection, module: Module
-    ) -> Union[Signal, Slice, Concat]:
-        """ Import a Proto-defined `Connection` into a Signal, Slice, or Concatenation """
-        # Connections are a proto `oneof` union; figure out which to import
-        stype = pconn.WhichOneof("stype")
-        # Concatenations are more complicated and need their own method
-        if stype == "concat":
-            return self.import_concat(pconn.concat, module)
-        # For signals & slices, first sort out the signal-name, so we can grab the object from `module.namespace`
-        if stype == "sig":
-            sname = pconn.sig.name
-        elif stype == "slice":
-            sname = pconn.slice.signal
-        else:
-            raise ValueError(f"Invalid Connection Type: {pconn}")
-        # Grab this Signal, if it exists
-        sig = module.namespace.get(sname, None)
-        if sig is None:
-            # This block has held, at some points in code-history,
-            # the SPICE-style "create nets from thin air" behavior.
-            # That's outta here; undeclared signals produce errors instead.
-            raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
-        # Now chop this up if it's a Slice
-        if stype == "slice":
-            start = bot = pconn.slice.bot
-            stop = top = pconn.slice.top + 1 # Move to Python-style exclusive indexing
-            sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
-        return sig
-
-    def import_concat(self, pconc: protodefs.Concat, module: Module) -> Concat:
-        """ Import a (potentially nested) Concatenation """
-        parts = []
-        for ppart in pconc.parts:
-            part = self.import_connection(ppart, module)
-            parts.append(part)
-        return Concat(*parts)
-
     def import_instance(self, pinst: protodefs.Instance) -> Instance:
         """ Convert Proto-Instance `pinst` to an `hdl21.Instance`. 
         Requires an available Module-definition to be referenced. 
@@ -178,9 +140,8 @@ class ProtoImporter:
             if module is None:
                 raise RuntimeError(f"Invalid undefined Module {ref.local} ")
             if len(pinst.parameters):
-                raise RuntimeError(
-                    f"Invalid Instance {pinst} with of Module {module} - does not accept Parameters"
-                )
+                msg = f"Invalid Instance {pinst} with of Module {module} - does not accept Parameters"
+                raise RuntimeError(msg)
             target = module
 
         elif ref.WhichOneof("to") == "external":  # Defined outside package
@@ -211,12 +172,11 @@ class ProtoImporter:
     @classmethod
     def import_primitive(cls, pref: protodefs.QualifiedName) -> Primitive:
         if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
-            raise ValueError
+            raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
         prim = getattr(primitives, pref.name, None)
         if not isinstance(prim, Primitive):
-            raise RuntimeError(
-                f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
-            )
+            msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+            raise RuntimeError(msg)
         return prim
 
     @classmethod
@@ -237,8 +197,46 @@ class ProtoImporter:
             return str(pparam.string)
         raise ValueError
 
+    def import_connection(
+        self, pconn: protodefs.Connection, module: Module
+    ) -> Union[Signal, Slice, Concat]:
+        """ Import a Proto-defined `Connection` into a Signal, Slice, or Concatenation """
+        # Connections are a proto `oneof` union; figure out which to import
+        stype = pconn.WhichOneof("stype")
+        # Concatenations are more complicated and need their own method
+        if stype == "concat":
+            return self.import_concat(pconn.concat, module)
+        # For signals & slices, first sort out the signal-name, so we can grab the object from `module.namespace`
+        if stype == "sig":
+            sname = pconn.sig.name
+        elif stype == "slice":
+            sname = pconn.slice.signal
+        else:
+            raise ValueError(f"Invalid Connection Type: {pconn}")
+        # Grab this Signal, if it exists
+        sig = module.namespace.get(sname, None)
+        if sig is None:
+            # This block has held, at some points in code-history,
+            # the SPICE-style "create nets from thin air" behavior.
+            # That's outta here; undeclared signals produce errors instead.
+            raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
+        # Now chop this up if it's a Slice
+        if stype == "slice":
+            start = bot = pconn.slice.bot
+            stop = top = pconn.slice.top + 1  # Move to Python-style exclusive indexing
+            sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
+        return sig
+
+    def import_concat(self, pconc: protodefs.Concat, module: Module) -> Concat:
+        """ Import a (potentially nested) Concatenation """
+        parts = []
+        for ppart in pconc.parts:
+            part = self.import_connection(ppart, module)
+            parts.append(part)
+        return Concat(*parts)
+
     def import_ports(self, pports: List[protodefs.Port]) -> List[Signal]:
-        # Import a list of proto-ports
+        """ Import a list of proto-ports """
         ports = []
         for pport in pports:
             dir_ = self.import_port_dir(pport)
@@ -248,7 +246,7 @@ class ProtoImporter:
         return ports
 
     def import_port_dir(self, pport: protodefs.Port) -> PortDir:
-        # Convert between Port-Direction Enumerations
+        """ Convert between Port-Direction Enumerations """
         if pport.direction == protodefs.Port.Direction.INPUT:
             return PortDir.INPUT
         if pport.direction == protodefs.Port.Direction.OUTPUT:

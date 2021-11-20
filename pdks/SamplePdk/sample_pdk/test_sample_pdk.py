@@ -1,5 +1,17 @@
+"""
+# Hdl21 Sample PDK 
+
+Unit Tests
+"""
+
 import hdl21 as h
-from . import sky130
+from io import StringIO
+from . import sample_pdk
+
+
+def test_default():
+    h.pdk.set_default(sample_pdk)
+    assert h.pdk.default() is sample_pdk
 
 
 def gethasmos():
@@ -23,11 +35,11 @@ def test_compile():
 
     # Compile it for the PDK
     pkg = h.to_proto(hasmos)
-    pdk_pkg = sky130.compile(pkg)
+    pdk_pkg = sample_pdk.compile(pkg)
 
     # Import it back into Modules & Namespaces
     ns = h.from_proto(pdk_pkg)
-    rt = ns.hdl21pdk.sky130.test_sky130.hasmos
+    rt = ns.sample_pdk.test_sample_pdk.hasmos
 
     # And check what came back
     assert isinstance(rt.n, h.Instance)
@@ -43,6 +55,6 @@ def test_netlist():
 
     # Netlist it for the PDK
     pkg = h.to_proto(hasmos)
-    pkg = sky130.compile(pkg)
-    h.netlist(pkg, open("scratch/whatever.scs", "w"), "spectre")
+    pkg = sample_pdk.compile(pkg)
+    h.netlist(pkg, StringIO(), "spectre")
 

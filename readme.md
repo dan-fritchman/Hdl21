@@ -346,7 +346,7 @@ class DiodePlus:
 Designing for a specific implementation technology (or "process development kit", or PDK) with Hdl21 can use either of (or a combination of) two routes: 
 
 * Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its tech-specific transistor and passive modules, and potentially larger cells, for example from a cell library. 
-* Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21pdk` converter. 
+* Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21.pdk` converter. 
 
 Hdl21 PDKs are Python packages which generally include two primary elements: 
 

@@ -29,7 +29,6 @@ from typing import Union
 from types import SimpleNamespace
 
 import hdl21 as h
-from hdl21.module import ExternalModule
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
 
 
