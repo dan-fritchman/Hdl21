@@ -1646,7 +1646,6 @@ def test_wrong_decorator():
             ...
 
 
-@pytest.mark.xfail(reason="#7")
 def test_elab_noconn():
     """ Initial test of elaborating a `NoConn` """
 
@@ -1664,7 +1663,6 @@ def test_elab_noconn():
     assert len(HasNoConn.signals) == 1
 
 
-@pytest.mark.xfail(reason="#7")
 def test_bad_noconn():
     """ Test that a doubly-connected `NoConn` should fail """
 

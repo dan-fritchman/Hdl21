@@ -31,9 +31,7 @@ from .connect import connectable, _is_connectable
 
 def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
     """ Square-bracket slicing into Signals, Concatenations, and Slices. 
-    Assuming valid inputs, returns a signal-`Slice`. 
-
-    FIXME: this commentary reflects what *should* happen, not totally what *is* yet: 
+    Assuming valid inputs, returns a signal-`Slice`.  
 
     Signal slices are indexed "Python style", in the senses that: 
     * Negative indices are supported, and count from the "end" of the Signal.
@@ -41,7 +39,7 @@ def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
     * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
     Popular HDLs commonly use different signal-indexing conventions. 
     Hdl21's own primary exchange format (in ProtoBuf) does as well, 
-    eschewing adopting inclusive-endpoints and eschewing negative-indexing.
+    eschewing adopting inclusive-endpoints and negative-indexing.
     """
 
     if isinstance(key, int):
@@ -297,9 +295,9 @@ class Slice:
     signal: Union[Signal, Concat, "Slice"]  # Parent Signal
     top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
-    start: Optional[int]  # Python-convention-style start index
-    stop: Optional[int]  # Python-convention-style stop index
-    step: Optional[int]  # Python-convention-style step size
+    start: Optional[int]  # Python-convention start index
+    stop: Optional[int]  # Python-convention stop index
+    step: Optional[int]  # Python-convention step size
 
     def __post_init_post_parse__(self):
         if self.step is not None and self.step == 0:
@@ -348,3 +346,11 @@ class NoConn:
     """
 
     name: Optional[str] = None
+
+    def __eq__(self, other: "NoConn") -> bool:
+        """ `NoConn`s are "equal" only if identical objects. """
+        return self is other
+
+    def __hash__(self) -> int:
+        """ `NoConn`s are "equal" only if identical objects. """
+        return hash(id(self))
