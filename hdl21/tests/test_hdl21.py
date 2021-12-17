@@ -1471,6 +1471,13 @@ def test_netlist_fmts():
     assert ".p(p)" in nl
     assert "endmodule // Top" in nl
 
+    nl = StringIO()
+    h.netlist(ppkg, nl, "spice")
+    nl = nl.getvalue()
+    assert ".SUBCKT Bot s_2 s_1 s_0 p" in nl
+    assert ".SUBCKT Top p" in nl
+    assert "Xb s_2 s_1 s_0 p Bot" in nl
+
 
 def test_bad_width_conn():
     """ Test invalid connection-widths """
