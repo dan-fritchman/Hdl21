@@ -1479,6 +1479,22 @@ def test_netlist_fmts():
     assert "Xb s_2 s_1 s_0 p Bot" in nl
 
 
+def test_spice_netlister():
+    @h.module
+    class DUT:
+        a = h.Input(width=5)
+        b = h.Output(width=5)
+        res = h.IdealResistor(h.ResistorParams(r=10e3))(p=a[0], n=b[0])
+        cap = h.IdealCapacitor(h.IdealCapacitorParams(c=10e-12))(p=a[1], n=b[1])
+        ind = h.IdealInductor(h.IdealInductorParams(l=10e-9))(p=a[2], n=b[2])
+
+    ppkg = h.to_proto(DUT)
+    nl = StringIO()
+    h.netlist(ppkg, nl, "spice")
+    nl = nl.getvalue()
+    print(nl)
+
+
 def test_bad_width_conn():
     """ Test invalid connection-widths """
     c = h.Module(name="c")
