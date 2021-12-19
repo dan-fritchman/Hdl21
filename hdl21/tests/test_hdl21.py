@@ -1474,9 +1474,9 @@ def test_netlist_fmts():
     nl = StringIO()
     h.netlist(ppkg, nl, "spice")
     nl = nl.getvalue()
-    assert ".SUBCKT Bot s_2 s_1 s_0 p" in nl
-    assert ".SUBCKT Top p" in nl
-    assert "Xb s_2 s_1 s_0 p Bot" in nl
+    assert ".SUBCKT Bot \n+ s_2 s_1 s_0 p" in nl
+    assert ".SUBCKT Top \n+ p" in nl
+    assert "xb \n+ s_2 s_1 s_0 p \n+ Bot" in nl
 
 
 def test_spice_netlister():

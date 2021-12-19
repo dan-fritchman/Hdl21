@@ -259,7 +259,9 @@ def main():
         ),
     )
     proto = h.to_proto(h.elaborate(mux_tree(params)))
-    h.netlist(proto, sys.stdout)
+    h.netlist(proto, sys.stdout, "verilog")
+    h.netlist(proto, sys.stdout, "spectre")
+    h.netlist(proto, sys.stdout, "spice")
 
 
 if __name__ == "__main__":
