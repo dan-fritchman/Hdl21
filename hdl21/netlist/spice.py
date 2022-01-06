@@ -67,7 +67,7 @@ class SpiceNetlister(Netlister):
     ) -> None:
         """ Write the instance-name line for `pinst`, including the SPICE-dictated primitive-prefix. """
         prim = target.spice_primitive
-        prefix = "x" if prim is None else prim.value()
+        prefix = "x" if prim is None else prim.value
         self.write(f"{prefix}{pinst.name} \n")
 
     def write_instance(self, pinst: protodefs.Instance) -> None:
