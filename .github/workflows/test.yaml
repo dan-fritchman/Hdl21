@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9] # python3.7 *could* work in principle, but is not currently supported
+        python-version: [3.8, 3.9, 3.10] # python3.7 *could* work in principle, but is not currently supported
 
     steps:
     - uses: actions/checkout@v2
