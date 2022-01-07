@@ -1,27 +1,17 @@
 """
 # Verilog-Format Netlister 
-
 """
-
-# Std-Lib Imports
-from typing import Optional, Tuple, List, Mapping, Union, IO
-from enum import Enum
-from dataclasses import field
-
-# PyPi
-from pydantic.dataclasses import dataclass
-
 # Local Imports
-from ..proto.to_proto import ProtoExporter
-from ..proto.from_proto import ProtoImporter
 from ..proto import circuit_pb2 as protodefs
 
 # Import the base-class
-from .base import Netlister, ModuleLike
+from .base import Netlister
 
 
 class VerilogNetlister(Netlister):
-    """ Netlister to create structural verilog netlists """
+    """
+    # Structural Verilog Netlister 
+    """
 
     @property
     def enum(self):
@@ -216,3 +206,6 @@ class VerilogNetlister(Netlister):
             return f"{pslice.signal}[{pslice.top}]"
         return f"{pslice.signal}[{pslice.top}:{pslice.bot}]"  # Multi-bit slice
 
+    def write_comment(self, comment: str) -> None:
+        """ Verilog uses C-style line comments, beginning with `//` """
+        self.write(f"// {comment}\n")

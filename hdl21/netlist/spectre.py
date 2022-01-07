@@ -1,27 +1,19 @@
 """
 # Spectre-Format Netlister 
-
 """
 
 # Std-Lib Imports
-from typing import Optional, Tuple, List, Mapping, Union, IO
-from enum import Enum
-from dataclasses import field
-
-# PyPi
-from pydantic.dataclasses import dataclass
+from typing import Union
 
 # Local Imports
-from ..proto.to_proto import ProtoExporter
-from ..proto.from_proto import ProtoImporter
 from ..proto import circuit_pb2 as protodefs
 
 # Import the base-class
-from .base import Netlister, ModuleLike
+from .base import Netlister
 
 
 class SpectreNetlister(Netlister):
-    """Netlister for Spectre compatible netlist"""
+    """ Spectre-Format Netlister """
 
     @property
     def enum(self):
@@ -158,4 +150,9 @@ class SpectreNetlister(Netlister):
         """ Format-specific string-representation of a bus bit-index"""
         # Spectre netlisting uses an underscore prefix, e.g. `bus_0`
         return "_" + str(index)
+
+    def write_comment(self, comment: str) -> None:
+        """ While Spectre *can* do a bunch of other comment-styles, 
+        the canonical one is generally the C-style line comment beginning with `//`. """
+        self.write(f"// {comment}\n")
 

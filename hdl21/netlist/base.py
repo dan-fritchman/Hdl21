@@ -119,12 +119,15 @@ class Netlister:
         Convert everything in `self.pkg` and write to `self.dest`. """
 
         if self.pkg.ext_sources:
-            raise RuntimeError(f"External sources not (yet) supported")
+            raise NotImplementedError(f"External sources not (yet) supported")
 
         # First visit any externally-defined Modules,
         # Ensuring we have their port-orders.
         for emod in self.pkg.ext_modules:
             self.get_external_module(emod)
+
+        # Add some header commentary
+        self.write_header()
 
         # Now do the real stuff,
         # Creating netlist entries for each package-defined Module
@@ -274,6 +277,20 @@ class Netlister:
             return self.format_concat(pconn.concat)
         raise ValueError(f"Invalid Connection Type {stype} for Connection {pconn}")
 
+    def write_header(self) -> None:
+        """ Write header commentary 
+        This proves particularly important for many Spice-like formats, 
+        which *always* interpret the first line of an input-file as a comment (among many other dumb things). 
+        So, always write one there right off the bat. """
+
+        if self.pkg.domain:
+            self.write_comment(f"circuit.Package {self.pkg.domain}")
+        else:
+            self.write_comment(f"Anonymous circuit.Package")
+        self.write_comment(f"Written by {self.__class__.__name__}")
+        self.write_comment("")
+        self.writeln("")
+
     """ 
     Virtual `format` Methods 
     """
@@ -320,6 +337,12 @@ class Netlister:
     """ 
     Virtual `write` Methods 
     """
+
+    def write_comment(self, comment: str) -> None:
+        """ Format and string a string comment. 
+        "Line comments" are the sole supported variety, which fit within a line, and extend to the end of that line. 
+        The `write_comment` method assumes responsibility for closing the line. """
+        raise NotImplementedError
 
     def write_module_definition(self, pmodule: protodefs.Module) -> None:
         """ Write Module `module` """

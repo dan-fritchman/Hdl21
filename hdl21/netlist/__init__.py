@@ -12,18 +12,30 @@ from enum import Enum
 from ..proto import circuit_pb2 as protodefs
 
 # Locally-defined netlister classes
-from .spice import SpiceNetlister
 from .spectre import SpectreNetlister
 from .verilog import VerilogNetlister
+from .spice import (
+    SpiceNetlister,
+    HspiceNetlister,
+    CdlNetlister,
+    XyceNetlister,
+    NgspiceNetlister,
+)
 
 
 class NetlistFormat(Enum):
     """ Enumeration of available formats. 
     Includes string-value conversion. """
 
-    SPECTRE = "spectre"
     VERILOG = "verilog"
+    SPECTRE = "spectre"
+
+    # Spice Dialects
     SPICE = "spice"
+    HSPICE = "hspice"
+    NGSPICE = "ngspice"
+    XYCE = "xyce"
+    CDL = "cdl"
 
     @staticmethod
     def get(spec: "NetlistFormatSpec") -> "NetlistFormat":
@@ -41,6 +53,14 @@ class NetlistFormat(Enum):
             return VerilogNetlister
         if self == NetlistFormat.SPICE:
             return SpiceNetlister
+        if self == NetlistFormat.HSPICE:
+            return HspiceNetlister
+        if self == NetlistFormat.NGSPICE:
+            return NgspiceNetlister
+        if self == NetlistFormat.XYCE:
+            return XyceNetlister
+        if self == NetlistFormat.CDL:
+            return CdlNetlister
         raise ValueError
 
 
