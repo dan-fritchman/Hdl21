@@ -240,16 +240,13 @@ def external_factory(
 def main():
     """ Main function, generating an `rladder` and `mux_tree` and netlisting each. """
 
-    params = RLadderParams(
+    rparams = RLadderParams(
         nseg=15,
         res=PdkResistor,
         res_params=dict(w=4, l=10),
         res_conns=dict(PLUS="P", MINUS="N"),
     )
-    proto = h.to_proto(h.elaborate(rladder(params)))
-    h.netlist(proto, sys.stdout)
-
-    params = MuxTreeParams(
+    mparams = MuxTreeParams(
         nbit=4,
         mux_params=PassGateParams(
             nmos=NchMac,
@@ -258,8 +255,15 @@ def main():
             pmos_params=PdkMosParams(l=1),
         ),
     )
-    proto = h.to_proto(h.elaborate(mux_tree(params)))
-    h.netlist(proto, sys.stdout)
+
+    # Convert each to VLSIR protobuf
+    proto = h.to_proto([rladder(rparams), mux_tree(mparams)], domain="rdac")
+
+    # And netlist in a handful of formats
+    h.netlist(proto, sys.stdout, "verilog")
+    h.netlist(proto, sys.stdout, "spectre")
+    h.netlist(proto, sys.stdout, "spice")
+    h.netlist(proto, sys.stdout, "xyce")
 
 
 if __name__ == "__main__":

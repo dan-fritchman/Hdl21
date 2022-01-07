@@ -407,6 +407,7 @@ There are lots of other very cool hardware-description projects out there which 
 * Install [Poetry](https://python-poetry.org/docs/) (the cool-kids' TOML-configured `pip` replacement). Or drag `pip` along if you know how. 
 * Clone this repo & navigate to it 
 * `poetry install` will install all dependencies
+* `poetry shell` will spawn a new shell within the virtualenv poetry created for this project
 * `pytest -s` should yield something like: 
 
 

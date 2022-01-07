@@ -6,6 +6,7 @@ import sys, copy, pytest
 from io import StringIO
 from types import SimpleNamespace
 from enum import Enum, EnumMeta, auto
+from textwrap import dedent
 
 # Import the PUT (package under test)
 import hdl21 as h
@@ -1470,6 +1471,49 @@ def test_netlist_fmts():
     assert ".s(s)" in nl
     assert ".p(p)" in nl
     assert "endmodule // Top" in nl
+
+    nl = StringIO()
+    h.netlist(ppkg, nl, "spice")
+    nl = nl.getvalue()
+    assert ".SUBCKT Bot \n+ s_2 s_1 s_0 p" in nl
+    assert ".SUBCKT Top \n+ p" in nl
+    assert "xb \n+ s_2 s_1 s_0 p \n+ Bot" in nl
+
+
+def test_spice_netlister():
+    @h.module
+    class DUT:
+        a = h.Input(width=5)
+        b = h.Output(width=5)
+        res = h.IdealResistor(h.ResistorParams(r=10e3))(p=a[0], n=b[0])
+        cap = h.IdealCapacitor(h.IdealCapacitorParams(c=10e-12))(p=a[1], n=b[1])
+        ind = h.IdealInductor(h.IdealInductorParams(l=10e-9))(p=a[2], n=b[2])
+
+    ppkg = h.to_proto(DUT)
+    nl = StringIO()
+    h.netlist(ppkg, nl, "spice")
+    good = dedent(
+        """\
+        .SUBCKT DUT 
+        + a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0 
+        + * No parameters
+
+        rres 
+        + a_0 b_0 
+        + r=10000.0 
+
+        ccap 
+        + a_1 b_1 
+        + c=1e-11 
+
+        lind 
+        + a_2 b_2 
+        + l=1e-08 
+
+        .ENDS
+    """
+    )
+    assert good in nl.getvalue()
 
 
 def test_bad_width_conn():
