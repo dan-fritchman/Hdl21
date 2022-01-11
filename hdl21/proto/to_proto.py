@@ -10,7 +10,7 @@ from typing import Optional, List, Union
 
 # Local imports
 # Proto-definitions
-from . import circuit_pb2 as protodefs
+import vlsir
 
 # HDL
 from ..elab import Elabables, elab_all
@@ -22,7 +22,7 @@ from .. import signal
 
 def to_proto(
     top: Elabables, domain: Optional[str] = None, **kwargs,
-) -> protodefs.Package:
+) -> vlsir.circuit.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`"""
     # Elaborate all the top-level Modules
     tops = elab_all(top)
@@ -42,9 +42,9 @@ class ProtoExporter:
         self.module_names = dict()  # (Serialized) Module-name to Proto-Module dict
         self.ext_modules = dict()  # ExternalModule-id to Proto-ExternalModule dict
         # Default `domain` AKA package-name is the empty string
-        self.pkg = protodefs.Package(domain=domain or "")
+        self.pkg = vlsir.circuit.Package(domain=domain or "")
 
-    def export(self) -> protodefs.Package:
+    def export(self) -> vlsir.circuit.Package:
         """Export starting with every Module in `self.tops`,
         visiting every hierarchical node along the way.
         Returns our generated `Package` as a result."""
@@ -56,7 +56,7 @@ class ProtoExporter:
             self.export_module(m)
         return self.pkg
 
-    def export_module_name(self, module: Module) -> protodefs.QualifiedName:
+    def export_module_name(self, module: Module) -> vlsir.utils.QualifiedName:
         """Create and return a unique `QualifiedName` for Module `module`.
         Raises a `RuntimeError` if unique name is taken."""
 
@@ -72,7 +72,7 @@ class ProtoExporter:
             )
         return mname
 
-    def export_module(self, module: Module) -> protodefs.Module:
+    def export_module(self, module: Module) -> vlsir.circuit.Module:
         if id(module) in self.modules:  # Already done
             return self.modules[id(module)]
 
@@ -82,7 +82,7 @@ class ProtoExporter:
             )
 
         # Create the Proto-Module
-        pmod = protodefs.Module()
+        pmod = vlsir.circuit.Module()
 
         # Create its serialized name
         pmod.name = self.export_module_name(module)
@@ -93,7 +93,7 @@ class ProtoExporter:
 
         # Create its Signal-objects
         for sig in module.signals.values():
-            psig = protodefs.Signal(name=sig.name, width=sig.width)
+            psig = vlsir.circuit.Signal(name=sig.name, width=sig.width)
             pmod.signals.append(psig)
 
         # Create each Proto-Instance
@@ -111,14 +111,14 @@ class ProtoExporter:
         self.pkg.modules.append(pmod)
         return pmod
 
-    def export_external_module(self, emod: ExternalModule) -> protodefs.ExternalModule:
+    def export_external_module(self, emod: ExternalModule) -> vlsir.circuit.ExternalModule:
         """Export an `ExternalModule`"""
         if id(emod) in self.ext_modules:  # Already done
             return self.ext_modules[id(emod)]
 
         # Create the Proto-ExternalModule
-        qname = protodefs.QualifiedName(name=emod.name, domain=emod.domain)
-        pmod = protodefs.ExternalModule(name=qname)
+        qname = vlsir.utils.QualifiedName(name=emod.name, domain=emod.domain)
+        pmod = vlsir.circuit.ExternalModule(name=qname)
 
         # Create its Port-objects
         for port in emod.ports.values():
@@ -130,8 +130,8 @@ class ProtoExporter:
         return pmod
 
     @classmethod
-    def export_primitive(cls, prim: Primitive) -> protodefs.ExternalModule:
-        """Export a `Primitive as a `protodefs.ExternalModule`. 
+    def export_primitive(cls, prim: Primitive) -> vlsir.circuit.ExternalModule:
+        """Export a `Primitive as a `vlsir.circuit.ExternalModule`. 
         Not typically done as part of serialization, 
         but solely as an aid to other conversion utilities. """
 
@@ -142,8 +142,8 @@ class ProtoExporter:
             domain = "hdl21.ideal"
         else:
             raise ValueError
-        qname = protodefs.QualifiedName(name=prim.name, domain=domain)
-        pmod = protodefs.ExternalModule(name=qname)
+        qname = vlsir.utils.QualifiedName(name=prim.name, domain=domain)
+        pmod = vlsir.circuit.ExternalModule(name=qname)
 
         # Create its Port-objects
         for port in prim.port_list:
@@ -153,33 +153,33 @@ class ProtoExporter:
         return pmod
 
     @classmethod
-    def export_port(cls, port: signal.Port) -> protodefs.Port:
-        pport = protodefs.Port()
+    def export_port(cls, port: signal.Port) -> vlsir.circuit.Port:
+        pport = vlsir.circuit.Port()
         pport.direction = cls.export_port_dir(port)
         pport.signal.name = port.name
         pport.signal.width = port.width
         return pport
 
     @classmethod
-    def export_port_dir(cls, port: signal.Port) -> protodefs.Port.Direction:
+    def export_port_dir(cls, port: signal.Port) -> vlsir.circuit.Port.Direction:
         # Convert between Port-Direction Enumerations
         if port.direction == signal.PortDir.INPUT:
-            return protodefs.Port.Direction.INPUT
+            return vlsir.circuit.Port.Direction.INPUT
         if port.direction == signal.PortDir.OUTPUT:
-            return protodefs.Port.Direction.OUTPUT
+            return vlsir.circuit.Port.Direction.OUTPUT
         if port.direction == signal.PortDir.INOUT:
-            return protodefs.Port.Direction.INOUT
+            return vlsir.circuit.Port.Direction.INOUT
         if port.direction == signal.PortDir.NONE:
-            return protodefs.Port.Direction.NONE
+            return vlsir.circuit.Port.Direction.NONE
         raise ValueError
 
-    def export_instance(self, inst: Instance) -> protodefs.Instance:
+    def export_instance(self, inst: Instance) -> vlsir.circuit.Instance:
         """Convert an hdl21.Instance into a Proto-Instance
         Depth-first retrieves a Module definition first,
         using its generated `name` field as the Instance's `module` pointer."""
 
         # Create the Proto-Instance
-        pinst = protodefs.Instance(name=inst.name)
+        pinst = vlsir.circuit.Instance(name=inst.name)
 
         # First depth-first seek out our definition,
         # Retrieving the data we need to make a `Reference` to it
@@ -242,10 +242,10 @@ class ProtoExporter:
 
     def export_conn(
         self, sig: Union[signal.Signal, signal.Slice, signal.Concat]
-    ) -> protodefs.Connection:
+    ) -> vlsir.circuit.Connection:
         """ Export a proto Connection """
 
-        pconn = protodefs.Connection()  # Create a proto-Connection
+        pconn = vlsir.circuit.Connection()  # Create a proto-Connection
         if isinstance(sig, signal.Signal):
             pconn.sig.name = sig.name
             pconn.sig.width = sig.width
@@ -259,7 +259,7 @@ class ProtoExporter:
             raise TypeError(f"Invalid argument to `ProtoExporter.export_conn`: {sig}")
         return pconn
 
-    def export_slice(self, slize: signal.Slice) -> protodefs.Slice:
+    def export_slice(self, slize: signal.Slice) -> vlsir.circuit.Slice:
         """ Export a signal-`Slice`. 
         Fails if the parent is not a concrete `Signal`, i.e. it is a `Concat` or another `Slice`. 
         Fails for non-unit step-sizes, which should be converted to `Concat`s upstream. """
@@ -271,13 +271,13 @@ class ProtoExporter:
             raise RuntimeError(msg)
 
         # Move to HDL-style indexing, with inclusive `top` index.
-        return protodefs.Slice(
+        return vlsir.circuit.Slice(
             signal=slize.signal.name, top=slize.top - 1, bot=slize.bot
         )
 
-    def export_concat(self, concat: signal.Concat) -> protodefs.Concat:
+    def export_concat(self, concat: signal.Concat) -> vlsir.circuit.Concat:
         """ Export (potentially recursive) Signal Concatenations """
-        pconc = protodefs.Concat()
+        pconc = vlsir.circuit.Concat()
         for part in concat.parts:
             pconc.parts.append(self.export_conn(part))
         return pconc

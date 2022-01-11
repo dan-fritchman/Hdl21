@@ -1,7 +1,7 @@
 """ 
 # Hdl21 Netlisting 
 
-Exports protodefs.Package to a netlist format.
+Exports vlsir.circuit.Package to a netlist format.
 """
 
 # Std-Lib Imports
@@ -9,7 +9,7 @@ from typing import Union, IO
 from enum import Enum
 
 # Local Imports
-from ..proto import circuit_pb2 as protodefs
+import vlsir
 
 # Locally-defined netlister classes
 from .spectre import SpectreNetlister
@@ -69,7 +69,7 @@ NetlistFormatSpec = Union[NetlistFormat, str]
 
 
 def netlist(
-    pkg: protodefs.Package, dest: IO, fmt: NetlistFormatSpec = "spectre"
+    pkg: vlsir.circuit.Package, dest: IO, fmt: NetlistFormatSpec = "spectre"
 ) -> None:
     """ Netlist proto-Package `pkg` to destination `dest`. 
 
@@ -86,7 +86,7 @@ def netlist(
     h.netlist(pkg, dest=sys.stdout, fmt='spice')
     ```
 
-    Primary argument `pkg` must be a `protodefs.Package`.  
+    Primary argument `pkg` must be a `vlsir.circuit.Package`.  
     Destination `dest` may be anything that supports the `typing.IO` bundle, 
     commonly including open file-handles. `StringIO` is particularly helpful 
     for producing a netlist in an in-memory string.  

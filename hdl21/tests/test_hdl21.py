@@ -10,6 +10,7 @@ from textwrap import dedent
 
 # Import the PUT (package under test)
 import hdl21 as h
+import vlsir
 
 
 def test_version():
@@ -481,20 +482,20 @@ def test_prim_proto1():
 
     ppkg = h.to_proto(HasPrims)
 
-    assert isinstance(ppkg, h.proto.Package)
+    assert isinstance(ppkg, vlsir.circuit.Package)
     assert len(ppkg.modules) == 1
     assert ppkg.domain == ""
 
     # Check the proto-Module
     pm = ppkg.modules[0]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.HasPrims"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 2
     assert len(pm.instances) == 5
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
     for inst in pm.instances:
-        assert isinstance(inst, h.proto.Instance)
+        assert isinstance(inst, vlsir.circuit.Instance)
         assert inst.module.WhichOneof("to") == "external"
         assert inst.module.external.domain in ["hdl21.ideal", "hdl21.primitives"]
 
@@ -682,15 +683,15 @@ def test_proto1():
 
     m = h.Module(name="TestProto1")
     ppkg = h.to_proto(m)
-    assert isinstance(ppkg, h.proto.Package)
+    assert isinstance(ppkg, vlsir.circuit.Package)
     assert len(ppkg.modules) == 1
     assert ppkg.domain == ""
     pm = ppkg.modules[0]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.TestProto1"
     assert len(pm.ports) == 0
     assert len(pm.instances) == 0
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
 
 
 def test_proto2():
@@ -709,35 +710,35 @@ def test_proto2():
 
     ppkg = h.to_proto(TestProto2)
 
-    assert isinstance(ppkg, h.proto.Package)
+    assert isinstance(ppkg, vlsir.circuit.Package)
     assert len(ppkg.modules) == 3
     assert ppkg.domain == ""
 
     # Check the first Module in, Child1
     pm = ppkg.modules[0]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.Child1"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
 
     # Check the second Module in, Child2
     pm = ppkg.modules[1]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.Child2"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
 
     # And check the parent module
     pm = ppkg.modules[2]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.TestProto2"
     assert len(pm.ports) == 0
     assert len(pm.instances) == 2
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
 
 
 def test_proto3():
@@ -755,27 +756,27 @@ def test_proto3():
 
     ppkg = h.to_proto(M2, domain="test_proto3")
 
-    assert isinstance(ppkg, h.proto.Package)
+    assert isinstance(ppkg, vlsir.circuit.Package)
     assert len(ppkg.modules) == 2
     assert ppkg.domain == "test_proto3"
 
     # Check the child module
     pm = ppkg.modules[0]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.M1"
     assert len(pm.ports) == 2
     assert len(pm.signals) == 0
     assert len(pm.instances) == 0
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
 
     # And check the parent module
     pm = ppkg.modules[1]
-    assert isinstance(pm, h.proto.Module)
+    assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_hdl21.M2"
     assert len(pm.ports) == 0
     assert len(pm.signals) == 1
     assert len(pm.instances) == 1
-    assert len(pm.default_parameters) == 0
+    assert len(pm.parameters) == 0
 
     ns = h.from_proto(ppkg)
 
@@ -1259,7 +1260,7 @@ def test_mos_generator():
     assert "unit1_s_unit0_d" in m.signals
 
     ppkg = h.to_proto(m)
-    assert isinstance(ppkg, h.proto.Package)
+    assert isinstance(ppkg, vlsir.circuit.Package)
 
 
 def test_series_parallel_generator():
@@ -1295,7 +1296,7 @@ def test_series_parallel_generator():
     assert "unit_1_1_a_unit_1_0_b" in m.signals
 
     ppkg = h.to_proto(m)
-    assert isinstance(ppkg, h.proto.Package)
+    assert isinstance(ppkg, vlsir.circuit.Package)
 
 
 def test_instance_mult():

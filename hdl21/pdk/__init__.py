@@ -103,14 +103,14 @@ def register(module: ModuleType) -> None:
 
     # Extract the parameters-argument type
     paramtype = args[0].annotation
-    if paramtype is not proto.Package:
-        msg = f"Invalid call signature for {module}.compile. Argument type must be `hdl21.proto.Package`, not {paramtype}"
+    if paramtype is not proto.circuit.Package:
+        msg = f"Invalid call signature for {module}.compile. Argument type must be `hdl21.proto.circuit.Package`, not {paramtype}"
         raise RuntimeError(msg)
 
     # Validate the return type is also `Package`
     rt = sig.return_annotation
-    if rt is not proto.Package:
-        msg = f"Invalid call signature for {module}.compile. Return type must be `hdl21.proto.Package`, not {paramtype}"
+    if rt is not proto.circuit.Package:
+        msg = f"Invalid call signature for {module}.compile. Return type must be `hdl21.proto.circuit.Package`, not {paramtype}"
         raise RuntimeError(msg)
 
     # Checks out. Add it.
@@ -119,8 +119,8 @@ def register(module: ModuleType) -> None:
 
 
 def compile(
-    src: proto.Package, pdk: Optional[Union[str, ModuleType]] = None
-) -> proto.Package:
+    src: proto.circuit.Package, pdk: Optional[Union[str, ModuleType]] = None
+) -> proto.circuit.Package:
     """ 
     Compile to a target PDK. 
 

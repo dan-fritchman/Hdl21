@@ -2,7 +2,7 @@
 # Verilog-Format Netlister 
 """
 # Local Imports
-from ..proto import circuit_pb2 as protodefs
+import vlsir
 
 # Import the base-class
 from .base import Netlister
@@ -20,7 +20,7 @@ class VerilogNetlister(Netlister):
 
         return NetlistFormat.VERILOG
 
-    def write_module_definition(self, module: protodefs.Module) -> None:
+    def write_module_definition(self, module: vlsir.circuit.Module) -> None:
         """ Create a Verilog module definition for proto-Module `module` """
 
         # Create the module name
@@ -36,12 +36,12 @@ class VerilogNetlister(Netlister):
         self.writeln(f"module {module_name}")
 
         # Create its parameters, if defined
-        if module.default_parameters:
+        if module.parameters:
             self.writeln("#( ")
             self.indent += 1
-            for num, name in enumerate(module.default_parameters):
-                pparam = module.default_parameters[name]
-                comma = "" if num == len(module.default_parameters) - 1 else ","
+            for num, name in enumerate(module.parameters):
+                pparam = module.parameters[name]
+                comma = "" if num == len(module.parameters) - 1 else ","
                 self.writeln(self.format_param_decl(name, pparam) + comma)
             self.indent -= 1
             self.writeln(") ")
@@ -83,7 +83,7 @@ class VerilogNetlister(Netlister):
         self.writeln("")  # Blank before `endmodule`
         self.writeln(f"endmodule // {module_name} \n\n")
 
-    def write_instance(self, pinst: protodefs.Instance) -> None:
+    def write_instance(self, pinst: vlsir.circuit.Instance) -> None:
         """ Format and write Instance `pinst` """
 
         # Get its Module or ExternalModule definition
@@ -129,7 +129,7 @@ class VerilogNetlister(Netlister):
         self.writeln("")  # Post-Instance blank line
 
     @classmethod
-    def format_param_type(cls, pparam: protodefs.Parameter) -> str:
+    def format_param_type(cls, pparam: vlsir.circuit.Parameter) -> str:
         """ Verilog type-string for `Parameter` `param`. """
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
@@ -141,7 +141,7 @@ class VerilogNetlister(Netlister):
         raise ValueError
 
     @classmethod
-    def format_param_decl(cls, name: str, param: protodefs.Parameter) -> str:
+    def format_param_decl(cls, name: str, param: vlsir.circuit.Parameter) -> str:
         """ Format a parameter-declaration """
         rv = f"parameter {name}"
         # FIXME: whether to include datatype
@@ -151,22 +151,22 @@ class VerilogNetlister(Netlister):
             rv += f" = {default}"
         return rv
 
-    def format_concat(self, pconc: protodefs.Concat) -> str:
+    def format_concat(self, pconc: vlsir.circuit.Concat) -> str:
         """ Format the Concatenation of several other Connections """
         # Verilog { a, b, c } concatenation format
         parts = [self.format_connection(part) for part in pconc.parts]
         return "{" + ", ".join(parts) + "}"
 
     @classmethod
-    def format_port_decl(cls, pport: protodefs.Port) -> str:
+    def format_port_decl(cls, pport: vlsir.circuit.Port) -> str:
         """ Format a `Port` declaration """
 
         # First retrieve and check the validity of its direction
         port_type_to_str = {
-            protodefs.Port.Direction.Value("INPUT"): "input",
-            protodefs.Port.Direction.Value("OUTPUT"): "output",
-            protodefs.Port.Direction.Value("INOUT"): "inout",
-            protodefs.Port.Direction.Value("NONE"): "NO_DIRECTION",
+            vlsir.circuit.Port.Direction.Value("INPUT"): "input",
+            vlsir.circuit.Port.Direction.Value("OUTPUT"): "output",
+            vlsir.circuit.Port.Direction.Value("INOUT"): "inout",
+            vlsir.circuit.Port.Direction.Value("NONE"): "NO_DIRECTION",
         }
         dir_ = port_type_to_str.get(pport.direction, None)
         if dir_ is None:
@@ -179,7 +179,7 @@ class VerilogNetlister(Netlister):
         return dir_ + " " + cls.format_signal_decl(pport.signal)
 
     @classmethod
-    def format_signal_decl(cls, psig: protodefs.Signal) -> str:
+    def format_signal_decl(cls, psig: vlsir.circuit.Signal) -> str:
         """ Format a `Signal` declaration """
         rv = "wire"
         if psig.width > 1:
@@ -188,19 +188,19 @@ class VerilogNetlister(Netlister):
         return rv
 
     @classmethod
-    def format_port_ref(cls, pport: protodefs.Port) -> str:
+    def format_port_ref(cls, pport: vlsir.circuit.Port) -> str:
         """ Format a reference to a `Port`. 
         Unlike declarations, this just requires the name of its `Signal`. """
         return cls.format_signal_ref(pport.signal)
 
     @classmethod
-    def format_signal_ref(cls, psig: protodefs.Signal) -> str:
+    def format_signal_ref(cls, psig: vlsir.circuit.Signal) -> str:
         """ Format a reference to a `Signal`. 
         Unlike declarations, this just requires its name. """
         return psig.name
 
     @classmethod
-    def format_signal_slice(cls, pslice: protodefs.Slice) -> str:
+    def format_signal_slice(cls, pslice: vlsir.circuit.Slice) -> str:
         """ Format Signal-Slice `pslice` """
         if pslice.top == pslice.bot:  # Single-bit slice
             return f"{pslice.signal}[{pslice.top}]"

@@ -36,7 +36,7 @@ heavily re-using a central `SpiceNetlister` class, but requiring simulator-speci
 from typing import List, Union
 
 # Local Imports
-from ..proto import circuit_pb2 as protodefs
+import vlsir
 
 # Import the base-class
 from .base import Netlister, ResolvedModule
@@ -63,7 +63,7 @@ class SpiceNetlister(Netlister):
 
         return NetlistFormat.SPICE
 
-    def write_module_definition(self, module: protodefs.Module) -> None:
+    def write_module_definition(self, module: vlsir.circuit.Module) -> None:
         """ Write the `SUBCKT` definition for `Module` `module`."""
 
         # Create the module name
@@ -86,7 +86,7 @@ class SpiceNetlister(Netlister):
             self.write_comment("No ports")
 
         # Create its parameters, if any are defined
-        if module.default_parameters:
+        if module.parameters:
             self.write_param_declarations(module)
         else:
             self.write("+ ")
@@ -102,14 +102,14 @@ class SpiceNetlister(Netlister):
         # And close up the sub-circuit
         self.write(".ENDS\n\n")
 
-    def write_port_declarations(self, module: protodefs.Module) -> None:
+    def write_port_declarations(self, module: vlsir.circuit.Module) -> None:
         """ Write the port declarations for Module `module`. """
         self.write("+ ")
         for pport in module.ports:
             self.write(self.format_port_decl(pport) + " ")
         self.write("\n")
 
-    def write_param_declarations(self, module: protodefs.Module) -> None:
+    def write_param_declarations(self, module: vlsir.circuit.Module) -> None:
         """ Write the parameter declarations for Module `module`. 
         Parameter declaration format: `name1=val1 name2=val2 name3=val3 \n`"""
         self.write("+ ")
@@ -118,14 +118,14 @@ class SpiceNetlister(Netlister):
         self.write("\n")
 
     def write_instance_name(
-        self, pinst: protodefs.Instance, target: ResolvedModule
+        self, pinst: vlsir.circuit.Instance, target: ResolvedModule
     ) -> None:
         """ Write the instance-name line for `pinst`, including the SPICE-dictated primitive-prefix. """
         prim = target.spice_primitive
         prefix = "x" if prim is None else prim.value
         self.write(f"{prefix}{pinst.name} \n")
 
-    def write_instance(self, pinst: protodefs.Instance) -> None:
+    def write_instance(self, pinst: vlsir.circuit.Instance) -> None:
         """ Create and return a netlist-string for Instance `pinst`"""
 
         # Get its Module or ExternalModule definition, primarily for sake of port-order
@@ -158,7 +158,7 @@ class SpiceNetlister(Netlister):
         self.write("\n")
 
     def write_instance_conns(
-        self, pinst: protodefs.Instance, port_list: List[str]
+        self, pinst: vlsir.circuit.Instance, port_list: List[str]
     ) -> None:
         """ Write the port-connections for Instance `pinst` """
         self.write("+ ")
@@ -170,7 +170,7 @@ class SpiceNetlister(Netlister):
             self.write(self.format_connection(pconn) + " ")
         self.write("\n")
 
-    def write_instance_params(self, pinst: protodefs.Instance) -> None:
+    def write_instance_params(self, pinst: vlsir.circuit.Instance) -> None:
         """ Write the parameter-values for Instance `pinst`. 
         Parameter-values format:
         XNAME <ports> <subckt-name> name1=val1 name2=val2 name3=val3 \n """
@@ -181,7 +181,7 @@ class SpiceNetlister(Netlister):
         self.write("\n")
 
     # TODO: copied from Spectre implementation, need test cases to exercise
-    def format_concat(self, pconc: protodefs.Concat) -> str:
+    def format_concat(self, pconc: vlsir.circuit.Concat) -> str:
         """ Format the Concatenation of several other Connections """
         out = ""
         for part in pconc.parts:
@@ -189,17 +189,17 @@ class SpiceNetlister(Netlister):
         return out
 
     @classmethod
-    def format_port_decl(cls, pport: protodefs.Port) -> str:
+    def format_port_decl(cls, pport: vlsir.circuit.Port) -> str:
         """ Get a netlist `Port` definition """
         return cls.format_signal_ref(pport.signal)
 
     @classmethod
-    def format_port_ref(cls, pport: protodefs.Port) -> str:
+    def format_port_ref(cls, pport: vlsir.circuit.Port) -> str:
         """ Get a netlist `Port` reference """
         return cls.format_signal_ref(pport.signal)
 
     @classmethod
-    def format_signal_ref(cls, psig: protodefs.Signal) -> str:
+    def format_signal_ref(cls, psig: vlsir.circuit.Signal) -> str:
         """ Get a netlist definition for Signal `psig` """
         if psig.width < 1:
             raise RuntimeError
@@ -211,7 +211,7 @@ class SpiceNetlister(Netlister):
         )
 
     @classmethod
-    def format_signal_slice(cls, pslice: protodefs.Slice) -> str:
+    def format_signal_slice(cls, pslice: vlsir.circuit.Slice) -> str:
         """ Get a netlist definition for Signal-Slice `pslice` """
         base = pslice.signal
         indices = list(reversed(range(pslice.bot, pslice.top + 1)))
@@ -226,7 +226,7 @@ class SpiceNetlister(Netlister):
         return "_" + str(index)
 
     @classmethod
-    def format_param_decl(cls, name: str, param: protodefs.Parameter) -> str:
+    def format_param_decl(cls, name: str, param: vlsir.circuit.Parameter) -> str:
         """ Format a parameter-declaration """
         default = cls.get_param_default(param)
         if default is None:
@@ -249,7 +249,7 @@ class XyceNetlister(SpiceNetlister):
 
         return NetlistFormat.XYCE
 
-    def write_param_declarations(self, module: protodefs.Module) -> None:
+    def write_param_declarations(self, module: vlsir.circuit.Module) -> None:
         """ Write the parameter declarations for Module `module`. 
         Parameter declaration format:
         .SUBCKT <name> <ports> 
@@ -260,7 +260,7 @@ class XyceNetlister(SpiceNetlister):
             self.write(self.format_param_decl(name, pparam))
         self.write("\n")
 
-    def write_instance_params(self, pinst: protodefs.Instance) -> None:
+    def write_instance_params(self, pinst: vlsir.circuit.Instance) -> None:
         """ Write the parameter-values for Instance `pinst`. 
         Parameter-values format:
         XNAME <ports> <subckt-name> 

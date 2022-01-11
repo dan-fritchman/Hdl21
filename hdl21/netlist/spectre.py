@@ -6,7 +6,7 @@
 from typing import Union
 
 # Local Imports
-from ..proto import circuit_pb2 as protodefs
+import vlsir
 
 # Import the base-class
 from .base import Netlister
@@ -22,7 +22,7 @@ class SpectreNetlister(Netlister):
 
         return NetlistFormat.SPECTRE
 
-    def write_module_definition(self, module: protodefs.Module) -> None:
+    def write_module_definition(self, module: vlsir.circuit.Module) -> None:
         """ Create a Spectre-format definition for proto-Module `module` """
 
         # Create the module name
@@ -46,7 +46,7 @@ class SpectreNetlister(Netlister):
             self.write("+  // No ports \n")
 
         # Create its parameters, if defined
-        if module.default_parameters:
+        if module.parameters:
             self.write("parameters ")
             for name, pparam in module.parameters.items():
                 self.write(
@@ -68,7 +68,7 @@ class SpectreNetlister(Netlister):
         # Close up the sub-circuit
         self.write("ends \n\n")
 
-    def write_instance(self, pinst: protodefs.Instance) -> None:
+    def write_instance(self, pinst: vlsir.circuit.Instance) -> None:
         """Create and return a netlist-string for Instance `pinst`"""
 
         # Create the instance name
@@ -107,7 +107,7 @@ class SpectreNetlister(Netlister):
         # And add a post-instance blank line
         self.write("\n")
 
-    def format_concat(self, pconc: protodefs.Concat) -> str:
+    def format_concat(self, pconc: vlsir.circuit.Concat) -> str:
         """ Format the Concatenation of several other Connections """
         out = ""
         for part in pconc.parts:
@@ -115,17 +115,17 @@ class SpectreNetlister(Netlister):
         return out
 
     @classmethod
-    def format_port_decl(cls, pport: protodefs.Port) -> str:
+    def format_port_decl(cls, pport: vlsir.circuit.Port) -> str:
         """ Get a netlist `Port` definition """
         return cls.format_signal_ref(pport.signal)
 
     @classmethod
-    def format_port_ref(cls, pport: protodefs.Port) -> str:
+    def format_port_ref(cls, pport: vlsir.circuit.Port) -> str:
         """ Get a netlist `Port` reference """
         return cls.format_signal_ref(pport.signal)
 
     @classmethod
-    def format_signal_ref(cls, psig: protodefs.Signal) -> str:
+    def format_signal_ref(cls, psig: vlsir.circuit.Signal) -> str:
         """ Get a netlist definition for Signal `psig` """
         if psig.width < 1:
             raise RuntimeError
@@ -137,7 +137,7 @@ class SpectreNetlister(Netlister):
         )
 
     @classmethod
-    def format_signal_slice(cls, pslice: protodefs.Slice) -> str:
+    def format_signal_slice(cls, pslice: vlsir.circuit.Slice) -> str:
         """Get a netlist definition for Signal-Slice `pslice`"""
         base = pslice.signal
         indices = list(reversed(range(pslice.bot, pslice.top + 1)))

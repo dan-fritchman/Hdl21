@@ -13,12 +13,12 @@ from enum import Enum
 from pydantic.dataclasses import dataclass
 
 # Local Imports
+import vlsir
 from ..proto.to_proto import ProtoExporter
 from ..proto.from_proto import ProtoImporter
-from ..proto import circuit_pb2 as protodefs
 
 # Internal type shorthand
-ModuleLike = Union[protodefs.Module, protodefs.ExternalModule]
+ModuleLike = Union[vlsir.circuit.Module, vlsir.circuit.ExternalModule]
 
 
 class SpicePrimitive(Enum):
@@ -103,7 +103,7 @@ class Netlister:
     * `get_*` methods, which retrieve some internal data, e.g. extracting the type of a `Connection`. 
     """
 
-    def __init__(self, pkg: protodefs.Package, dest: IO):
+    def __init__(self, pkg: vlsir.circuit.Package, dest: IO):
         self.pkg = pkg
         self.dest = dest
         self.indent = Indent(chars="  ")
@@ -117,9 +117,6 @@ class Netlister:
     def netlist(self) -> None:
         """ Primary API Method.
         Convert everything in `self.pkg` and write to `self.dest`. """
-
-        if self.pkg.ext_sources:
-            raise NotImplementedError(f"External sources not (yet) supported")
 
         # First visit any externally-defined Modules,
         # Ensuring we have their port-orders.
@@ -144,7 +141,7 @@ class Netlister:
         """ Write `s` as a line, at our current `indent` level. """
         self.write(f"{self.indent.state}{s}\n")
 
-    def get_external_module(self, emod: protodefs.ExternalModule) -> None:
+    def get_external_module(self, emod: vlsir.circuit.ExternalModule) -> None:
         """ Visit an ExternalModule definition.
         "Netlisting" these doesn't actually write anything,
         but just stores a reference  in internal dictionary `ext_modules`
@@ -155,14 +152,14 @@ class Netlister:
         self.ext_modules[key] = emod
 
     @classmethod
-    def get_param_default(cls, pparam: protodefs.Parameter) -> Optional[str]:
+    def get_param_default(cls, pparam: vlsir.circuit.Parameter) -> Optional[str]:
         """ Get the default value of `pparam`. Returns `None` for no default. """
         if pparam.WhichOneof("value") is None:
             return None
         return cls.get_param_value(pparam)
 
     @classmethod
-    def get_param_value(cls, pparam: protodefs.Parameter) -> str:
+    def get_param_value(cls, pparam: vlsir.circuit.Parameter) -> str:
         """ Get a string representation of a parameter-value """
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
@@ -173,7 +170,7 @@ class Netlister:
             return str(pparam.string)
         raise ValueError
 
-    def get_module_name(self, module: protodefs.Module) -> str:
+    def get_module_name(self, module: vlsir.circuit.Module) -> str:
         """ Create a netlist-compatible name for proto-Module `module` """
 
         # Create the module name
@@ -184,7 +181,7 @@ class Netlister:
                 name = name.replace(ch, "_")
         return name
 
-    def resolve_reference(self, ref: protodefs.Reference) -> ResolvedModule:
+    def resolve_reference(self, ref: vlsir.utils.Reference) -> ResolvedModule:
         """ Resolve the `ModuleLike` referent of `ref`. """
 
         if ref.WhichOneof("to") == "local":  # Internally-defined Module
@@ -229,7 +226,7 @@ class Netlister:
                     raise ValueError(f"Unsupported or Invalid Ideal Primitive {ref}")
 
                 # Awkwardly, primitives don't naturally have definitions as
-                # either `protodefs.Module` or `protodefs.ExternalModule`.
+                # either `vlsir.circuit.Module` or `vlsir.circuit.ExternalModule`.
                 # So we create one on the fly.
                 prim = ProtoImporter.import_primitive(ref.external)
                 module = ProtoExporter.export_primitive(prim)
@@ -261,7 +258,7 @@ class Netlister:
         # Not a Module, not an ExternalModule, not sure what it is
         raise ValueError(f"Invalid Module reference {ref}")
 
-    def format_connection(self, pconn: protodefs.Connection) -> str:
+    def format_connection(self, pconn: vlsir.circuit.Connection) -> str:
         """ Format a `Connection` reference. 
         Does not *declare* any new connection objects, but generates references to existing ones. """
         # Connections are a proto `oneof` union
@@ -296,36 +293,36 @@ class Netlister:
     """
 
     @classmethod
-    def format_param_decl(cls, name: str, param: protodefs.Parameter) -> str:
+    def format_param_decl(cls, name: str, param: vlsir.circuit.Parameter) -> str:
         """ Format a named `Parameter` definition """
         raise NotImplementedError
 
     @classmethod
-    def format_port_decl(cls, pport: protodefs.Port) -> str:
+    def format_port_decl(cls, pport: vlsir.circuit.Port) -> str:
         """ Format a declaration of a `Port` """
         raise NotImplementedError
 
     @classmethod
-    def format_port_ref(cls, pport: protodefs.Port) -> str:
+    def format_port_ref(cls, pport: vlsir.circuit.Port) -> str:
         """ Format a reference to a `Port` """
         raise NotImplementedError
 
     @classmethod
-    def format_signal_decl(cls, psig: protodefs.Signal) -> str:
+    def format_signal_decl(cls, psig: vlsir.circuit.Signal) -> str:
         """ Format a declaration of Signal `psig` """
         raise NotImplementedError
 
     @classmethod
-    def format_signal_ref(cls, psig: protodefs.Signal) -> str:
+    def format_signal_ref(cls, psig: vlsir.circuit.Signal) -> str:
         """ Format a reference to Signal `psig` """
         raise NotImplementedError
 
     @classmethod
-    def format_signal_slice(cls, pslice: protodefs.Slice) -> str:
+    def format_signal_slice(cls, pslice: vlsir.circuit.Slice) -> str:
         """ Format Signal-Slice `pslice` """
         raise NotImplementedError
 
-    def format_concat(self, pconc: protodefs.Concat) -> str:
+    def format_concat(self, pconc: vlsir.circuit.Concat) -> str:
         """ Format the Concatenation of several other Connections """
         raise NotImplementedError
 
@@ -344,11 +341,11 @@ class Netlister:
         The `write_comment` method assumes responsibility for closing the line. """
         raise NotImplementedError
 
-    def write_module_definition(self, pmodule: protodefs.Module) -> None:
+    def write_module_definition(self, pmodule: vlsir.circuit.Module) -> None:
         """ Write Module `module` """
         raise NotImplementedError
 
-    def write_instance(self, pinst: protodefs.Instance) -> str:
+    def write_instance(self, pinst: vlsir.circuit.Instance) -> str:
         """ Write Instance `pinst` """
         raise NotImplementedError
 
