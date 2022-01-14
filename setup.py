@@ -24,7 +24,7 @@ setup(
     url="https://github.com/dan-fritchman/Hdl21",
     author="Dan Fritchman",
     packages=["hdl21"],
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
     install_requires=["vlsir==0.2.0", "vlsirtools==0.2.0", "pydantic==1.8.2",],
     extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov"]},
 )
