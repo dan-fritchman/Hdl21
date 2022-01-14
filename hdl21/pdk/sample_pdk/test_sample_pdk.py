@@ -39,7 +39,8 @@ def test_compile():
 
     # Import it back into Modules & Namespaces
     ns = h.from_proto(pdk_pkg)
-    rt = ns.sample_pdk.test_sample_pdk.hasmos
+    print(ns)
+    rt = ns.hdl21.pdk.sample_pdk.test_sample_pdk.hasmos
 
     # And check what came back
     assert isinstance(rt.n, h.Instance)

@@ -1,8 +1,8 @@
 """
 # Hdl21 PDK Sample 
 
-Demonstration of an `hdl21.pdk` plug-in package. 
-Not a working or existing process technology. 
+An entirely fictitious process-technology, 
+written solely as a demonstration of an `hdl21.pdk` plug-in package. 
 """
 
 from hdl21.pdk import register
