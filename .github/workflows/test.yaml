@@ -23,12 +23,19 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: |
-        python -m pip install poetry 
-        poetry install 
+      run: | # FIXME: baking in git-cloning the `vlsir` dependency until it is distributed 
+        pwd
+        cd .. 
+        git clone https://github.com/dan-fritchman/Vlsir.git
+        cd Vlsir/bindings/python 
+        pip install -e .
+        cd ../../VlsirTools
+        pip install -e .
+        cd ../../Hdl21
+        pip install -e ".[dev]"
     - name: Test with pytest
       run: |
-        poetry run pytest -sv --cov=./ --cov-report=xml
+        pytest -sv --cov=./ --cov-report=xml
     - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
       uses: codecov/codecov-action@v1
       with:

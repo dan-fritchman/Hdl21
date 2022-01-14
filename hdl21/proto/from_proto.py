@@ -6,7 +6,7 @@ from typing import Union, Any, Dict, List, Type
 
 # Local imports
 # Proto-definitions
-from . import circuit_pb2 as protodefs
+import vlsir
 
 # HDL
 from ..module import Module, ExternalModule
@@ -16,7 +16,7 @@ from .. import primitives
 from ..primitives import Primitive
 
 
-def from_proto(pkg: protodefs.Package) -> SimpleNamespace:
+def from_proto(pkg: vlsir.circuit.Package) -> SimpleNamespace:
     """ Convert Proto-defined Package `pkg` to a namespace-full of Modules. """
     importer = ProtoImporter(pkg)
     return importer.import_()
@@ -26,7 +26,7 @@ class ProtoImporter:
     """ Protobuf Package Importer. 
     Collects all `Modules` defined in Protobuf-sourced primary-argument `pkg` into a Python `types.SimpleNamespace`. """
 
-    def __init__(self, pkg: protodefs.Package):
+    def __init__(self, pkg: vlsir.circuit.Package):
         self.pkg = pkg
         self.modules = dict()  # Dict of names to Modules
         self.ext_modules = dict()  # Dict of qual-names to ExternalModules
@@ -60,7 +60,7 @@ class ProtoImporter:
                 raise RuntimeError(f"Invalid namespace path {path} overwriting {attr}")
         return ns
 
-    def import_external_module(self, pmod: protodefs.ExternalModule) -> ExternalModule:
+    def import_external_module(self, pmod: vlsir.circuit.ExternalModule) -> ExternalModule:
         """ Convert Proto-Module `emod` to an `hdl21.ExternalModule` """
 
         # Check our cache for whether a module by the same name has been imported
@@ -84,7 +84,7 @@ class ProtoImporter:
         self.ext_modules[key] = emod
         return emod
 
-    def import_module(self, pmod: protodefs.Module) -> Module:
+    def import_module(self, pmod: vlsir.circuit.Module) -> Module:
         """ Convert Proto-Module `pmod` to an `hdl21.Module` """
         if pmod.name in self.modules:
             raise RuntimeError(f"Proto Import Error: Redefined Module {pmod.name}")
@@ -127,7 +127,7 @@ class ProtoImporter:
         setattr(ns, module.name, module)
         return module
 
-    def import_instance(self, pinst: protodefs.Instance) -> Instance:
+    def import_instance(self, pinst: vlsir.circuit.Instance) -> Instance:
         """ Convert Proto-Instance `pinst` to an `hdl21.Instance`. 
         Requires an available Module-definition to be referenced. 
         Connections are *not* performed inside this method. """
@@ -170,7 +170,7 @@ class ProtoImporter:
         return Instance(name=pinst.name, of=target)
 
     @classmethod
-    def import_primitive(cls, pref: protodefs.QualifiedName) -> Primitive:
+    def import_primitive(cls, pref: vlsir.utils.QualifiedName) -> Primitive:
         if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
             raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
         prim = getattr(primitives, pref.name, None)
@@ -180,14 +180,14 @@ class ProtoImporter:
         return prim
 
     @classmethod
-    def import_parameters(cls, pparams: Dict[str, protodefs.Parameter]) -> dict:
+    def import_parameters(cls, pparams: Dict[str, vlsir.circuit.Parameter]) -> dict:
         pdict = {}
         for pname, pparam in pparams.items():
             pdict[pname] = cls.import_parameter(pparam)
         return pdict
 
     @classmethod
-    def import_parameter(cls, pparam: protodefs.Parameter) -> Any:
+    def import_parameter(cls, pparam: vlsir.circuit.Parameter) -> Any:
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
             return int(pparam.integer)
@@ -198,7 +198,7 @@ class ProtoImporter:
         raise ValueError
 
     def import_connection(
-        self, pconn: protodefs.Connection, module: Module
+        self, pconn: vlsir.circuit.Connection, module: Module
     ) -> Union[Signal, Slice, Concat]:
         """ Import a Proto-defined `Connection` into a Signal, Slice, or Concatenation """
         # Connections are a proto `oneof` union; figure out which to import
@@ -227,7 +227,7 @@ class ProtoImporter:
             sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
         return sig
 
-    def import_concat(self, pconc: protodefs.Concat, module: Module) -> Concat:
+    def import_concat(self, pconc: vlsir.circuit.Concat, module: Module) -> Concat:
         """ Import a (potentially nested) Concatenation """
         parts = []
         for ppart in pconc.parts:
@@ -235,7 +235,7 @@ class ProtoImporter:
             parts.append(part)
         return Concat(*parts)
 
-    def import_ports(self, pports: List[protodefs.Port]) -> List[Signal]:
+    def import_ports(self, pports: List[vlsir.circuit.Port]) -> List[Signal]:
         """ Import a list of proto-ports """
         ports = []
         for pport in pports:
@@ -245,14 +245,14 @@ class ProtoImporter:
             )
         return ports
 
-    def import_port_dir(self, pport: protodefs.Port) -> PortDir:
+    def import_port_dir(self, pport: vlsir.circuit.Port) -> PortDir:
         """ Convert between Port-Direction Enumerations """
-        if pport.direction == protodefs.Port.Direction.INPUT:
+        if pport.direction == vlsir.circuit.Port.Direction.INPUT:
             return PortDir.INPUT
-        if pport.direction == protodefs.Port.Direction.OUTPUT:
+        if pport.direction == vlsir.circuit.Port.Direction.OUTPUT:
             return PortDir.OUTPUT
-        if pport.direction == protodefs.Port.Direction.INOUT:
+        if pport.direction == vlsir.circuit.Port.Direction.INOUT:
             return PortDir.INOUT
-        if pport.direction == protodefs.Port.Direction.NONE:
+        if pport.direction == vlsir.circuit.Port.Direction.NONE:
             return PortDir.NONE
         raise ValueError
