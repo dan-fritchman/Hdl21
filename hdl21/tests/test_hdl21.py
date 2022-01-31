@@ -1495,26 +1495,31 @@ def test_spice_netlister():
     h.netlist(ppkg, nl, "spice")
     good = dedent(
         """\
-        .SUBCKT DUT 
-        + a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0 
-        + * No parameters
+            .SUBCKT DUT 
+            + a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0 
+            + * No parameters
 
-        rres 
-        + a_0 b_0 
-        + r=10000.0 
+            rres 
+            + a_0 b_0 
+            + 10000.0 
+            + 
 
-        ccap 
-        + a_1 b_1 
-        + c=1e-11 
+            ccap 
+            + a_1 b_1 
+            + 1e-11 
+            + 
 
-        lind 
-        + a_2 b_2 
-        + l=1e-08 
+            lind 
+            + a_2 b_2 
+            + 1e-08 
+            + 
 
-        .ENDS
+            .ENDS
     """
     )
-    assert good in nl.getvalue()
+    nl = nl.getvalue()
+    open("somenetlist", "w").write(nl)
+    assert good in nl
 
 
 def test_bad_width_conn():
