@@ -233,7 +233,7 @@ def test_params4():
     o2 = Outer(**d2)
     uname2 = h.params._unique_name(o2)
     assert uname1 == uname2
-    assert uname1 == "Outer(3dcc309796996b3a8a61db66631c5a93)"
+    assert uname1 == "3dcc309796996b3a8a61db66631c5a93"
 
 
 def test_bad_params1():

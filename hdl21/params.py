@@ -188,8 +188,8 @@ def _unique_name(params: Any) -> str:
     # Note the "not used for security" option ensures consistent hashing between runs/ Python-processes
     h = hashlib.new("md5", usedforsecurity=False)
     h.update(data)
-    # Combine the `@paramclass` name with this (hex) digest
-    return params.__class__.__name__ + "(" + h.hexdigest() + ")"
+    # And return the (hex) digest as our unique name
+    return h.hexdigest()
 
 
 def hdl21_naming_encoder(obj: Any) -> Any:
