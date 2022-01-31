@@ -497,7 +497,7 @@ def test_prim_proto1():
     for inst in pm.instances:
         assert isinstance(inst, vlsir.circuit.Instance)
         assert inst.module.WhichOneof("to") == "external"
-        assert inst.module.external.domain in ["hdl21.ideal", "hdl21.primitives"]
+        assert inst.module.external.domain in ["vlsir.primitives", "hdl21.primitives"]
 
     ns = h.from_proto(ppkg)
 
@@ -1495,30 +1495,32 @@ def test_spice_netlister():
     h.netlist(ppkg, nl, "spice")
     good = dedent(
         """\
-            .SUBCKT DUT 
-            + a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0 
-            + * No parameters
+        .SUBCKT DUT 
+        + a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0 
+        + * No parameters
 
-            rres 
-            + a_0 b_0 
-            + 10000.0 
-            + 
+        rres 
+        + a_0 b_0 
+        + 10000.0 
+        + * No parameters
 
-            ccap 
-            + a_1 b_1 
-            + 1e-11 
-            + 
 
-            lind 
-            + a_2 b_2 
-            + 1e-08 
-            + 
+        ccap 
+        + a_1 b_1 
+        + 1e-11 
+        + * No parameters
 
-            .ENDS
+
+        lind 
+        + a_2 b_2 
+        + 1e-08 
+        + * No parameters
+
+
+        .ENDS
     """
     )
     nl = nl.getvalue()
-    open("somenetlist", "w").write(nl)
     assert good in nl
 
 

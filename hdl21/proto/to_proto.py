@@ -111,8 +111,10 @@ class ProtoExporter:
         self.pkg.modules.append(pmod)
         return pmod
 
-    def export_external_module(self, emod: ExternalModule) -> vlsir.circuit.ExternalModule:
-        """Export an `ExternalModule`"""
+    def export_external_module(
+        self, emod: ExternalModule
+    ) -> vlsir.circuit.ExternalModule:
+        """ Export an `ExternalModule` """
         if id(emod) in self.ext_modules:  # Already done
             return self.ext_modules[id(emod)]
 
@@ -130,8 +132,8 @@ class ProtoExporter:
         return pmod
 
     @classmethod
-    def export_primitive(cls, prim: Primitive) -> vlsir.circuit.ExternalModule:
-        """Export a `Primitive as a `vlsir.circuit.ExternalModule`. 
+    def export_hdl21_primitive(cls, prim: Primitive) -> vlsir.circuit.ExternalModule:
+        """ Export a `Primitive` as a `vlsir.circuit.ExternalModule`. 
         Not typically done as part of serialization, 
         but solely as an aid to other conversion utilities. """
 
@@ -174,9 +176,9 @@ class ProtoExporter:
         raise ValueError
 
     def export_instance(self, inst: Instance) -> vlsir.circuit.Instance:
-        """Convert an hdl21.Instance into a Proto-Instance
+        """ Convert an hdl21.Instance into a Proto-Instance
         Depth-first retrieves a Module definition first,
-        using its generated `name` field as the Instance's `module` pointer."""
+        using its generated `name` field as the Instance's `module` pointer. """
 
         # Create the Proto-Instance
         pinst = vlsir.circuit.Instance(name=inst.name)
@@ -193,11 +195,24 @@ class ProtoExporter:
                 # Create a reference to one of the `primitive` namespaces
                 if call.prim.primtype == PrimitiveType.PHYSICAL:
                     pinst.module.external.domain = "hdl21.primitives"
+                    pinst.module.external.name = call.prim.name
                 elif call.prim.primtype == PrimitiveType.IDEAL:
-                    pinst.module.external.domain = "hdl21.ideal"
+                    # Ideal elements convert to `vlsir.primitives`
+                    pinst.module.external.domain = "vlsir.primitives"
+                    prim_map = {
+                        "DcVoltageSource": "vdc",
+                        "IdealCurrentSource": "isource",
+                        "IdealResistor": "resistor",
+                        "IdealCapacitor": "capacitor",
+                        "IdealInductor": "inductor",
+                    }
+                    if call.prim.name not in prim_map:
+                        msg = f"Invalid Primitive {call.prim.name} in PrimitiveCall {inst.name}"
+                        raise RuntimeError(msg)
+                    # Set the
+                    pinst.module.external.name = prim_map[call.prim.name]
                 else:
                     raise ValueError
-                pinst.module.external.name = call.prim.name
                 params = asdict(call.params)
             else:  # ExternalModuleCall
                 self.export_external_module(call.module)

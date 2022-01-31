@@ -60,7 +60,9 @@ class ProtoImporter:
                 raise RuntimeError(f"Invalid namespace path {path} overwriting {attr}")
         return ns
 
-    def import_external_module(self, pmod: vlsir.circuit.ExternalModule) -> ExternalModule:
+    def import_external_module(
+        self, pmod: vlsir.circuit.ExternalModule
+    ) -> ExternalModule:
         """ Convert Proto-Module `emod` to an `hdl21.ExternalModule` """
 
         # Check our cache for whether a module by the same name has been imported
@@ -145,35 +147,66 @@ class ProtoImporter:
             target = module
 
         elif ref.WhichOneof("to") == "external":  # Defined outside package
-            # First check the priviledged/ internally-defined domains
-            if ref.external.domain in ("hdl21.primitives", "hdl21.ideal"):
-                # Retrieve the Primitive from `hdl21.primitives`
-                prim = self.import_primitive(ref.external)
-                # Import all of its instance parameters, and convert them to its param-type
-                pdict = self.import_parameters(pinst.parameters)
-                params = prim.Params(**pdict)
-                # Call the Primitive with its parameters, creating a PrimitiveCall Instance-target
-                target = prim(params)
+            # Import all of its instance parameters to a dict
+            params = self.import_parameters(pinst.parameters)
 
-            else:  # External Module
+            # First check the priviledged/ internally-defined domains
+            if ref.external.domain == "vlsir.primitives":
+                # Import a VLSIR primitive to an ideal element, and convert its parameters
+                target = self.import_vlsir_primitive(ref.external)
+                params = target.Params(**params)
+
+            elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
+                # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
+                target = self.import_hdl21_primitive(ref.external)
+                params = target.Params(**params)
+
+            else:  # Externally-defined `ExternalModule`
+                # These must be declared in our `Package` being imported. Look up its header-info from `ext_modules`.
                 key = (ref.external.domain, ref.external.name)
-                emod = self.ext_modules.get(key, None)
-                if emod is None:
-                    raise RuntimeError(
-                        f"Invalid Instance of undefined External Module {key}"
-                    )
-                # Import all of its instance parameters to a dict
-                pdict = self.import_parameters(pinst.parameters)
-                # And call it with the parameters
-                target = emod(pdict)
+                target = self.ext_modules.get(key, None)
+                if target is None:
+                    msg = f"Invalid Instance of undefined External Module {key}"
+                    raise RuntimeError(msg)
+
+            # Call the `target` ExternalModule/ Primitive it with the parameters, making an instantiable `Call`-object.
+            target = target(params)
 
         return Instance(name=pinst.name, of=target)
 
     @classmethod
-    def import_primitive(cls, pref: vlsir.utils.QualifiedName) -> Primitive:
+    def import_hdl21_primitive(cls, pref: vlsir.utils.QualifiedName) -> Primitive:
+        """ Convert an `hdl21.primitives` or `hdl21.ideal` qualified name to a Primitive. """
         if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
             raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
+
+        # Get the Primitive from `hdl21.primitives`, or fail
         prim = getattr(primitives, pref.name, None)
+        if not isinstance(prim, Primitive):
+            msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+            raise RuntimeError(msg)
+        return prim
+
+    @classmethod
+    def import_vlsir_primitive(cls, pref: vlsir.utils.QualifiedName) -> Primitive:
+        """ Import a VLSIR-defined Primitive """
+        if pref.domain != "vlsir.primitives":
+            raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
+
+        # Mapping from `vlsir.primitives` to Hdl21's ideal elements
+        prim_map = {
+            "vdc": "DcVoltageSource",
+            "isource": "IdealCurrentSource",
+            "resistor": "IdealResistor",
+            "capacitor": "IdealCapacitor",
+            "inductor": "IdealInductor",
+        }
+        if pref.name not in prim_map:
+            msg = f"Invalid or unsupported VLSIR Primitive: {pref.name}"
+            raise RuntimeError(msg)
+
+        # Get the Hdl21 Primitive class
+        prim = getattr(primitives, prim_map[pref.name], None)
         if not isinstance(prim, Primitive):
             msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
             raise RuntimeError(msg)

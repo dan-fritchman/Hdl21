@@ -284,16 +284,18 @@ The leaf-nodes of each hierarchical Hdl21 circuit are generally defined in one o
 
 Hdl21 `Primitives` come in *ideal* and *physical* flavors. The difference is most frequently relevant for passive elements, which can represent either (a) technology-specific passives, e.g. a MIM or MOS capacitor, or (b) an *ideal*  capacitor. Some element-types have solely physical implementations, some are solely ideal, and others include both. A summary of the `hdl21.Primitives` and their flavors:
 
-| Physical             | Ideal            | Alias(es)         | 
-| ------------------   | ---------------- | ----------------- | 
-| `PhysicalResistor`   | `IdealResistor`  | `R`, `Res`, `Resistor`  | 
-| `PhysicalInductor`   | `IdealInductor`  | `L`, `Ind`, `Inductor`  | 
-| `PhysicalCapacitor`  | `IdealCapacitor` | `C`, `Cap`, `Capacitor` | 
-| `PhysicalShort`      | `IdealShort`     | `Short`                 | 
-|                      | `VoltageSource`  | `Vsrc`, `V`             | 
-|                      | `CurrentSource`  | `Isrc`, `I`             | 
-| `Mos`                |                  |                         | 
-| `Diode`              |                  | `D`                     | 
+| Ideal          | Alias(es)         | Physical           | Alias(es)      |
+| -------------- | ----------------- | ------------------ | -------------- |
+| IdealResistor  | R, Res, Resistor  | PhysicalResistor   |                |
+| IdealInductor  | L, Ind, Inductor  | PhysicalInductor   |                |
+| IdealCapacitor | C, Cap, Capacitor | PhysicalCapacitor  |                |
+| VoltageSource  | Vsrc, V           |                    |                |
+| CurrentSource  | Isrc, I           |                    |                |
+|                |                   | Mos                | Nmos, Pmos     |
+|                |                   | Bipolar            | Bjt, Npn, Pnp  |
+|                |                   | Diode              | D              |
+|                |                   | PhysicalShort      | Short          |
+
 
 Alternately Hdl21 includes an `ExternalModule` type which defines the interface to a module-implementation outside Hdl21. These external definitions are common for instantiating technology-specific modules and libraries. (They might analogously be called *black boxes*.) An example `ExternalModule`: 
 

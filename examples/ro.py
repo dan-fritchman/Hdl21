@@ -98,7 +98,7 @@ def RoTb(params: RoParams) -> h.Module:
     This serves as an early case-study for how hdl21 modules and 
     these SPICE-native things can play together (and perhaps how they shouldn't). 
     """
-    from hdl21.primitives import VoltageSource as V
+    from hdl21.primitives import V
 
     # Create our module
     m = h.Module()

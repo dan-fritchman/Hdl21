@@ -27,12 +27,12 @@ for these physically-specified cells is commonly suggestive or optional.
 | IdealResistor  | R, Res, Resistor  | PhysicalResistor   |                |
 | IdealInductor  | L, Ind, Inductor  | PhysicalInductor   |                |
 | IdealCapacitor | C, Cap, Capacitor | PhysicalCapacitor  |                |
-| IdealShort     | Short             | PhysicalShort      |                |
 | VoltageSource  | Vsrc, V           |                    |                |
 | CurrentSource  | Isrc, I           |                    |                |
 |                |                   | Mos                | Nmos, Pmos     |
 |                |                   | Bipolar            | Bjt, Npn, Pnp  |
 |                |                   | Diode              | D              |
+|                |                   | PhysicalShort      | Short          |
 
 """
 
@@ -317,15 +317,17 @@ PhysicalShort = Primitive(
     primtype=PrimitiveType.PHYSICAL,
 )
 
-IdealShort = Primitive(
-    name="IdealShort",
-    desc="Short-Circuit/ Net-Tie",
-    port_list=[Port(name="p"), Port(name="n")],
-    paramtype=HasNoParams,
-    primtype=PrimitiveType.IDEAL,
-)
+Short = PhysicalShort
 
-Short = IdealShort
+# FIXME: sort out whether to permanently deprecate
+# IdealShort = Primitive(
+#     name="IdealShort",
+#     desc="Short-Circuit/ Net-Tie",
+#     port_list=[Port(name="p"), Port(name="n")],
+#     paramtype=HasNoParams,
+#     primtype=PrimitiveType.IDEAL,
+# )
+# Short = IdealShort
 
 
 """ 
@@ -334,28 +336,31 @@ Sources
 
 
 @paramclass
-class VoltageSourceParams:
+class DcVoltageSourceParams:
     dc = Param(dtype=ScalarOption, default=0, desc="DC Value (V)")
-    delay = Param(dtype=ScalarOption, default=None, desc="Time Delay (s)")
+    ac = Param(dtype=ScalarOption, default=None, desc="AC Amplitude (V)")
+    
+    # # FIXME: break out pulse, sine, etc
+    # delay = Param(dtype=ScalarOption, default=None, desc="Time Delay (s)")
 
-    # Pulse source parameters
-    v0 = Param(dtype=ScalarOption, default=None, desc="Zero Value (V)")
-    v1 = Param(dtype=ScalarOption, default=None, desc="One Value (V)")
-    period = Param(dtype=ScalarOption, default=None, desc="Period (s)")
-    rise = Param(dtype=ScalarOption, default=None, desc="Rise time (s)")
-    fall = Param(dtype=ScalarOption, default=None, desc="Fall time (s)")
-    width = Param(dtype=ScalarOption, default=None, desc="Pulse width (s)")
+    # # Pulse source parameters
+    # v0 = Param(dtype=ScalarOption, default=None, desc="Zero Value (V)")
+    # v1 = Param(dtype=ScalarOption, default=None, desc="One Value (V)")
+    # period = Param(dtype=ScalarOption, default=None, desc="Period (s)")
+    # rise = Param(dtype=ScalarOption, default=None, desc="Rise time (s)")
+    # fall = Param(dtype=ScalarOption, default=None, desc="Fall time (s)")
+    # width = Param(dtype=ScalarOption, default=None, desc="Pulse width (s)")
 
 
-VoltageSource = Primitive(
-    name="VoltageSource",
+DcVoltageSource = Primitive(
+    name="vdc",
     desc="Ideal Voltage Source",
     port_list=[Port(name="p"), Port(name="n")],
-    paramtype=VoltageSourceParams,
+    paramtype=DcVoltageSourceParams,
     primtype=PrimitiveType.IDEAL,
 )
 
-V = Vsrc = VoltageSource
+V = Vsrc = DcVoltageSource
 
 
 @paramclass
