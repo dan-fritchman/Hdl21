@@ -17,7 +17,7 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 
 setup(
     name="hdl21",
-    version="0.2.0rc1",
+    version="0.2.0",
     description="Hardware Description Library",
     long_description=long_description,
     long_description_content_type="text/markdown",
