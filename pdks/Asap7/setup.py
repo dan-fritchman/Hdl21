@@ -17,7 +17,7 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 
 setup(
     name="asap7-hdl21",
-    version="0.2.0",
+    version="0.2.0rc1",
     description="ASAP7 PDK Package for Hdl21",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -25,6 +25,6 @@ setup(
     author="Dan Fritchman",
     packages=["asap7"],
     python_requires=">=3.8, <4",
-    install_requires=["hdl21==0.2.0"],
-    extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov"]},
+    install_requires=["hdl21==0.2.0rc1"],
+    extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov", "twine"]},
 )

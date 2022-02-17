@@ -2,7 +2,7 @@
 # Hdl21 Hardware Description Library 
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.0rc1"
 
 
 # Before any real importing, ensure we can instantiate non-pydantic types in type-checked dataclasses.

@@ -17,14 +17,17 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 
 setup(
     name="hdl21",
-    version="0.2.0",
+    version="0.2.0rc1",
     description="Hardware Description Library",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/dan-fritchman/Hdl21",
     author="Dan Fritchman",
+    author_email="dan@fritch.mn",
     packages=["hdl21"],
     python_requires=">=3.8, <4",
     install_requires=["vlsir==0.2.0", "vlsirtools==0.2.0", "pydantic==1.8.2",],
-    extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov"]},
+    extras_require={
+        "dev": ["pytest==5.2", "coverage", "pytest-cov", "black==19.10b0", "twine"]
+    },
 )
