@@ -23,7 +23,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/dan-fritchman/Hdl21",
     author="Dan Fritchman",
-    packages=["sky130"],
+    packages=find_packages(),
     python_requires=">=3.8, <4",
     install_requires=["hdl21==0.2.0rc1"],
     extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov", "twine"]},
