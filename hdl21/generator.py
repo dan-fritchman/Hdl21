@@ -34,6 +34,12 @@ class Generator:
         return GeneratorCall(gen=self, arg=arg)
 
     @property
+    def name(self) -> str:
+        """ Generator Name
+        Equal to its callable-function's name. """
+        return self.func.__name__
+
+    @property
     def Params(self) -> type:
         """ Parameter-Type Property """
         return self.paramtype

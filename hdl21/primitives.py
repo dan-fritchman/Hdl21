@@ -353,7 +353,7 @@ class DcVoltageSourceParams:
 
 
 DcVoltageSource = Primitive(
-    name="vdc",
+    name="DcVoltageSource",
     desc="Ideal Voltage Source",
     port_list=[Port(name="p"), Port(name="n")],
     paramtype=DcVoltageSourceParams,
