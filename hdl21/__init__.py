@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 BaseModel.Config.arbitrary_types_allowed = True
 
+
 from .params import *
 from .instance import *
 from .signal import *
@@ -25,7 +26,12 @@ from .walker import HierarchyWalker
 from .instantiable import *
 from . import units
 from .units import Prefix, Prefixed
+from . import sim
 
+# Update all the forward type-references throughout our many `@datatype`s
+from .datatype import _update_forward_refs
+
+_update_forward_refs()
 
 from . import proto
 from .proto import to_proto, from_proto
