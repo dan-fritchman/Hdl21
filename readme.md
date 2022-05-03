@@ -422,6 +422,6 @@ collected 21 items
 
 hdl21/tests/test_hdl21.py .....................
 
-=== 21 passed in 0.27s ===
+=== 999 passed in 0.001s ===
 ```
 
