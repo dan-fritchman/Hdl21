@@ -49,6 +49,7 @@ def test_simattrs():
     dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
     ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
     tr = s.tran(tstop=11 * h.prefix.p, name="mytran")
+    assert tr.tstop == 11 * h.prefix.p
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
         inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc"
@@ -70,7 +71,7 @@ def test_proto1():
     """ Test exporting `Sim` to the VLSIR Protobuf schema """
 
     s = Sim(
-        tb=tb(name="tb"),
+        tb=tb(name="mytb"),
         attrs=[
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
@@ -101,7 +102,7 @@ def test_proto1():
     import vlsir.spice_pb2 as vsp
 
     assert isinstance(p.pkg, vckt.Package)
-    assert p.top == "tb"
+    assert p.top == "hdl21.sim.data.mytb"
 
 
 def test_generator_sim():
@@ -131,6 +132,6 @@ def test_generator_sim():
     p2 = to_proto(s2)
 
     assert p1.top != p2.top
-    assert p1.top == "G(P(i=1))"
-    assert p2.top == "G(P(i=2))"
+    assert p1.top == "test_sim.G(P(i=1))"
+    assert p2.top == "test_sim.G(P(i=2))"
 

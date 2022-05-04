@@ -31,6 +31,7 @@ class ProtoExporter:
         """ Primary export method. Converts `sim.tb` and its dependencies to a `Package`, 
         and all other `SimAttr`s to VLSIR attributes. """
         from ..proto import to_proto as module_to_proto
+        from ..instantiable import qualname
 
         # Convert the testbench module and all its dependencies into a `Package`
         pkg = module_to_proto(self.sim.tb)
@@ -40,7 +41,7 @@ class ProtoExporter:
             raise RuntimeError(f"Invalid Testbench {self.sim.tb} for Simulation")
 
         # Create our `SimInput`, and provide it with a "link" to the testbench, via its name
-        self.inp = vsp.SimInput(pkg=pkg, top=self.sim.tb.name)
+        self.inp = vsp.SimInput(pkg=pkg, top=qualname(self.sim.tb))
 
         # Export each simulation attribute
         for attr in self.sim.attrs:
@@ -216,7 +217,19 @@ class ProtoExporter:
 
     def export_meas(self, meas: data.Meas) -> vsp.Meas:
         """ Export a measurement """
-        return vsp.Meas(name=meas.name, expr=str(meas.expr))
+        return vsp.Meas(
+            analysis_type=self.export_analysis_type(meas.analysis),
+            name=meas.name,
+            expr=str(meas.expr),
+        )
+
+    def export_analysis_type(self, an: Union[str, data.Analysis]) -> str:
+        """ Export an `AnalysisType`, or string representation thereof. """
+        if isinstance(an, str):
+            return an
+        if data.is_analysis(an):
+            return an.tp
+        raise TypeError(f"Invalid Analysis for type-extraction {an}")
 
     def export_param(self, param: data.Param) -> vsp.Param:
         """ Export a parameter declaration """

@@ -15,7 +15,8 @@ from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCa
 
 
 # Union of numeric types, including the internally-defined `Prefixed`
-Number = Union[int, float, Prefixed]
+# Note sadly the *order* in this union is important! With `Prefixed` last, it is converted to float!
+Number = Union[Prefixed, float, int]
 
 
 def is_number(val: Any) -> bool:
@@ -37,7 +38,7 @@ def is_tb(i: Instantiable) -> bool:
         m = i
     elif isinstance(i, GeneratorCall):
         m = i.result
-    else: 
+    else:
         raise TypeError(f"Invalid un-instantiable argument {i} to `is_tb`")
 
     if len(m.ports) != 1:
@@ -65,7 +66,7 @@ def simattr(cls) -> type:
     """
 
     # Class names are lower-cases to create the dictionary key,
-    # which also becomes the method-name on `sim`. 
+    # which also becomes the method-name on `sim`.
     _simattrs[cls.__name__.lower()] = cls
     return cls
 
@@ -112,6 +113,18 @@ def is_sweep(val: Any) -> bool:
     return isinstance(val, get_args(Sweep))
 
 
+class AnalysisType(Enum):
+    """ Enumerated Analysis-Types 
+    Corresponding to the entries in the `Analysis` type-union. """
+
+    DC = "dc"
+    AC = "ac"
+    TRAN = "tran"
+    MONTE = "monte"
+    SWEEP = "sweep"
+    CUSTOM = "custom"
+
+
 @simattr
 @datatype
 class Dc:
@@ -120,6 +133,10 @@ class Dc:
     var: Union[str, Param]  # Swept parameter, or its name
     sweep: Sweep  # Sweep values
     name: Optional[str] = None  # Optional analysis name
+
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.DC
 
 
 @simattr
@@ -130,6 +147,10 @@ class Ac:
     sweep: LogSweep  # Sweep values. Always log-valued.
     name: Optional[str] = None  # Optional analysis name
 
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.AC
+
 
 @simattr
 @datatype
@@ -139,6 +160,10 @@ class Tran:
     tstop: Number  # Stop time
     tstep: Optional[Number] = None  # Optional time-step recommendation
     name: Optional[str] = None  # Optional analysis name
+
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.TRAN
 
 
 @simattr
@@ -151,6 +176,10 @@ class SweepAnalysis:
     sweep: Sweep  # Sweep Values
     name: Optional[str] = None  # Optional analysis name
 
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.SWEEP
+
 
 @simattr
 @datatype
@@ -161,6 +190,10 @@ class MonteCarlo:
     npts: int  # Number of points
     name: Optional[str] = None  # Optional analysis name
 
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.MONTE
+
 
 @simattr
 @datatype
@@ -170,6 +203,10 @@ class CustomAnalysis:
 
     cmd: str  # Analysis command string
     name: Optional[str] = None  #
+
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.CUSTOM
 
 
 # Analysis type-union
@@ -212,7 +249,7 @@ class Save:
 class Meas:
     """ Measurement """
 
-    analysis: Union["Analysis", str]  # Target `Analysis`, or its name
+    analysis: Union["Analysis", str]  # Target `Analysis`, or its type-name
     name: str  # Measurement name
     expr: str  # Measured expression. FIXME: just a string to be evaluated, no in-Python semantics
 
