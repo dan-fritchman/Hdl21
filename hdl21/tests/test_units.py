@@ -2,16 +2,16 @@ import hdl21 as h
 
 
 def test_prefix_shortname():
-    assert h.units.f == h.Prefix.FEMTO
-    assert h.units.p == h.Prefix.PICO
-    assert h.units.n == h.Prefix.NANO
-    assert h.units.µ == h.Prefix.MICRO
-    assert h.units.m == h.Prefix.MILLI
-    assert h.units.K == h.Prefix.KILO
-    assert h.units.M == h.Prefix.MEGA
-    assert h.units.G == h.Prefix.GIGA
-    assert h.units.T == h.Prefix.TERA
-    assert h.units.P == h.Prefix.PETA
+    assert h.prefix.f == h.Prefix.FEMTO
+    assert h.prefix.p == h.Prefix.PICO
+    assert h.prefix.n == h.Prefix.NANO
+    assert h.prefix.µ == h.Prefix.MICRO
+    assert h.prefix.m == h.Prefix.MILLI
+    assert h.prefix.K == h.Prefix.KILO
+    assert h.prefix.M == h.Prefix.MEGA
+    assert h.prefix.G == h.Prefix.GIGA
+    assert h.prefix.T == h.Prefix.TERA
+    assert h.prefix.P == h.Prefix.PETA
 
 
 def test_prefix_from_exp():
@@ -46,7 +46,7 @@ def test_prefix_from_exp():
 
 def test_prefix_mul():
     """ Test `Prefix` multiplication. """
-    from hdl21.units import µ
+    from hdl21.prefix import µ
 
     assert 5 * µ == 5 * h.Prefix.MICRO
     assert 5 * µ == h.Prefixed(5, h.Prefix.MICRO)
@@ -54,7 +54,7 @@ def test_prefix_mul():
 
 def test_e():
     """ Test the `e` shorthand notation for exponential creation """
-    from hdl21.units import e
+    from hdl21.prefix import e
 
     assert e(-24) == h.Prefix.YOCTO
     assert e(-21) == h.Prefix.ZEPTO
@@ -79,7 +79,7 @@ def test_e():
 
 
 def test_e_mult():
-    from hdl21.units import e
+    from hdl21.prefix import e
 
     assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
 

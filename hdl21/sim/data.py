@@ -9,9 +9,9 @@ from dataclasses import field
 
 # Local Imports
 from ..datatype import datatype
-from ..units import Prefixed
-from ..module import Module
+from ..prefix import Prefixed
 from ..signal import Signal, Port
+from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
 
 
 # Union of numeric types, including the internally-defined `Prefixed`
@@ -31,8 +31,15 @@ def tb(name: str) -> Module:
     return tb
 
 
-def is_tb(m: Module) -> bool:
+def is_tb(i: Instantiable) -> bool:
     """ Boolean indication of whether Module `m` meets the test-bench interface. """
+    if isinstance(i, (Module, ExternalModuleCall)):
+        m = i
+    elif isinstance(i, GeneratorCall):
+        m = i.result
+    else: 
+        raise TypeError(f"Invalid un-instantiable argument {i} to `is_tb`")
+
     if len(m.ports) != 1:
         return False
     # There's exactly one port. Retrieve it from the `ports` dict,
@@ -45,7 +52,8 @@ _simattrs = {}
 
 
 def simattr(cls) -> type:
-    """ Add a class to the `simattrs` set of generation methods. 
+    """ 
+    Add a class to the `simattrs` set of generation methods. 
     This is the magic that enables methods including: 
     ```python 
     sim = Sim()
@@ -57,7 +65,7 @@ def simattr(cls) -> type:
     """
 
     # Class names are lower-cases to create the dictionary key,
-    # which also becomes the method-name on `sim`
+    # which also becomes the method-name on `sim`. 
     _simattrs[cls.__name__.lower()] = cls
     return cls
 
@@ -268,14 +276,13 @@ class Sim:
     """ 
     # Simulation Input 
 
-    Comprises a `Module` DUT and set of simulation control input. 
-    DUT Modules must adhere to the testbench IO interface: 
-    A single, width-one port, nominally named "VSS", 
-    and expected to be connected from "simulator ground" to the Module's ground. 
+    Comprises a `Instantiable`, typically `Module`, testbench and set of simulation control input. 
+    Testbenches must adhere to the testbench IO interface: 
+    A single, width-one port, nominally named "VSS", and expected to be connected from "simulator ground" to the DUT's ground. 
     """
 
-    # Testbench `Module`, with its dependencies via `Instance`s
-    dut: Module
+    # Testbench, with its dependencies via `Instance`s
+    tb: Instantiable
     # Simulation Control Attributes
     attrs: List[SimAttr] = field(default_factory=list)
 

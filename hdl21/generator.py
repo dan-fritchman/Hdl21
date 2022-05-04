@@ -60,7 +60,8 @@ class GeneratorCall:
     def __post_init_post_parse__(self):
         """ Validate that our argument matches the Generator param-type """
         if not isinstance(self.arg, self.gen.Params):
-            raise ValidationError
+            msg = f"Generator {self.gen} called with invalid parameters {self.arg}"
+            raise ValidationError(msg)
 
     def __eq__(self, other) -> bool:
         """ Generator-Call equality requires:
@@ -74,6 +75,15 @@ class GeneratorCall:
         * *Value* of its parameters. 
         The two are joined for hashing as a two-element tuple. """
         return hash((id(self.gen), pickle.dumps(self.arg)))
+
+    @property
+    def name(self) -> str:
+        """ GeneratorCall Naming 
+        Once elaborated, returns the name of the generated Module. 
+        If not elaborated, raises a `RuntimeError`. """
+        if self.result is None:
+            raise RuntimeError(f"Cannot name un-elaborated GeneratorCall {self}")
+        return self.result.name
 
 
 def generator(f: Callable) -> Generator:
@@ -94,23 +104,22 @@ def generator(f: Callable) -> Generator:
     # Extract the parameters-argument type
     paramtype = args[0].annotation
     if not isparamclass(paramtype):
-        raise RuntimeError(
-            f"Invalid generator call signature for {f.__name__}: {args}. First argument must be a paramclass."
-        )
+        msg = f"Invalid generator call signature for {f.__name__}: {args}. First argument must be a paramclass."
+        raise RuntimeError(msg)
+
     # Check the context argument, if the function uses one
     usecontext = False
     if len(args) > 1:  # Also requests the context
         if args[1].annotation is not Context:
-            raise RuntimeError(
-                f"Invalid generator call signature for {f.__name__}: {args}. Second argument (if provided) must be a Context."
-            )
+            msg = f"Invalid generator call signature for {f.__name__}: {args}. Second argument (if provided) must be a Context."
+            raise RuntimeError(msg)
         usecontext = True
+
     # Validate the return type is `Module`
     rt = sig.return_annotation
     if rt is not Module:
-        raise TypeError(
-            f"Generator {f.__name__} must return (and must be annotated to return) a Module."
-        )
+        msg = f"Generator {f.__name__} must return (and must be annotated to return) a Module."
+        raise TypeError(msg)
 
     # Grab a reference to the Python-module defining the function
     # (For later name-unique-ifying)

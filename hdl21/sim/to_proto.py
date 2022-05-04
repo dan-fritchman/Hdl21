@@ -10,7 +10,7 @@ import vlsir.spice_pb2 as vsp
 
 # Local Imports
 from . import data
-from ..units import Prefixed
+from ..prefix import Prefixed
 from ..signal import Signal
 
 
@@ -24,23 +24,27 @@ class ProtoExporter:
     """ Simulation Protobuf Exporter """
 
     def __init__(self, sim: data.Sim):
-        self.sim = sim
-        self.inp = None
+        self.sim = sim  # Store the input `Sim`
+        self.inp = None  # Initialize our resultant `vsp.SimInput`
 
     def export(self) -> vsp.SimInput:
-        """ Primary export method. Converts `sim.dut` and its dependencies to a `Package`, 
+        """ Primary export method. Converts `sim.tb` and its dependencies to a `Package`, 
         and all other `SimAttr`s to VLSIR attributes. """
-        from ..proto import to_proto
+        from ..proto import to_proto as module_to_proto
 
-        pkg = to_proto(self.sim.dut)
+        # Convert the testbench module and all its dependencies into a `Package`
+        pkg = module_to_proto(self.sim.tb)
 
-        # FIXME: check back on whether this is a generator-name, or elaborated name
-        top = self.sim.dut.name
-        self.inp = vsp.SimInput(pkg=pkg, top=top)
+        # Now that the testbench has been elaborated, ensure it adheres to the testbench interface.
+        if not data.is_tb(self.sim.tb):
+            raise RuntimeError(f"Invalid Testbench {self.sim.tb} for Simulation")
 
+        # Create our `SimInput`, and provide it with a "link" to the testbench, via its name
+        self.inp = vsp.SimInput(pkg=pkg, top=self.sim.tb.name)
+
+        # Export each simulation attribute
         for attr in self.sim.attrs:
             self.export_attr(attr)
-
         return self.inp
 
     def export_attr(self, attr: data.SimAttr) -> None:

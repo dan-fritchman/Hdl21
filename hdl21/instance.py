@@ -85,10 +85,10 @@ class _Instance:
     def __init__(
         self, of: "Instantiable", *, name: Optional[str] = None,
     ):
-        from .instantiable import _is_instantiable
+        from .instantiable import is_instantiable
 
-        if not _is_instantiable(of):
-            raise RuntimeError(f"Invalid instance of {of}")
+        if not is_instantiable(of):
+            raise RuntimeError(f"Invalid Instance of {of}")
 
         self.name = name
         self.of = of

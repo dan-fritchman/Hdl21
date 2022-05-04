@@ -3,20 +3,23 @@ from hdl21.sim import *
 
 
 def test_sim1():
-    # Test minimal `Sim` creation
-    s = Sim(dut=h.Module(), attrs=[])
+    """ Test minimal `Sim` creation """
+    s = Sim(tb=tb("empty"), attrs=[])
     assert isinstance(s, Sim)
+    assert s.tb.name == "empty"
+    assert len(s.tb.ports) == 1
+    assert s.attrs == []
 
 
 def test_sim2():
     """ Test creating a more fully-featured sim """
     Sim(
-        dut=h.Module(),
+        tb=tb(name="mytb"),
         attrs=[
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
             Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
-            Tran(tstop=11 * h.units.p, name="mytran"),
+            Tran(tstop=11 * h.prefix.p, name="mytran"),
             SweepAnalysis(
                 inner=[Tran(tstop=1, name="swptran")],
                 var="x",
@@ -40,12 +43,12 @@ def test_sim2():
 def test_simattrs():
     """ Test the "sim attrs" feature, which adds methods to `Sim` for each `SimAttr` """
 
-    s = Sim(dut=h.Module())
+    s = Sim(tb=tb("mytb"))
 
     p = s.param(name="x", val=5)
     dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
     ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
-    tr = s.tran(tstop=11 * h.units.p, name="mytran")
+    tr = s.tran(tstop=11 * h.prefix.p, name="mytran")
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
         inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc"
@@ -64,13 +67,15 @@ def test_tb():
 
 
 def test_proto1():
+    """ Test exporting `Sim` to the VLSIR Protobuf schema """
+
     s = Sim(
-        dut=h.Module(name="tb"),
+        tb=tb(name="tb"),
         attrs=[
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
             Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
-            Tran(tstop=11 * h.units.p, name="mytran"),
+            Tran(tstop=11 * h.prefix.p, name="mytran"),
             SweepAnalysis(
                 inner=[Tran(tstop=1, name="swptran")],
                 var="x",
@@ -90,4 +95,42 @@ def test_proto1():
         ],
     )
 
-    to_proto(s)
+    p = to_proto(s)
+
+    import vlsir.circuit_pb2 as vckt
+    import vlsir.spice_pb2 as vsp
+
+    assert isinstance(p.pkg, vckt.Package)
+    assert p.top == "tb"
+
+
+def test_generator_sim():
+    """ Test creating and exporting `Sim` with generator-valued DUTs, 
+    particularly several with different parameter-values. """
+
+    @h.paramclass
+    class P:  # A largely dummy param-class
+        i = h.Param(dtype=int, desc="An integer", default=11)
+
+    @h.generator
+    def G(p: P) -> h.Module:
+        m = h.Module()
+        m.VSS = h.Port()
+        return m
+
+    # Create a few instances
+    g1 = G(P(1))
+    g2 = G(P(2))
+
+    # Create `Sim`s of them
+    s1 = Sim(tb=g1)
+    s2 = Sim(tb=g2)
+
+    # And export both to protobuf
+    p1 = to_proto(s1)
+    p2 = to_proto(s2)
+
+    assert p1.top != p2.top
+    assert p1.top == "G(P(i=1))"
+    assert p2.top == "G(P(i=2))"
+

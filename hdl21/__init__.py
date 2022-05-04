@@ -24,8 +24,8 @@ from .netlist import *
 from .elab import *
 from .walker import HierarchyWalker
 from .instantiable import *
-from . import units
-from .units import Prefix, Prefixed
+from . import prefix
+from .prefix import Prefix, Prefixed
 from . import sim
 
 # Update all the forward type-references throughout our many `@datatype`s
