@@ -1,11 +1,10 @@
 """
-hdl21 ProtoBuf Export
+# VLSIR ProtoBuf Schema Export
 """
 
 from textwrap import dedent
 from dataclasses import asdict, is_dataclass
 from enum import Enum
-from types import SimpleNamespace
 from typing import Optional, List, Union
 
 # Local imports

@@ -87,6 +87,12 @@ class Prefixed:
     value: Union[int, float, str]
     prefix: Prefix
 
+    def __float__(self) -> float:
+        """ Convert to float """
+        if isinstance(self.value, str):
+            raise RuntimeError
+        return self.value * 10 ** self.prefix.value
+
 
 # Common prefixes as single-character identifiers.
 f = Prefix.FEMTO

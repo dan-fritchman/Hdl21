@@ -15,16 +15,24 @@ def test_sim2():
         attrs=[
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
-            Ac(sweep=PointSweep([1]), name="myac"),
+            Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
             Tran(tstop=11 * h.units.p, name="mytran"),
             SweepAnalysis(
-                inner=["mytran"], var="x", sweep=LinearSweep(0, 1, 2), name="mysweep"
+                inner=[Tran(tstop=1, name="swptran")],
+                var="x",
+                sweep=LinearSweep(0, 1, 2),
+                name="mysweep",
             ),
-            MonteCarlo(inner=["mysweep"], npts=11, name="mymc"),
+            MonteCarlo(
+                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+                npts=11,
+                name="mymc",
+            ),
             Save(SaveMode.ALL),
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
+            Options(reltol=1e-9),
         ],
     )
 
@@ -36,14 +44,17 @@ def test_simattrs():
 
     p = s.param(name="x", val=5)
     dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
-    ac = s.ac(sweep=PointSweep([1]), name="myac")
+    ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
     tr = s.tran(tstop=11 * h.units.p, name="mytran")
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
-    mc = s.montecarlo(inner=[sw], npts=11, name="mymc")
+    mc = s.montecarlo(
+        inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc"
+    )
     s.save(SaveMode.ALL)
     s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
     s.include("/home/models")
     s.lib(path="/home/models", section="fast")
+    s.options(reltol=1e-9)
 
 
 def test_tb():
@@ -51,3 +62,32 @@ def test_tb():
     assert isinstance(mytb, h.Module)
     assert is_tb(mytb)
 
+
+def test_proto1():
+    s = Sim(
+        dut=h.Module(name="tb"),
+        attrs=[
+            Param(name="x", val=5),
+            Dc(var="x", sweep=PointSweep([1]), name="mydc"),
+            Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
+            Tran(tstop=11 * h.units.p, name="mytran"),
+            SweepAnalysis(
+                inner=[Tran(tstop=1, name="swptran")],
+                var="x",
+                sweep=LinearSweep(0, 1, 2),
+                name="mysweep",
+            ),
+            MonteCarlo(
+                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+                npts=11,
+                name="mymc",
+            ),
+            Save(SaveMode.ALL),
+            Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
+            Include("/home/models"),
+            Lib(path="/home/models", section="fast"),
+            Options(reltol=1e-9),
+        ],
+    )
+
+    to_proto(s)
