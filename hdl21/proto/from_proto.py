@@ -213,14 +213,14 @@ class ProtoImporter:
         return prim
 
     @classmethod
-    def import_parameters(cls, pparams: Dict[str, vlsir.circuit.Parameter]) -> dict:
+    def import_parameters(cls, pparams: Dict[str, vlsir.Param]) -> dict:
         pdict = {}
         for pname, pparam in pparams.items():
             pdict[pname] = cls.import_parameter(pparam)
         return pdict
 
     @classmethod
-    def import_parameter(cls, pparam: vlsir.circuit.Parameter) -> Any:
+    def import_parameter(cls, pparam: vlsir.Param) -> Any:
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
             return int(pparam.integer)

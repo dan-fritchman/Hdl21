@@ -39,7 +39,6 @@ def test_compile():
 
     # Import it back into Modules & Namespaces
     ns = h.from_proto(pdk_pkg)
-    print(ns)
     rt = ns.hdl21.pdk.sample_pdk.test_sample_pdk.hasmos
 
     # And check what came back

@@ -1807,3 +1807,58 @@ def test_export_strides():
     p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
 
     h.netlist(h.to_proto(p), sys.stdout, "verilog")
+
+
+def test_common_attr_errors():
+    """ Test that common errors provide helpful feedback. 
+    For example, adding `Module`s where one wants an `Instance`. """
+
+    M = h.Module(name="M")
+
+    # Module assignment, where we'd want an Instance `M.i = I()`
+    I = h.Module(name="I")
+    with pytest.raises(TypeError) as einfo:
+        M.i = I  # Bad - Module
+    assert "Did you mean" in str(einfo.value)
+    assert "`Module`" in str(einfo.value)
+    M.i = I()  # Good - Instance
+
+    # Primitive assignment
+    from hdl21.primitives import R
+
+    with pytest.raises(TypeError) as einfo:
+        M.r = R  # Fail - Primitive
+    assert "Did you mean" in str(einfo.value)
+    assert "`Primitive`" in str(einfo.value)
+    with pytest.raises(TypeError) as einfo:
+        M.r = R(R.Params(r=1))  # Fail - Primitive Call
+    assert "Did you mean" in str(einfo.value)
+    assert "`PrimitiveCall`" in str(einfo.value)
+    M.r = R(R.Params(r=1))()  # Good - Instances (granted incompletely connected)
+
+    # Generator assignment
+    @h.generator
+    def G(p: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    with pytest.raises(TypeError) as einfo:
+        M.g = G  # Bad - Generator
+    assert "Did you mean" in str(einfo.value)
+    assert "`Generator`" in str(einfo.value)
+    with pytest.raises(TypeError) as einfo:
+        M.g = G(h.NoParams)  # Bad - GeneratorCall
+    assert "Did you mean" in str(einfo.value)
+    assert "`GeneratorCall`" in str(einfo.value)
+    M.g = G(h.NoParams)()  # Good - Instance
+
+    X = h.ExternalModule(name="X", port_list=[])
+    with pytest.raises(TypeError) as einfo:
+        M.x = X  # Bad - ExternalModule
+    assert "Did you mean" in str(einfo.value)
+    assert "`ExternalModule`" in str(einfo.value)
+    with pytest.raises(TypeError) as einfo:
+        M.x = X()  # Bad - ExternalModuleCall
+    assert "Did you mean" in str(einfo.value)
+    assert "`ExternalModuleCall`" in str(einfo.value)
+    M.x = X()()  # Good - Instance
+

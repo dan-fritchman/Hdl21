@@ -18,6 +18,10 @@ from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCa
 # Note sadly the *order* in this union is important! With `Prefixed` last, it is converted to float!
 Number = Union[Prefixed, float, int]
 
+# Union of types which can serve as parameter values 
+# FIXME: math expressions too! 
+ParamVal = Union[Prefixed, float, int, str]
+
 
 def is_number(val: Any) -> bool:
     return isinstance(val, get_args(Number))

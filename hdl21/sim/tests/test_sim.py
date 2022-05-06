@@ -135,3 +135,33 @@ def test_generator_sim():
     assert p1.top == "test_sim.G(P(i=1))"
     assert p2.top == "test_sim.G(P(i=2))"
 
+
+def test_delay1():
+    from hdl21.sim.delay import delay, DelaySimParams, LogicState, Transition
+    from hdl21.prefix import p, n, f
+
+    @h.module
+    class M:
+        i0, i1 = h.Inputs(2)
+        o0, o1 = h.Outputs(2)
+        vdd, vss = h.Ports(2)
+
+    p = DelaySimParams(
+        dut=M,
+        primary_input=M.i0,
+        other_inputs=dict(i1=LogicState.HIGH),
+        input_trans=Transition.RISING,
+        vlo=0,
+        vhi=1,
+        supplies=dict(vdd=1),
+        grounds=[M.vss],
+        load_caps=dict(o0=2 * f),
+        default_load_cap=1 * f,
+        tstop=1 * n,
+        tstep=1 * p,
+        pathsep=":",
+    )
+    delay_sim = delay(p)
+
+    h.sim.to_proto(delay_sim)
+    # FIXME! some real checks plz

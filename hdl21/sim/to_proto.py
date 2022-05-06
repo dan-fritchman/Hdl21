@@ -6,6 +6,7 @@
 from typing import List, Union
 
 # VLSIR Import
+import vlsir
 import vlsir.spice_pb2 as vsp
 
 # Local Imports
@@ -228,12 +229,14 @@ class ProtoExporter:
         if isinstance(an, str):
             return an
         if data.is_analysis(an):
-            return an.tp
+            return an.tp.value
         raise TypeError(f"Invalid Analysis for type-extraction {an}")
 
-    def export_param(self, param: data.Param) -> vsp.Param:
+    def export_param(self, param: data.Param) -> vlsir.Param:
         """ Export a parameter declaration """
-        return vsp.Param(name=param.name, val=str(param.val))
+        from ..proto.to_proto import export_param_value
+
+        return vlsir.Param(name=param.name, value=export_param_value(param.val))
 
     def export_literal(self, literal: data.Literal) -> str:
         """ Export a simulation literal, as its text value """

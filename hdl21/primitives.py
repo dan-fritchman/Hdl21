@@ -22,17 +22,18 @@ in physical length and width. Capacitors are similarly specified in physical ter
 often adding metal layers or other physical features. The component-value (R,C,L, etc.) 
 for these physically-specified cells is commonly suggestive or optional. 
 
-| Ideal          | Alias(es)         | Physical           | Alias(es)      |
-| -------------- | ----------------- | ------------------ | -------------- |
-| IdealResistor  | R, Res, Resistor  | PhysicalResistor   |                |
-| IdealInductor  | L, Ind, Inductor  | PhysicalInductor   |                |
-| IdealCapacitor | C, Cap, Capacitor | PhysicalCapacitor  |                |
-| VoltageSource  | Vsrc, V           |                    |                |
-| CurrentSource  | Isrc, I           |                    |                |
-|                |                   | Mos                | Nmos, Pmos     |
-|                |                   | Bipolar            | Bjt, Npn, Pnp  |
-|                |                   | Diode              | D              |
-|                |                   | PhysicalShort      | Short          |
+| Ideal              | Alias(es)         | Physical           | Alias(es)      |
+| ------------------ | ----------------- | ------------------ | -------------- |
+| IdealResistor      | R, Res, Resistor  | PhysicalResistor   |                |
+| IdealInductor      | L, Ind, Inductor  | PhysicalInductor   |                |
+| IdealCapacitor     | C, Cap, Capacitor | PhysicalCapacitor  |                |
+| DcVoltageSource    | Vsrc, Vdc, V      |                    |                |
+| PulseVoltageSource | Vpulse, Vpu       |                    |                |
+| CurrentSource      | Isrc, Idc, I      |                    |                |
+|                    |                   | Mos                | Nmos, Pmos     |
+|                    |                   | Bipolar            | Bjt, Npn, Pnp  |
+|                    |                   | Diode              | D              |
+|                    |                   | PhysicalShort      | Short          |
 
 """
 
@@ -43,12 +44,13 @@ from typing import Optional, Any, List, Type, Union
 from pydantic.dataclasses import dataclass
 
 # Local imports
-from .params import paramclass, Param, isparamclass, HasNoParams, NoParams
+from .params import paramclass, Param, isparamclass, NoParams
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
+from .prefix import Prefixed
 
 # Type alias for many scalar parameters
-ScalarParam = Union[int, float, str]
+ScalarParam = Union[Prefixed, int, float, str]
 ScalarOption = Optional[ScalarParam]
 
 
@@ -148,7 +150,9 @@ class MosParams:
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
-    model = Param(dtype=Optional[str], desc="Model (Name)", default=None) # FIXME: whether to include
+    model = Param(
+        dtype=Optional[str], desc="Model (Name)", default=None
+    )  # FIXME: whether to include
 
     def __post_init_post_parse__(self):
         """ Value Checks """
@@ -186,7 +190,9 @@ def Pmos(params: MosParams) -> Primitive:
 class DiodeParams:
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
-    model = Param(dtype=Optional[str], desc="Model (Name)", default=None) # FIXME: whether to include
+    model = Param(
+        dtype=Optional[str], desc="Model (Name)", default=None
+    )  # FIXME: whether to include
 
 
 Diode = Primitive(
@@ -317,17 +323,8 @@ PhysicalShort = Primitive(
     primtype=PrimitiveType.PHYSICAL,
 )
 
+# Common alias(es)
 Short = PhysicalShort
-
-# FIXME: sort out whether to permanently deprecate
-# IdealShort = Primitive(
-#     name="IdealShort",
-#     desc="Short-Circuit/ Net-Tie",
-#     port_list=[Port(name="p"), Port(name="n")],
-#     paramtype=HasNoParams,
-#     primtype=PrimitiveType.IDEAL,
-# )
-# Short = IdealShort
 
 
 """ 
@@ -337,30 +334,47 @@ Sources
 
 @paramclass
 class DcVoltageSourceParams:
+    """ `DcVoltageSource` Parameters """
+
     dc = Param(dtype=ScalarOption, default=0, desc="DC Value (V)")
     ac = Param(dtype=ScalarOption, default=None, desc="AC Amplitude (V)")
-    
-    # # FIXME: break out pulse, sine, etc
-    # delay = Param(dtype=ScalarOption, default=None, desc="Time Delay (s)")
-
-    # # Pulse source parameters
-    # v0 = Param(dtype=ScalarOption, default=None, desc="Zero Value (V)")
-    # v1 = Param(dtype=ScalarOption, default=None, desc="One Value (V)")
-    # period = Param(dtype=ScalarOption, default=None, desc="Period (s)")
-    # rise = Param(dtype=ScalarOption, default=None, desc="Rise time (s)")
-    # fall = Param(dtype=ScalarOption, default=None, desc="Fall time (s)")
-    # width = Param(dtype=ScalarOption, default=None, desc="Pulse width (s)")
 
 
 DcVoltageSource = Primitive(
     name="DcVoltageSource",
-    desc="Ideal Voltage Source",
+    desc="Ideal DC Voltage Source",
     port_list=[Port(name="p"), Port(name="n")],
     paramtype=DcVoltageSourceParams,
     primtype=PrimitiveType.IDEAL,
 )
 
-V = Vsrc = DcVoltageSource
+# Common alias(es)
+V = Vdc = Vsrc = DcVoltageSource
+
+
+@paramclass
+class PulseVoltageSourceParams:
+    """ `PulseVoltageSource` Parameters """
+
+    delay = Param(dtype=ScalarOption, default=None, desc="Time Delay (s)")
+    v1 = Param(dtype=ScalarOption, default=None, desc="One Value (V)")
+    v2 = Param(dtype=ScalarOption, default=None, desc="Zero Value (V)")
+    period = Param(dtype=ScalarOption, default=None, desc="Period (s)")
+    rise = Param(dtype=ScalarOption, default=None, desc="Rise time (s)")
+    fall = Param(dtype=ScalarOption, default=None, desc="Fall time (s)")
+    width = Param(dtype=ScalarOption, default=None, desc="Pulse width (s)")
+
+
+PulseVoltageSource = Primitive(
+    name="PulseVoltageSource",
+    desc="Pulse Voltage Source",
+    port_list=[Port(name="p"), Port(name="n")],
+    paramtype=PulseVoltageSourceParams,
+    primtype=PrimitiveType.IDEAL,
+)
+
+# Common alias(es)
+Vpu = Vpulse = PulseVoltageSource
 
 
 @paramclass
@@ -370,13 +384,14 @@ class CurrentSourceParams:
 
 CurrentSource = Primitive(
     name="CurrentSource",
-    desc="Ideal Current Source",
+    desc="Ideal DC Current Source",
     port_list=[Port(name="p"), Port(name="n")],
     paramtype=CurrentSourceParams,
     primtype=PrimitiveType.IDEAL,
 )
 
-I = Isrc = CurrentSource
+# Common alias(es)
+I = Idc = Isrc = CurrentSource
 
 
 """ 

@@ -12,6 +12,7 @@ from typing import Optional, List, Union
 import vlsir
 
 # HDL
+from ..prefix import Prefix, Prefixed
 from ..elab import Elabables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
 from ..primitives import Primitive, PrimitiveCall, PrimitiveType
@@ -98,9 +99,8 @@ class ProtoExporter:
         # Create each Proto-Instance
         for inst in module.instances.values():
             if not inst._resolved:
-                raise RuntimeError(
-                    f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
-                )
+                msg = f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
+                raise RuntimeError(msg)
             pinst = self.export_instance(inst)
             pmod.instances.append(pinst)
 
@@ -190,6 +190,11 @@ class ProtoExporter:
             pinst.module.local = pmod.name
         elif isinstance(inst._resolved, (PrimitiveCall, ExternalModuleCall)):
             call = inst._resolved
+
+            if not is_dataclass(call.params):
+                msg = f"Invalid Parameter Call-Argument {call.params} - must be dataclasses"
+                raise TypeError(msg)
+
             if isinstance(inst._resolved, PrimitiveCall):
                 # Create a reference to one of the `primitive` namespaces
                 if call.prim.primtype == PrimitiveType.PHYSICAL:
@@ -200,6 +205,7 @@ class ProtoExporter:
                     pinst.module.external.domain = "vlsir.primitives"
                     prim_map = {
                         "DcVoltageSource": "vdc",
+                        "PulseVoltageSource": "vpulse",
                         "IdealCurrentSource": "isource",
                         "IdealResistor": "resistor",
                         "IdealCapacitor": "capacitor",
@@ -212,37 +218,22 @@ class ProtoExporter:
                     pinst.module.external.name = prim_map[call.prim.name]
                 else:
                     raise ValueError
-                params = asdict(call.params)
+
             else:  # ExternalModuleCall
                 self.export_external_module(call.module)
                 pinst.module.external.domain = call.module.domain or ""
                 pinst.module.external.name = call.module.name
-                # FIXME: while these ExternalModule parameters can ostensibly be anything,
-                # there are really two supported types-of-types:
-                # dictionaries, and dataclasses (which we can turn into dictionaries)
-                if isinstance(call.params, dict):
-                    params = call.params
-                elif is_dataclass(call.params):
-                    params = asdict(call.params)
-                else:
-                    msg = f"Invalid ExternalModule parameter-type for export: {call.params}"
-                    raise TypeError(msg)
 
             # Set the parameter-values
-            for key, val in params.items():
-                if isinstance(val, type(None)):
+            from dataclasses import fields
+
+            for field in fields(call.params):
+                pval = export_param_value(getattr(call.params, field.name))
+                if pval is None:
                     continue  # None-valued parameters go un-set
-                elif isinstance(val, int):
-                    pinst.parameters[key].integer = val
-                elif isinstance(val, float):
-                    pinst.parameters[key].double = val
-                elif isinstance(val, str):
-                    pinst.parameters[key].string = val
-                elif isinstance(val, Enum):
-                    # Enum-valued parameters are always strings
-                    pinst.parameters[key].string = val.value
-                else:
-                    raise TypeError(f"Invalid instance parameter {val} for {inst}")
+                # Otherwise copy it into place
+                pinst.parameters[field.name].CopyFrom(pval)
+
         else:
             raise TypeError
 
@@ -295,3 +286,73 @@ class ProtoExporter:
         for part in concat.parts:
             pconc.parts.append(self.export_conn(part))
         return pconc
+
+
+def export_param_value(
+    val: Union[int, float, str, Prefixed, Enum]
+) -> Optional[vlsir.ParamValue]:
+    """ Export a `ParamValue`. """
+
+    if isinstance(val, type(None)):
+        return None
+    elif isinstance(val, int):
+        return vlsir.ParamValue(integer=val)
+    elif isinstance(val, float):
+        return vlsir.ParamValue(double=val)
+    elif isinstance(val, str):
+        return vlsir.ParamValue(string=val)
+    elif isinstance(val, Prefixed):
+        return vlsir.ParamValue(prefixed=export_prefixed(val))
+    elif isinstance(val, Enum):
+        # Enum-valued parameters are always strings
+        return vlsir.ParamValue(string=val.value)
+    else:
+        msg = f"Unsupported parameter for proto-export: `{val}`"
+        raise TypeError(msg)
+
+
+def export_prefix(pre: Prefix) -> vlsir.SIPrefix:
+    """ Export an enumerated `Prefix` """
+    map = {
+        -24: vlsir.SIPrefix.YOCTO,
+        -21: vlsir.SIPrefix.ZEPTO,
+        -18: vlsir.SIPrefix.ATTO,
+        -15: vlsir.SIPrefix.FEMTO,
+        -12: vlsir.SIPrefix.PICO,
+        -9: vlsir.SIPrefix.NANO,
+        -6: vlsir.SIPrefix.MICRO,
+        -3: vlsir.SIPrefix.MILLI,
+        -2: vlsir.SIPrefix.CENTI,
+        -1: vlsir.SIPrefix.DECI,
+        1: vlsir.SIPrefix.DECA,
+        2: vlsir.SIPrefix.HECTO,
+        3: vlsir.SIPrefix.KILO,
+        6: vlsir.SIPrefix.MEGA,
+        9: vlsir.SIPrefix.GIGA,
+        12: vlsir.SIPrefix.TERA,
+        15: vlsir.SIPrefix.PETA,
+        18: vlsir.SIPrefix.EXA,
+        21: vlsir.SIPrefix.ZETTA,
+        24: vlsir.SIPrefix.YOTTA,
+    }
+    if pre.value not in map:
+        raise ValueError(f"Invalid Prefix {pre}")
+    return map[pre.value]
+
+
+def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
+    """ Export a `Prefixed` number """
+
+    # Export the metric prefix
+    prefix = export_prefix(pref.prefix)
+
+    # And export the numeric part, dispatched across its type.
+    if isinstance(pref.number, int):
+        return vlsir.Prefixed(prefix=prefix, integer=pref.number)
+    elif isinstance(pref.number, float):
+        return vlsir.Prefixed(prefix=prefix, double=pref.number)
+    elif isinstance(pref.number, str):
+        return vlsir.Prefixed(prefix=prefix, string=pref.number)
+
+    raise TypeError(f"Invalid Prefixed numeric-value {pref}")
+
