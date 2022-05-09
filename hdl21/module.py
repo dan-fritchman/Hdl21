@@ -327,7 +327,7 @@ class ExternalModule:
     port_list: List[Signal]  # Ordered Ports
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
-    domain: Optional[str] = None
+    domain: Optional[str] = None  # Domain name, for references upon export
     pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
     importpath: Optional[List[str]] = field(repr=False, init=False, default=None)
 

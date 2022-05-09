@@ -158,7 +158,12 @@ def delay(p: DelaySimParams) -> Sim:
         sim.meas(
             analysis=tran,
             name=f"tcross_{out.name}",
-            expr=f"when V(xtop{p.pathsep}{out.name})={{vdd/2}} cross=1",
+            expr=f"when V(xtop{p.pathsep}{out.name})={{vdd/2}} cross=1",  # FIXME: simulator-specific
+        )
+        sim.meas(
+            analysis=tran,
+            name=f"tdelay_{out.name}",
+            expr=f"PARAM={{tcross_{out.name}-tcross_primary_input}}",  # FIXME: simulator-specific
         )
 
     # Aaaaaaand return the sim already!

@@ -194,8 +194,10 @@ class ProtoImporter:
             raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
         # Mapping from `vlsir.primitives` to Hdl21's ideal elements
+        # FIXME: specialized importing of their parameters! 
         prim_map = {
             "vdc": "DcVoltageSource",
+            "vpluse": "PulseVoltageSource",
             "isource": "IdealCurrentSource",
             "resistor": "IdealResistor",
             "capacitor": "IdealCapacitor",

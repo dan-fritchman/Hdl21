@@ -21,7 +21,12 @@ class _Default:
     Normally the class-object itself would work for this, but `pydantic.dataclasses`
     seems to have some problems accepting class-objects. 
     https://github.com/samuelcolvin/pydantic/issues/1537
-    So we create this singleton instance `_default`, AKA `_Default._the_one`. """
+    So we create this singleton instance `_default`, AKA `_Default._the_one`. 
+
+    FIXME: this pydantic issue was updated and closed at some point, 
+    potentially enabling removint this singleton stuff. 
+    Check out the pydantic updates along with https://github.com/dan-fritchman/Hdl21/issues/15
+    """
 
     _the_one = None
 

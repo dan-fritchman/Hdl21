@@ -7,6 +7,7 @@ Unit Tests
 from io import StringIO
 import hdl21 as h
 from . import sky130
+from .sky130 import modules as s
 
 
 def test_default():
@@ -57,4 +58,17 @@ def test_netlist():
     pkg = h.to_proto(hasmos)
     pkg = sky130.compile(pkg)
     h.netlist(pkg, StringIO(), "spectre")
+
+
+def test_module1():
+
+    mp = sky130.Sky130MosParams()
+
+    @h.module
+    class HasXtors:
+        # Instantiate each transistor, with the default parameter values
+        ns = s.sky130_fd_pr__nfet_01v8(mp)()
+        nl = s.sky130_fd_pr__nfet_01v8_lvt(mp)()
+        ps = s.sky130_fd_pr__pfet_01v8(mp)()
+        ph = s.sky130_fd_pr__pfet_01v8_hvt(mp)()
 

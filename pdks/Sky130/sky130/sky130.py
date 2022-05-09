@@ -25,7 +25,7 @@ or added to this package via pull request.
 """
 
 import copy
-from typing import Union
+from typing import Union, Dict, Tuple
 from types import SimpleNamespace
 
 import hdl21 as h
@@ -44,39 +44,34 @@ class Sky130MosParams:
     mult = h.Param(dtype=int, desc="Multiplier", default=1)
 
 
+def _xtor_module(modname: str) -> h.ExternalModule:
+    """ Transistor module creator, with module-name `name`."""
+    return h.ExternalModule(
+        domain="sky130",
+        name=modname,
+        desc=f"Sky130 PDK Mos {modname}",
+        port_list=copy.deepcopy(Mos.port_list),
+        paramtype=Sky130MosParams,
+    )
+
+
+# # Transistors
+#
+# Mapping from `MosType` and `MosVth`s to module-names.
+#
+xtors: Dict[Tuple[MosType, MosVth], h.ExternalModule] = {
+    (MosType.NMOS, MosVth.STD): _xtor_module("sky130_fd_pr__nfet_01v8"),
+    (MosType.NMOS, MosVth.LOW): _xtor_module("sky130_fd_pr__nfet_01v8_lvt"),
+    (MosType.PMOS, MosVth.STD): _xtor_module("sky130_fd_pr__pfet_01v8"),
+    (MosType.PMOS, MosVth.HIGH): _xtor_module("sky130_fd_pr__pfet_01v8_hvt"),
+    # Note there are no NMOS HVT or PMOS LVT!
+}
+
 # Collected `ExternalModule`s are stored in the `modules` namespace
 modules = SimpleNamespace()
-
-_mos_typenames = {
-    MosType.NMOS: "nfet",
-    MosType.PMOS: "pfet",
-}
-_mos_vtnames = {
-    MosVth.LOW: "_lvt",
-    MosVth.STD: "",
-    MosVth.HIGH: "_hvt",
-}
-# Create a lookup table from `MosParams` attributes to `ExternalModule`s
-_mos_modules = dict()  # `Dict[(MosType, MosVth), ExternalModule]`, if that worked
-
-# Create each Mos `ExternalModule`
-for tp, tpname in _mos_typenames.items():
-    for vt, vtname in _mos_vtnames.items():
-
-        modname = f"sky130_fd_pr__{tp}_01v8{vtname}"
-        mod = h.ExternalModule(
-            domain="sky130",
-            name=modname,
-            desc=f"Sky130 PDK Mos {modname}",
-            port_list=copy.deepcopy(Mos.port_list),
-            paramtype=Sky130MosParams,
-        )
-
-        # Add it to the `params => ExternalModules` lookup table
-        _mos_modules[(tp, vt)] = mod
-
-        # And add it, with its module-name as key, to the modules namespace
-        setattr(modules, modname, mod)
+for xtor in xtors.values():
+    # Add each to the `modules` namespace
+    setattr(modules, xtor.name, xtor)
 
 
 class Sky130Walker(h.HierarchyWalker):
@@ -104,9 +99,9 @@ class Sky130Walker(h.HierarchyWalker):
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """ Retrieve or create an `ExternalModule` for a MOS of parameters `params`. """
-        mod = _mos_modules.get((params.tp, params.vth), None)
+        mod = xtors.get((params.tp, params.vth), None)
         if mod is None:
-            raise RuntimeError(f"No Mos module {modname}")
+            raise RuntimeError(f"No Mos module for model combination {(params.tp, params.vth)}")
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
