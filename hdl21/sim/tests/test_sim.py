@@ -1,5 +1,7 @@
 import hdl21 as h
 from hdl21.sim import *
+import vlsirtools
+import pytest
 
 
 def test_sim1():
@@ -165,3 +167,40 @@ def test_delay1():
 
     h.sim.to_proto(delay_sim)
     # FIXME! some real checks plz
+
+
+@pytest.mark.skipif(
+    vlsirtools.spice.default() is None, reason="No simulator available",
+)
+def test_empty_sim1():
+    """ Create and run an empty `Sim`, returning a VLSIR_PROTO """
+
+    from hdl21.sim import Sim, to_proto
+    import vlsir.spice_pb2 as vsp
+    from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
+
+    s = Sim(tb=tb("empty"), attrs=[])
+    r = sim(to_proto(s), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
+    assert isinstance(r, vsp.SimResult)
+    assert not len(r.an)  # No analysis inputs, no analysis results
+
+
+@pytest.mark.skipif(
+    vlsirtools.spice.default() is None, reason="No simulator available",
+)
+@pytest.mark.skipif(
+    vlsirtools.spice.default() == vlsirtools.spice.SupportedSimulators.XYCE,
+    reason="No support for `Xyce` + `SimData` python types",
+)
+def test_empty_sim2():
+    """ Create and run an empty `Sim`, returning SIM_DATA """
+
+    from hdl21.sim import Sim, to_proto
+    import vlsir.spice_pb2 as vsp
+    from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
+
+    s = Sim(tb=tb("empty"), attrs=[])
+    r = sim(to_proto(s), SimOptions(fmt=ResultFormat.SIM_DATA))
+    assert isinstance(r, sd.SimResult)
+    assert not len(r.an)  # No analysis inputs, no analysis results
+
