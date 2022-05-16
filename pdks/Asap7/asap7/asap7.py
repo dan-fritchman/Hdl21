@@ -17,6 +17,7 @@ from typing import Union
 from types import SimpleNamespace
 from dataclasses import asdict
 
+import vlsir 
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
 
@@ -108,7 +109,7 @@ class Asap7Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: h.proto.Package) -> h.proto.Package:
+def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package:
     """ Compile proto-Package `src` to the ASAP7 technology """
     ns = h.from_proto(src)
     Asap7Walker().visit_namespace(ns)

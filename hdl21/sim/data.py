@@ -7,6 +7,8 @@ from typing import Union, Any, Optional, List, get_args
 from pathlib import Path
 from dataclasses import field
 
+import vlsirtools
+
 # Local Imports
 from ..datatype import datatype
 from ..prefix import Prefixed
@@ -18,8 +20,8 @@ from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCa
 # Note sadly the *order* in this union is important! With `Prefixed` last, it is converted to float!
 Number = Union[Prefixed, float, int]
 
-# Union of types which can serve as parameter values 
-# FIXME: math expressions too! 
+# Union of types which can serve as parameter values
+# FIXME: math expressions too!
 ParamVal = Union[Prefixed, float, int, str]
 
 
@@ -336,6 +338,14 @@ class Sim:
             return attrs[0]
         return list(attrs)
 
+    def run(
+        self, opts: Optional[vlsirtools.spice.SimOptions] = None
+    ) -> vlsirtools.spice.SimResultUnion:
+        """ Invoke simulation via `vlsirtools.spice`. """
+        from .to_proto import to_proto
+
+        return vlsirtools.spice.sim(inp=to_proto(self), opts=opts)
+
 
 def _add_attr_func(name: str, cls: type):
     # Create the internal "construct + add" closure
@@ -353,4 +363,3 @@ def _add_attr_func(name: str, cls: type):
 # Add all the `simattrs` as methods on `Sim`
 for name, cls in _simattrs.items():
     _add_attr_func(name, cls)
-

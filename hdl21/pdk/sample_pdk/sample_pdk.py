@@ -5,6 +5,7 @@
 import copy
 from typing import Union, Optional
 
+import vlsir 
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosParams
 
@@ -97,7 +98,7 @@ class SamplePdkWalker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: h.proto.Package) -> h.proto.Package:
+def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package:
     """ Compile proto-Package `src` to the Sample technology """
     ns = h.from_proto(src)
     SamplePdkWalker().visit_namespace(ns)

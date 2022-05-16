@@ -28,6 +28,7 @@ import copy
 from typing import Union, Dict, Tuple
 from types import SimpleNamespace
 
+import vlsir 
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
 
@@ -101,7 +102,9 @@ class Sky130Walker(h.HierarchyWalker):
         """ Retrieve or create an `ExternalModule` for a MOS of parameters `params`. """
         mod = xtors.get((params.tp, params.vth), None)
         if mod is None:
-            raise RuntimeError(f"No Mos module for model combination {(params.tp, params.vth)}")
+            raise RuntimeError(
+                f"No Mos module for model combination {(params.tp, params.vth)}"
+            )
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
@@ -128,7 +131,7 @@ class Sky130Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: h.proto.Package) -> h.proto.Package:
+def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package:
     """ Compile proto-Package `src` to the SkyWater 130nm technology """
     ns = h.from_proto(src)
     Sky130Walker().visit_namespace(ns)

@@ -8,16 +8,16 @@ PDK packages typically include:
 * (b) A transformation method for converting genertic `Primitive` elements to the technology-specific `ExternalModule`s.
 
 The latter manifests as a "compiler pass" over the Hdl21 circuit-proto tree. 
-An `hdl21.proto.Package` is hierarchically traversed, and instances of `hdl21.Primitive`s 
+An `vlsir.circuit.Package` is hierarchically traversed, and instances of `hdl21.Primitive`s 
 are transformed, typically to technology-specific `ExternalModule`s. 
 
 The PDK API consists of one required method `compile`: 
 
 ```python
-def compile(src: hdl21.proto.Package) -> hdl21.proto.Package
+def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package
 ```
 
-The core method `compile` transforms a process-generic `hdl21.proto.Package` into PDK-specific content. 
+The core method `compile` transforms a process-generic `vlsir.circuit.Package` into PDK-specific content. 
 This will commonly manifest as replacement of `hdl21.Primitive` instances with PDK-specific `ExternalModule`s. 
 Mutation of the `src` package is allowed, although not recommended (or often terribly helpful).  
 
@@ -45,7 +45,7 @@ import hdl21 as h
 MyMos = h.ExternalModule(name='MyMos', ...) 
 
 # Compilation method 
-def compile(src: h.proto.Package) -> h.proto.Package:
+def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package:
     ...
 
 """
@@ -104,13 +104,13 @@ def register(module: ModuleType) -> None:
     # Extract the parameters-argument type
     paramtype = args[0].annotation
     if paramtype is not proto.circuit.Package:
-        msg = f"Invalid call signature for {module}.compile. Argument type must be `hdl21.proto.circuit.Package`, not {paramtype}"
+        msg = f"Invalid call signature for {module}.compile. Argument type must be `vlsir.circuit.circuit.Package`, not {paramtype}"
         raise RuntimeError(msg)
 
     # Validate the return type is also `Package`
     rt = sig.return_annotation
     if rt is not proto.circuit.Package:
-        msg = f"Invalid call signature for {module}.compile. Return type must be `hdl21.proto.circuit.Package`, not {paramtype}"
+        msg = f"Invalid call signature for {module}.compile. Return type must be `vlsir.circuit.circuit.Package`, not {paramtype}"
         raise RuntimeError(msg)
 
     # Checks out. Add it.
