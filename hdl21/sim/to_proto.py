@@ -249,4 +249,3 @@ class ProtoExporter:
         elif isinstance(num, (int, Prefixed)):
             return float(num)
         raise TypeError(f"Invalid value for proto float: {num}")
-

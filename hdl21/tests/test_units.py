@@ -82,4 +82,3 @@ def test_e_mult():
     from hdl21.prefix import e
 
     assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
-

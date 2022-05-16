@@ -35,4 +35,3 @@ _update_forward_refs()
 
 from . import proto
 from .proto import to_proto, from_proto
-

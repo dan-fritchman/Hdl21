@@ -28,7 +28,7 @@ import copy
 from typing import Union, Dict, Tuple
 from types import SimpleNamespace
 
-import vlsir 
+import vlsir
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
 

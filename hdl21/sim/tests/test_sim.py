@@ -203,4 +203,3 @@ def test_empty_sim2():
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.SIM_DATA))
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
-

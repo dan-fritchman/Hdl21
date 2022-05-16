@@ -130,4 +130,3 @@ def e(exp: int) -> Optional[Prefix]:
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
 # They can be explicityle imported from `hdl21.units` instead.
 __all__ = ["Prefix", "Prefixed"]
-

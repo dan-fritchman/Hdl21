@@ -288,4 +288,3 @@ def _check_compatible(bundle: Bundle, other: Union[BundleInstance, AnonymousBund
 
     msg = f"Invalid connection-compatibility check between {bundle} and {other}"
     raise TypeError(msg)
-

@@ -5,7 +5,7 @@
 import copy
 from typing import Union, Optional
 
-import vlsir 
+import vlsir
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosParams
 

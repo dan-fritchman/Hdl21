@@ -127,4 +127,3 @@ def RoTb(params: RoParams) -> h.Module:
 # Netlist this stuff!
 ppkg = h.to_proto([RoTb(RoParams())], domain="ro130")
 netlist = h.netlist(pkg=ppkg, dest=sys.stdout)
-

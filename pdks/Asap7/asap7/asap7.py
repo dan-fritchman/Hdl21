@@ -17,7 +17,7 @@ from typing import Union
 from types import SimpleNamespace
 from dataclasses import asdict
 
-import vlsir 
+import vlsir
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
 

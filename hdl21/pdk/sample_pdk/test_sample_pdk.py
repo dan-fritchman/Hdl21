@@ -57,4 +57,3 @@ def test_netlist():
     pkg = h.to_proto(hasmos)
     pkg = sample_pdk.compile(pkg)
     h.netlist(pkg, StringIO(), "spectre")
-

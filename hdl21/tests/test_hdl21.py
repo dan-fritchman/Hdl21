@@ -1861,4 +1861,3 @@ def test_common_attr_errors():
     assert "Did you mean" in str(einfo.value)
     assert "`ExternalModuleCall`" in str(einfo.value)
     M.x = X()()  # Good - Instance
-

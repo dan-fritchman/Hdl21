@@ -176,4 +176,3 @@ def _copy_to_internal(sig: Signal) -> Signal:
     sig.vis = Visibility.INTERNAL
     sig.direction = PortDir.NONE
     return sig
-

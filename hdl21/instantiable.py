@@ -28,5 +28,5 @@ def qualname(i: Instantiable) -> str:
         return i.name
     raise TypeError
 
-__all__ = ["Instantiable", "is_instantiable"]
 
+__all__ = ["Instantiable", "is_instantiable"]
