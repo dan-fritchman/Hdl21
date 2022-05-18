@@ -11,18 +11,18 @@ import vlsirtools
 
 # Local Imports
 from ..datatype import datatype
-from ..prefix import Prefixed
+from ..prefix import Prefixed, Number as PrefixableNumber
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
 
 
-# Union of numeric types, including the internally-defined `Prefixed`
-# Note sadly the *order* in this union is important! With `Prefixed` last, it is converted to float!
-Number = Union[Prefixed, float, int]
+# Union of numeric types, including `Prefixed` and all types which can serve as its `number` field.
+# Note sadly the *order* in this union is important! With `Prefixed` last, it gets converted
+# when creating many of these types!
+Number = Union[Prefixed, PrefixableNumber]
 
 # Union of types which can serve as parameter values
-# FIXME: math expressions too!
-ParamVal = Union[Prefixed, float, int, str]
+ParamVal = Union[Number, str]
 
 
 def is_number(val: Any) -> bool:

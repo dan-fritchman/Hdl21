@@ -25,12 +25,29 @@ or added to this package via pull request.
 """
 
 import copy
-from typing import Union, Dict, Tuple
+from pathlib import Path
+from typing import Union, Dict, Tuple, Optional
 from types import SimpleNamespace
 
-import vlsir
+from pydantic.dataclasses import dataclass
+
 import hdl21 as h
+from hdl21.pdk import PdkInstallation
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
+from vlsir import circuit as vckt
+
+
+@dataclass
+class Install(PdkInstallation):
+    """ Pdk Installation Data 
+    External data provided by site-specific installations """
+
+    model_lib: Path  # Path to the transistor models included in this module
+
+
+# The optional external-data installation.
+# Set by an instantiator of `Install`, if available.
+install: Optional[Install] = None
 
 
 @h.paramclass
@@ -131,7 +148,7 @@ class Sky130Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package:
+def compile(src: vckt.Package) -> vckt.Package:
     """ Compile proto-Package `src` to the SkyWater 130nm technology """
     ns = h.from_proto(src)
     Sky130Walker().visit_namespace(ns)

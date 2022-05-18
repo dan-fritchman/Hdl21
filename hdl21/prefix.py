@@ -16,9 +16,13 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 """
 
 from enum import Enum
-from typing import Optional, Any, Union
+from decimal import Decimal
+from typing import Optional, Any, Union, get_args
 
 from pydantic.dataclasses import dataclass
+
+# `Number` shorthand for the union of types accepted as the numeric parts of `Prefixed`s
+Number = Union[int, float, Decimal]
 
 
 class Prefix(Enum):
@@ -53,24 +57,8 @@ class Prefix(Enum):
         inverted = {v.value: v for v in cls.__members__.values()}
         return inverted.get(exp, None)
 
-    # FIXME: debating whether to include this, as many combinations
-    # do not produce supported `Prefix` values.
-    # With values we can scale instead; e.g. `5 * µ * Prefix.DECI` is 5e-7,
-    # which can be expressed as either 0.5e-6, or 500e-9.
-    # With a `Prefix` alone we can't make these choices.
-    # def __mul__(self, other: Any):
-    #     """ Left-hand-side multiplication operator, e.g. `µ * µ`.
-    #     Only invoked if the RHS is also a `Prefix`.
-    #     Otherwise returns `NotImplemented`. """
-    #     if isinstance(other, Prefix):
-    #         return Prefix.from_exp(self.value + other.value)
-    #     return NotImplemented
-
     def __rmul__(self, other: Any):
         """ Right-hand-side multiplication operator, e.g. `5 * µ`. """
-        # if isinstance(other, Prefix):
-        #     # This case *should* never happen, as `other.__mul__` will be called first.
-        #     return Prefix.from_exp(self.value + other.value)
         if isinstance(other, Prefixed):
             prefix = Prefix.from_exp(self.value + other.prefix.value)
             if prefix is None:
@@ -78,7 +66,7 @@ class Prefix(Enum):
                 msg = f"Prefix mult scaling for {self} and {other.prefix}"
                 raise NotImplementedError(msg)
             return Prefixed(other.value, prefix)
-        if isinstance(other, (int, float, str)):
+        if isinstance(other, get_args(Number)):
             return Prefixed(other, self)
         return NotImplemented
 
@@ -89,15 +77,12 @@ class Prefixed:
     Colloquially, the numbers in expressions like "5ns", "11MV", and "1µA" 
     are represented as `Prefixed`. """
 
-    number: Union[int, float, str]
+    number: Number
     prefix: Prefix
 
     def __float__(self) -> float:
         """ Convert to float """
-        if isinstance(self.number, str):
-            # Try to convert to a float, and if we can't, fail.
-            self.number = float(self.number)
-        return self.number * 10 ** self.prefix.value
+        return float(self.number) * 10 ** self.prefix.value
 
 
 # Common prefixes as single-character identifiers.

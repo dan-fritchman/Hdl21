@@ -11,6 +11,7 @@ Exports of simpler "scalar"(-ish) types such as `Signal`s and `Param`s are provi
 free-standing functions to enable use elsewhere. 
 """
 
+from decimal import Decimal
 from textwrap import dedent
 from dataclasses import is_dataclass, fields
 from enum import Enum
@@ -371,6 +372,9 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
         return vlsir.Prefixed(prefix=prefix, double=pref.number)
     elif isinstance(pref.number, str):
         return vlsir.Prefixed(prefix=prefix, string=pref.number)
+    elif isinstance(pref.number, Decimal): 
+        # Decimal values are serialized as strings
+        return vlsir.Prefixed(prefix=prefix, string=str(pref.number))
 
     raise TypeError(f"Invalid Prefixed numeric-value {pref}")
 

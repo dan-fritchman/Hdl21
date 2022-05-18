@@ -15,7 +15,7 @@ def test_default():
     assert h.pdk.default() is sky130
 
 
-def gethasmos():
+def mosmodule():
     # Create a simple Module with each of the default-param Mos types
     hasmos = h.Module(name="hasmos")
     z = hasmos.z = h.Signal()
@@ -32,7 +32,7 @@ def gethasmos():
 
 
 def test_compile():
-    hasmos = gethasmos()
+    hasmos = mosmodule()
 
     # Compile it for the PDK
     pkg = h.to_proto(hasmos)
@@ -52,7 +52,7 @@ def test_compile():
 
 
 def test_netlist():
-    hasmos = gethasmos()
+    hasmos = mosmodule()
 
     # Netlist it for the PDK
     pkg = h.to_proto(hasmos)
