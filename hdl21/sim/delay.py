@@ -8,17 +8,19 @@ to each of its outputs.
 
 from copy import copy
 from enum import Enum
-from dataclasses import field
-from typing import Dict, List, Union, Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+import vlsir.spice_pb2 as vsp
+from vlsirtools.spice import sim_data as sd, SimResultUnion
 
 # Local Imports
-from ..datatype import datatype
 from ..module import Module
 from ..signal import Signal, Port, Visibility, PortDir
 from ..instantiable import Instantiable
 from ..prefix import Prefix
 from ..primitives import Vdc, Vpu, Cap
-from .data import ParamVal, Sim
+from .data import ParamVal, Sim, SimAttr
 
 
 class LogicState(Enum):
@@ -31,7 +33,7 @@ class Transition(Enum):
     FALLING = "falling"
 
 
-@datatype
+@dataclass
 class DelaySimParams:
     dut: Instantiable  # The design under test
 
@@ -56,17 +58,47 @@ class DelaySimParams:
     trf: ParamVal = 1 * Prefix.PICO  # Input rise / fall time
     tstop: ParamVal = 1 * Prefix.NANO  # Sim stop time
     tstep: Optional[ParamVal] = 1 * Prefix.PICO  # Recommended sim timestep
+
     # Sadly we don't really know how to pass hierarchical paths into `Sim` yet, without some help here.
     pathsep: str = ":"
 
+    # Additional simulation attributes (options, saves, etc)
+    attrs: List[SimAttr] = field(default_factory=list)
 
-def delay(p: DelaySimParams) -> Sim:
+
+@dataclass
+class DelaySimResult:
+    """ Results from a `DelaySim` """
+
+    # Per-output delays, keyed by output signal name
+    delays: Dict[str, Optional[float]]
+
+
+def delays(p: DelaySimParams) -> DelaySimResult:
+    """ Create and run a delay `Sim`. 
+    
+    Executes four discrete steps, all defined in this module: 
+
+    * `create_sim`
+    * `run` the generated `Sim`
+    * `get_meas` is a short step to gather the measurement dictionary. It will (should) eventually disappear. 
+    * `collect_result`
+
+    Each individually for cases needing to "get in between" them. 
+    """
+    sim = create_sim(p)
+    results = sim.run()
+    meas = get_meas(results)
+    return collect_result(p, meas)
+
+
+def create_sim(p: DelaySimParams) -> Sim:
     """ Create a delay `Sim` """
 
     # Create the testbench `Module` and `Sim` input
     tb = Module(name=f"{p.dut.name}Tb")
     tb.vss = Port(width=1)
-    sim = Sim(tb=tb)
+    sim = Sim(tb=tb, attrs=p.attrs)
     # Add the primary transient analysis
     tran = sim.tran(
         tstop=p.tstop, tstep=p.tstep, name=f"tran_delay_{p.primary_input.name}"
@@ -168,6 +200,39 @@ def delay(p: DelaySimParams) -> Sim:
 
     # Aaaaaaand return the sim already!
     return sim
+
+
+def collect_result(
+    p: DelaySimParams, meas: Dict[str, Optional[float]]
+) -> DelaySimResult:
+    """ 
+    Collect measured output delays 
+    After simulation has run and data has been pulled back into memory, 
+    extract the delay value for each of `p.module`'s outputs. 
+    """
+    delays = {}
+    dut_outputs = [s for s in p.dut.ports.values() if s.direction == PortDir.OUTPUT]
+    for out in dut_outputs:
+        out_meas = meas.get(f"tdelay_{out.name}", None)
+        if out_meas is None:
+            delays[out.name] = None
+        else:
+            try:
+                delays[out.name] = float(out_meas)
+            except:
+                delays[out.name] = None
+    return DelaySimResult(delays)
+
+
+def get_meas(results: SimResultUnion) -> Dict[str, Optional[float]]:
+    """ Get the `measurements` dict from either of the VLSIRTOOLS sim-results types. 
+    FIXME: this should get pushed down to VLSIRT. """
+
+    if isinstance(results, sd.SimResult):
+        return results.an[0].measurements
+    if isinstance(results, vsp.SimResult):
+        return results.an[0].tran.measurements
+    raise TypeError
 
 
 def _copy_to_internal(sig: Signal) -> Signal:

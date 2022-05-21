@@ -5,20 +5,18 @@ Spice-Class Simulation Interface
 from enum import Enum
 from typing import Union, Any, Optional, List, get_args
 from pathlib import Path
-from dataclasses import field
+from dataclasses import dataclass, field
 
 import vlsirtools
 
 # Local Imports
-from ..datatype import datatype
 from ..prefix import Prefixed, Number as PrefixableNumber
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
 
 
 # Union of numeric types, including `Prefixed` and all types which can serve as its `number` field.
-# Note sadly the *order* in this union is important! With `Prefixed` last, it gets converted
-# when creating many of these types!
+# Note the `pydantic` commentary in the `prefix` module also applies here. 
 Number = Union[Prefixed, PrefixableNumber]
 
 # Union of types which can serve as parameter values
@@ -78,7 +76,7 @@ def simattr(cls) -> type:
 
 
 @simattr
-@datatype
+@dataclass
 class Param:
     """ Simulation Parameter-Value """
 
@@ -86,7 +84,7 @@ class Param:
     val: Any  # Parameter Value
 
 
-@datatype
+@dataclass
 class LinearSweep:
     """ Linear Sweep """
 
@@ -95,7 +93,7 @@ class LinearSweep:
     step: Number
 
 
-@datatype
+@dataclass
 class LogSweep:
     """ Logarithmic / Decade Sweep """
 
@@ -104,7 +102,7 @@ class LogSweep:
     npts: int
 
 
-@datatype
+@dataclass
 class PointSweep:
     """ List of Points Sweep """
 
@@ -132,7 +130,7 @@ class AnalysisType(Enum):
 
 
 @simattr
-@datatype
+@dataclass
 class Dc:
     """ DC Steady-State Analysis """
 
@@ -146,7 +144,7 @@ class Dc:
 
 
 @simattr
-@datatype
+@dataclass
 class Ac:
     """ AC Small-Signal Analysis """
 
@@ -159,7 +157,7 @@ class Ac:
 
 
 @simattr
-@datatype
+@dataclass
 class Tran:
     """ Transient Analysis """
 
@@ -173,7 +171,7 @@ class Tran:
 
 
 @simattr
-@datatype
+@dataclass
 class SweepAnalysis:
     """ Sweep over `inner` analyses """
 
@@ -188,7 +186,7 @@ class SweepAnalysis:
 
 
 @simattr
-@datatype
+@dataclass
 class MonteCarlo:
     """ Add monte-carlo variations to one or more `inner` analyses. """
 
@@ -202,7 +200,7 @@ class MonteCarlo:
 
 
 @simattr
-@datatype
+@dataclass
 class CustomAnalysis:
     """ String-defined, non-first-class analysis statement
     Primarily for simulator-specific specialty analyses. """
@@ -242,7 +240,7 @@ SaveTarget = Union[
 
 
 @simattr
-@datatype
+@dataclass
 class Save:
     """ Save Control-Element 
     Adds content to the target simulation output """
@@ -251,7 +249,7 @@ class Save:
 
 
 @simattr
-@datatype
+@dataclass
 class Meas:
     """ Measurement """
 
@@ -261,7 +259,7 @@ class Meas:
 
 
 @simattr
-@datatype
+@dataclass
 class Include:
     """ Include a File Path """
 
@@ -269,7 +267,7 @@ class Include:
 
 
 @simattr
-@datatype
+@dataclass
 class Lib:
     """ Include a Library Section """
 
@@ -278,7 +276,7 @@ class Lib:
 
 
 @simattr
-@datatype
+@dataclass
 class Literal:
     """ Simulation-Control Literal, 
     expressed as netlist-language text for a particular target language. """
@@ -295,7 +293,7 @@ def is_control(val: Any) -> bool:
 
 
 @simattr
-@datatype
+@dataclass
 class Options:
     """ Simulation Options """
 
@@ -314,7 +312,7 @@ def is_simattr(val: Any) -> bool:
     return isinstance(val, get_args(SimAttr))
 
 
-@datatype
+@dataclass
 class Sim:
     """ 
     # Simulation Input 

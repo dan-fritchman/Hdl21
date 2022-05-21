@@ -139,7 +139,8 @@ def test_generator_sim():
 
 
 def test_delay1():
-    from hdl21.sim.delay import delay, DelaySimParams, LogicState, Transition
+    from hdl21.sim import delay
+    from hdl21.sim.delay import DelaySimParams, LogicState, Transition
     from hdl21.prefix import p, n, f
 
     @h.module
@@ -163,8 +164,7 @@ def test_delay1():
         tstep=1 * p,
         pathsep=":",
     )
-    delay_sim = delay(p)
-
+    delay_sim = delay.create_sim(p)
     h.sim.to_proto(delay_sim)
     # FIXME! some real checks plz
 

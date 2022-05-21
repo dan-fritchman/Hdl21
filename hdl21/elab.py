@@ -765,7 +765,8 @@ class ImplicitBundles(_Elaborator):
                 ):
                     other_port = conn.inst._resolved.get(conn.portname)
                     if other_port is None:
-                        raise RuntimeError
+                        msg = f"Cannot resolve connection to {port} on {inst}"
+                        raise RuntimeError(msg)
                     if isinstance(other_port, BundleInstance):
                         internal_ref = PortRef.new(inst, port)
                         portconns[internal_ref] = conn

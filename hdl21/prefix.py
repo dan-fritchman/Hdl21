@@ -19,10 +19,19 @@ from enum import Enum
 from decimal import Decimal
 from typing import Optional, Any, Union, get_args
 
-from pydantic.dataclasses import dataclass
+# Note the types here - particularly anything touching the `Number` union-type,
+# *do not* use Pydantic. It doesn't have great control over which variant
+# actually makes it through its validation process, as described here:
+# https://pydantic-docs.helpmanual.io/usage/types/#unions
+#
+# For `Number` and similar, this often causes unexpected conversions
+# between int, float, and Decimal. Everything instantiating a `Number`,
+# including the `Prefixed` type defined here, must use the standard-library
+# `dataclass` instead.
+from dataclasses import dataclass
 
 # `Number` shorthand for the union of types accepted as the numeric parts of `Prefixed`s
-Number = Union[int, float, Decimal]
+Number = Union[Decimal, float, int]
 
 
 class Prefix(Enum):
@@ -59,15 +68,26 @@ class Prefix(Enum):
 
     def __rmul__(self, other: Any):
         """ Right-hand-side multiplication operator, e.g. `5 * µ`. """
-        if isinstance(other, Prefixed):
-            prefix = Prefix.from_exp(self.value + other.prefix.value)
-            if prefix is None:
-                # FIXME: scale to the nearest prefix
-                msg = f"Prefix mult scaling for {self} and {other.prefix}"
-                raise NotImplementedError(msg)
-            return Prefixed(other.value, prefix)
-        if isinstance(other, get_args(Number)):
+
+        if isinstance(other, get_args(Number)):  # The usual use-case, e.g. `5 * µ`
             return Prefixed(other, self)
+
+        if isinstance(other, Prefixed):
+            # Prefixed times Prefix, e.g. `(5 * n) * G`
+            targ = self.value + other.prefix.value
+            prefix = Prefix.from_exp(targ)
+            if prefix is not None:
+                return Prefixed(other.value, prefix)
+
+            # Didn't land on a supported prefix. Scale to the nearest smaller one.
+            closest = max(
+                [v.value for v in type(self).__members__.values() if v.value < targ]
+            )
+            # Scale the other number
+            new_num = other.number * 10 ** (targ - closest)
+            # And create a corresponding `Prefixed`
+            return Prefixed(number=new_num, prefix=Prefix.from_exp(closest))
+
         return NotImplemented
 
 

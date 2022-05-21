@@ -1,6 +1,23 @@
 import hdl21 as h
 
 
+def test_prefix_numbers():
+    """ Check that we get the numeric types we expect in each `Prefixed` """
+    from decimal import Decimal
+
+    x = h.Prefixed(11, h.Prefix.FEMTO)
+    assert isinstance(x.number, int)
+    assert x.number == 11
+
+    x = h.Prefixed(11.11, h.Prefix.FEMTO)
+    assert isinstance(x.number, float)
+    assert x.number == 11.11
+
+    x = h.Prefixed(Decimal("11.11"), h.Prefix.FEMTO)
+    assert isinstance(x.number, Decimal)
+    assert x.number == Decimal("11.11")
+
+
 def test_prefix_shortname():
     assert h.prefix.f == h.Prefix.FEMTO
     assert h.prefix.p == h.Prefix.PICO
@@ -79,6 +96,23 @@ def test_e():
 
 
 def test_e_mult():
+    """ Test multiplying by the `e` function results, e.g. `11 * e(-9) """
     from hdl21.prefix import e
 
     assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
+
+
+def test_prefix_scaling():
+    """ Test cases of `Prefixed` multiplication which do not land on other `Prefix`es, and require scaling """
+    from hdl21.prefix import e
+
+    # 1e-11, scaled to 10e-12
+    assert 1 * e(-9) * h.Prefix.CENTI == 10 * e(-12)
+
+    # 5e4, scaled to 50e3
+    assert 5 * e(6) * h.Prefix.CENTI == 50 * e(3)
+
+    # 11.11e14, scaled to 1111e12
+    print(11.11 * e(15))
+    assert 11.11 * e(15) * h.Prefix.DECI == 1111 * e(12)
+
