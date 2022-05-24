@@ -5,6 +5,7 @@ Phase Interpolator Example
 from enum import Enum, auto
 from io import StringIO
 import hdl21 as h
+from hdl21.primitives import Nmos, Pmos, MosParams
 
 
 @h.paramclass
@@ -15,12 +16,26 @@ class PhaseWeighterParams:
 
 @h.generator
 def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
+    """ Phase-weighting inverter-pair 
+    Drives a single output with two out-of-phase inputs `a` and `b`, 
+    with weights dictates by params `wta` and `wtb`. """
+
     @h.module
     class PhaseWeighter:
+        # IO Ports
         a, b = h.Inputs(2)
         out = h.Output()
+        mix = h.Signal(desc="Internal phase-mixing node")
 
-        # FIXME! actual contents coming soon
+        # a-input inverter
+        pa = Pmos(MosParams(npar=p.wta))(d=mix, g=a)
+        na = Nmos(MosParams(npar=p.wta))(d=mix, g=a)
+        # b-input inverter
+        pb = Pmos(MosParams(npar=p.wtb))(d=mix, g=b)
+        nb = Nmos(MosParams(npar=p.wtb))(d=mix, g=b)
+        # Output inverter, with the combined size of the two inputs
+        po = Pmos(MosParams(npar=p.wta + p.wtb))(d=out, g=mix)
+        no = Nmos(MosParams(npar=p.wta + p.wtb))(d=out, g=mix)
 
     return PhaseWeighter
 
@@ -91,9 +106,7 @@ def PhaseGenerator(p: PiParams) -> h.Module:
         index = 24 + wtb
         PhaseGen.add(
             name=f"weight{index}",
-            val=PhaseWeighter(p)(
-                a=ckq.ck270, b=ckq.ck0, out=phases[index]
-            ),  # FIXME: `c0` misspelling wasnt a great error
+            val=PhaseWeighter(p)(a=ckq.ck270, b=ckq.ck0, out=phases[index]),
         )
 
     return PhaseGen
@@ -118,9 +131,7 @@ def PhaseInterp(p: PiParams) -> h.Module:
     @h.module
     class PhaseInterp:
         # IO Interface
-        ckq = QuadClock(
-            role=QuadClock.Roles.SINK, port=True
-        )  ##, desc="Quadrature input")
+        ckq = QuadClock(role=QuadClock.Roles.SINK, port=True, desc="Quadrature input")
         sel = h.Input(width=p.nbits, desc="Selection input")
         out = h.Output(width=1, desc="Clock output")
 
@@ -136,5 +147,5 @@ def PhaseInterp(p: PiParams) -> h.Module:
 
 # Run the default version
 s = StringIO()
-h.netlist(h.to_proto(PhaseInterp(PiParams())), dest=s)
+h.netlist(h.to_proto(PhaseInterp()), dest=s)
 print(s.getvalue())

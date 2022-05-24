@@ -19,10 +19,10 @@ from pydantic.dataclasses import dataclass
 from .connect import connectable
 from .module import Module, ExternalModuleCall
 from .instance import InstArray, Instance, PortRef
-from .primitives import R, PrimitiveCall
+from .primitives import PrimitiveCall
 from .bundle import AnonymousBundle, Bundle, BundleInstance, _check_compatible
 from .signal import PortDir, Signal, Visibility, Slice, Concat, Sliceable, NoConn
-from .generator import Generator, GeneratorCall
+from .generator import Generator, GeneratorCall, Default as GenDefault
 from .params import _unique_name
 from .instantiable import Instantiable
 
@@ -177,6 +177,21 @@ class GeneratorElaborator(_Elaborator):
             result = self.generator_calls[call]
             call.result = result
             return result
+
+        # Support the "no paramclass constructor" invocation.
+        # Create an instance of the generator's parameter-class if keyword args were provided instead.
+        # If both were provided, fail.
+        if call.kwargs and call.arg is not GenDefault:
+            msg = f"Invalid Generator Call {call}: either provide a single {call.gen.Params} instance or keyword arguments, not both."
+            raise RuntimeError(msg)
+        elif call.arg is GenDefault:
+            # Create an instance of the generator's parameter-class
+            call.arg = call.gen.Params(**call.kwargs)
+
+        # After all that, check that the call has a valid instance of the generator's parameter-class
+        if not isinstance(call.arg, call.gen.Params):
+            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.arg}"
+            raise RuntimeError(msg)
 
         # The main event: Run the generator-function
         if call.gen.usecontext:

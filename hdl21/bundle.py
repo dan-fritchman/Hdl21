@@ -8,8 +8,8 @@ from textwrap import dedent
 from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args, Dict
 
-from hdl21.connect import has_port_refs
-
+# Local Imports
+from .connect import has_port_refs
 from .instance import connects, connectable
 from .signal import Signal
 
@@ -28,6 +28,7 @@ class BundleInstance:
         "role",
         "src",
         "dest",
+        "desc",
         "conns",
         "portrefs",
         "_port_ref",
@@ -44,6 +45,7 @@ class BundleInstance:
         role: Optional[Enum] = None,
         src: Optional[Enum] = None,
         dest: Optional[Enum] = None,
+        desc: Optional[str] = None,
     ):
         self.name = name
         self.of = of
@@ -51,6 +53,7 @@ class BundleInstance:
         self.role = role
         self.src = src
         self.dest = dest
+        self.desc = desc
         self.conns = dict()
         self.portrefs = dict()
         self._elaborated = False

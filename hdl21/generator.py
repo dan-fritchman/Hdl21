@@ -5,7 +5,7 @@
 import inspect
 import pickle
 from dataclasses import field
-from typing import Callable, Any, Optional
+from typing import Callable, Any, Optional, Dict
 from types import ModuleType
 from pydantic.dataclasses import dataclass
 from pydantic import ValidationError
@@ -13,6 +13,13 @@ from pydantic import ValidationError
 # Local imports
 from .module import Module
 from .instance import calls_instantiate
+
+
+@dataclass
+class Default:
+    """ Default value for generator arguments """
+
+    ...  # Empty contents
 
 
 @dataclass
@@ -28,10 +35,10 @@ class Generator:
     usecontext: bool  # Boolean indication of `Context` usage
     pymodule: ModuleType  # Python module where function defined
 
-    def __call__(self, arg: Any):
+    def __call__(self, arg: Any = Default, **kwargs) -> "GeneratorCall":
         """ Calls to Generators create GeneratorCall-objects
         to be expanded during elaboration. """
-        return GeneratorCall(gen=self, arg=arg)
+        return GeneratorCall(gen=self, arg=arg, kwargs=kwargs)
 
     @property
     def name(self) -> str:
@@ -55,13 +62,8 @@ class GeneratorCall:
 
     gen: Generator
     arg: Any
+    kwargs: Dict[str, Any]
     result: Optional[Module] = field(init=False, default=None)
-
-    def __post_init_post_parse__(self):
-        """ Validate that our argument matches the Generator param-type """
-        if not isinstance(self.arg, self.gen.Params):
-            msg = f"Generator {self.gen} called with invalid parameters {self.arg}"
-            raise ValidationError(msg)
 
     def __eq__(self, other) -> bool:
         """ Generator-Call equality requires:

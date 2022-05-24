@@ -8,6 +8,8 @@ from types import SimpleNamespace
 from enum import Enum, EnumMeta, auto
 from textwrap import dedent
 
+from pydantic import ValidationError
+
 # Import the PUT (package under test)
 import hdl21 as h
 import vlsir
@@ -1861,3 +1863,30 @@ def test_common_attr_errors():
     assert "Did you mean" in str(einfo.value)
     assert "`ExternalModuleCall`" in str(einfo.value)
     M.x = X()()  # Good - Instance
+
+
+def test_generator_call_by_kwargs():
+    """ Test the capacity for generators to create their param-classes inline. """
+
+    @h.paramclass
+    class P:
+        a = h.Param(dtype=int, desc="a")
+        b = h.Param(dtype=float, desc="b")
+        c = h.Param(dtype=str, desc="c")
+
+    @h.generator
+    def M(p: P) -> h.Module:
+        return h.Module()
+
+    # Call without constructing a `P`
+    m = M(a=1, b=2.0, c="3")
+
+    assert isinstance(m, h.GeneratorCall)
+    m = h.elaborate(m)
+    assert isinstance(m, h.Module)
+
+    # Check that type-checking continue
+    m = M(a=TabError, b=TabError, c=TabError)
+    assert isinstance(m, h.GeneratorCall)
+    with pytest.raises(ValidationError):
+        m = h.elaborate(m)
