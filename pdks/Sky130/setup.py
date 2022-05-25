@@ -1,5 +1,5 @@
 """
-# SkyWater 130nm Hdl21 PDK Setup Script
+# Setup Script
 
 Derived from the setuptools sample project at
 https://github.com/pypa/sampleproject/blob/main/setup.py
@@ -15,9 +15,11 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
 
+_VLSIR_VERSION = "1.0.0.dev0"
+
 setup(
     name="sky130-hdl21",
-    version="1.0.0.dev0",
+    version=_VLSIR_VERSION,
     description="SkyWater 130nm PDK Package for Hdl21",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -25,6 +27,6 @@ setup(
     author="Dan Fritchman",
     packages=find_packages(),
     python_requires=">=3.8, <4",
-    install_requires=["hdl21==1.0.0.dev0"],
+    install_requires=[f"hdl21=={_VLSIR_VERSION}"],
     extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov", "twine"]},
 )

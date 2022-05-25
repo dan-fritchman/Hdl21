@@ -169,6 +169,26 @@ def test_delay1():
     # FIXME! some real checks plz
 
 
+def empty_tb() -> h.Module:
+    from hdl21.prefix import K
+    from hdl21.primitives import R
+
+    ri = R(R.Params(r=1 * K))
+
+    @h.module
+    class EmptyTb:
+        """ An Empty TestBench, 
+        or as close as we can get to one without some simulators failing. 
+        AKA, a resistor to ground. """
+
+        VSS = h.Port()
+        s = h.Signal()
+        r = ri(p=s, n=VSS)
+
+    EmptyTb.name = "EmptyTb"
+    return EmptyTb
+
+
 @pytest.mark.skipif(
     vlsirtools.spice.default() is None, reason="No simulator available",
 )
@@ -179,7 +199,7 @@ def test_empty_sim1():
     import vlsir.spice_pb2 as vsp
     from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
 
-    s = Sim(tb=tb("empty"), attrs=[])
+    s = Sim(tb=empty_tb(), attrs=[])
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
     assert isinstance(r, vsp.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
@@ -199,7 +219,7 @@ def test_empty_sim2():
     import vlsir.spice_pb2 as vsp
     from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
 
-    s = Sim(tb=tb("empty"), attrs=[])
+    s = Sim(tb=empty_tb(), attrs=[])
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.SIM_DATA))
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
