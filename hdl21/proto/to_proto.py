@@ -308,7 +308,7 @@ def dictify_params(params: Any) -> Dict[str, ScalarOption]:
 
 
 def export_param_value(
-    val: Union[int, float, str, Prefixed, Enum]
+    val: Union[int, float, str, Decimal, Prefixed, Enum]
 ) -> Optional[vlsir.ParamValue]:
     """ Export a `ParamValue`. """
 
@@ -325,6 +325,8 @@ def export_param_value(
     elif isinstance(val, Enum):
         # Enum-valued parameters are always strings
         return vlsir.ParamValue(string=val.value)
+    elif isinstance(val, Decimal):
+        return vlsir.ParamValue(string=str(val))
     else:
         msg = f"Unsupported parameter for proto-export: `{val}`"
         raise TypeError(msg)
@@ -372,7 +374,7 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
         return vlsir.Prefixed(prefix=prefix, double=pref.number)
     elif isinstance(pref.number, str):
         return vlsir.Prefixed(prefix=prefix, string=pref.number)
-    elif isinstance(pref.number, Decimal): 
+    elif isinstance(pref.number, Decimal):
         # Decimal values are serialized as strings
         return vlsir.Prefixed(prefix=prefix, string=str(pref.number))
 

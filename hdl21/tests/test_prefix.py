@@ -1,17 +1,47 @@
 import hdl21 as h
+from decimal import Decimal
+
+
+def test_decimal():
+    """ This isnt a test of Hdl21 so much as a demo and reminder of how 
+    the standard library's `Decimal` works, particularly in conjunction with 
+    our widely-used `pydantic.dataclasses`. 
+
+    In short: `pydantic` converts `Decimal` valued fields to strings before
+    passing them to the `Decimal` constructor. 
+    https://pydantic-docs.helpmanual.io/usage/types/ """
+
+    # Decimal-only
+    assert Decimal(11) == Decimal(11)
+    assert Decimal(11.1) == Decimal(11.1)
+    assert Decimal("11.1") == Decimal("11.1")
+    # Note these are *not* equal, due to floating-point precision
+    assert Decimal(11.1) != Decimal("11.1")
+
+    # Create a dataclass with a `Decimal` field
+    from pydantic.dataclasses import dataclass
+
+    @dataclass
+    class HasDecimal:
+        d: Decimal
+
+    assert HasDecimal(11).d == Decimal(11)
+    assert HasDecimal("11.1").d == Decimal("11.1")
+    # These last two are the trick.
+    assert HasDecimal(11.1).d == Decimal("11.1")
+    assert HasDecimal(11.1).d != Decimal(11.1)
 
 
 def test_prefix_numbers():
     """ Check that we get the numeric types we expect in each `Prefixed` """
-    from decimal import Decimal
 
     x = h.Prefixed(11, h.Prefix.FEMTO)
-    assert isinstance(x.number, int)
+    assert isinstance(x.number, Decimal)
     assert x.number == 11
 
-    x = h.Prefixed(11.11, h.Prefix.FEMTO)
-    assert isinstance(x.number, float)
-    assert x.number == 11.11
+    x = h.Prefixed(11.1, h.Prefix.FEMTO)
+    assert isinstance(x.number, Decimal)
+    assert x.number == Decimal("11.1")
 
     x = h.Prefixed(Decimal("11.11"), h.Prefix.FEMTO)
     assert isinstance(x.number, Decimal)

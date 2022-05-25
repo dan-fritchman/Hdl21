@@ -2,29 +2,26 @@
 Spice-Class Simulation Interface 
 """
 
+from decimal import Decimal
 from enum import Enum
 from typing import Union, Any, Optional, List, get_args
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import field
 
 import vlsirtools
 
 # Local Imports
-from ..prefix import Prefixed, Number as PrefixableNumber
+from ..datatype import datatype
+from ..prefix import Prefixed
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
 
 
-# Union of numeric types, including `Prefixed` and all types which can serve as its `number` field.
-# Note the `pydantic` commentary in the `prefix` module also applies here. 
-Number = Union[Prefixed, PrefixableNumber]
-
 # Union of types which can serve as parameter values
-ParamVal = Union[Number, str]
-
-
-def is_number(val: Any) -> bool:
-    return isinstance(val, get_args(Number))
+# The `str` variant is the escape hatch for:
+# * References to other parameter(s) by name
+# * Compound expressions among parameters, e.g. `5µ * a + b`
+ParamVal = Union[Prefixed, Decimal, str]
 
 
 def tb(name: str) -> Module:
@@ -76,24 +73,24 @@ def simattr(cls) -> type:
 
 
 @simattr
-@dataclass
+@datatype
 class Param:
     """ Simulation Parameter-Value """
 
     name: str  # Parameter Name
-    val: Any  # Parameter Value
+    val: ParamVal  # Parameter Value
 
 
-@dataclass
+@datatype
 class LinearSweep:
     """ Linear Sweep """
 
-    start: Number
-    stop: Number
-    step: Number
+    start: ParamVal
+    stop: ParamVal
+    step: ParamVal
 
 
-@dataclass
+@datatype
 class LogSweep:
     """ Logarithmic / Decade Sweep """
 
@@ -102,11 +99,11 @@ class LogSweep:
     npts: int
 
 
-@dataclass
+@datatype
 class PointSweep:
     """ List of Points Sweep """
 
-    points: List[Number]
+    points: List[ParamVal]
 
 
 # Sweep type-union
@@ -130,7 +127,7 @@ class AnalysisType(Enum):
 
 
 @simattr
-@dataclass
+@datatype
 class Dc:
     """ DC Steady-State Analysis """
 
@@ -144,7 +141,7 @@ class Dc:
 
 
 @simattr
-@dataclass
+@datatype
 class Ac:
     """ AC Small-Signal Analysis """
 
@@ -157,12 +154,12 @@ class Ac:
 
 
 @simattr
-@dataclass
+@datatype
 class Tran:
     """ Transient Analysis """
 
-    tstop: Number  # Stop time
-    tstep: Optional[Number] = None  # Optional time-step recommendation
+    tstop: ParamVal  # Stop time
+    tstep: Optional[ParamVal] = None  # Optional time-step recommendation
     name: Optional[str] = None  # Optional analysis name
 
     @property
@@ -171,7 +168,7 @@ class Tran:
 
 
 @simattr
-@dataclass
+@datatype
 class SweepAnalysis:
     """ Sweep over `inner` analyses """
 
@@ -186,7 +183,7 @@ class SweepAnalysis:
 
 
 @simattr
-@dataclass
+@datatype
 class MonteCarlo:
     """ Add monte-carlo variations to one or more `inner` analyses. """
 
@@ -200,7 +197,7 @@ class MonteCarlo:
 
 
 @simattr
-@dataclass
+@datatype
 class CustomAnalysis:
     """ String-defined, non-first-class analysis statement
     Primarily for simulator-specific specialty analyses. """
@@ -240,7 +237,7 @@ SaveTarget = Union[
 
 
 @simattr
-@dataclass
+@datatype
 class Save:
     """ Save Control-Element 
     Adds content to the target simulation output """
@@ -249,7 +246,7 @@ class Save:
 
 
 @simattr
-@dataclass
+@datatype
 class Meas:
     """ Measurement """
 
@@ -259,7 +256,7 @@ class Meas:
 
 
 @simattr
-@dataclass
+@datatype
 class Include:
     """ Include a File Path """
 
@@ -267,7 +264,7 @@ class Include:
 
 
 @simattr
-@dataclass
+@datatype
 class Lib:
     """ Include a Library Section """
 
@@ -276,7 +273,7 @@ class Lib:
 
 
 @simattr
-@dataclass
+@datatype
 class Literal:
     """ Simulation-Control Literal, 
     expressed as netlist-language text for a particular target language. """
@@ -293,7 +290,7 @@ def is_control(val: Any) -> bool:
 
 
 @simattr
-@dataclass
+@datatype
 class Options:
     """ Simulation Options """
 
@@ -312,7 +309,7 @@ def is_simattr(val: Any) -> bool:
     return isinstance(val, get_args(SimAttr))
 
 
-@dataclass
+@datatype
 class Sim:
     """ 
     # Simulation Input 

@@ -17,21 +17,7 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 from enum import Enum
 from decimal import Decimal
-from typing import Optional, Any, Union, get_args
-
-# Note the types here - particularly anything touching the `Number` union-type,
-# *do not* use Pydantic. It doesn't have great control over which variant
-# actually makes it through its validation process, as described here:
-# https://pydantic-docs.helpmanual.io/usage/types/#unions
-#
-# For `Number` and similar, this often causes unexpected conversions
-# between int, float, and Decimal. Everything instantiating a `Number`,
-# including the `Prefixed` type defined here, must use the standard-library
-# `dataclass` instead.
-from dataclasses import dataclass
-
-# `Number` shorthand for the union of types accepted as the numeric parts of `Prefixed`s
-Number = Union[Decimal, float, int]
+from typing import Optional, Any
 
 
 class Prefix(Enum):
@@ -69,7 +55,8 @@ class Prefix(Enum):
     def __rmul__(self, other: Any):
         """ Right-hand-side multiplication operator, e.g. `5 * µ`. """
 
-        if isinstance(other, get_args(Number)):  # The usual use-case, e.g. `5 * µ`
+        if isinstance(other, (Decimal, float, int, str)):
+            # The usual use-case, e.g. `5 * µ`
             return Prefixed(other, self)
 
         if isinstance(other, Prefixed):
@@ -91,14 +78,54 @@ class Prefix(Enum):
         return NotImplemented
 
 
+"""
+# Note on Numeric Types 
+
+`Prefixed` supports a sole type for its `number` field: the standard library's `Decimal`. 
+One might wonder why it does not include `int` and `float` as well, or perhaps 
+some other numeric-like types. 
+
+This boils down to limitations in validation. Previous versions of `Prefixed` have 
+used a `Number` union-type along these lines:
+```
+Number = Union[Decimal, float, int]
+```
+This is nominally handy, but results in many values being converted among these types, 
+often where one may not expect. 
+The pydantic docs are clear about their limitations in this respect: 
+https://pydantic-docs.helpmanual.io/usage/types/#unions
+
+These limitations include the fact that despite being declared in list-like 
+"ordered" syntax, union-types do not have orders in the Python standard library. 
+So even interpreting `Union[Decimal, float, int]` as "prefer Decimal, use float 
+and then int if that (for whatever reason) doesn't work" fails, 
+since the `Union` syntax can be reordered arbitrarily by the language. 
+
+The other clear alternative is not doing runtime type-validation of `Prefixed`, 
+or of classes which instantiate them. Prior versions also tried this, 
+to fairly confounding results. Incorporating standard-library `dataclasses` 
+as members of larger `pydantic.dataclasses` seems to *work* - i.e. it does not 
+produce `ValidationError`s or similar - but ultimately with enough of them, 
+triggers some highly inscrutable errors in the standard-library methods. 
+
+So: all `Decimal`, all `pydantic.dataclasses`.
+"""
+
+from pydantic.dataclasses import dataclass
+
+
 @dataclass
 class Prefixed:
-    """ Combination of a literal value and a unit-indicating prefix. 
+    """ 
+    # Prefixed 
+    
+    Combination of a literal value and a unit-indicating prefix. 
     Colloquially, the numbers in expressions like "5ns", "11MV", and "1µA" 
-    are represented as `Prefixed`. """
+    are represented as `Prefixed`. 
+    """
 
-    number: Number
-    prefix: Prefix
+    number: Decimal  # Numeric Portion. See the long note above.
+    prefix: Prefix  # Enumerated SI Prefix
 
     def __float__(self) -> float:
         """ Convert to float """

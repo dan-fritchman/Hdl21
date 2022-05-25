@@ -4,6 +4,7 @@
 
 # Std-Lib Imports
 from typing import List, Union
+from decimal import Decimal
 
 # VLSIR Import
 import vlsir
@@ -54,23 +55,13 @@ class ProtoExporter:
         from .data import is_analysis, is_control
 
         if isinstance(attr, data.Options):
-            self.inp.opts.append(self.export_options(attr))
+            self.inp.opts.append(export_options(attr))
         elif is_analysis(attr):
             self.inp.an.append(self.export_analysis(attr))
         elif is_control(attr):
-            self.inp.ctrls.append(self.export_control(attr))
+            self.inp.ctrls.append(export_control(attr))
         else:
             raise TypeError(f"Invalid SimAttr: {attr}")
-
-    def export_options(self, options: data.Options) -> vsp.SimOptions:
-        """ Export simulation options """
-        return vsp.SimOptions(
-            temp=options.temper,
-            tnom=options.tnom,
-            gmin=options.gmin,
-            iabstol=options.iabstol,
-            reltol=options.reltol,
-        )
 
     def export_analysis(self, an: data.Analysis) -> vsp.Analysis:
         """ Export an `Analysis`, largely dispatching across types and re-assembling into a `vsp.Analysis`. """
@@ -138,6 +129,12 @@ class ProtoExporter:
             ctrls=[],  # FIXME: analysis-specific controls
         )
 
+    def export_custom_analysis(
+        self, an: data.CustomAnalysis
+    ) -> vsp.CustomAnalysisInput:
+        """ Export a custom analysis """
+        raise NotImplementedError
+
     def export_sweep_variable(self, var: Union[str, data.Param]) -> str:
         """ Export a sweep-variable to its name. """
         if isinstance(var, str):
@@ -151,101 +148,119 @@ class ProtoExporter:
         if isinstance(sweep, data.LinearSweep):
             return vsp.Sweep(
                 linear=vsp.LinearSweep(
-                    start=self.export_float(sweep.start),
-                    stop=self.export_float(sweep.stop),
-                    step=self.export_float(sweep.step),
+                    start=export_float(sweep.start),
+                    stop=export_float(sweep.stop),
+                    step=export_float(sweep.step),
                 )
             )
         elif isinstance(sweep, data.LogSweep):
             return vsp.Sweep(
                 log=vsp.LogSweep(
-                    start=self.export_float(sweep.start),
-                    stop=self.export_float(sweep.stop),
-                    npts=self.export_float(sweep.npts),  # FIXME: move to int
+                    start=export_float(sweep.start),
+                    stop=export_float(sweep.stop),
+                    npts=export_float(sweep.npts),  # FIXME: move to int
                 )
             )
         elif isinstance(sweep, data.PointSweep):
             return vsp.Sweep(
-                points=vsp.PointSweep(
-                    points=[self.export_float(x) for x in sweep.points]
-                )
+                points=vsp.PointSweep(points=[export_float(x) for x in sweep.points])
             )
         else:
             raise TypeError(f"Invalid Sweep value {sweep}")
 
-    def export_control(self, ctrl: data.Control) -> vsp.Control:
-        """ Export a `Control` element """
-        if isinstance(ctrl, data.Include):
-            return vsp.Control(include=self.export_include(ctrl))
-        if isinstance(ctrl, data.Lib):
-            return vsp.Control(lib=self.export_lib(ctrl))
-        if isinstance(ctrl, data.Save):
-            return vsp.Control(save=self.export_save(ctrl))
-        if isinstance(ctrl, data.Meas):
-            return vsp.Control(meas=self.export_meas(ctrl))
-        if isinstance(ctrl, data.Param):
-            return vsp.Control(param=self.export_param(ctrl))
-        if isinstance(ctrl, data.Literal):
-            return vsp.Control(literal=self.export_literal(ctrl))
-        raise TypeError(f"Invalid Sim Control {ctrl}")
 
-    def export_include(self, inc: data.Include) -> vsp.Include:
-        return vsp.Include(path=str(inc.path))
+def export_options(options: data.Options) -> vsp.SimOptions:
+    """ Export simulation options """
+    return vsp.SimOptions(
+        temp=options.temper,
+        tnom=options.tnom,
+        gmin=options.gmin,
+        iabstol=options.iabstol,
+        reltol=options.reltol,
+    )
 
-    def export_lib(self, lib: data.Lib) -> vsp.LibInclude:
-        return vsp.LibInclude(path=str(lib.path), section=lib.section)
 
-    def export_save(self, save: data.Save) -> vsp.Save:
-        if isinstance(save.targ, data.SaveMode):
-            if save.targ == data.SaveMode.ALL:
-                mode = vsp.Save.SaveMode.ALL
-            elif save.targ == data.SaveMode.NONE:
-                mode = vsp.Save.SaveMode.NONE
-            else:
-                raise ValueError
-            return vsp.Save(mode=mode)
-        if isinstance(save.targ, Signal):
-            signal = save.targ.name
-        elif isinstance(save.targ, List[Signal]):
-            signal = ",".join([s.name for s in save.targ])
-        elif isinstance(save.targ, str):
-            signal = save.targ
-        elif isinstance(save.targ, List[str]):
-            signal = ",".join([s for s in save.targ])
+def export_control(ctrl: data.Control) -> vsp.Control:
+    """ Export a `Control` element """
+    if isinstance(ctrl, data.Include):
+        return vsp.Control(include=export_include(ctrl))
+    if isinstance(ctrl, data.Lib):
+        return vsp.Control(lib=export_lib(ctrl))
+    if isinstance(ctrl, data.Save):
+        return vsp.Control(save=export_save(ctrl))
+    if isinstance(ctrl, data.Meas):
+        return vsp.Control(meas=export_meas(ctrl))
+    if isinstance(ctrl, data.Param):
+        return vsp.Control(param=export_param(ctrl))
+    if isinstance(ctrl, data.Literal):
+        return vsp.Control(literal=export_literal(ctrl))
+    raise TypeError(f"Invalid Sim Control {ctrl}")
+
+
+def export_include(inc: data.Include) -> vsp.Include:
+    return vsp.Include(path=str(inc.path))
+
+
+def export_lib(lib: data.Lib) -> vsp.LibInclude:
+    return vsp.LibInclude(path=str(lib.path), section=lib.section)
+
+
+def export_save(save: data.Save) -> vsp.Save:
+    if isinstance(save.targ, data.SaveMode):
+        if save.targ == data.SaveMode.ALL:
+            mode = vsp.Save.SaveMode.ALL
+        elif save.targ == data.SaveMode.NONE:
+            mode = vsp.Save.SaveMode.NONE
         else:
-            raise TypeError
-        return vsp.Save(signal=signal)
+            raise ValueError
+        return vsp.Save(mode=mode)
+    if isinstance(save.targ, Signal):
+        signal = save.targ.name
+    elif isinstance(save.targ, List[Signal]):
+        signal = ",".join([s.name for s in save.targ])
+    elif isinstance(save.targ, str):
+        signal = save.targ
+    elif isinstance(save.targ, List[str]):
+        signal = ",".join([s for s in save.targ])
+    else:
+        raise TypeError
+    return vsp.Save(signal=signal)
 
-    def export_meas(self, meas: data.Meas) -> vsp.Meas:
-        """ Export a measurement """
-        return vsp.Meas(
-            analysis_type=self.export_analysis_type(meas.analysis),
-            name=meas.name,
-            expr=str(meas.expr),
-        )
 
-    def export_analysis_type(self, an: Union[str, data.Analysis]) -> str:
-        """ Export an `AnalysisType`, or string representation thereof. """
-        if isinstance(an, str):
-            return an
-        if data.is_analysis(an):
-            return an.tp.value
-        raise TypeError(f"Invalid Analysis for type-extraction {an}")
+def export_meas(meas: data.Meas) -> vsp.Meas:
+    """ Export a measurement """
+    return vsp.Meas(
+        analysis_type=export_analysis_type(meas.analysis),
+        name=meas.name,
+        expr=str(meas.expr),
+    )
 
-    def export_param(self, param: data.Param) -> vlsir.Param:
-        """ Export a parameter declaration """
-        from ..proto.to_proto import export_param_value
 
-        return vlsir.Param(name=param.name, value=export_param_value(param.val))
+def export_analysis_type(an: Union[str, data.Analysis]) -> str:
+    """ Export an `AnalysisType`, or string representation thereof. """
+    if isinstance(an, str):
+        return an
+    if data.is_analysis(an):
+        return an.tp.value
+    raise TypeError(f"Invalid Analysis for type-extraction {an}")
 
-    def export_literal(self, literal: data.Literal) -> str:
-        """ Export a simulation literal, as its text value """
-        return literal.txt
 
-    def export_float(self, num: data.Number) -> float:
-        """ Export a `Number` union-type to a float, or protobuf float/double. """
-        if isinstance(num, float):
-            return num
-        elif isinstance(num, (int, Prefixed)):
-            return float(num)
-        raise TypeError(f"Invalid value for proto float: {num}")
+def export_param(param: data.Param) -> vlsir.Param:
+    """ Export a parameter declaration """
+    from ..proto.to_proto import export_param_value
+
+    return vlsir.Param(name=param.name, value=export_param_value(param.val))
+
+
+def export_literal(literal: data.Literal) -> str:
+    """ Export a simulation literal, as its text value """
+    return literal.txt
+
+
+def export_float(num: Union[float, int, Decimal, Prefixed]) -> float:
+    """ Export a `Number` union-type to a float, or protobuf float/double. """
+    if isinstance(num, float):
+        return num
+    if isinstance(num, (int, Decimal, Prefixed)):
+        return float(num)
+    raise TypeError(f"Invalid value for proto float: {num}")
