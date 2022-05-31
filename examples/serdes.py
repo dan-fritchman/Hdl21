@@ -214,4 +214,3 @@ def Serdes(p: SerdesParams) -> h.Module:
 import sys
 
 h.netlist(h.to_proto(Serdes(SerdesParams())), dest=sys.stdout)
-

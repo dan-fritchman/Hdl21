@@ -658,7 +658,6 @@ class BundleConnTypes(_Elaborator):
         return module
 
 
-
 class SignalConnTypes(_Elaborator):
     """ Check for connection-type-validity between each Instance and its connections. 
     "Connection type validity" includes: 

@@ -53,4 +53,3 @@ class Orphanage(_Elaborator):
                 raise RuntimeError(msg)
         # Checks out! Return the module unchanged.
         return module
-

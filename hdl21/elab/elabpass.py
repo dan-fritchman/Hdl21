@@ -46,4 +46,3 @@ class ElabPass(Enum):
         """ Return the default ordered Elaborator Passes. """
         # Returns each in definition order, then a final `Orphanage` test.
         return list(ElabPass) + [ElabPass.ORPHANAGE]
-

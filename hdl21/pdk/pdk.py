@@ -176,4 +176,3 @@ def default() -> Optional[ModuleType]:
         # Get the only element from the set
         return next(iter(_mgr.modules))
     return None
-

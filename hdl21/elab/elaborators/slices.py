@@ -179,4 +179,3 @@ def _flat_concatable(s: Sliceable) -> bool:
     return isinstance(s, Signal) or (
         isinstance(s, Slice) and isinstance(s.signal, Signal)
     )
-
