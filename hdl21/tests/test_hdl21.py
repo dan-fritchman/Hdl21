@@ -1892,7 +1892,6 @@ def test_generator_call_by_kwargs():
         m = h.elaborate(m)
 
 
-@pytest.mark.xfail(reason="Debugging Array PortRefs")
 def test_instance_array_portrefs():
     """ Test Instance Arrays connected by port-references """
 
@@ -1909,3 +1908,33 @@ def test_instance_array_portrefs():
     m.invb = 4 * Inv()(i=m.inva.z, z=m.b)
 
     h.elaborate(m)
+
+    assert len(m.instances) == 8
+    assert len(m.instarrays) == 0
+
+
+
+def test_array_bundle():
+    """ Test bundle-valued connections to instance arrays. """
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class HasB:
+        b = B(port=True)
+
+    @h.module
+    class HasArr:
+        b = B()
+        bs = 11 * HasB(b=b)
+
+    # Elaborate this,
+    h.elaborate(HasArr)
+
+    assert len(HasArr.signals) == 1
+    assert len(HasArr.instances) == 11
+    assert len(HasArr.instarrays) == 0
+    for inst in HasArr.instances.values():
+        assert inst.conns.get("b_s", None) is HasArr.b_s

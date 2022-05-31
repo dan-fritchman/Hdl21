@@ -234,60 +234,11 @@ class GeneratorElaborator(_Elaborator):
             msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
             raise RuntimeError(msg)
 
-        # Flatten Instance arrays
-        while module.instarrays:
-            name, array = module.instarrays.popitem()
-            module.namespace.pop(name)
-            # Visit the array's target
-            target = self.elaborate_instance_array(array)
-
-            # And do the real work: flattening it.
-            if array.n < 1:
-                raise RuntimeError(f"Invalid InstArray {array} with size {array.n}")
-            # Create the new, flat Instances
-            new_insts = []
-            for k in range(array.n):
-                name = self.flatname(
-                    segments=[array.name, str(k)], avoid=module.namespace
-                )
-                inst = module.add(Instance(of=target, name=name))
-                new_insts.append(inst)
-            # And connect them
-            for portname, conn in array.conns.items():
-                if isinstance(conn, BundleInstance):
-                    # All new instances get the same BundleInstance
-                    for inst in new_insts:
-                        inst.connect(portname, conn)
-                elif isinstance(conn, (Signal, Slice, Concat)):
-                    # Get the target-module port, particularly for its width
-                    port = target.get(portname)
-                    if not isinstance(port, Signal):
-                        msg = f"Invalid port connection of `{portname}` {port} to {conn} in InstArray {array}"
-                        raise RuntimeError(msg)
-
-                    if port.width == conn.width:
-                        # All new instances get the same signal
-                        for inst in new_insts:
-                            inst.connect(portname, conn)
-                    elif port.width * array.n == conn.width:
-                        # Each new instance gets a slice, equal to its own width
-                        for k, inst in enumerate(new_insts):
-                            slize = conn[k * port.width : (k + 1) * port.width]
-                            if slize.width != port.width:
-                                msg = f"Width mismatch connecting {slize} to {port}"
-                                raise RuntimeError(msg)
-                            inst.connect(portname, slize)
-                    else:  # All other width-values are invalid
-                        msg = f"Invalid connection of {conn} of width {conn.width} to port {portname} on Array {array.name} of width {port.width}. "
-                        msg += f"Valid widths are either {port.width} (broadcasting across instances) and {port.width * array.n} (individually wiring to each)."
-                        raise RuntimeError(msg)
-                else:
-                    msg = f"Invalid connection to {conn} in InstArray {array}"
-                    raise TypeError(msg)
-
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
             self.elaborate_instance(inst)
+        for arr in module.instarrays.values():
+            self.elaborate_instance_array(arr)
         # Also visit bundle instances, turning off their pre-elab magic
         for bundle in module.bundles.values():
             self.elaborate_bundle_instance(bundle)
@@ -305,6 +256,16 @@ class GeneratorElaborator(_Elaborator):
         inst._elaborated = True
         # And visit the Instance's target
         return self.elaborate_instantiable(inst.of)
+
+    def elaborate_instance_array(self, arr: InstArray) -> Instantiable:
+        """ Elaborate an Instance Array. """
+        # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
+        # instead of the resolved version `inst._resolved`.
+
+        # Turn off `PortRef` magic
+        arr._elaborated = True
+        # And visit the Instance's target
+        return self.elaborate_instantiable(arr.of)
 
     def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
         """ Elaborate an Instance target. Adds the capacity to call `GeneratorCall`s to the more-common base-case. """
@@ -331,11 +292,17 @@ class ImplicitSignals(_Elaborator):
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
             self.elaborate_instance(inst)
+        for arr in module.instarrays.values():
+            self.elaborate_instance_array(arr)
 
         # Now work through expanding any implicit-ish connections, such as those from port to port.
         # Start by building an adjacency graph of every `PortRef` and `NoConn` that's been instantiated.
-        portconns = dict()
-        for inst in module.instances.values():
+        portconns: Dict[PortRef, PortRef] = dict()
+        # FIXME: a better word for "instances or arrays thereof"; we already used "connectable"
+        connectables = list(module.instances.values()) + list(
+            module.instarrays.values()
+        )
+        for inst in connectables:
             for port, conn in inst.conns.items():
                 if isinstance(conn, (PortRef, NoConn)):
                     internal_ref = PortRef.new(inst, port)
@@ -575,6 +542,8 @@ class BundleFlattener(_Elaborator):
         # but *will not* have modified its `conns` dict.
         for inst in module.instances.values():
             self.elaborate_instance(inst)
+        for arr in module.instarrays.values():
+            self.elaborate_instance_array(arr)
 
         # Start a dictionary of bundle-conn_replacements
         conn_replacements: Dict[str, FlatBundleInst] = dict()
@@ -623,7 +592,11 @@ class BundleFlattener(_Elaborator):
                 module.add(sig)
 
             # Replace connections to any connected instances
-            for inst in module.instances.values():
+            # FIXME: a better word for "instances or arrays thereof"; we already used "connectable"
+            connectables = list(module.instances.values()) + list(
+                module.instarrays.values()
+            )
+            for inst in connectables:
                 for portname in list(inst.conns.keys()):
                     # Operate on connections to *this* bundle instance
                     if inst.conns[portname] is bundle_inst:
@@ -647,17 +620,24 @@ class BundleFlattener(_Elaborator):
             for portref in bundle_inst.portrefs.values():
                 flatsig = flat.signals.get(PathStr(portref.portname), None)
                 if flatsig is None:
-                    raise RuntimeError(
-                        f"Port {portref.portname} not found in Bundle {bundle_inst.of.name}"
-                    )
+                    msg = f"Port {portref.portname} not found in Bundle {bundle_inst.of.name}"
+                    raise RuntimeError(msg)
                 # Walk through our Instances, replacing any connections to this `PortRef` with `flatsig`
-                for inst in module.instances.values():
+                # FIXME: a better word for "instances or arrays thereof"; we already used "connectable"
+                connectables = list(module.instances.values()) + list(
+                    module.instarrays.values()
+                )
+                for inst in connectables:
                     for portname, conn in inst.conns.items():
                         if conn is portref:
                             inst.conns[portname] = flatsig
 
         # Go through each Instance, replacing `AnonymousBundle`s with their referents
-        for inst in module.instances.values():
+        # FIXME: a better word for "instances or arrays thereof"; we already used "connectable"
+        connectables = list(module.instances.values()) + list(
+            module.instarrays.values()
+        )
+        for inst in connectables:
             for portname in list(inst.conns.keys()):
                 conn = inst.conns[portname]
                 if isinstance(conn, AnonymousBundle):
@@ -769,6 +749,8 @@ class ImplicitBundles(_Elaborator):
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
             self.elaborate_instance(inst)
+        for arr in module.instarrays.values():
+            self.elaborate_instance_array(arr)
 
         # Now work through expanding any implicit-ish connections, such as those from port to port.
         # Start by building an adjacency graph of every bundle-valued `PortRef` that's been instantiated.
@@ -858,15 +840,19 @@ class BundleConnTypes(_Elaborator):
         # Depth-first traverse instances, checking them first.
         for inst in module.instances.values():
             self.elaborate_instance(inst)
+        for arr in module.instarrays.values():
+            self.elaborate_instance_array(arr)
 
         # And then check each Instance
         for inst in module.instances.values():
+            self.check_instance(module, inst)
+        for inst in module.instarrays.values():
             self.check_instance(module, inst)
 
         # No errors means it checked out, return the Module unchanged
         return module
 
-    def check_instance(self, module: Module, inst: Instance) -> None:
+    def check_instance(self, module: Module, inst: Union[Instance, InstArray]) -> None:
         """ Check the connections of `inst` in parent `module` """
 
         # Get the Instance's resolve target, and its bundle-valued IO
@@ -916,6 +902,92 @@ class BundleConnTypes(_Elaborator):
             msg = f"Unconnected Bundle Port(s) {list(bad.keys())} on Instance {inst.name} in Module {module.name}"
             raise RuntimeError(msg)
 
+        return module
+
+
+class ArrayFlattener(_Elaborator):
+    """ Elaboration Pass to Flatten `InstArray`s into `Instance`s, 
+    broadcast and remake their connections. """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.modules = dict()  # Module ids to references
+
+    def elaborate_module(self, module: Module) -> Module:
+        """ Elaborate Module `module`. 
+        Primarily performs flattening of Instance Arrays, 
+        and re-connecting to the resultant flattened instances  """
+        if id(module) in self.modules:  # Already done!
+            return module
+
+        if not module.name:
+            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
+            raise RuntimeError(msg)
+
+        # Flatten Instance arrays
+        while module.instarrays:
+            name, array = module.instarrays.popitem()
+            module.namespace.pop(name)
+            # Visit the array's target
+            target = self.elaborate_instance_array(array)
+
+            # And do the real work: flattening it.
+            if array.n < 1:
+                raise RuntimeError(f"Invalid InstArray {array} with size {array.n}")
+            # Create the new, flat Instances
+            new_insts = []
+            for k in range(array.n):
+                name = self.flatname(
+                    segments=[array.name, str(k)], avoid=module.namespace
+                )
+                inst = module.add(Instance(of=target, name=name))
+                new_insts.append(inst)
+            # And connect them
+            for portname, conn in array.conns.items():
+                if isinstance(conn, BundleInstance):
+                    # All new instances get the same BundleInstance
+                    for inst in new_insts:
+                        inst.connect(portname, conn)
+                elif isinstance(conn, (Signal, Slice, Concat)):
+                    # Get the target-module port, particularly for its width
+                    port = target.ports.get(portname, None)
+                    if not isinstance(port, Signal):
+                        msg = f"Invalid port connection of `{portname}` {port} to {conn} in InstArray {array}"
+                        raise RuntimeError(msg)
+
+                    if port.width == conn.width:
+                        # All new instances get the same signal
+                        for inst in new_insts:
+                            inst.connect(portname, conn)
+                    elif port.width * array.n == conn.width:
+                        # Each new instance gets a slice, equal to its own width
+                        for k, inst in enumerate(new_insts):
+                            slize = conn[k * port.width : (k + 1) * port.width]
+                            if slize.width != port.width:
+                                msg = f"Width mismatch connecting {slize} to {port}"
+                                raise RuntimeError(msg)
+                            inst.connect(portname, slize)
+                    else:  # All other width-values are invalid
+                        msg = f"Invalid connection of {conn} of width {conn.width} to port {portname} on Array {array.name} of width {port.width}. "
+                        msg += f"Valid widths are either {port.width} (broadcasting across instances) and {port.width * array.n} (individually wiring to each)."
+                        raise RuntimeError(msg)
+                elif isinstance(conn, PortRef):
+                    msg = f"Error elaborating {array} in {module}. "
+                    msg += f"Connection {conn} has not been resolved to a `Signal`. "
+                    raise RuntimeError
+                else:
+                    msg = f"Invalid connection to {conn} in InstArray {array}"
+                    raise TypeError(msg)
+
+        # Depth-first traverse instances, ensuring their targets are defined
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+        # Also visit bundle instances, turning off their pre-elab magic
+        for bundle in module.bundles.values():
+            self.elaborate_bundle_instance(bundle)
+
+        # Store a reference to the now-expanded Module in our cache, and return it
+        self.modules[id(module)] = module
         return module
 
 
@@ -1219,6 +1291,7 @@ class ElabPass(Enum):
     BUNDLE_CONN_TYPES = BundleConnTypes
     FLATTEN_BUNDLES = BundleFlattener
     IMPLICIT_SIGNALS = ImplicitSignals
+    FLATTEN_ARRAYS = ArrayFlattener
     SIGNAL_CONN_TYPES = SignalConnTypes
     RESOLVE_SLICES = SliceResolver
 
