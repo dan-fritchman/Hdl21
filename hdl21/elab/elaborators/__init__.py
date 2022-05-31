@@ -7,3 +7,4 @@ from .slices import SliceResolver
 from .generators import GeneratorElaborator
 from .orphanage import Orphanage
 from .arrays import ArrayFlattener
+from .portrefs import ImplicitSignals, ImplicitBundles

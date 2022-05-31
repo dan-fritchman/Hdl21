@@ -28,6 +28,18 @@ Latch = h.ExternalModule(
 )
 
 
+@h.bundle
+class Diff:
+    """ Differential Bundle """
+
+    class Roles(Enum):
+        # Clock roles: source or sink
+        SOURCE = auto()
+        SINK = auto()
+
+    p, n = h.Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
+
+
 @h.generator
 def Count16(_: h.HasNoParams) -> h.Module:
     """ Four-Bit, Sixteen-State Rising Edge Counter """
@@ -58,7 +70,11 @@ def OneHotMux16(_: h.HasNoParams) -> h.Module:
 @h.generator
 def OneHotEncode4to16(_: h.HasNoParams) -> h.Module:
     """ 4 to 16b One-Hot Encoder """
-    return h.Module()  # FIXME! the actual contents
+    m = h.Module()
+    m.inp = h.Input(width=4, desc="Binary-Encoded Input")
+    m.out = h.Output(width=16, desc="One-Hot-Encoded Output")
+    # FIXME! the actual contents
+    return m
 
 
 @h.generator
@@ -116,12 +132,12 @@ def RxDeSerializer(_: h.HasNoParams) -> h.Module:
 @h.generator
 def TxDriver(_: h.HasNoParams) -> h.Module:
     """ Transmit Driver """
+
     m = h.Module()
 
-    m.data = h.Input(width=2)  # Half-Rate Data Input
-    m.clk = h.Input()  # Half-Rate Serial Clock
-    m.pads = Diff()  # Output pads
-    m.zcal = h.Input(width=32)  # Impedance Control Input
+    m.data = h.Input(width=1)  # Data Input
+    m.pads = Diff(port=True)  # Output pads
+    # m.zcal = h.Input(width=32)  # Impedance Control Input
     # Create the segmented unit drivers
     # m.segments = 32 * TxDriverSegment(pads=pads, en=m.zcal, data=m.data, clk=m.clk)
 
@@ -134,18 +150,6 @@ class SerdesShared:
     Central, re-used elements amortized across lanes """
 
     ...  # So far, empty
-
-
-@h.bundle
-class Diff:
-    """ Differential Bundle """
-
-    class Roles(Enum):
-        # Clock roles: source or sink
-        SOURCE = auto()
-        SINK = auto()
-
-    p, n = h.Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
 
 
 @h.bundle
@@ -173,16 +177,28 @@ class TxIo:
 
 
 @h.module
-class SerdesTx:
+class SerdesTxLane:
     """ Transmit Lane """
 
-    io = TxIo(port=True)
-    serializer = TxSerializer()(data=io.data)
-    driver = TxDriver()()
+    # IO
+    # io = TxIo(port=True) # FIXME: combined bundle
+    # * Pad Interface
+    pads = Diff(desc="Differential Transmit Pads", role=Diff.Roles.SOURCE)
+    # * Core Interface
+    pdata = h.Input(width=16, desc="Parallel Input Data")
+    pclk = h.Output(width=1, desc="*Output*, Divided Parallel Clock")
+    # * PLL Interface
+    sclk = h.Input(width=1, desc="Input Serial Clock")
+
+    # Internal Implementation
+    # Serializer, with internal 16:1 parallel-clock divider
+    serializer = TxSerializer()(pdata=pdata, pclk=pclk, sclk=sclk)
+    # Output Driver
+    driver = TxDriver()(data=serializer.sdata, pads=pads)
 
 
 @h.module
-class SerdesRx:
+class SerdesRxLane:
     """ Receive Lane """
 
     ...  #
@@ -192,8 +208,8 @@ class SerdesRx:
 class SerdesLane:
     """ TX + RX Lane """
 
-    tx = SerdesTx()
-    rx = SerdesRx()
+    tx = SerdesTxLane()
+    rx = SerdesRxLane()
 
 
 @h.paramclass
@@ -213,4 +229,6 @@ def Serdes(p: SerdesParams) -> h.Module:
 # "Main" Script Action
 import sys
 
-h.netlist(h.to_proto(Serdes(SerdesParams())), dest=sys.stdout)
+# h.netlist(h.to_proto(Serdes(SerdesParams())), dest=sys.stdout)
+h.netlist(h.to_proto(SerdesTxLane), dest=sys.stdout)
+h.netlist(h.to_proto(SerdesRxLane), dest=sys.stdout)

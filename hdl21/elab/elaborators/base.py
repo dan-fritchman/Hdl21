@@ -4,74 +4,113 @@
 
 
 # Std-Lib Imports
-import copy
-from typing import Union, Any, Dict, List, Optional, Tuple
-
-# PyPi
-from pydantic.dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 # Local imports
-from ...connect import connectable
 from ...module import Module, ExternalModuleCall
-from ...instance import InstArray, Instance, PortRef
+from ...instance import InstArray, Instance
 from ...primitives import PrimitiveCall
-from ...bundle import AnonymousBundle, Bundle, BundleInstance, _check_compatible
-from ...signal import PortDir, Signal, Visibility, Slice, Concat, Sliceable, NoConn
-from ...generator import Generator, GeneratorCall, Default as GenDefault
-from ...params import _unique_name
+from ...bundle import BundleInstance
+from ...generator import GeneratorCall
 from ...instantiable import Instantiable
 
 from ..elaboratable import Elabable
 from ..context import Context
 
 
-class _Elaborator:
-    """ Base Elaborator Class """
+class Elaborator:
+    """ 
+    # Base Elaborator Class 
+    
+    Defines the hierarchy-traversing methods used by each "elaborator pass" sub-class. 
+
+    For most passes, elaborating a `Module` at a time is the primary activity.     
+    To offload the need for each sub-class to cache `Module` definitions, 
+    and to traverse their internal contents, the base class defines `elaborate_module_base`, which: 
+    * Checks for the module result being pre-cached
+    * Pre-order traverses its instances, arrays, and bundle instances 
+    * Calls the per-pass `elaborate_module` 
+    * Adds the result to the `modules` cache. 
+    This requires that sub-classes also carefully audit when they call their own 
+    `elaborate_module` method. Generally, they should not, and should always call 
+    `elaborate_module_base` instead. 
+    """
 
     @classmethod
-    def elaborate(cls, top, ctx):
+    def elaborate(cls, top: Elabable, ctx: Context) -> Module:
         """ Elaboration entry-point. Elaborate the top-level object. """
         return cls(top, ctx).elaborate_top()
 
     def __init__(self, top: Elabable, ctx: Context):
         self.top = top
         self.ctx = ctx
+        self.modules: Dict[int, Module] = dict()
 
-    def elaborate_top(self):
+    def elaborate_top(self) -> Module:
         """ Elaborate our top node """
         if not isinstance(self.top, Module):
-            raise TypeError
-        return self.elaborate_module(self.top)
+            raise TypeError(f"Invalid Top for Elaboration: {self.top} must be a Module")
+        return self.elaborate_module_base(self.top)  # Note `_base` here!
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate a GeneratorCall """
-        # Only the generator-elaborator can handle generator calls; default it to error on others.
+        # Only the generator-elaborator can handle generator calls.
+        # By default it generates errors for all other elaboration passes.
         raise RuntimeError(f"Invalid call to elaborate GeneratorCall by {self}")
 
+    def elaborate_module_base(self, module: Module) -> Module:
+        """ Base-Case `Module` Elaboration 
+        
+        For most passes, elaborating a `Module` at a time is the primary activity.     
+        To offload the need for each sub-class to cache `Module` definitions, 
+        and to traverse their internal contents, the base class defines `elaborate_module_base`, which: 
+        * Checks for the module result being pre-cached
+        * Pre-order traverses its instances, arrays, and bundle instances 
+        * Calls the per-pass `elaborate_module` 
+        * Adds the result to the `modules` cache. 
+        This requires that sub-classes also carefully audit when they call their own 
+        `elaborate_module` method. Generally, they should not, and should always call 
+        `elaborate_module_base` instead. 
+        """
+
+        if id(module) in self.modules:  # Check our cache
+            return module  # Already done!
+
+        if not module.name:
+            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
+            raise RuntimeError(msg)
+
+        # Depth-first traverse instances, ensuring their targets are defined
+        for inst in module.instances.values():
+            self.elaborate_instance(inst)
+        for arr in module.instarrays.values():
+            self.elaborate_instance_array(arr)
+        for bundle in module.bundles.values():
+            self.elaborate_bundle_instance(bundle)
+
+        # Run the pass-specific `elaborate_module`
+        result = self.elaborate_module(module)
+
+        # Store a reference to the now-elaborated Module in our cache, and return it
+        self.modules[id(module)] = result
+        return result
+
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate a Module """
-        # Required for all passes. Defaults to `NotImplementedError`.
-        raise NotImplementedError
+        """ Elaborate a Module. Returns the Module unmodified by default. """
+        return module
 
     def elaborate_external_module(self, call: ExternalModuleCall) -> ExternalModuleCall:
-        """ Elaborate an ExternalModuleCall """
-        # Default: nothing to see here, carry on
+        """ Elaborate an ExternalModuleCall. Returns the Call unmodified by default. """
         return call
 
     def elaborate_primitive_call(self, call: PrimitiveCall) -> PrimitiveCall:
-        """ Elaborate a PrimitiveCall """
-        # Default: nothing to see here, carry on
+        """ Elaborate a PrimitiveCall. Returns the Call unmodified by default.  """
         return call
 
     def elaborate_bundle_instance(self, inst: BundleInstance) -> None:
         """ Elaborate an BundleInstance """
         # Annotate each BundleInstance so that its pre-elaboration `PortRef` magic is disabled.
         inst._elaborated = True
-
-    def elaborate_bundle(self, bundle: Bundle) -> Bundle:
-        """ Elaborate an Bundle """
-        # Default: nothing to see here, carry on
-        return bundle
 
     def elaborate_instance_array(self, array: InstArray) -> Instantiable:
         """ Elaborate an InstArray """
@@ -96,7 +135,7 @@ class _Elaborator:
         if not of:
             raise RuntimeError(f"Error elaborating undefined Instance-target {of}")
         if isinstance(of, Module):
-            return self.elaborate_module(of)
+            return self.elaborate_module_base(of)  # Note `_base` here!
         if isinstance(of, PrimitiveCall):
             return self.elaborate_primitive_call(of)
         if isinstance(of, ExternalModuleCall):

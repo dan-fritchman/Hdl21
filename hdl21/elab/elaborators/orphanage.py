@@ -6,10 +6,10 @@
 from ...module import Module
 
 # Import the base class
-from .base import _Elaborator
+from .base import Elaborator
 
 
-class Orphanage(_Elaborator):
+class Orphanage(Elaborator):
     """ # Orphan-Checking Elaborator Pass 
 
     Ensures each Module-attribute is "parented" by the `Module` which holds it. 

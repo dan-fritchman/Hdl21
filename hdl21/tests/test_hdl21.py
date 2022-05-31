@@ -1202,21 +1202,21 @@ def test_generator_recall():
     # Convert to proto
     ppkg = h.to_proto(Caller)
     assert len(ppkg.modules) == 2
-    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.CallMeTwice(NoParams())"
+    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.CallMeTwice"
     assert ppkg.modules[1].name == "hdl21.tests.test_hdl21.Caller"
 
     # Convert the proto-package to a netlist, and run some (very basic) checks
     nl = StringIO()
     h.netlist(ppkg, nl)
     nl = nl.getvalue()
-    assert "CallMeTwice_NoParams" in nl
+    assert "CallMeTwice" in nl
     assert "Caller" in nl
 
     # Round-trip back from Proto to Modules
     rt = h.from_proto(ppkg)
     ns = rt.hdl21.tests.test_hdl21
     assert isinstance(ns.Caller, h.Module)
-    assert isinstance(getattr(ns, "CallMeTwice(NoParams())"), h.Module)
+    assert isinstance(getattr(ns, "CallMeTwice"), h.Module)
 
 
 def test_module_as_param():
@@ -1689,7 +1689,7 @@ def test_orphanage3():
         h.elaborate(m1)
 
 
-@pytest.mark.xfail(reason="#6")
+@pytest.mark.xfail(reason="#6 https://github.com/dan-fritchman/Hdl21/issues/6")
 def test_wrong_decorator():
     """ Mistake `Module` for `module` """
 
@@ -1798,7 +1798,7 @@ def test_slice_resolution():
     assert _resolve_slice(sa[:][0:4]).parts == (sa[0], sa[1], sa[2], sa[3])
 
 
-@pytest.mark.xfail(reason="#1")
+@pytest.mark.xfail(reason="#1 https://github.com/dan-fritchman/Hdl21/issues/1")
 def test_export_strides():
     """ Test exporting connections with non-unit Slice-strides """
 
@@ -1938,3 +1938,27 @@ def test_array_bundle():
     assert len(HasArr.instarrays) == 0
     for inst in HasArr.instances.values():
         assert inst.conns.get("b_s", None) is HasArr.b_s
+
+
+@pytest.mark.xfail(reason="#19 https://github.com/dan-fritchman/Hdl21/issues/19")
+def test_sub_bundle_conn():
+    """ Test connecting via PortRef to a sub-Bundle """
+
+    @h.bundle
+    class B1:
+        s = h.Signal()
+
+    @h.bundle
+    class B2:
+        b1 = B1()
+
+    @h.module
+    class HasB1:
+        b1 = B1(port=True)
+
+    @h.module
+    class HasB2:
+        b2 = B2()
+        h = HasB1(b1=b2.b1)
+
+    h.elaborate(HasB2)

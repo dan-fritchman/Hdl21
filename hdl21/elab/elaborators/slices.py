@@ -6,21 +6,14 @@
 from typing import List
 
 # Local imports
-from ...connect import connectable
-from ...module import Module, ExternalModuleCall
-from ...instance import InstArray, Instance, PortRef
-from ...primitives import PrimitiveCall
-from ...bundle import AnonymousBundle, Bundle, BundleInstance, _check_compatible
-from ...signal import PortDir, Signal, Visibility, Slice, Concat, Sliceable, NoConn
-from ...generator import Generator, GeneratorCall, Default as GenDefault
-from ...params import _unique_name
-from ...instantiable import Instantiable
+from ...module import Module
+from ...signal import Signal, Slice, Concat, Sliceable
 
 # Import the base class
-from .base import _Elaborator
+from .base import Elaborator
 
 
-class SliceResolver(_Elaborator):
+class SliceResolver(Elaborator):
     """ Elaboration pass to resolve slices and concatenations to concrete signals. 
     Modifies connections to any nested slices, nested concatenations, or combinations thereof. 
     "Full-width" `Slice`s e.g. `sig[:]` are replaced with their parent `Signal`s.
@@ -28,23 +21,21 @@ class SliceResolver(_Elaborator):
     TODO: `Slice`s with non-unit `step` are converted to `Concat`s. """
 
     def elaborate_module(self, module: Module) -> Module:
-        # Depth-first traverse instances, covering their targets first.
-        for inst in module.instances.values():
-            self.elaborate_instance(inst)
+        # All arrays must be flattened before getting here, or fail
+        if module.instarrays:
+            msg = f"Error attempting to resolve slices on {module} - "
+            msg += f"still has Instance Arrays {module.instarrays}"
+            raise RuntimeError(msg)
 
         # Then do the real work, updating any necessary connections on each instance
         for inst in module.instances.values():
-            self.update_instance(module, inst)
+            # Update all `Slice` and `Concat` valued connections to remove nested `Slice`s
+            for portname, conn in inst.conns.items():
+                if isinstance(conn, (Slice, Concat)):
+                    inst.conns[portname] = _resolve_sliceable(conn)
+                # All other connection-types (Signals, Interfaces) are fine
 
         return module
-
-    def update_instance(self, module: Module, inst: Instance) -> None:
-        """ Update all `Slice` and `Concat` valued connections to remove nested `Slice`s """
-
-        for portname, conn in inst.conns.items():
-            if isinstance(conn, (Slice, Concat)):
-                inst.conns[portname] = _resolve_sliceable(conn)
-            # All other connection-types (Signals, Interfaces) are fine
 
 
 def _resolve_sliceable(conn: Sliceable) -> Sliceable:

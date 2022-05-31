@@ -22,28 +22,17 @@ from ...params import _unique_name
 from ...instantiable import Instantiable
 
 # Import the base class
-from .base import _Elaborator
+from .base import Elaborator
 
 
-class ArrayFlattener(_Elaborator):
+class ArrayFlattener(Elaborator):
     """ 
     Elaboration Pass to Flatten `InstArray`s into `Instance`s, broadcast and remake their connections. 
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.modules = dict()  # Module ids to references
-
     def elaborate_module(self, module: Module) -> Module:
         """ Elaborate Module `module`. 
-        Primarily performs flattening of Instance Arrays, 
-        and re-connecting to the resultant flattened instances  """
-        if id(module) in self.modules:  # Already done!
-            return module
-
-        if not module.name:
-            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
-            raise RuntimeError(msg)
+        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances. """
 
         # Flatten Instance arrays
         while module.instarrays:
@@ -100,13 +89,4 @@ class ArrayFlattener(_Elaborator):
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     raise TypeError(msg)
 
-        # Depth-first traverse instances, ensuring their targets are defined
-        for inst in module.instances.values():
-            self.elaborate_instance(inst)
-        # Also visit bundle instances, turning off their pre-elab magic
-        for bundle in module.bundles.values():
-            self.elaborate_bundle_instance(bundle)
-
-        # Store a reference to the now-expanded Module in our cache, and return it
-        self.modules[id(module)] = module
         return module
