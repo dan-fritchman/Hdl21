@@ -1890,3 +1890,22 @@ def test_generator_call_by_kwargs():
     assert isinstance(m, h.GeneratorCall)
     with pytest.raises(ValidationError):
         m = h.elaborate(m)
+
+
+@pytest.mark.xfail(reason="Debugging Array PortRefs")
+def test_instance_array_portrefs():
+    """ Test Instance Arrays connected by port-references """
+
+    Inv = h.ExternalModule(
+        name="Inv", port_list=[h.Input(name="i"), h.Output(name="z"),],
+    )
+
+    m = h.Module(name="TestArrayPortRef")
+    m.a, m.b = h.Signals(2, width=4)
+
+    # Create an InstArray
+    m.inva = 4 * Inv()(i=m.a)
+    # And another which connects to it via PortRef
+    m.invb = 4 * Inv()(i=m.inva.z, z=m.b)
+
+    h.elaborate(m)

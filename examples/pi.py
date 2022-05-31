@@ -50,10 +50,8 @@ class QuadClock:
         SOURCE = auto()
         SINK = auto()
 
-    ck0 = h.Signal()
-    ck90 = h.Signal()
-    ck180 = h.Signal()
-    ck270 = h.Signal()
+    # The four quadrature phases, all driven by SOURCE and consumed by SINK.
+    ck0, ck90, ck180, ck270 = h.Signals(4, src=Roles.SOURCE, dest=Roles.SINK)
 
 
 @h.paramclass

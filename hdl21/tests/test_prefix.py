@@ -143,6 +143,5 @@ def test_prefix_scaling():
     assert 5 * e(6) * h.Prefix.CENTI == 50 * e(3)
 
     # 11.11e14, scaled to 1111e12
-    print(11.11 * e(15))
     assert 11.11 * e(15) * h.Prefix.DECI == 1111 * e(12)
 
