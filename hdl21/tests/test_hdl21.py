@@ -1760,7 +1760,8 @@ def test_array_concat_conn():
 def test_slice_resolution():
     """ Test resolutions of slice combinations """
 
-    from hdl21.elab import _resolve_slice
+    # This is a very private import of the slice-resolver function
+    from hdl21.elab.elaborators.slices import _resolve_slice
 
     # Slice of a Signal
     s = h.Signal(width=5)
@@ -1911,7 +1912,6 @@ def test_instance_array_portrefs():
 
     assert len(m.instances) == 8
     assert len(m.instarrays) == 0
-
 
 
 def test_array_bundle():
