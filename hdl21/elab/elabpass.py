@@ -9,10 +9,9 @@ from typing import List
 from .elaborators import (
     GeneratorElaborator,
     Orphanage,
-    ImplicitBundles,
     BundleConnTypes,
     BundleFlattener,
-    ImplicitSignals,
+    ResolvePortRefs,
     ArrayFlattener,
     SignalConnTypes,
     SliceResolver,
@@ -33,10 +32,9 @@ class ElabPass(Enum):
 
     RUN_GENERATORS = GeneratorElaborator
     ORPHANAGE = Orphanage
-    IMPLICIT_BUNDLES = ImplicitBundles
+    RESOLVE_PORT_REFS = ResolvePortRefs
     BUNDLE_CONN_TYPES = BundleConnTypes
     FLATTEN_BUNDLES = BundleFlattener
-    IMPLICIT_SIGNALS = ImplicitSignals
     FLATTEN_ARRAYS = ArrayFlattener
     SIGNAL_CONN_TYPES = SignalConnTypes
     RESOLVE_SLICES = SliceResolver

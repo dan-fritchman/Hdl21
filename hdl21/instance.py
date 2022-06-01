@@ -47,10 +47,6 @@ class PortRef:
         self._elaborated = False
         self._initialized = True
 
-    @classmethod
-    def new(cls, inst, portname: str) -> "PortRef":
-        return PortRef(inst=inst, portname=portname)
-
     def __eq__(self, other) -> bool:
         """ Port-reference equality requires *identity* between instances 
         (and of course equality of port-name). """

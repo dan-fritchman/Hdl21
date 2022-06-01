@@ -8,6 +8,6 @@ from .slices import SliceResolver
 from .generators import GeneratorElaborator
 from .orphanage import Orphanage
 from .arrays import ArrayFlattener
-from .portrefs import ImplicitSignals, ImplicitBundles
+from .portrefs import ResolvePortRefs
 from .conntypes import SignalConnTypes, BundleConnTypes
 from .flatten_bundles import BundleFlattener

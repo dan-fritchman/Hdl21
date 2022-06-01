@@ -553,7 +553,7 @@ def test_bundle2():
     # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPass
 
-    m3 = h.elaborate(m3, passes=[ElabPass.IMPLICIT_BUNDLES])
+    m3 = h.elaborate(m3, passes=[ElabPass.RESOLVE_PORT_REFS])
     assert isinstance(m3, h.Module)
     assert isinstance(m3.i1, h.Instance)
     assert isinstance(m3.i2, h.Instance)
@@ -665,7 +665,7 @@ def test_bundle4():
     # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPass
 
-    sys = h.elaborate(System, passes=[ElabPass.IMPLICIT_BUNDLES])
+    sys = h.elaborate(System, passes=[ElabPass.RESOLVE_PORT_REFS])
     assert "devc_hr_host_hr" in sys.namespace
 
     # Now expand the rest of the way, down to scalar signals
