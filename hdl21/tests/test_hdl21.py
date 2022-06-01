@@ -583,8 +583,8 @@ def test_bundle3():
     assert isinstance(DisplayPort, h.Bundle)
     assert isinstance(DisplayPort(), h.BundleInstance)
     assert isinstance(DisplayPort.main_link, h.BundleInstance)
-    assert isinstance(DisplayPort.main_link.p, h.PortRef)
-    assert isinstance(DisplayPort.main_link.n, h.PortRef)
+    assert isinstance(DisplayPort.main_link.p, h.BundleRef)
+    assert isinstance(DisplayPort.main_link.n, h.BundleRef)
     assert isinstance(DisplayPort.aux, h.Signal)
     assert isinstance(Diff, h.Bundle)
     assert isinstance(Diff(), h.BundleInstance)
@@ -967,11 +967,7 @@ def test_bigger_bundles():
     assert isinstance(TestSystem.board, h.Instance)
 
     assert isinstance(TestSystem.tester.uart, h.PortRef)
-    assert isinstance(TestSystem.tester.uart.tx, h.PortRef)
-    assert isinstance(TestSystem.tester.uart.rx, h.PortRef)
     assert isinstance(TestSystem.board.uart, h.PortRef)
-    assert isinstance(TestSystem.board.uart.tx, h.PortRef)
-    assert isinstance(TestSystem.board.uart.rx, h.PortRef)
 
     # Run this through elaboration
     h.elaborate(TestSystem)
@@ -1962,3 +1958,67 @@ def test_sub_bundle_conn():
         h = HasB1(b1=b2.b1)
 
     h.elaborate(HasB2)
+
+
+def test_anon_bundle_port_conn():
+    """ Test connecting via PortRef to an AnonymousBundle """
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class HasB:
+        b = B(port=True)
+
+    @h.module
+    class Top:
+        s = h.Signal()
+        h1 = HasB(b=h.AnonymousBundle(s=s))
+        h2 = HasB(b=h1.b)
+        h3 = HasB(b=h2.b)
+
+    # Elaborate to flesh this out
+    h.elaborate(Top)
+
+    # Check this resolved to a single Signal in Top
+    assert len(Top.signals) == 1
+    assert len(Top.bundles) == 0
+    assert len(Top.instances) == 3
+
+    # And check that Signal is connected to all three Instances
+    assert Top.h1.b_s is Top.s
+    assert Top.h2.b_s is Top.s
+    assert Top.h3.b_s is Top.s
+
+
+def test_multiple_signals_in_port_group():
+    """ Test, or at least try to test, jamming more than one Signal 
+    into the `group` concept used by the `ResolvePortRefs` elaborator pass. 
+    Based on the design of `ResolvePortRefs`, this is a thing that (we think) 
+    is not possible. """
+
+    @h.module
+    class I:
+        s = h.Port()
+
+    @h.module
+    class M:
+        s = h.Signal()
+        i1 = I(s=s)
+        i2 = I(s=s)
+        i3 = I(s=i1.s)
+        i4 = I(s=i2.s)
+
+    h.elaborate(M)
+
+    # Check this resolved to a single Signal
+    assert len(M.signals) == 1
+    assert len(M.bundles) == 0
+    assert len(M.instances) == 4
+
+    # And check that Signal is connected to all four Instances
+    assert M.i1.s is M.s
+    assert M.i2.s is M.s
+    assert M.i3.s is M.s
+    assert M.i4.s is M.s

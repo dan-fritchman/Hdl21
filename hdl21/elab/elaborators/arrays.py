@@ -2,24 +2,11 @@
 # Array Flattening 
 """
 
-
-# Std-Lib Imports
-import copy
-from typing import Union, Any, Dict, List, Optional, Tuple
-
-# PyPi
-from pydantic.dataclasses import dataclass
-
 # Local imports
-from ...connect import connectable
-from ...module import Module, ExternalModuleCall
-from ...instance import InstArray, Instance, PortRef
-from ...primitives import PrimitiveCall
-from ...bundle import AnonymousBundle, Bundle, BundleInstance, _check_compatible
-from ...signal import PortDir, Signal, Visibility, Slice, Concat, Sliceable, NoConn
-from ...generator import Generator, GeneratorCall, Default as GenDefault
-from ...params import _unique_name
-from ...instantiable import Instantiable
+from ...module import Module
+from ...instance import Instance, PortRef
+from ...bundle import BundleInstance
+from ...signal import Signal, Slice, Concat
 
 # Import the base class
 from .base import Elaborator

@@ -9,11 +9,10 @@ from typing import List
 from .elaborators import (
     GeneratorElaborator,
     Orphanage,
-    BundleConnTypes,
+    ConnTypes,
     BundleFlattener,
     ResolvePortRefs,
     ArrayFlattener,
-    SignalConnTypes,
     SliceResolver,
 )
 
@@ -33,14 +32,13 @@ class ElabPass(Enum):
     RUN_GENERATORS = GeneratorElaborator
     ORPHANAGE = Orphanage
     RESOLVE_PORT_REFS = ResolvePortRefs
-    BUNDLE_CONN_TYPES = BundleConnTypes
+    CONN_TYPES = ConnTypes
     FLATTEN_BUNDLES = BundleFlattener
     FLATTEN_ARRAYS = ArrayFlattener
-    SIGNAL_CONN_TYPES = SignalConnTypes
     RESOLVE_SLICES = SliceResolver
 
     @classmethod
     def default(cls) -> List["ElabPass"]:
         """ Return the default ordered Elaborator Passes. """
-        # Returns each in definition order, then a final `Orphanage` test.
-        return list(ElabPass) + [ElabPass.ORPHANAGE]
+        # Returns each in definition order, then a final few tests.
+        return list(ElabPass) + [ElabPass.CONN_TYPES, ElabPass.ORPHANAGE]

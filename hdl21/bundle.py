@@ -8,11 +8,68 @@ from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args, Dict, List
 
 # Local Imports
-from .connect import connectable, getattr_port_refs, track_connected_ports
+from .connect import connectable, track_connected_ports
 from .signal import Signal
 
 
-@getattr_port_refs
+def getattr_bundle_refs(cls: type) -> type:
+    """ Decorator to add the "__getattr__ generates BundleRefs" functionality to `cls`. 
+    Adds the `_bundle_ref` method and `__getattr__` access to it. """
+
+    # First check and fail if any of the methods to be defined here are already defined elsewhere
+    defined_here = ["_bundle_ref", "__getattr__"]
+    for key in defined_here:
+        if key in cls.__dict__:
+            msg = f"Invalid modification of {cls} with `@getattr_bundle_refs`: {key} is already defined."
+            raise RuntimeError(msg)
+
+    def _bundle_ref(self, key: str) -> "BundleRef":
+        """ Return a reference to name `key`, creating it if necessary. """
+
+        # Check in our existing references
+        bundle_refs = self.__getattribute__("refs")
+        if key in bundle_refs:
+            return bundle_refs[key]
+
+        # New reference; create, add, and return it
+        bundle_ref = BundleRef(parent=self, attrname=key)
+        bundle_refs[key] = bundle_ref
+        return bundle_ref
+
+    def __getattr__(self, key: str) -> Any:
+        """ BundleRef access by getattr """
+        if not self.__getattribute__("_initialized") or key.startswith("_"):
+            # Bootstrapping phase: do regular getattrs to get started
+            return object.__getattribute__(self, key)
+
+        if key in self.__getattribute__("_specialcases"):  # Special case(s)
+            return object.__getattribute__(self, key)
+
+        # After elaboration, the fancy BundleRef creation below goes away. Only return ready-made refs.
+        if self.__getattribute__("_elaborated"):
+            refs = self.__getattribute__("refs")
+            if key in refs.keys():
+                return refs[key]
+            raise AttributeError(f"No attribute {key} for {self}")
+
+        # Fell through all those cases. Fancy `BundleRef` generation time!
+        # Return a `BundleRef`, creating one if necessary.
+        return self._bundle_ref(key)
+
+    cls._bundle_ref = _bundle_ref
+    cls.__getattr__ = __getattr__
+    cls.__getattr_bundle_refs__ = True
+
+    # And don't forget to return it!
+    return cls
+
+
+def has_getattr_bundle_refs(obj: Any) -> bool:
+    """ Boolean indication of "getattr bundle refs" functionality """
+    return getattr(obj, "__getattr_bundle_refs__", False)
+
+
+@getattr_bundle_refs
 @track_connected_ports
 @connectable
 class BundleInstance:
@@ -27,9 +84,9 @@ class BundleInstance:
         "src",
         "dest",
         "desc",
-        "portrefs",
+        "refs",
         "connected_ports",
-        "_port_ref",
+        "_bundle_ref",
         "_elaborated",
         "_initialized",
     ]
@@ -52,9 +109,9 @@ class BundleInstance:
         self.src = src
         self.dest = dest
         self.desc = desc
-        self.portrefs: Dict[str, "PortRef"] = dict()
+        self.refs: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: List["PortRef"] = []
+        self.connected_ports: List["BundleRef"] = []
         self._elaborated = False
         self._initialized = True
 
@@ -67,7 +124,7 @@ class BundleInstance:
 BundleAttr = Union[Signal, BundleInstance]
 
 
-def _is_bundle_attr(val: Any) -> bool:
+def is_bundle_attr(val: Any) -> bool:
     """ Boolean indication of whether `val` is a valid `hdl21.Bundle` attribute. """
     return isinstance(val, get_args(BundleAttr))
 
@@ -228,12 +285,12 @@ class AnonymousBundle:
 
     def __init__(self, **kwargs: Dict[str, "Connectable"]):
         # Create our internal structures
-        self.signals = dict()
-        self.bundles = dict()
-        self.anons = dict()
-        self.portrefs: Dict[str, "PortRef"] = dict()
+        self.signals: Dict[str, "Signal"] = dict()
+        self.bundles: Dict[str, "BundleInstance"] = dict()
+        self.anons: Dict[str, "AnonymousBundle"] = dict()
+        self.refs: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: List["PortRef"] = []
+        self.connected_ports: List["BundleRef"] = []
 
         # And add each keyword-arg
         for key, val in kwargs.items():
@@ -250,45 +307,60 @@ class AnonymousBundle:
         #     self.bundles[name] = val
         # elif isinstance(val, AnonymousBundle):
         #     self.anons[name] = val
-        # elif isinstance(val, PortRef): # FIXME: whether to enable these. Currently not supported.
+        # elif isinstance(val, BundleRef): # FIXME: whether to enable these. Currently not supported.
         #     self.portrefs[name] = val
         else:
             raise TypeError
         return val
 
 
-def _check_compatible(bundle: Bundle, other: Union[BundleInstance, AnonymousBundle]):
-    """ Assert that `bundle` is compatible for connection with `other`. 
-    Raises a `RuntimeError` if not compatible. 
-    This includes key-matching and Signal-width matching, but *does not* examine Signal directions. 
-    """
+@track_connected_ports
+@connectable
+class BundleRef:
+    """ Reference into a Bundle Instance """
 
-    if isinstance(other, BundleInstance):
-        other = other.of
-        if other is bundle:
-            return None  # Same types, we good
-        # Check the key-names of Signals and Bundles match
-        if sorted(bundle.signals.keys()) != sorted(other.signals.keys()):
-            msg = f"Signal names do not match: {bundle.signals.keys()} != {other.signals.keys()}"
-            raise RuntimeError(msg)
-        if sorted(bundle.bundles.keys()) != sorted(other.bundles.keys()):
-            msg = f"Bundle names do not match: {bundle.signals.keys()} != {other.signals.keys()}"
-            raise RuntimeError(msg)
-        # Check that each Signal is compatible
-        for key, val in bundle.signals.items():
-            # FIXME: maybe make this something like _signal_compatible
-            if val.width != other.signals[key].width:
-                msg = f"Signal {key} width mismatch: {val.width} != {other.signals[key].width}"
-                raise RuntimeError(msg)
-        # Recursively check that each Bundle is compatible
-        for key, val in bundle.bundles.items():
-            _check_compatible(val.of, other.bundles[key].of)
-        return None  # Checks out, we good
+    _specialcases = [
+        "parent",
+        "refs",
+        "connected_ports",
+        "_bundle_ref",
+        "_module",
+        "_resolved",
+        "_elaborated",
+        "_initialized",
+    ]
 
-    if isinstance(other, AnonymousBundle):
-        # FIXME: checks on port-refs, signal-widths, etc.
-        # For now this just returns success; later checks may often fail where this (eventually) should.
-        return None
+    def __init__(
+        self, parent: Union["BundleInstance", "BundleRef"], attrname: str,
+    ):
+        self.parent = parent
+        self.attrname = attrname
+        self.refs: Dict[str, "BundleRef"] = dict()
+        # Connected port references
+        self.connected_ports: List["BundleRef"] = []
+        self._elaborated = False
+        self._initialized = True
 
-    msg = f"Invalid connection-compatibility check between {bundle} and {other}"
-    raise TypeError(msg)
+    def __eq__(self, other) -> bool:
+        """ Port-reference equality requires *identity* between parents 
+        (and of course equality of attribute-name). """
+        return self.inst is other.inst and self.attrname == other.attrname
+
+    def __hash__(self):
+        """ Hash references as the tuple of their instance-address and name """
+        return hash((id(self.inst), self.attrname))
+
+
+def resolve_bundle_ref(bref: BundleRef) -> Union[Signal, BundleInstance]:
+    """ Resolve a bundle-reference to either a Signal or sub-Bundle Instance. """
+
+    if isinstance(bref.parent, BundleInstance):
+        # Parent is a BundleInstance. Get the attribute from its namespace.
+        return bref.parent.of.get(bref.attrname)
+
+    if isinstance(bref.parent, BundleRef):
+        # Nested reference. Recursively resolve the parent.
+        resolved_parent = resolve_bundle_ref(bref.parent)
+        return resolved_parent.of.get(bref.attrname)
+
+    raise TypeError(f"BundleRef parent for {bref}")

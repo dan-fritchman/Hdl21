@@ -124,7 +124,6 @@ def getattr_port_refs(cls: type) -> type:
     """ Decorator to add the "__getattr__ generates PortRefs" functionality to `cls`. 
 
     Adds the `_port_ref` method and `__getattr__` access to it. 
-    Types 
 
     This method is *required* of `@call_and_setattr_connects` types (e.g. `Instance`s), 
     and is also included on `PortRef`s themselves, largely to support nested Bundled references. """

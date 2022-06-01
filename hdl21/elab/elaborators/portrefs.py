@@ -6,23 +6,26 @@ Creates concrete `Signal`s and `BundleInstance`s to replace `PortRef`s.
 
 # Std-Lib Imports
 import copy
-from typing import Union, Dict, List, Optional
+from typing import Union, Dict, List, Optional, Sequence, get_args
 
 # Local imports
 from ...module import Module
 from ...instance import PortRef, Instance, InstArray
-from ...bundle import BundleInstance
+from ...bundle import BundleInstance, BundleRef, AnonymousBundle
 from ...signal import PortDir, Signal, Visibility, NoConn
 
 # Import the base class
 from .base import Elaborator
 
+# Union of the types which serve as "source signals",
+# i.e. the things which we are resolve `PortRef`s *to*.
+# If we find one of these connected to a group of connected ports,
+# it becomes the replacement connection for all of them.
+Source = Union[Signal, BundleInstance, BundleRef, AnonymousBundle]
 
-# def traverse_port_refs(portref_haver: "HasPortRefs", order: List[PortRef]) -> None:
-#     """ Depth first traverse an object with a `.portrefs` field """
-#     for pref in portref_haver.portrefs.values():
-#         traverse_port_refs(pref, order)
-#     order.append(portref_haver)
+# Union of the types which can serve as (generalized) Ports:
+# either Signals or Bundle Instances
+PortType = Union[Signal, BundleInstance]
 
 
 class ResolvePortRefs(Elaborator):
@@ -35,8 +38,8 @@ class ResolvePortRefs(Elaborator):
     ```
 
     After this pass, all such connections resolve to concrete 
-    Signals, BundleInstances, *or PortRefs into BundleInstances*. 
-    FIXME: the latter case should probably go away with a dediced Bundle-reference.
+    connectable objects, all of which are members of the `Source` type-union 
+    defined above. 
 
     While not terribly consistent with its name, this pass also resolves 
     all `NoConn` connections into concrete `Signal`s, or fails if any `NoConn`s 
@@ -113,62 +116,64 @@ class ResolvePortRefs(Elaborator):
         Creates and adds a fresh new `Signal` if one does not already exist. """
 
         # Find any existing, declared `Signal` connected to `group`.
-        sig = self.find_signal(group)
+        # And if we don't find any, go about naming and creating one.
+        sig: Source = self.find_source(group) or self.create_source(module, group)
 
-        # If we didn't find any, go about naming and creating one
-        if sig is None:
-            sig = self.create_signal(module, group)
+        # if sig is None:
+        #     sig = self.create_source(module, group)
 
         # And re-connect it to each Instance
-        non_sources = list(filter(lambda p: not self.is_a_source(p), group))
+        non_sources = list(filter(lambda p: self.source(p) is None, group))
         for portref in non_sources:
             portref.inst.conns[portref.portname] = sig
 
     @staticmethod
-    def is_a_source(portref: PortRef) -> bool:
-        """ Boolean indication of whether the thing attached to `pref` is a "source" for a group of connected ports.
-        "Source" is defined, loosely, as "something concrete all the `PortRef`s can connect to".
-        The primary example is a concrete `Signal`. Other examples are `PortRef`s into `BundleInstance`s, 
-        which ultimately serve as references to `Signal`s, and are expanded when being flattened. 
+    def source(portref: PortRef) -> Optional[Source]:
+        """ 
+        Find the "source signal" for `portref`, if one is connected. 
+        If `portref` is not explicitly connected, or is connected to another `PortRef`, returns None. 
         """
-        if isinstance(portref.inst, (Instance, InstArray)):
-            portconn = portref.inst.conns.get(portref.portname, None)
-            return isinstance(portconn, (Signal, BundleInstance))
-        if isinstance(portref.inst, (BundleInstance, PortRef)):
-            # References into Bundle instances, or references into PortRefs which
-            # FIXME: these should probably be a separate bundle-reference type
-            # FIXME: how AnonymousBundles fit in here
-            return True
-        raise TypeError(f"PortRef instance {portref}")
+        if not isinstance(portref.inst, (Instance, InstArray)):
+            raise TypeError(f"PortRef instance {portref}")
 
-    def find_signal(self, group: List[PortRef]) -> Optional[Signal]:
-        """ Find any existing, declared `Signal` connected to `group`. 
-        And if there are any, make sure there's only one. 
-        Returns `None` if no `Signal`s present. """
+        portconn = portref.inst.conns.get(portref.portname, None)
+        if portconn is None:
+            return None  # Nothing explicitly connected *into* this port
+        if isinstance(portconn, PortRef):
+            return None  # Connected to another `PortRef`, not a `Source`
 
-        # Extract which of the `group` are "sources"
-        sources = list(filter(self.is_a_source, group))
+        # This check *should* always succeed, but type-check it nonetheless.
+        if isinstance(portconn, get_args(Source)):
+            return portconn
+        raise TypeError(f"Connection {portconn}")
+
+    def find_source(self, group: List[PortRef]) -> Optional[Source]:
+        """ Find any existing, declared `Source` connected to `group`. 
+        And if there more than one, make sure they all connect to the same object. 
+        Returns None is no `Source`s are connected to any element in the group. """
+
+        # Extract which of the `group` are connected to `Source`s
+        sources: Sequence[Optional[Source]] = map(self.source, group)
+        sources: List[Source] = [s for s in sources if s is not None]
 
         # Three relevant cases then emerge:
         # * (a) Zero sources. No problem, create one.
         # * (b) A single source. Also good; this will be connected to all other ports in the group.
-        # * (c) More than one source. This can be bad, in indicating invalid "short-circuit" connections between ports.
-        #   * When this case arises, check that all such entries are identical. If they are, that's the source.
+        # * (c) More than one source.
+        #   * This *shouldn't* be possible. If it is possible, we haven't figured out how.
+        #   * This method raises a `RuntimeError` if this somehow happens.
 
         if len(sources) == 0:
             return None
         if len(sources) == 1:
             return sources[0]
-        # More than one source case. Check all are the same object.
-        for src in sources[1:]:
-            if src is not sources[0]:
-                msg = f"Invalid connection, shorting {[(p.inst.name, p.portname) for p in group]}"
-                raise RuntimeError(msg)
-        return sources[0]
 
-    def create_signal(
-        self, module: Module, group: List[PortRef]
-    ) -> Union[Signal, BundleInstance]:
+        # More than one source, somehow. Error time.
+        msg = f"Internal error: invalid connection, with multiple Source-Signals {sources}, "
+        msg += f"shorting Ports {[(p.inst.name, p.portname) for p in group]}"
+        raise RuntimeError(msg)
+
+    def create_source(self, module: Module, group: List[PortRef]) -> PortType:
         """ Create a new `Signal`, parametrized and named to connect to the `PortRef`s in `group`. """
 
         # Find a unique name for the new Signal.
@@ -202,7 +207,7 @@ class ResolvePortRefs(Elaborator):
         return sig
 
     @staticmethod
-    def copy_port(port: Union[Signal, BundleInstance]) -> Union[Signal, BundleInstance]:
+    def copy_port(port: PortType) -> PortType:
         """ Copy a port into an internal Signal or BundleInstance """
 
         if isinstance(port, Signal):

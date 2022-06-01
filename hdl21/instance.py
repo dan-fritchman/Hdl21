@@ -15,7 +15,6 @@ from .connect import (
 )
 
 
-@getattr_port_refs
 @track_connected_ports
 @connectable
 class PortRef:
@@ -35,9 +34,7 @@ class PortRef:
     ]
 
     def __init__(
-        self,
-        inst: Union["Instance", "InstArray", "BundleInstance", "PortRef"],
-        portname: str,
+        self, inst: Union["Instance", "InstArray"], portname: str,
     ):
         self.inst = inst
         self.portname = portname
