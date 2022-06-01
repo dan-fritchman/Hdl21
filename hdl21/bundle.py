@@ -4,18 +4,16 @@
 Structured connection objects, instances thereof, and associated utilities.
 """
 
-from textwrap import dedent
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args, Dict
+from typing import Optional, Union, Any, get_args, Dict, List
 
 # Local Imports
-from .connect import has_port_refs
-from .instance import connects, connectable
+from .connect import connectable, getattr_port_refs, track_connected_ports
 from .signal import Signal
 
 
-@connects
-@has_port_refs
+@getattr_port_refs
+@track_connected_ports
 @connectable
 class BundleInstance:
     """ Instance of an Bundle, 
@@ -29,8 +27,8 @@ class BundleInstance:
         "src",
         "dest",
         "desc",
-        "conns",
         "portrefs",
+        "connected_ports",
         "_port_ref",
         "_elaborated",
         "_initialized",
@@ -54,8 +52,9 @@ class BundleInstance:
         self.src = src
         self.dest = dest
         self.desc = desc
-        self.conns = dict()
-        self.portrefs = dict()
+        self.portrefs: Dict[str, "PortRef"] = dict()
+        # Connected port references
+        self.connected_ports: List["PortRef"] = []
         self._elaborated = False
         self._initialized = True
 
@@ -220,6 +219,7 @@ def bundle(cls: type) -> Bundle:
     return bundle
 
 
+@track_connected_ports
 @connectable
 class AnonymousBundle:
     """ # Anonymous Connection Bundle 
@@ -231,7 +231,9 @@ class AnonymousBundle:
         self.signals = dict()
         self.bundles = dict()
         self.anons = dict()
-        self.portrefs = dict()
+        self.portrefs: Dict[str, "PortRef"] = dict()
+        # Connected port references
+        self.connected_ports: List["PortRef"] = []
 
         # And add each keyword-arg
         for key, val in kwargs.items():
@@ -239,7 +241,6 @@ class AnonymousBundle:
 
     def add(self, name: str, val: BundleAttr) -> BundleAttr:
         """ Add attribute `val`. """
-        from .instance import PortRef
 
         if isinstance(val, Signal):
             self.signals[name] = val

@@ -26,7 +26,8 @@ from dataclasses import field
 from pydantic.dataclasses import dataclass
 
 # Local imports
-from .connect import connectable, _is_connectable
+from .connect import connectable, is_connectable
+from .instance import PortRef
 
 
 def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
@@ -149,9 +150,13 @@ class Signal:
     src: Optional[Enum] = field(repr=False, default=None)
     dest: Optional[Enum] = field(repr=False, default=None)
 
+    # Internal, ideally private fields
+    # Connected port references
+    connected_ports: List[PortRef] = field(init=False, repr=False, default_factory=list)
+
     def __post_init_post_parse__(self):
         if self.width < 1:
-            raise ValueError
+            raise ValueError(f"Signal {self.name} width must be positive")
 
 
 def Signals(num: int, **kwargs) -> List[Signal]:
@@ -262,7 +267,7 @@ class Concat:
 
     def __init__(self, *parts):
         for p in parts:
-            if not _is_connectable(p):
+            if not is_connectable(p):
                 raise TypeError(f"Signal-concatenating unconnectable object {p}")
         self.parts = tuple(parts)
         if self.width < 1:
@@ -346,6 +351,10 @@ class NoConn:
     """
 
     name: Optional[str] = None
+
+    # Internal, ideally private fields
+    # Connected port references
+    connected_ports: List[PortRef] = field(init=False, repr=False, default_factory=list)
 
     def __eq__(self, other: "NoConn") -> bool:
         """ `NoConn`s are "equal" only if identical objects. """

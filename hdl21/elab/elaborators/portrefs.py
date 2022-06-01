@@ -43,7 +43,7 @@ class ImplicitSignals(Elaborator):
         for inst in connectables:
             for port, conn in inst.conns.items():
                 if isinstance(conn, (PortRef, NoConn)):
-                    internal_ref = PortRef.new(inst, port)
+                    internal_ref = PortRef(inst, port)
                     portconns[internal_ref] = conn
 
         # Create and connect Signals for each `NoConn` and `PortRef`
@@ -207,7 +207,7 @@ class ImplicitBundles(Elaborator):
                         msg = f"Cannot resolve connection to {port} on {inst}"
                         raise RuntimeError(msg)
                     if isinstance(other_port, BundleInstance):
-                        internal_ref = PortRef.new(inst, port)
+                        internal_ref = PortRef(inst, port)
                         portconns[internal_ref] = conn
 
         # Now walk through them, assigning each set to a net

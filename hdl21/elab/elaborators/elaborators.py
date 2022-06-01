@@ -299,7 +299,6 @@ class BundleFlattener(Elaborator):
         return flat
 
 
-
 class BundleConnTypes(Elaborator):
     """ Check for connection-type-validity on each Bundle-valued connection. 
     Note this stage *does not* perform port-direction checking or modification. 
@@ -426,4 +425,3 @@ class SignalConnTypes(Elaborator):
 
         if len(io):  # Check for anything left over
             raise RuntimeError(f"Unconnected IO {io} on {inst.name} in {module.name}")
-
