@@ -23,7 +23,7 @@ jobs:
       matrix:
         python-version: ['3.8', '3.9', '3.10'] # python3.7 *could* work in principle, but is not currently supported
         dep-installer: ["dev", "pypi"]
-    continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' || python-version == '3.10' }}
 
     steps:
     - uses: actions/checkout@v2
