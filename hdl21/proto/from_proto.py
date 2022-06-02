@@ -194,8 +194,10 @@ class ProtoImporter:
             raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
         # Mapping from `vlsir.primitives` to Hdl21's ideal elements
+        # FIXME: specialized importing of their parameters!
         prim_map = {
             "vdc": "DcVoltageSource",
+            "vpluse": "PulseVoltageSource",
             "isource": "IdealCurrentSource",
             "resistor": "IdealResistor",
             "capacitor": "IdealCapacitor",
@@ -213,14 +215,14 @@ class ProtoImporter:
         return prim
 
     @classmethod
-    def import_parameters(cls, pparams: Dict[str, vlsir.circuit.Parameter]) -> dict:
+    def import_parameters(cls, pparams: Dict[str, vlsir.Param]) -> dict:
         pdict = {}
         for pname, pparam in pparams.items():
             pdict[pname] = cls.import_parameter(pparam)
         return pdict
 
     @classmethod
-    def import_parameter(cls, pparam: vlsir.circuit.Parameter) -> Any:
+    def import_parameter(cls, pparam: vlsir.Param) -> Any:
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
             return int(pparam.integer)

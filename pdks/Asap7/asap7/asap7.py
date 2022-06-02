@@ -13,12 +13,26 @@ as BSIM-CMG `.model` definitions. These are represented in the `vlsir` proto-sch
 """
 
 import copy
-from typing import Union
+from typing import Union, Optional
 from types import SimpleNamespace
 from dataclasses import asdict
 
+from pydantic.dataclasses import dataclass
+
 import hdl21 as h
+from hdl21.pdk import PdkInstallation
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
+from vlsir import circuit as vckt
+
+
+@dataclass
+class Install(PdkInstallation):
+    ...  # No content
+
+
+# The optional external-data installation.
+# Set by an instantiator of `Install`, if available.
+install: Optional[Install] = None
 
 
 # Collected `ExternalModule`s are stored in the `modules` namespace
@@ -108,7 +122,7 @@ class Asap7Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: h.proto.Package) -> h.proto.Package:
+def compile(src: vckt.Package) -> vckt.Package:
     """ Compile proto-Package `src` to the ASAP7 technology """
     ns = h.from_proto(src)
     Asap7Walker().visit_namespace(ns)

@@ -2,11 +2,28 @@
 # Hdl21 Sample PDK
 """
 
+# Std-Lib Imports
 import copy
 from typing import Union, Optional
 
+# PyPi Imports
+from pydantic.dataclasses import dataclass
+
+# Project Imports
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosParams
+from hdl21.pdk import PdkInstallation
+from vlsir import circuit as vckt
+
+
+@dataclass
+class Install(PdkInstallation):
+    ...  # No content
+
+
+# The optional external-data installation.
+# Set by an instantiator of `Install`, if available.
+install: Optional[Install] = None
 
 
 @h.paramclass
@@ -97,7 +114,7 @@ class SamplePdkWalker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: h.proto.Package) -> h.proto.Package:
+def compile(src: vckt.Package) -> vckt.Package:
     """ Compile proto-Package `src` to the Sample technology """
     ns = h.from_proto(src)
     SamplePdkWalker().visit_namespace(ns)

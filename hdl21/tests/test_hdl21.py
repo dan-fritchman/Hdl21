@@ -8,6 +8,8 @@ from types import SimpleNamespace
 from enum import Enum, EnumMeta, auto
 from textwrap import dedent
 
+from pydantic import ValidationError
+
 # Import the PUT (package under test)
 import hdl21 as h
 import vlsir
@@ -86,7 +88,7 @@ def test_generator1():
 
     m = h.elaborate(gen1(MyParams(w=3)))
 
-    assert m.name == "gen1(MyParams(w=3))"
+    assert m.name == "gen1(w=3)"
     assert isinstance(m.i, h.Signal)
 
 
@@ -105,7 +107,7 @@ def test_generator2():
     m = h.elaborate(g2(P2()))
 
     assert isinstance(m, h.Module)
-    assert m.name == "g2(P2(f=1e-11))"
+    assert m.name == "g2(f=1e-11)"
 
 
 def test_generator3():
@@ -140,11 +142,11 @@ def test_generator3():
     assert HasGen.a.of.gen is g3a
     assert HasGen.a.of.arg == P3()
     assert isinstance(HasGen.a.of.result, h.Module)
-    assert HasGen.a.of.result.name == "g3a(P3(width=1))"
+    assert HasGen.a.of.result.name == "g3a(width=1)"
     assert isinstance(HasGen.b, h.Instance)
     assert isinstance(HasGen.b.of, h.GeneratorCall)
     assert isinstance(HasGen.b.of.result, h.Module)
-    assert HasGen.b.of.result.name == "g3b(P3(width=5))"
+    assert HasGen.b.of.result.name == "g3b(width=5)"
     assert HasGen.b.of.gen is g3b
     assert HasGen.b.of.arg == P3(width=5)
     assert isinstance(HasGen.c, h.Instance)
@@ -551,7 +553,7 @@ def test_bundle2():
     # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPass
 
-    m3 = h.elaborate(m3, passes=[ElabPass.IMPLICIT_BUNDLES])
+    m3 = h.elaborate(m3, passes=[ElabPass.RESOLVE_PORT_REFS])
     assert isinstance(m3, h.Module)
     assert isinstance(m3.i1, h.Instance)
     assert isinstance(m3.i2, h.Instance)
@@ -581,8 +583,8 @@ def test_bundle3():
     assert isinstance(DisplayPort, h.Bundle)
     assert isinstance(DisplayPort(), h.BundleInstance)
     assert isinstance(DisplayPort.main_link, h.BundleInstance)
-    assert isinstance(DisplayPort.main_link.p, h.PortRef)
-    assert isinstance(DisplayPort.main_link.n, h.PortRef)
+    assert isinstance(DisplayPort.main_link.p, h.BundleRef)
+    assert isinstance(DisplayPort.main_link.n, h.BundleRef)
     assert isinstance(DisplayPort.aux, h.Signal)
     assert isinstance(Diff, h.Bundle)
     assert isinstance(Diff(), h.BundleInstance)
@@ -663,7 +665,7 @@ def test_bundle4():
     # First run the "implicit bundles" pass, and see that an explicit one is created
     from hdl21.elab import ElabPass
 
-    sys = h.elaborate(System, passes=[ElabPass.IMPLICIT_BUNDLES])
+    sys = h.elaborate(System, passes=[ElabPass.RESOLVE_PORT_REFS])
     assert "devc_hr_host_hr" in sys.namespace
 
     # Now expand the rest of the way, down to scalar signals
@@ -965,11 +967,7 @@ def test_bigger_bundles():
     assert isinstance(TestSystem.board, h.Instance)
 
     assert isinstance(TestSystem.tester.uart, h.PortRef)
-    assert isinstance(TestSystem.tester.uart.tx, h.PortRef)
-    assert isinstance(TestSystem.tester.uart.rx, h.PortRef)
     assert isinstance(TestSystem.board.uart, h.PortRef)
-    assert isinstance(TestSystem.board.uart.tx, h.PortRef)
-    assert isinstance(TestSystem.board.uart.rx, h.PortRef)
 
     # Run this through elaboration
     h.elaborate(TestSystem)
@@ -1200,21 +1198,21 @@ def test_generator_recall():
     # Convert to proto
     ppkg = h.to_proto(Caller)
     assert len(ppkg.modules) == 2
-    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.CallMeTwice(NoParams())"
+    assert ppkg.modules[0].name == "hdl21.tests.test_hdl21.CallMeTwice"
     assert ppkg.modules[1].name == "hdl21.tests.test_hdl21.Caller"
 
     # Convert the proto-package to a netlist, and run some (very basic) checks
     nl = StringIO()
     h.netlist(ppkg, nl)
     nl = nl.getvalue()
-    assert "CallMeTwice_NoParams" in nl
+    assert "CallMeTwice" in nl
     assert "Caller" in nl
 
     # Round-trip back from Proto to Modules
     rt = h.from_proto(ppkg)
     ns = rt.hdl21.tests.test_hdl21
     assert isinstance(ns.Caller, h.Module)
-    assert isinstance(getattr(ns, "CallMeTwice(NoParams())"), h.Module)
+    assert isinstance(getattr(ns, "CallMeTwice"), h.Module)
 
 
 def test_module_as_param():
@@ -1687,7 +1685,7 @@ def test_orphanage3():
         h.elaborate(m1)
 
 
-@pytest.mark.xfail(reason="#6")
+@pytest.mark.xfail(reason="#6 https://github.com/dan-fritchman/Hdl21/issues/6")
 def test_wrong_decorator():
     """ Mistake `Module` for `module` """
 
@@ -1758,7 +1756,8 @@ def test_array_concat_conn():
 def test_slice_resolution():
     """ Test resolutions of slice combinations """
 
-    from hdl21.elab import _resolve_slice
+    # This is a very private import of the slice-resolver function
+    from hdl21.elab.elaborators.slices import _resolve_slice
 
     # Slice of a Signal
     s = h.Signal(width=5)
@@ -1795,7 +1794,7 @@ def test_slice_resolution():
     assert _resolve_slice(sa[:][0:4]).parts == (sa[0], sa[1], sa[2], sa[3])
 
 
-@pytest.mark.xfail(reason="#1")
+@pytest.mark.xfail(reason="#1 https://github.com/dan-fritchman/Hdl21/issues/1")
 def test_export_strides():
     """ Test exporting connections with non-unit Slice-strides """
 
@@ -1807,3 +1806,219 @@ def test_export_strides():
     p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
 
     h.netlist(h.to_proto(p), sys.stdout, "verilog")
+
+
+def test_common_attr_errors():
+    """ Test that common errors provide helpful feedback. 
+    For example, adding `Module`s where one wants an `Instance`. """
+
+    M = h.Module(name="M")
+
+    # Module assignment, where we'd want an Instance `M.i = I()`
+    I = h.Module(name="I")
+    with pytest.raises(TypeError) as einfo:
+        M.i = I  # Bad - Module
+    assert "Did you mean" in str(einfo.value)
+    assert "`Module`" in str(einfo.value)
+    M.i = I()  # Good - Instance
+
+    # Primitive assignment
+    from hdl21.primitives import R
+
+    with pytest.raises(TypeError) as einfo:
+        M.r = R  # Fail - Primitive
+    assert "Did you mean" in str(einfo.value)
+    assert "`Primitive`" in str(einfo.value)
+    with pytest.raises(TypeError) as einfo:
+        M.r = R(R.Params(r=1))  # Fail - Primitive Call
+    assert "Did you mean" in str(einfo.value)
+    assert "`PrimitiveCall`" in str(einfo.value)
+    M.r = R(R.Params(r=1))()  # Good - Instances (granted incompletely connected)
+
+    # Generator assignment
+    @h.generator
+    def G(p: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    with pytest.raises(TypeError) as einfo:
+        M.g = G  # Bad - Generator
+    assert "Did you mean" in str(einfo.value)
+    assert "`Generator`" in str(einfo.value)
+    with pytest.raises(TypeError) as einfo:
+        M.g = G(h.NoParams)  # Bad - GeneratorCall
+    assert "Did you mean" in str(einfo.value)
+    assert "`GeneratorCall`" in str(einfo.value)
+    M.g = G(h.NoParams)()  # Good - Instance
+
+    X = h.ExternalModule(name="X", port_list=[])
+    with pytest.raises(TypeError) as einfo:
+        M.x = X  # Bad - ExternalModule
+    assert "Did you mean" in str(einfo.value)
+    assert "`ExternalModule`" in str(einfo.value)
+    with pytest.raises(TypeError) as einfo:
+        M.x = X()  # Bad - ExternalModuleCall
+    assert "Did you mean" in str(einfo.value)
+    assert "`ExternalModuleCall`" in str(einfo.value)
+    M.x = X()()  # Good - Instance
+
+
+def test_generator_call_by_kwargs():
+    """ Test the capacity for generators to create their param-classes inline. """
+
+    @h.paramclass
+    class P:
+        a = h.Param(dtype=int, desc="a")
+        b = h.Param(dtype=float, desc="b")
+        c = h.Param(dtype=str, desc="c")
+
+    @h.generator
+    def M(p: P) -> h.Module:
+        return h.Module()
+
+    # Call without constructing a `P`
+    m = M(a=1, b=2.0, c="3")
+
+    assert isinstance(m, h.GeneratorCall)
+    m = h.elaborate(m)
+    assert isinstance(m, h.Module)
+
+    # Check that type-checking continue
+    m = M(a=TabError, b=TabError, c=TabError)
+    assert isinstance(m, h.GeneratorCall)
+    with pytest.raises(ValidationError):
+        m = h.elaborate(m)
+
+
+def test_instance_array_portrefs():
+    """ Test Instance Arrays connected by port-references """
+
+    Inv = h.ExternalModule(
+        name="Inv", port_list=[h.Input(name="i"), h.Output(name="z"),],
+    )
+
+    m = h.Module(name="TestArrayPortRef")
+    m.a, m.b = h.Signals(2, width=4)
+
+    # Create an InstArray
+    m.inva = 4 * Inv()(i=m.a)
+    # And another which connects to it via PortRef
+    m.invb = 4 * Inv()(i=m.inva.z, z=m.b)
+
+    h.elaborate(m)
+
+    assert len(m.instances) == 8
+    assert len(m.instarrays) == 0
+
+
+def test_array_bundle():
+    """ Test bundle-valued connections to instance arrays. """
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class HasB:
+        b = B(port=True)
+
+    @h.module
+    class HasArr:
+        b = B()
+        bs = 11 * HasB(b=b)
+
+    # Elaborate this,
+    h.elaborate(HasArr)
+
+    assert len(HasArr.signals) == 1
+    assert len(HasArr.instances) == 11
+    assert len(HasArr.instarrays) == 0
+    for inst in HasArr.instances.values():
+        assert inst.conns.get("b_s", None) is HasArr.b_s
+
+
+@pytest.mark.xfail(reason="#19 https://github.com/dan-fritchman/Hdl21/issues/19")
+def test_sub_bundle_conn():
+    """ Test connecting via PortRef to a sub-Bundle """
+
+    @h.bundle
+    class B1:
+        s = h.Signal()
+
+    @h.bundle
+    class B2:
+        b1 = B1()
+
+    @h.module
+    class HasB1:
+        b1 = B1(port=True)
+
+    @h.module
+    class HasB2:
+        b2 = B2()
+        h = HasB1(b1=b2.b1)
+
+    h.elaborate(HasB2)
+
+
+def test_anon_bundle_port_conn():
+    """ Test connecting via PortRef to an AnonymousBundle """
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class HasB:
+        b = B(port=True)
+
+    @h.module
+    class Top:
+        s = h.Signal()
+        h1 = HasB(b=h.AnonymousBundle(s=s))
+        h2 = HasB(b=h1.b)
+        h3 = HasB(b=h2.b)
+
+    # Elaborate to flesh this out
+    h.elaborate(Top)
+
+    # Check this resolved to a single Signal in Top
+    assert len(Top.signals) == 1
+    assert len(Top.bundles) == 0
+    assert len(Top.instances) == 3
+
+    # And check that Signal is connected to all three Instances
+    assert Top.h1.b_s is Top.s
+    assert Top.h2.b_s is Top.s
+    assert Top.h3.b_s is Top.s
+
+
+def test_multiple_signals_in_port_group():
+    """ Test, or at least try to test, jamming more than one Signal 
+    into the `group` concept used by the `ResolvePortRefs` elaborator pass. 
+    Based on the design of `ResolvePortRefs`, this is a thing that (we think) 
+    is not possible. """
+
+    @h.module
+    class I:
+        s = h.Port()
+
+    @h.module
+    class M:
+        s = h.Signal()
+        i1 = I(s=s)
+        i2 = I(s=s)
+        i3 = I(s=i1.s)
+        i4 = I(s=i2.s)
+
+    h.elaborate(M)
+
+    # Check this resolved to a single Signal
+    assert len(M.signals) == 1
+    assert len(M.bundles) == 0
+    assert len(M.instances) == 4
+
+    # And check that Signal is connected to all four Instances
+    assert M.i1.s is M.s
+    assert M.i2.s is M.s
+    assert M.i3.s is M.s
+    assert M.i4.s is M.s

@@ -14,6 +14,19 @@ from .primitives import PrimitiveCall
 Instantiable = Union[Module, ExternalModuleCall, GeneratorCall, PrimitiveCall]
 
 
-def _is_instantiable(val: Any) -> bool:
+def is_instantiable(val: Any) -> bool:
     """ Boolean indication of whether `val` is an `Instantiable` type. """
     return isinstance(val, get_args(Instantiable))
+
+
+def qualname(i: Instantiable) -> str:
+    if isinstance(i, Module):
+        return i._qualname()
+    if isinstance(i, GeneratorCall):
+        return i.result._qualname()
+    if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
+        return i.name
+    raise TypeError
+
+
+__all__ = ["Instantiable", "is_instantiable"]

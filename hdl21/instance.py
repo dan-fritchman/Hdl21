@@ -4,14 +4,18 @@
 Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, Union, List, Any, Dict
 
 # Local imports
-from .connect import connectable, connects, has_port_refs
+from .connect import (
+    connectable,
+    track_connected_ports,
+    call_and_setattr_connects,
+    getattr_port_refs,
+)
 
 
-@connects
-@has_port_refs
+@track_connected_ports
 @connectable
 class PortRef:
     """ Reference to a Port 
@@ -19,10 +23,9 @@ class PortRef:
 
     _specialcases = [
         "inst",
-        "conns",
-        "portref",
         "portrefs",
         "connect",
+        "connected_ports",
         "_port_ref",
         "_module",
         "_resolved",
@@ -31,20 +34,15 @@ class PortRef:
     ]
 
     def __init__(
-        self,
-        inst: Union["Instance", "InstArray", "BundleInstance", "PortRef"],
-        portname: str,
+        self, inst: Union["Instance", "InstArray"], portname: str,
     ):
         self.inst = inst
         self.portname = portname
-        self.portrefs = dict()
-        self.conns = dict()
+        self.portrefs: Dict[str, "PortRef"] = dict()
+        # Connected port references
+        self.connected_ports: List["PortRef"] = []
         self._elaborated = False
         self._initialized = True
-
-    @classmethod
-    def new(cls, inst, portname: str) -> "PortRef":
-        return PortRef(inst=inst, portname=portname)
 
     def __eq__(self, other) -> bool:
         """ Port-reference equality requires *identity* between instances 
@@ -55,29 +53,6 @@ class PortRef:
         """ Hash references as the tuple of their instance-address and name """
         return hash((id(self.inst), self.portname))
 
-    @property
-    def _specialcases(self) -> List[str]:
-        return ["inst", "portname", "portrefs"]
-
-
-# @connects
-# @has_port_refs
-# @dataclass
-# class InstanceRef:
-#     """ Instance Reference from an Array or Group """
-
-#     parent: "InstArray"
-#     name: Union[int, str]
-
-#     def __eq__(self, other) -> bool:
-#         """ Equality requires *identity* between parents
-#         (and of course equality of name). """
-#         return self.parent is other.parent and self.name == other.name
-
-#     def __hash__(self):
-#         """ Hash references as the tuple of their instance-address and name """
-#         return hash((id(self.parent), self.name))
-
 
 class _Instance:
     """ Shared base class for Instance-like types (Instance, InstArray) """
@@ -85,10 +60,10 @@ class _Instance:
     def __init__(
         self, of: "Instantiable", *, name: Optional[str] = None,
     ):
-        from .instantiable import _is_instantiable
+        from .instantiable import is_instantiable
 
-        if not _is_instantiable(of):
-            raise RuntimeError(f"Invalid instance of {of}")
+        if not is_instantiable(of):
+            raise RuntimeError(f"Invalid Instance of {of}")
 
         self.name = name
         self.of = of
@@ -112,8 +87,8 @@ class _Instance:
         return self.of
 
 
-@connects
-@has_port_refs
+@call_and_setattr_connects
+@getattr_port_refs
 class Instance(_Instance):
     """ Hierarchical Instance of another Module or Generator """
 
@@ -156,8 +131,8 @@ class Instance(_Instance):
         return InstArray(of=self.of, n=num, name=self.name)(**self.conns)
 
 
-@connects
-@has_port_refs
+@call_and_setattr_connects
+@getattr_port_refs
 class InstArray(_Instance):
     """ Array of `n` Instances """
 
@@ -202,5 +177,6 @@ def calls_instantiate(cls: type) -> type:
     if "__call__" in cls.__dict__:
         msg = f"Hdl21 Internal Error: Invalid conflict between `calls_instantiate` decorator and explicit `__call__` method on {cls}"
         raise RuntimeError(msg)
+
     cls.__call__ = __call__
     return cls

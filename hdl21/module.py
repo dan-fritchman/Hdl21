@@ -327,7 +327,7 @@ class ExternalModule:
     port_list: List[Signal]  # Ordered Ports
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
-    domain: Optional[str] = None
+    domain: Optional[str] = None  # Domain name, for references upon export
     pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
     importpath: Optional[List[str]] = field(repr=False, init=False, default=None)
 
@@ -427,7 +427,20 @@ def _assert_module_attr(m: Module, val: Any) -> None:
 
 def _attr_type_error(m: Module, val: Any) -> None:
     """ Raise a `TypeError` with debug info for invalid attribute `val`. """
-    msg = f"Invalid Module attribute {val} of type {type(val)} for {m}. Valid `Module` attributes are of types: {list(get_args(ModuleAttr))}"
+
+    # Give more specific error-messages for our common types.
+    # Especially those that are easily confused, e.g. all the `Call` types, `Module`s, and `Instance`s thereof.
+    from .generator import Generator, GeneratorCall
+    from .primitives import Primitive, PrimitiveCall
+
+    if isinstance(val, (Generator, Primitive, ExternalModule)):
+        msg = f"Cannot add `{type(val).__name__}` `{val.name}` to `Module` `{m.name}`. Did you mean to make an `Instance` by *calling* it - once for params and once for connections - first?"
+    elif isinstance(val, Module):
+        msg = f"Cannot add `{type(val).__name__}` `{val.name}` to `Module` `{m.name}`. Did you mean to make an `Instance` by *calling* to connect it first?"
+    elif isinstance(val, (GeneratorCall, PrimitiveCall, ExternalModuleCall)):
+        msg = f"Cannot add `{type(val).__name__}` `{val}` to `Module` `{m.name}`. Did you mean to make an `Instance` by *calling* to connect it first?"
+    else:
+        msg = f"Invalid Module attribute {val} of type {type(val)} for {m}. Valid `Module` attributes are of types: {list(get_args(ModuleAttr))}"
     raise TypeError(msg)
 
 
@@ -453,4 +466,3 @@ def _caller_pymodule() -> Optional[ModuleType]:
             return pymod
     # No caller module found, anywhere in the call-stack.
     return None
-

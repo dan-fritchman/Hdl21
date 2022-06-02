@@ -14,7 +14,7 @@ def test_default():
     assert h.pdk.default() is sample_pdk
 
 
-def gethasmos():
+def mosmodule():
     # Create a simple Module with each of the default-param Mos types
     hasmos = h.Module(name="hasmos")
     z = hasmos.z = h.Signal()
@@ -31,7 +31,7 @@ def gethasmos():
 
 
 def test_compile():
-    hasmos = gethasmos()
+    hasmos = mosmodule()
 
     # Compile it for the PDK
     pkg = h.to_proto(hasmos)
@@ -39,7 +39,6 @@ def test_compile():
 
     # Import it back into Modules & Namespaces
     ns = h.from_proto(pdk_pkg)
-    print(ns)
     rt = ns.hdl21.pdk.sample_pdk.test_sample_pdk.hasmos
 
     # And check what came back
@@ -52,10 +51,9 @@ def test_compile():
 
 
 def test_netlist():
-    hasmos = gethasmos()
+    hasmos = mosmodule()
 
     # Netlist it for the PDK
     pkg = h.to_proto(hasmos)
     pkg = sample_pdk.compile(pkg)
     h.netlist(pkg, StringIO(), "spectre")
-
