@@ -15,6 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9] # python3.7 *could* work in principle, but is not currently supported
+        dep-installer: ["dev", "pypi"]
 
     steps:
     - uses: actions/checkout@v2
@@ -23,16 +24,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: | # pip install -e ".[dev]" ## FIXME: baking in git-cloning the `vlsir` dependency until it is distributed 
-        pwd
-        cd .. 
-        git clone https://github.com/dan-fritchman/Vlsir.git
-        cd Vlsir/bindings/python 
-        pip install -e .
-        cd ../../VlsirTools
-        pip install -e .
-        cd ../../Hdl21
-        pip install -e ".[dev]"
+      run: bash .github/install-${{ matrix.dep-installer }}.sh
     - name: Test with pytest
       run: |
         pytest -sv --cov=./ --cov-report=xml
