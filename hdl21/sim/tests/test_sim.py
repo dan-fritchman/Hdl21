@@ -134,8 +134,8 @@ def test_generator_sim():
     p2 = to_proto(s2)
 
     assert p1.top != p2.top
-    assert p1.top == "test_sim.G(P(i=1))"
-    assert p2.top == "test_sim.G(P(i=2))"
+    assert p1.top == "test_sim.G(i=1)"
+    assert p2.top == "test_sim.G(i=2)"
 
 
 def test_delay1():

@@ -165,13 +165,10 @@ def _unique_name(params: Any) -> str:
 
     # If all params are scalars, create a readable string of their values
     if all_scalar:
-        name = params.__class__.__name__ + "("
-        for pname in params.__params__.keys():
-            pval = getattr(params, pname)
-            name += pname + "=" + str(pval) + " "
-        name = name.rstrip()
-        name += ")"
-
+        # Format: `pname1=pval1 pname2=pval2 pname3=pval3`
+        keys = params.__params__.keys()
+        name = " ".join(f"{k}={str(getattr(params, k))}" for k in keys)
+        
         # These names must also be limited in length, for sake of our favorite output formats.
         # If the generated name is too long, use the hashing method below instead
         if len(name) < 128:  # Probably(?) a reasonable length limit

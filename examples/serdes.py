@@ -33,7 +33,6 @@ class Diff:
     """ Differential Bundle """
 
     class Roles(Enum):
-        # Clock roles: source or sink
         SOURCE = auto()
         SINK = auto()
 

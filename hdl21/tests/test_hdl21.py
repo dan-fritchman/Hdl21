@@ -88,7 +88,7 @@ def test_generator1():
 
     m = h.elaborate(gen1(MyParams(w=3)))
 
-    assert m.name == "gen1(MyParams(w=3))"
+    assert m.name == "gen1(w=3)"
     assert isinstance(m.i, h.Signal)
 
 
@@ -107,7 +107,7 @@ def test_generator2():
     m = h.elaborate(g2(P2()))
 
     assert isinstance(m, h.Module)
-    assert m.name == "g2(P2(f=1e-11))"
+    assert m.name == "g2(f=1e-11)"
 
 
 def test_generator3():
@@ -142,11 +142,11 @@ def test_generator3():
     assert HasGen.a.of.gen is g3a
     assert HasGen.a.of.arg == P3()
     assert isinstance(HasGen.a.of.result, h.Module)
-    assert HasGen.a.of.result.name == "g3a(P3(width=1))"
+    assert HasGen.a.of.result.name == "g3a(width=1)"
     assert isinstance(HasGen.b, h.Instance)
     assert isinstance(HasGen.b.of, h.GeneratorCall)
     assert isinstance(HasGen.b.of.result, h.Module)
-    assert HasGen.b.of.result.name == "g3b(P3(width=5))"
+    assert HasGen.b.of.result.name == "g3b(width=5)"
     assert HasGen.b.of.gen is g3b
     assert HasGen.b.of.arg == P3(width=5)
     assert isinstance(HasGen.c, h.Instance)
