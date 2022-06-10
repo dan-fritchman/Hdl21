@@ -4,7 +4,11 @@
 
 
 # Std-Lib Imports
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
+from enum import Enum
+
+# PyPi Imports
+from pydantic.dataclasses import dataclass
 
 # Local imports
 from ...module import Module, ExternalModuleCall
@@ -16,6 +20,24 @@ from ...instantiable import Instantiable
 
 from ..elaboratable import Elabable
 from ..context import Context
+
+
+class ElabStackEnum(Enum):
+    GENERATOR = "Generator"
+    MODULE = "Module"
+    BUNDLE = "Bundle"
+    INSTANCE = "Instance"
+    ARRAY = "Array"
+
+
+@dataclass
+class ElabStackEntry:
+    enum: ElabStackEnum
+    name: str
+
+    def __repr__(self):
+        """ Formatting: `Module ModuleName`, with second column aligned to print in a stack. """
+        return f"{self.enum.value.ljust(14)} {self.name}"
 
 
 class Elaborator:
@@ -44,6 +66,7 @@ class Elaborator:
     def __init__(self, top: Elabable, ctx: Context):
         self.top = top
         self.ctx = ctx
+        self.stack: List[ElabStackEntry] = list()
         self.modules: Dict[int, Module] = dict()
 
     def elaborate_top(self) -> Module:
@@ -80,6 +103,8 @@ class Elaborator:
             msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
             raise RuntimeError(msg)
 
+        self.stack_push(ElabStackEnum.MODULE, module.name)
+
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
             self.elaborate_instance(inst)
@@ -93,6 +118,7 @@ class Elaborator:
 
         # Store a reference to the now-elaborated Module in our cache, and return it
         self.modules[id(module)] = result
+        self.stack_pop()
         return result
 
     def elaborate_module(self, module: Module) -> Module:
@@ -107,27 +133,34 @@ class Elaborator:
         """ Elaborate a PrimitiveCall. Returns the Call unmodified by default.  """
         return call
 
-    def elaborate_bundle_instance(self, inst: BundleInstance) -> None:
+    def elaborate_bundle_instance(self, inst: BundleInstance) -> BundleInstance:
         """ Elaborate an BundleInstance """
         # Annotate each BundleInstance so that its pre-elaboration `PortRef` magic is disabled.
         inst._elaborated = True
+        return inst
 
     def elaborate_instance_array(self, array: InstArray) -> Instantiable:
         """ Elaborate an InstArray """
+        self.stack_push(ElabStackEnum.ARRAY, array.name)
         # Turn off `PortRef` magic
         array._elaborated = True
         # And visit the Instance's target
-        return self.elaborate_instantiable(array._resolved)
+        rv = self.elaborate_instantiable(array._resolved)
+        self.stack_pop()
+        return rv
 
     def elaborate_instance(self, inst: Instance) -> Instantiable:
         """ Elaborate a Module Instance. """
         # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
         # The Generator-elaborator is different, and overrides it.
 
+        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
         # Turn off `PortRef` magic
         inst._elaborated = True
         # And visit the Instance's target
-        return self.elaborate_instantiable(inst._resolved)
+        rv = self.elaborate_instantiable(inst._resolved)
+        self.stack_pop()
+        return rv
 
     def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
         # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
@@ -165,3 +198,19 @@ class Elaborator:
                 break
             name += "_"  # Collision; append underscore
         return name
+
+    def stack_push(self, enum: ElabStackEnum, name: str):
+        """ Stack helper, pushing the combination of `enum` and `name` """
+        self.stack.append(ElabStackEntry(enum, name))
+
+    def stack_pop(self) -> ElabStackEntry:
+        """ Stack helper, popping the top entry """
+        return self.stack.pop()
+
+    def fail(self, msg: str):
+        """ Error helper, adding stack and state info to an error """
+        # This also serves as a very helpful place for a debugger breakpoint.
+        state = ["\t" + str(s) + " \n" for s in self.stack]
+        state = "Elaboration Error at hierarchical path: \n" + "".join(state)
+        raise RuntimeError(state + msg)
+

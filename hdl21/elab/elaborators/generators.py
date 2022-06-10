@@ -10,7 +10,7 @@ from ...params import HasNoParams, _unique_name
 from ...instantiable import Instantiable
 
 # Import the base class
-from .base import Elaborator
+from .base import Elaborator, ElabStackEnum
 
 
 class GeneratorElaborator(Elaborator):
@@ -53,6 +53,8 @@ class GeneratorElaborator(Elaborator):
             result = self.generator_calls[call]
             call.result = result
             return result
+
+        self.stack_push(ElabStackEnum.GENERATOR, call.gen.name)
 
         # Support the "no paramclass constructor" invocation.
         # Create an instance of the generator's parameter-class if keyword args were provided instead.
@@ -102,27 +104,35 @@ class GeneratorElaborator(Elaborator):
         m._pymodule = call.gen.pymodule
 
         # And elaborate the module
-        return self.elaborate_module_base(m)  # Note the `_base` here!
+        m = self.elaborate_module_base(m)  # Note the `_base` here!
+        self.stack_pop()
+        return m
 
     def elaborate_instance(self, inst: Instance) -> Instantiable:
         """ Elaborate a Module Instance. """
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
 
+        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
         # Turn off `PortRef` magic
         inst._elaborated = True
         # And visit the Instance's target
-        return self.elaborate_instantiable(inst.of)
+        rv = self.elaborate_instantiable(inst.of)
+        self.stack_pop()
+        return rv
 
     def elaborate_instance_array(self, arr: InstArray) -> Instantiable:
         """ Elaborate an Instance Array. """
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
 
+        self.stack_push(ElabStackEnum.INSTANCE, arr.name)
         # Turn off `PortRef` magic
         arr._elaborated = True
         # And visit the Instance's target
-        return self.elaborate_instantiable(arr.of)
+        rv = self.elaborate_instantiable(arr.of)
+        self.stack_pop()
+        return rv
 
     def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
         """ Elaborate an Instance target. Adds the capacity to call `GeneratorCall`s to the more-common base-case. """

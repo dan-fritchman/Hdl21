@@ -45,11 +45,6 @@ class Install(PdkInstallation):
     model_lib: Path  # Path to the transistor models included in this module
 
 
-# The optional external-data installation.
-# Set by an instantiator of `Install`, if available.
-install: Optional[Install] = None
-
-
 @h.paramclass
 class Sky130MosParams:
     """ Parameters for the PDK MOS transistor modules """

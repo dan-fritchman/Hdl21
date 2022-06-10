@@ -9,7 +9,7 @@ to each of its outputs.
 from copy import copy
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import vlsir.spice_pb2 as vsp
 from vlsirtools.spice import sim_data as sd, SimResultUnion
@@ -59,8 +59,10 @@ class DelaySimParams:
     tstop: ParamVal = 1 * Prefix.NANO  # Sim stop time
     tstep: Optional[ParamVal] = 1 * Prefix.PICO  # Recommended sim timestep
 
-    # Sadly we don't really know how to pass hierarchical paths into `Sim` yet, without some help here.
-    pathsep: str = ":"
+    # Sadly we don't really know how to pass these into `Sim` yet, without some help here.
+    pathsep: str = "."  # Hierarchical path separator
+    # Expression delimiters, opening and closing. Pair of single quotes by default.
+    expr_delim: Tuple[str, str] = ("'", "'")
 
     # Additional simulation attributes (options, saves, etc)
     attrs: List[SimAttr] = field(default_factory=list)
@@ -74,7 +76,7 @@ class DelaySimResult:
     delays: Dict[str, Optional[float]]
 
 
-def delays(p: DelaySimParams) -> DelaySimResult:
+def delays(p: DelaySimParams, opts: Optional[vsp.SimOptions] = None) -> DelaySimResult:
     """ Create and run a delay `Sim`. 
     
     Executes four discrete steps, all defined in this module: 
@@ -87,7 +89,7 @@ def delays(p: DelaySimParams) -> DelaySimResult:
     Each individually for cases needing to "get in between" them. 
     """
     sim = create_sim(p)
-    results = sim.run()
+    results = sim.run(opts=opts)
     meas = get_meas(results)
     return collect_result(p, meas)
 
@@ -129,7 +131,7 @@ def create_sim(p: DelaySimParams) -> Sim:
     sim.meas(
         analysis=tran,
         name=f"tcross_primary_input",
-        expr=f"when V(xtop{p.pathsep}{p.primary_input.name})={{vdd/2}} {cross}=1",
+        expr=f"when V(xtop{p.pathsep}{p.primary_input.name})={p.expr_delim[0]}vdd/2{p.expr_delim[1]} {cross}=1",  # FIXME: simulator-specific
     )
 
     for gndsig in p.grounds:
@@ -190,12 +192,12 @@ def create_sim(p: DelaySimParams) -> Sim:
         sim.meas(
             analysis=tran,
             name=f"tcross_{out.name}",
-            expr=f"when V(xtop{p.pathsep}{out.name})={{vdd/2}} cross=1",  # FIXME: simulator-specific
+            expr=f"when V(xtop{p.pathsep}{out.name})={p.expr_delim[0]}vdd/2{p.expr_delim[1]} cross=1",  # FIXME: simulator-specific
         )
         sim.meas(
             analysis=tran,
             name=f"tdelay_{out.name}",
-            expr=f"PARAM={{tcross_{out.name}-tcross_primary_input}}",  # FIXME: simulator-specific
+            expr=f"PARAM={p.expr_delim[0]}tcross_{out.name}-tcross_primary_input{p.expr_delim[1]}",  # FIXME: simulator-specific
         )
 
     # Aaaaaaand return the sim already!
@@ -225,8 +227,8 @@ def collect_result(
 
 
 def get_meas(results: SimResultUnion) -> Dict[str, Optional[float]]:
-    """ Get the `measurements` dict from either of the VLSIRTOOLS sim-results types. 
-    FIXME: this should get pushed down to VLSIRT. """
+    """ Get the `measurements` dict from either of the `VlsirTools` sim-results types. 
+    FIXME: this should get pushed down to `VlsirTools`. """
 
     if isinstance(results, sd.SimResult):
         return results.an[0].measurements
