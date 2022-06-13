@@ -16,7 +16,7 @@ import vlsir
 
 
 def test_version():
-    assert h.__version__ == "1.0.0.dev0"
+    assert h.__version__ == "1.0.0rc0"
 
 
 def test_module1():
