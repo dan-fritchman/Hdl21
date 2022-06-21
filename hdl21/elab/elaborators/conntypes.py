@@ -133,7 +133,7 @@ class ConnTypes(Elaborator):
             return None
 
         msg = f"Invalid connection-compatibility check between {bundle} and {other}"
-        raise TypeError(msg)
+        self.fail(msg)
 
     def assert_signals_compatible(self, sig: Sliceable, other: Any) -> None:
         """ Assert that `Sliceable`s (generally `Signal`s) a and b are compatible for connection. """
@@ -165,5 +165,5 @@ class ConnTypes(Elaborator):
         if isinstance(port, BundleInstance):
             return self.assert_bundles_compatible(port.of, conn)
 
-        raise TypeError(f"Invalid Port {port}")
+        self.fail(f"Invalid Port {port}")
 

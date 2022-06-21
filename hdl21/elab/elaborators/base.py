@@ -23,6 +23,8 @@ from ..context import Context
 
 
 class ElabStackEnum(Enum):
+    """ Enumerated Types of Entries in the Elaboration Stack """
+
     GENERATOR = "Generator"
     MODULE = "Module"
     BUNDLE = "Bundle"
@@ -32,6 +34,8 @@ class ElabStackEnum(Enum):
 
 @dataclass
 class ElabStackEntry:
+    """ Entry in the Elaboration Stack """
+
     enum: ElabStackEnum
     name: str
 
@@ -72,14 +76,14 @@ class Elaborator:
     def elaborate_top(self) -> Module:
         """ Elaborate our top node """
         if not isinstance(self.top, Module):
-            raise TypeError(f"Invalid Top for Elaboration: {self.top} must be a Module")
+            self.fail(f"Invalid Top for Elaboration: {self.top} must be a Module")
         return self.elaborate_module_base(self.top)  # Note `_base` here!
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate a GeneratorCall """
         # Only the generator-elaborator can handle generator calls.
         # By default it generates errors for all other elaboration passes.
-        raise RuntimeError(f"Invalid call to elaborate GeneratorCall by {self}")
+        self.fail(f"Invalid call to elaborate GeneratorCall by {self}")
 
     def elaborate_module_base(self, module: Module) -> Module:
         """ Base-Case `Module` Elaboration 
@@ -101,7 +105,7 @@ class Elaborator:
 
         if not module.name:
             msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
-            raise RuntimeError(msg)
+            self.fail(msg)
 
         self.stack_push(ElabStackEnum.MODULE, module.name)
 
@@ -166,7 +170,7 @@ class Elaborator:
         # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
         # The Generator-elaborator is different, and overrides it.
         if not of:
-            raise RuntimeError(f"Error elaborating undefined Instance-target {of}")
+            self.fail(f"Error elaborating undefined Instance-target {of}")
         if isinstance(of, Module):
             return self.elaborate_module_base(of)  # Note `_base` here!
         if isinstance(of, PrimitiveCall):
@@ -175,9 +179,8 @@ class Elaborator:
             return self.elaborate_external_module(of)
         raise TypeError
 
-    @staticmethod
     def flatname(
-        segments: List[str], *, avoid: Optional[Dict] = None, maxlen: int = 511
+        self, segments: List[str], *, avoid: Optional[Dict] = None, maxlen: int = 511
     ) -> str:
         """ Create a attribute-name merging string-list `segments`, while avoiding all keys in dictionary `avoid`.
         Commonly re-used while flattening  nested objects and while creating explicit attributes from implicit ones. 
@@ -193,7 +196,7 @@ class Elaborator:
         while True:
             if len(name) > maxlen:
                 msg = f"Could not generate a flattened name for {segments}: (trying {name})"
-                raise RuntimeError(msg)
+                self.fail(msg)
             if name not in avoid:  # Done!
                 break
             name += "_"  # Collision; append underscore

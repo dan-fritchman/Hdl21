@@ -41,7 +41,7 @@ class GeneratorElaborator(Elaborator):
         if isinstance(self.top, GeneratorCall):
             return self.elaborate_generator_call(self.top)
         msg = f"Invalid Elaboration top-level {self.top}, must be a Module or Generator"
-        raise TypeError(msg)
+        self.fail(msg)
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate Generator-function-call `call`. Returns the generated Module. """
@@ -61,7 +61,7 @@ class GeneratorElaborator(Elaborator):
         # If both were provided, fail.
         if call.kwargs and call.arg is not GenDefault:
             msg = f"Invalid Generator Call {call}: either provide a single {call.gen.Params} instance or keyword arguments, not both."
-            raise RuntimeError(msg)
+            self.fail(msg)
         elif call.arg is GenDefault:
             # Create an instance of the generator's parameter-class
             call.arg = call.gen.Params(**call.kwargs)
@@ -69,7 +69,7 @@ class GeneratorElaborator(Elaborator):
         # After all that, check that the call has a valid instance of the generator's parameter-class
         if not isinstance(call.arg, call.gen.Params):
             msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.arg}"
-            raise RuntimeError(msg)
+            self.fail(msg)
 
         # The main event: Run the generator-function
         if call.gen.usecontext:
@@ -85,7 +85,7 @@ class GeneratorElaborator(Elaborator):
         # Ultimately they've gotta resolve to Modules, or they fail.
         if not isinstance(m, Module):
             msg = f"Generator {call.gen.func.__name__} returned {type(m)}, must return Module."
-            raise TypeError(msg)
+            self.fail(msg)
 
         # Give the GeneratorCall a reference to its result, and store it in our local dict
         call.result = m

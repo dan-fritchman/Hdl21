@@ -115,7 +115,7 @@ class BundleFlattener(Elaborator):
             # Check we haven't (somehow) already flattened it
             if id(bundle_inst) in self.bundle_insts:
                 msg = f"Bundle Instance {bundle_inst} in Module {module} flattened more than once. Was it actually part of another Module?"
-                raise RuntimeError(msg)
+                self.fail(msg)
             # Flatten it
             flat = self.flatten_bundle_inst(bundle_inst)
             # And store the result
@@ -163,7 +163,7 @@ class BundleFlattener(Elaborator):
                         t = self.module_attrs.get((id(inst._resolved), portname), None)
                         if t is None:
                             msg = f"Invalid Port Connection to {portname} on Instance {inst} in Module {module}"
-                            raise RuntimeError(msg)
+                            self.fail(msg)
                         # Destructure the hierarchical and flat versions that come back
                         _hier_bundle_port, flat_bundle_port = t
                         # Replace the connection to each flattened Signal
@@ -181,16 +181,16 @@ class BundleFlattener(Elaborator):
                 resolved_bref = resolve_bundle_ref(bref)
                 if isinstance(resolved_bref, BundleInstance):
                     msg = f"Bundle Reference to {resolved_bref} in {bref}"
-                    raise NotImplementedError(msg)
+                    self.fail(msg)
 
                 elif isinstance(resolved_bref, Signal):
                     # FIXME: this may need to traverse some hierarchy...
                     flatsig = flat.signals.get(PathStr(bref.attrname), None)
                     if flatsig is None:
                         msg = f"Port {bref.attrname} not found in Bundle {bundle_inst.of.name}"
-                        raise RuntimeError(msg)
+                        self.fail(msg)
                 else:
-                    raise TypeError(f"Resolved BundleRef {bref} to {resolved_bref}")
+                    self.fail(f"Resolved BundleRef {bref} to {resolved_bref}")
 
                 # Walk through our Instances, replacing any connections to this `BundleRef` with `flatsig`
                 # FIXME: a better word for "instances or arrays thereof"; we already used "connectable"
@@ -213,12 +213,12 @@ class BundleFlattener(Elaborator):
                 if isinstance(conn, AnonymousBundle):
                     # FIXME: hierarchical `AnonymousBundle`s are not handled here
                     if len(conn.bundles):
-                        raise NotImplementedError(f"Nested AnonymousBundle")
+                        self.fail(f"Nested AnonymousBundle")
                     # `module.portname` must be in our `module_attrs` by now (or fail)
                     t = self.module_attrs.get((id(inst._resolved), portname), None)
                     if t is None:
                         msg = f"Invalid Port Connection to {portname} on Instance {inst} in Module {module}"
-                        raise RuntimeError(msg)
+                        self.fail(msg)
                     # Destructure the hierarchical and flat versions that come back
                     _hier_bundle_port, flat_bundle_port = t
                     # Replace the connection to each flattened Signal
@@ -256,7 +256,7 @@ class BundleFlattener(Elaborator):
                 pathstr = PathStr.concat(i.name, path_suffix)
                 if pathstr in flat.signals:
                     msg = f"Error Flattening {bundle}: colliding flattened Signal names for {sig} and {flat.signals[pathstr]}"
-                    raise RuntimeError(msg)
+                    self.fail(msg)
                 flat.signals[pathstr] = sig
 
         # Store it in our cache, and return
@@ -285,7 +285,7 @@ class BundleFlattener(Elaborator):
         Differs from bundle-class instances in that each attribute of anonymous-bundles 
         are generally "references", owned by something else, commonly a Module. """
 
-        raise NotImplementedError(f"Nested AnonymousBundle")
+        self.fail(f"Nested AnonymousBundle")
 
         # Create the flattened version, initializing it with `bundle`s scalar Signals
         flat = FlatBundleInst(

@@ -127,14 +127,13 @@ class ResolvePortRefs(Elaborator):
         for portref in non_sources:
             portref.inst.conns[portref.portname] = sig
 
-    @staticmethod
-    def source(portref: PortRef) -> Optional[Source]:
+    def source(self, portref: PortRef) -> Optional[Source]:
         """ 
         Find the "source signal" for `portref`, if one is connected. 
         If `portref` is not explicitly connected, or is connected to another `PortRef`, returns None. 
         """
         if not isinstance(portref.inst, (Instance, InstArray)):
-            raise TypeError(f"PortRef instance {portref}")
+            self.fail(f"PortRef instance {portref}")
 
         portconn = portref.inst.conns.get(portref.portname, None)
         if portconn is None:
@@ -145,7 +144,7 @@ class ResolvePortRefs(Elaborator):
         # This check *should* always succeed, but type-check it nonetheless.
         if isinstance(portconn, get_args(Source)):
             return portconn
-        raise TypeError(f"Connection {portconn}")
+        self.fail(f"Connection {portconn}")
 
     def find_source(self, group: List[PortRef]) -> Optional[Source]:
         """ Find any existing, declared `Source` connected to `group`. 
@@ -171,7 +170,7 @@ class ResolvePortRefs(Elaborator):
         # More than one source, somehow. Error time.
         msg = f"Internal error: invalid connection, with multiple Source-Signals {sources}, "
         msg += f"shorting Ports {[(p.inst.name, p.portname) for p in group]}"
-        raise RuntimeError(msg)
+        self.fail(msg)
 
     def create_source(self, module: Module, group: List[PortRef]) -> PortType:
         """ Create a new `Signal`, parametrized and named to connect to the `PortRef`s in `group`. """
@@ -196,7 +195,7 @@ class ResolvePortRefs(Elaborator):
         port = io.get(portref.portname, None)
         if port is None:  # Clone it, and remove any Port-attributes
             msg = f"Invalid port {portref.portname} on Instance {portref.inst.name} in Module {module.name}"
-            raise RuntimeError(msg)
+            self.fail(msg)
 
         # Copy that port into an internal Signal / Bundle
         sig = self.copy_port(port)
@@ -206,8 +205,7 @@ class ResolvePortRefs(Elaborator):
         module.add(sig)
         return sig
 
-    @staticmethod
-    def copy_port(port: PortType) -> PortType:
+    def copy_port(self, port: PortType) -> PortType:
         """ Copy a port into an internal Signal or BundleInstance """
 
         if isinstance(port, Signal):
@@ -221,14 +219,14 @@ class ResolvePortRefs(Elaborator):
             # Copy the bundle, removing port and role fields.
             return BundleInstance(of=port.of, port=False, role=None)
 
-        raise TypeError(f"Port {port}")
+        self.fail(f"Port {port}")
 
     def handle_noconn(self, module: Module, group: List[Union[PortRef, NoConn]]):
         """ Handle a group with a `NoConn`. """
         # First check for validity of the group, i.e. that the `NoConn` only connects to *one* port.
         if len(group) > 2:
             msg = f"Invalid multiply-connected `NoConn`, including {group} in {module}"
-            raise RuntimeError(msg)
+            self.fail(msg)
         # So `group` has two entries: a `NoConn` and a `PortRef`
         if isinstance(group[0], NoConn):
             return self.replace_noconn(module, portref=group[1], noconn=group[0])
@@ -242,7 +240,7 @@ class ResolvePortRefs(Elaborator):
         port = mod.ports.get(portref.portname, None)
         if port is None:
             msg = f"Invalid port connection to {portref} in {module}"
-            raise RuntimeError(msg)
+            self.fail(msg)
 
         # Copy any relevant attributes of the Port
         sig = self.copy_port(port)
