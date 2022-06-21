@@ -2022,3 +2022,51 @@ def test_multiple_signals_in_port_group():
     assert M.i2.s is M.s
     assert M.i3.s is M.s
     assert M.i4.s is M.s
+
+
+def test_bad_conns():
+    """ Test the errors produced by elaborating with invalid Port connections """
+
+    @h.module
+    class I:
+        p = h.Port()
+
+    @h.module
+    class O:
+        a, b, c = h.Signals(3)
+        i = I(a=a, b=b, p=c)  # Two of these 3 ports don't exist
+
+    with pytest.raises(RuntimeError) as e:
+        h.elaborate(O)
+    assert "Connections to invalid ports" in str(e.value)
+    assert "a " in str(e.value)
+    assert "b " in str(e.value)
+
+    @h.module
+    class O:
+        a, b, c = h.Signals(3)
+        i = I(a=a, b=b)  # None of these ports exist
+
+    with pytest.raises(RuntimeError) as e:
+        h.elaborate(O)
+    assert "Missing connection to p" in str(e.value)
+
+    @h.module
+    class O:
+        a, b, c = h.Signals(3)
+        i = I(a=a, p=b)  # One of these ports don't exist
+
+    with pytest.raises(RuntimeError) as e:
+        h.elaborate(O)
+    assert "Connection to invalid port" in str(e.value)
+    assert "a " in str(e.value)
+
+    @h.module
+    class O:
+        a, b, c = h.Signals(3)
+        i = I(a=a)  # All (one) port doesn't exist
+
+    with pytest.raises(RuntimeError) as e:
+        h.elaborate(O)
+    assert "Missing connection to p" in str(e.value)
+

@@ -30,7 +30,7 @@ class ArrayFlattener(Elaborator):
 
             # And do the real work: flattening it.
             if array.n < 1:
-                raise RuntimeError(f"Invalid InstArray {array} with size {array.n}")
+                self.fail(f"Invalid InstArray {array} with size {array.n}")
             # Create the new, flat Instances
             new_insts = []
             for k in range(array.n):
@@ -50,7 +50,7 @@ class ArrayFlattener(Elaborator):
                     port = target.ports.get(portname, None)
                     if not isinstance(port, Signal):
                         msg = f"Invalid port connection of `{portname}` {port} to {conn} in InstArray {array}"
-                        raise RuntimeError(msg)
+                        self.fail(msg)
 
                     if port.width == conn.width:
                         # All new instances get the same signal
@@ -62,18 +62,18 @@ class ArrayFlattener(Elaborator):
                             slize = conn[k * port.width : (k + 1) * port.width]
                             if slize.width != port.width:
                                 msg = f"Width mismatch connecting {slize} to {port}"
-                                raise RuntimeError(msg)
+                                self.fail(msg)
                             inst.connect(portname, slize)
                     else:  # All other width-values are invalid
                         msg = f"Invalid connection of {conn} of width {conn.width} to port {portname} on Array {array.name} of width {port.width}. "
                         msg += f"Valid widths are either {port.width} (broadcasting across instances) and {port.width * array.n} (individually wiring to each)."
-                        raise RuntimeError(msg)
+                        self.fail(msg)
                 elif isinstance(conn, PortRef):
                     msg = f"Error elaborating {array} in {module}. "
                     msg += f"Connection {conn} has not been resolved to a `Signal`. "
                     raise RuntimeError
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
-                    raise TypeError(msg)
+                    self.fail(msg)
 
         return module

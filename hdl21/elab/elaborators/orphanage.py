@@ -35,7 +35,7 @@ class Orphanage(Elaborator):
     ```
 
     Here the dictionary `my_favorite_signals` retains a reference to Signal `s`. 
-    This does not generate an orphan-error complaint, so long as Module-level ownership is unique and unambiguous. 
+    This does not generate an orphan-error complaint, so long as `Module`-parent is unique and unambiguous. 
 
     The orphan-test is very simple: each Module-attribute is annotated with a `_parent_module` member 
     upon insertion into the Module namespace. 
@@ -50,6 +50,6 @@ class Orphanage(Elaborator):
         for attr in module.namespace.values():
             if attr._parent_module is not module:
                 msg = f"Orphanage: Module {module} attribute {attr} is actually owned by another Module {attr._parent_module}!"
-                raise RuntimeError(msg)
+                self.fail(msg)
         # Checks out! Return the module unchanged.
         return module

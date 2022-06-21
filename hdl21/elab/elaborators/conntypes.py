@@ -55,23 +55,45 @@ class ConnTypes(Elaborator):
         """ Check the connections of `inst` in parent `module` """
         self.stack_push(ElabStackEnum.INSTANCE, inst.name)
 
-        # Get the Instance's resolve target, and its bundle-valued IO
+        # Get copies of both the instance's ports and connections.
+        # These will be two {str: Signal-like} dictionaries, who should have the same keys,
+        # and each paired value should be connection-compatible.
         targ = inst._resolved
         io = copy.copy(targ.ports)
-        if hasattr(targ, "bundle_ports"):
+        if hasattr(targ, "bundle_ports"):  # FIXME: make this "Module-like-wide"
             io.update(copy.copy(targ.bundle_ports))
+        conns = copy.copy(inst.conns)
 
-        for portname, conn in inst.conns.items():
-            # Pop the port from our list
-            port = io.pop(portname, None)
-            if port is None:
-                msg = f"Connection to invalid bundle port {portname} on {inst.name} in {module.name}"
+        # FIXME: the errors here could perhaps instead cover "the whole instance", rather than the first problem that we encounter.
+        # For example if an instance has some of each or all of
+        # (a) missing port connections, (b) connections to non-existent ports, and (c) incompatible connection types,
+        # it'd probably be more helpful to list "all of the above" in the failure.
+        # As is, we report the first one that we come across.
+
+        for portname, port in io.items():
+            # Get the corresponding connection
+            conn = conns.pop(portname, None)
+            if conn is None:
+                msg = f"Missing connection to {portname} on Instance `{inst.name}` in Module `{module.name}`"
                 self.fail(msg)
 
             # Check its connection-compatibility
             self.assert_compatible(port, conn)
 
-        self.stack_pop()
+        # Now check if anything remains in `conns`, i.e. that there are invalid connections to nonexistent ports.
+        if conns:
+            if len(conns) > 1:
+                # If there are multiple such errant connections, make an error message including all of them
+                remaining = " ".join(list(conns.keys()))
+                msg = f"Connections to invalid ports {remaining} on Instance `{inst.name}` in Module `{module.name}`"
+                self.fail(msg)
+
+            # Otherwise pop the sole item to get its name
+            portname, _ = conns.popitem()
+            msg = f"Connection to invalid port {portname} on Instance `{inst.name}` in Module `{module.name}`"
+            self.fail(msg)
+
+        self.stack_pop()  # Checks out, we good, pop this Instance from our elab-stack.
 
     def assert_bundles_compatible(
         self, bundle: Bundle, other: Union[BundleInstance, AnonymousBundle]
