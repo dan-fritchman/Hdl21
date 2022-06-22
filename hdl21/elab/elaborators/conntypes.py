@@ -74,7 +74,7 @@ class ConnTypes(Elaborator):
             # Get the corresponding connection
             conn = conns.pop(portname, None)
             if conn is None:
-                msg = f"Missing connection to {portname} on Instance `{inst.name}` in Module `{module.name}`"
+                msg = f"Missing connection to Port `{portname}` on Instance `{inst.name}` in Module `{module.name}`"
                 self.fail(msg)
 
             # Check its connection-compatibility
@@ -85,12 +85,12 @@ class ConnTypes(Elaborator):
             if len(conns) > 1:
                 # If there are multiple such errant connections, make an error message including all of them
                 remaining = " ".join(list(conns.keys()))
-                msg = f"Connections to invalid ports {remaining} on Instance `{inst.name}` in Module `{module.name}`"
+                msg = f"Connections to invalid Ports `{remaining}` on Instance `{inst.name}` in Module `{module.name}`"
                 self.fail(msg)
 
             # Otherwise pop the sole item to get its name
             portname, _ = conns.popitem()
-            msg = f"Connection to invalid port {portname} on Instance `{inst.name}` in Module `{module.name}`"
+            msg = f"Connection to invalid Port `{portname}` on Instance `{inst.name}` in Module `{module.name}`"
             self.fail(msg)
 
         self.stack_pop()  # Checks out, we good, pop this Instance from our elab-stack.

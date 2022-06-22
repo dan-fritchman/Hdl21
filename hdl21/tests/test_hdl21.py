@@ -1449,11 +1449,11 @@ def test_netlist_fmts():
 
     # Basic checks on its contents
     assert "subckt Bot" in nl
-    assert "+  s_2 s_1 s_0 p" in nl
+    assert "s_2 s_1 s_0 p" in nl
     assert "subckt Top" in nl
     assert "b\n" in nl
-    assert "+  ( s_2 s_1 s_0 p  )" in nl
-    assert "+  p" in nl
+    assert "( s_2 s_1 s_0 p )" in nl
+    assert "+ p" in nl
     assert "+  Bot " in nl
 
     # Convert the proto-package to another netlist format
@@ -2038,9 +2038,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Connections to invalid ports" in str(e.value)
-    assert "a " in str(e.value)
-    assert "b " in str(e.value)
+    assert "Connections to invalid Ports" in str(e.value)
 
     @h.module
     class O:
@@ -2049,7 +2047,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Missing connection to p" in str(e.value)
+    assert "Missing connection to" in str(e.value)
 
     @h.module
     class O:
@@ -2058,8 +2056,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Connection to invalid port" in str(e.value)
-    assert "a " in str(e.value)
+    assert "Connection to invalid Port" in str(e.value)
 
     @h.module
     class O:
@@ -2068,5 +2065,5 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Missing connection to p" in str(e.value)
+    assert "Missing connection to" in str(e.value)
 

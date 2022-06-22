@@ -133,7 +133,7 @@ class ResolvePortRefs(Elaborator):
         If `portref` is not explicitly connected, or is connected to another `PortRef`, returns None. 
         """
         if not isinstance(portref.inst, (Instance, InstArray)):
-            self.fail(f"PortRef instance {portref}")
+            self.fail(f"Invalid reference to port on non-Instance `{portref}`")
 
         portconn = portref.inst.conns.get(portref.portname, None)
         if portconn is None:
@@ -194,7 +194,7 @@ class ResolvePortRefs(Elaborator):
 
         port = io.get(portref.portname, None)
         if port is None:  # Clone it, and remove any Port-attributes
-            msg = f"Invalid port {portref.portname} on Instance {portref.inst.name} in Module {module.name}"
+            msg = f"Invalid port `{portref.portname}` on Instance `{portref.inst.name}` in Module `{module.name}`"
             self.fail(msg)
 
         # Copy that port into an internal Signal / Bundle
@@ -219,7 +219,7 @@ class ResolvePortRefs(Elaborator):
             # Copy the bundle, removing port and role fields.
             return BundleInstance(of=port.of, port=False, role=None)
 
-        self.fail(f"Port {port}")
+        self.fail(f"Invalid Port Type `{port}`")
 
     def handle_noconn(self, module: Module, group: List[Union[PortRef, NoConn]]):
         """ Handle a group with a `NoConn`. """
@@ -239,7 +239,7 @@ class ResolvePortRefs(Elaborator):
         mod = portref.inst._resolved
         port = mod.ports.get(portref.portname, None)
         if port is None:
-            msg = f"Invalid port connection to {portref} in {module}"
+            msg = f"Invalid port connection to `{portref}` in Module `{module}`"
             self.fail(msg)
 
         # Copy any relevant attributes of the Port

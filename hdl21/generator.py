@@ -113,7 +113,7 @@ def generator(f: Callable) -> Generator:
     usecontext = False
     if len(args) > 1:  # Also requests the context
         if args[1].annotation is not Context:
-            msg = f"Invalid generator call signature for {f.__name__}: {args}. Second argument (if provided) must be a Context."
+            msg = f"Invalid generator call signature for {f.__name__}: {args}. Second argument (if provided) must be a `Context`."
             raise RuntimeError(msg)
         usecontext = True
 

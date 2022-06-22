@@ -131,18 +131,78 @@ class Prefixed:
         """ Convert to float """
         return float(self.number) * 10 ** self.prefix.value
 
+    def __mul__(self, other) -> "Prefixed":
+        if not isinstance(other, (int, float, Decimal)):
+            return NotImplemented
+        return Prefixed(self.number * other, self.prefix)
 
-# Common prefixes as single-character identifiers.
-f = Prefix.FEMTO
-p = Prefix.PICO
-n = Prefix.NANO
-µ = Prefix.MICRO
-m = Prefix.MILLI
-K = Prefix.KILO
-M = Prefix.MEGA
-G = Prefix.GIGA
-T = Prefix.TERA
-P = Prefix.PETA
+    def __rmul__(self, other) -> "Prefixed":
+        if not isinstance(other, (int, float, Decimal)):
+            return NotImplemented
+        return Prefixed(self.number * other, self.prefix)
+
+    def __truediv__(self, other) -> "Prefixed":
+        if not isinstance(other, (int, float, Decimal)):
+            return NotImplemented
+        return Prefixed(self.number / other, self.prefix)
+
+    def __add__(self, other: "Prefixed") -> "Prefixed":
+        return _add(lhs=self, rhs=other)
+
+    def __radd__(self, other: "Prefixed") -> "Prefixed":
+        return _add(lhs=other, rhs=self)
+
+    def __sub__(self, other: "Prefixed") -> "Prefixed":
+        return _subtract(lhs=self, rhs=other)
+
+    def __rsub__(self, other: "Prefixed") -> "Prefixed":
+        return _subtract(lhs=other, rhs=self)
+
+    def scaleto(self, prefix: Prefix) -> "Prefixed":
+        """ Scale to a new `Prefix` """
+        newnum = self.number * 10 ** (self.prefix.value - prefix.value)
+        return Prefixed(newnum, prefix)
+
+
+def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
+    """ `Prefixed` Addition """
+    if not isinstance(lhs, Prefixed) or not isinstance(rhs, Prefixed):
+        return NotImplemented
+
+    if lhs.prefix == rhs.prefix:
+        return Prefixed(lhs.number + rhs.number, lhs.prefix)
+
+    # Different prefix values. Scale to the smaller of the two
+    smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
+    newnum = lhs.scaleto(smaller).number + rhs.scaleto(smaller).number
+    return Prefixed(newnum, smaller)
+
+
+def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
+    """ `Prefixed` Subtraction """
+    if not isinstance(lhs, Prefixed) or not isinstance(rhs, Prefixed):
+        return NotImplemented
+
+    if lhs.prefix == rhs.prefix:
+        return Prefixed(lhs.number - rhs.number, lhs.prefix)
+
+    # Different prefix values. Scale to the smaller of the two
+    smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
+    newnum = lhs.scaleto(smaller).number - rhs.scaleto(smaller).number
+    return Prefixed(newnum, smaller)
+
+
+# Common prefixes as single-character identifiers, and exposed in the module namespace.
+f = FEMTO = Prefix.FEMTO
+p = PICO = Prefix.PICO
+n = NANO = Prefix.NANO
+µ = MICRO = Prefix.MICRO
+m = MILLI = Prefix.MILLI
+K = KILO = Prefix.KILO
+M = MEGA = Prefix.MEGA
+G = GIGA = Prefix.GIGA
+T = TERA = Prefix.TERA
+P = PETA = Prefix.PETA
 
 
 def e(exp: int) -> Optional[Prefix]:

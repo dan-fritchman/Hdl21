@@ -9,7 +9,7 @@ from ...bundle import BundleInstance
 from ...signal import Signal, Slice, Concat
 
 # Import the base class
-from .base import Elaborator
+from .base import Elaborator, ElabStackEnum
 
 
 class ArrayFlattener(Elaborator):
@@ -24,6 +24,7 @@ class ArrayFlattener(Elaborator):
         # Flatten Instance arrays
         while module.instarrays:
             name, array = module.instarrays.popitem()
+            self.stack_push(ElabStackEnum.ARRAY, name)
             module.namespace.pop(name)
             # Visit the array's target
             target = self.elaborate_instance_array(array)
@@ -48,8 +49,11 @@ class ArrayFlattener(Elaborator):
                 elif isinstance(conn, (Signal, Slice, Concat)):
                     # Get the target-module port, particularly for its width
                     port = target.ports.get(portname, None)
+                    if port is None:
+                        msg = f"Connection to invalid Port `{portname}` on InstArray `{array}` in Module `{module.name}`"
+                        self.fail(msg)
                     if not isinstance(port, Signal):
-                        msg = f"Invalid port connection of `{portname}` {port} to {conn} in InstArray {array}"
+                        msg = f"Invalid Port `{portname}` ({port}) on InstArray `{array}` in Module `{module.name}`"
                         self.fail(msg)
 
                     if port.width == conn.width:
@@ -75,5 +79,6 @@ class ArrayFlattener(Elaborator):
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     self.fail(msg)
+            self.stack_pop()
 
         return module

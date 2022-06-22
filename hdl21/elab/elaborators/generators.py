@@ -45,15 +45,6 @@ class GeneratorElaborator(Elaborator):
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate Generator-function-call `call`. Returns the generated Module. """
-
-        # First check out cache
-        if call in self.generator_calls:  # Already done!
-            # Give the `call` a reference to its result.
-            # Note this *has not* necessarily already happened, as the `self.generator_calls` key may be an equally-valued (but distinct) `GeneratorCall`.
-            result = self.generator_calls[call]
-            call.result = result
-            return result
-
         self.stack_push(ElabStackEnum.GENERATOR, call.gen.name)
 
         # Support the "no paramclass constructor" invocation.
@@ -63,13 +54,23 @@ class GeneratorElaborator(Elaborator):
             msg = f"Invalid Generator Call {call}: either provide a single {call.gen.Params} instance or keyword arguments, not both."
             self.fail(msg)
         elif call.arg is GenDefault:
-            # Create an instance of the generator's parameter-class
+            # Create an instance of the generator's parameter-class, and wipe out the keyword-args dict.
             call.arg = call.gen.Params(**call.kwargs)
+            call.kwargs = dict()
 
         # After all that, check that the call has a valid instance of the generator's parameter-class
         if not isinstance(call.arg, call.gen.Params):
             msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.arg}"
             self.fail(msg)
+
+        # At this point the `Call` has a valid `Generator` and `arg`.
+        # Check our cache, see if we've already generated its module.
+        if call in self.generator_calls:  # Already done!
+            # Give the `call` a reference to its result.
+            # Note this *has not* necessarily already happened, as the `self.generator_calls` key may be an equally-valued (but distinct) `GeneratorCall`.
+            result = self.generator_calls[call]
+            call.result = result
+            return result
 
         # The main event: Run the generator-function
         if call.gen.usecontext:
