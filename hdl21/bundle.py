@@ -307,10 +307,11 @@ class AnonymousBundle:
         #     self.bundles[name] = val
         # elif isinstance(val, AnonymousBundle):
         #     self.anons[name] = val
-        # elif isinstance(val, BundleRef): # FIXME: whether to enable these. Currently not supported.
+        # elif isinstance(val, BundleRef): # FIXME: enable these! 
         #     self.portrefs[name] = val
         else:
-            raise TypeError
+            msg = f"Invalid Bundle attribute for `{self}`: `{val}`"
+            raise TypeError(msg)
         return val
 
 

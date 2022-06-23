@@ -2067,3 +2067,32 @@ def test_bad_conns():
         h.elaborate(O)
     assert "Missing connection to" in str(e.value)
 
+
+@pytest.mark.xfail(reason="#22 https://github.com/dan-fritchman/Hdl21/issues/22")
+def test_anon_bundle_refs():
+    """ Test adding `BundleRef`s to `AnonymousBundle`s. """
+
+    @h.bundle
+    class Diff:
+        p, n = h.Signals(2)
+
+    @h.module
+    class HasDiff:
+        # Module with a `Diff` Port
+        d = Diff(port=True)
+
+    @h.module
+    class HasHasDiff:
+        # Module instantiating a few `HasDiff`
+        d = Diff()
+        # Instance connected to the Bundle Instance
+        h1 = HasDiff(d=d)
+
+        # THE POINT OF THE TEST:
+        # Instance with an Anon Bundle, "equal to" the Bundle Instance
+        h2 = HasDiff(d=h.AnonymousBundle(p=d.p, n=d.n))
+        # Instance with (p, n) flipped
+        h3 = HasDiff(d=h.AnonymousBundle(p=d.n, n=d.p))
+
+    h.elaborate(HasHasDiff)
+

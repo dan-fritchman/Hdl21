@@ -14,6 +14,7 @@ from ..instance import Instance
 from ..signal import Signal, Port, PortDir, Slice, Concat
 from .. import primitives
 from ..primitives import Primitive
+from ..prefix import Prefix, Prefixed
 
 
 def from_proto(pkg: vlsir.circuit.Package) -> SimpleNamespace:
@@ -198,7 +199,7 @@ class ProtoImporter:
         prim_map = {
             "vdc": "DcVoltageSource",
             "vpluse": "PulseVoltageSource",
-            "isource": "IdealCurrentSource",
+            "isource": "CurrentSource",
             "resistor": "IdealResistor",
             "capacitor": "IdealCapacitor",
             "inductor": "IdealInductor",
@@ -223,6 +224,7 @@ class ProtoImporter:
 
     @classmethod
     def import_parameter(cls, pparam: vlsir.Param) -> Any:
+        """ Import a `Param` """
         ptype = pparam.WhichOneof("value")
         if ptype == "integer":
             return int(pparam.integer)
@@ -230,7 +232,11 @@ class ProtoImporter:
             return float(pparam.double)
         if ptype == "string":
             return str(pparam.string)
-        raise ValueError
+        if ptype == "prefixed":
+            return import_prefixed(pparam.prefixed)
+        if ptype == "literal":
+            raise NotImplementedError
+        raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
     def import_connection(
         self, pconn: vlsir.circuit.Connection, module: Module
@@ -291,3 +297,51 @@ class ProtoImporter:
         if pport.direction == vlsir.circuit.Port.Direction.NONE:
             return PortDir.NONE
         raise ValueError
+
+
+def import_prefix(vpre: vlsir.SIPrefix) -> Prefix:
+    """ Import an enumerated `Prefix` """
+    map = {
+        vlsir.SIPrefix.YOCTO: Prefix.YOCTO,
+        vlsir.SIPrefix.ZEPTO: Prefix.ZEPTO,
+        vlsir.SIPrefix.ATTO: Prefix.ATTO,
+        vlsir.SIPrefix.FEMTO: Prefix.FEMTO,
+        vlsir.SIPrefix.PICO: Prefix.PICO,
+        vlsir.SIPrefix.NANO: Prefix.NANO,
+        vlsir.SIPrefix.MICRO: Prefix.MICRO,
+        vlsir.SIPrefix.MILLI: Prefix.MILLI,
+        vlsir.SIPrefix.CENTI: Prefix.CENTI,
+        vlsir.SIPrefix.DECI: Prefix.DECI,
+        vlsir.SIPrefix.DECA: Prefix.DECA,
+        vlsir.SIPrefix.HECTO: Prefix.HECTO,
+        vlsir.SIPrefix.KILO: Prefix.KILO,
+        vlsir.SIPrefix.MEGA: Prefix.MEGA,
+        vlsir.SIPrefix.GIGA: Prefix.GIGA,
+        vlsir.SIPrefix.TERA: Prefix.TERA,
+        vlsir.SIPrefix.PETA: Prefix.PETA,
+        vlsir.SIPrefix.EXA: Prefix.EXA,
+        vlsir.SIPrefix.ZETTA: Prefix.ZETTA,
+        vlsir.SIPrefix.YOTTA: Prefix.YOTTA,
+    }
+    if vpre not in map:
+        raise ValueError(f"Invalid Prefix {vpre}")
+    return map[vpre]
+
+
+def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
+    """ Import a `Prefixed` number """
+
+    # Import the metric prefix
+    prefix = import_prefix(vpref.prefix)
+
+    # And import the numeric part, dispatched across its type.
+    ptype = vpref.WhichOneof("number")
+    if ptype == "integer":
+        return int(vpref.integer)
+    if ptype == "double":
+        return float(vpref.double)
+    if ptype == "string":
+        return str(vpref.string)
+
+    raise ValueError(f"Invalid Parameter Type: `{ptype}`")
+

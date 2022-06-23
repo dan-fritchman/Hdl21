@@ -118,12 +118,25 @@ class AnalysisType(Enum):
     """ Enumerated Analysis-Types 
     Corresponding to the entries in the `Analysis` type-union. """
 
+    OP = "op"
     DC = "dc"
     AC = "ac"
     TRAN = "tran"
     MONTE = "monte"
     SWEEP = "sweep"
     CUSTOM = "custom"
+
+
+@simattr
+@datatype
+class Op:
+    """ Operating Point Analysis """
+
+    ...  # No additional attributes
+
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.OP
 
 
 @simattr

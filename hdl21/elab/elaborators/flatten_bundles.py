@@ -213,7 +213,7 @@ class BundleFlattener(Elaborator):
                 if isinstance(conn, AnonymousBundle):
                     # FIXME: hierarchical `AnonymousBundle`s are not handled here
                     if len(conn.bundles):
-                        self.fail(f"Nested AnonymousBundle")
+                        self.fail(f"Not implemented: nested AnonymousBundle")
                     # `module.portname` must be in our `module_attrs` by now (or fail)
                     t = self.module_attrs.get((id(inst._resolved), portname), None)
                     if t is None:
