@@ -132,7 +132,7 @@ class AnalysisType(Enum):
 class Op:
     """ Operating Point Analysis """
 
-    ...  # No additional attributes
+    name: Optional[str] = None  # Optional analysis name
 
     @property
     def tp(self) -> AnalysisType:
@@ -216,7 +216,7 @@ class CustomAnalysis:
     Primarily for simulator-specific specialty analyses. """
 
     cmd: str  # Analysis command string
-    name: Optional[str] = None  #
+    name: Optional[str] = None  # Optional analysis name
 
     @property
     def tp(self) -> AnalysisType:
@@ -224,7 +224,7 @@ class CustomAnalysis:
 
 
 # Analysis type-union
-Analysis = Union[Dc, Ac, Tran, SweepAnalysis, MonteCarlo, CustomAnalysis]
+Analysis = Union[Op, Dc, Ac, Tran, SweepAnalysis, MonteCarlo, CustomAnalysis]
 
 
 def is_analysis(val: Any) -> bool:
