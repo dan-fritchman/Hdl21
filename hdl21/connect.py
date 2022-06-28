@@ -62,7 +62,7 @@ def call_and_setattr_connects(cls: type) -> type:
         raise RuntimeError(f"Must be `@getattr_port_refs`")
 
     # First check and fail if any of the methods to be defined here are already defined elsewhere
-    defined_here = ["__call__", "__setattr__", "connect"]
+    defined_here = ["__call__", "__setattr__", "connect", "disconnect"]
     for key in defined_here:
         if key in cls.__dict__:
             msg = f"Invalid modification of {cls} with `@call_and_setattr_connects`: {key} is already defined."
@@ -100,15 +100,31 @@ def call_and_setattr_connects(cls: type) -> type:
             conn = AnonymousBundle(**conn)
         if not is_connectable(conn):
             raise TypeError(f"{self} attempting to connect non-connectable {conn}")
+        if portname in self.conns:
+            # Disconnect any prior connection
+            _ = self.disconnect(portname)
         self.conns[portname] = conn
         if does_track_connected_ports(conn):
-            conn.connected_ports.append(PortRef(self, portname))
+            conn.connected_ports.add(PortRef(self, portname))
         return self
+
+    def disconnect(self, portname: str) -> Connectable:
+        """ Disconnect the port named `portname`. 
+        Returns the formerly-connected `Connectable`. 
+        Raises a KeyError if the port is not connected. """
+        from .instance import PortRef
+
+        conn = self.conns.pop(portname)
+        if does_track_connected_ports(conn): 
+            conn.connected_ports.remove(PortRef(self, portname))
+        return conn
+
 
     # Attach all of these to the class
     cls.__call__ = __call__
     cls.__setattr__ = __setattr__
     cls.connect = connect
+    cls.disconnect = disconnect
     cls.__call_and_setattr_connects__ = True
 
     # And don't forget to return it!

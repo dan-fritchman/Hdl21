@@ -177,7 +177,7 @@ class BundleFlattener(Elaborator):
             # i = SomeBundle()       # Theoretical Bundle with signal-attribute `s`
             # x = SomeModule(s=i.s)  # Connects `BundleRef` `i.s`
             # FIXME: this needs to happen for hierarchical bundles too
-            for bref in bundle_inst.refs.values():
+            for bref in bundle_inst.refs_to_me.values():
                 resolved_bref = resolve_bundle_ref(bref)
                 if isinstance(resolved_bref, BundleInstance):
                     msg = f"Bundle Reference to {resolved_bref} in {bref}"
@@ -212,8 +212,8 @@ class BundleFlattener(Elaborator):
                 conn = inst.conns[portname]
                 if isinstance(conn, AnonymousBundle):
                     # FIXME: hierarchical `AnonymousBundle`s are not handled here
-                    if len(conn.bundles):
-                        self.fail(f"Not implemented: nested AnonymousBundle")
+                    # if len(conn.bundles):
+                    #     self.fail(f"Not implemented: nested AnonymousBundle")
                     # `module.portname` must be in our `module_attrs` by now (or fail)
                     t = self.module_attrs.get((id(inst._resolved), portname), None)
                     if t is None:
@@ -225,6 +225,18 @@ class BundleFlattener(Elaborator):
                     for pathstr, flat_port in flat_bundle_port.signals.items():
                         # Note `flat_port.name` will be `inst`'s name, i.e. `_mybus_clk_`
                         # Whereas its `path` will line up to `flat`'s namespace, i.e. `['bus']`
+                        attr = conn.get(pathstr.val)
+                        if attr is None:
+                            msg = f"Connection {pathstr.val} missing from AnonymousBundle connected to Port {portname} on Instance {inst}"
+                            self.fail(msg)
+                        # if isinstance(attr, Signal):
+                        #     raise TabError 
+                        # elif isinstance(attr, BundleRef):
+                        #     raise TabError 
+                        # else:
+                        #     raise TabError 
+                        
+
                         inst.conns[flat_port.name] = conn.signals[pathstr.val]
                     inst.conns.pop(portname)
 

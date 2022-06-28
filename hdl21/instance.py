@@ -4,7 +4,7 @@
 Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
-from typing import Optional, Union, List, Any, Dict
+from typing import Optional, Union, Set, Any, Dict
 
 # Local imports
 from .connect import (
@@ -25,6 +25,7 @@ class PortRef:
         "inst",
         "portrefs",
         "connect",
+        "disconnect",
         "connected_ports",
         "_port_ref",
         "_module",
@@ -40,7 +41,7 @@ class PortRef:
         self.portname = portname
         self.portrefs: Dict[str, "PortRef"] = dict()
         # Connected port references
-        self.connected_ports: List["PortRef"] = []
+        self.connected_ports: Set["PortRef"] = set()
         self._elaborated = False
         self._initialized = True
 
@@ -99,6 +100,7 @@ class Instance(_Instance):
         "portref",
         "portrefs",
         "connect",
+        "disconnect",
         "_port_ref",
         "_module",
         "_resolved",
@@ -145,6 +147,7 @@ class InstArray(_Instance):
         "_port_ref",
         "instrefs",
         "connect",
+        "disconnect",
         "_elaborated",
         "_initialized",
         "_module",

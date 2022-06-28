@@ -69,7 +69,7 @@ class Module:
     def __setattr__(self, key: str, val: Any) -> None:
         """ Set-attribute over-ride, organizing into type-based containers """
 
-        if not getattr(self, "_initialized", False) or key.startswith("_"):
+        if key.startswith("_") or not getattr(self, "_initialized", False):
             # Bootstrapping phase. Pass along to "regular" setattr.
             return super().__setattr__(key, val)
 
