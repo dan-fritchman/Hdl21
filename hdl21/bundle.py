@@ -5,7 +5,7 @@ Structured connection objects, instances thereof, and associated utilities.
 """
 
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args, Dict, Set
+from typing import Optional, Union, Any, get_args, Dict, Set, List
 
 # Local Imports
 from .connect import connectable, track_connected_ports
@@ -120,6 +120,9 @@ class BundleInstance:
     def _resolved(self) -> "Bundle":
         return self.of
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name} of={self.of})"
+
 
 # Type-alias for HDL objects storable as `Module` attributes
 BundleAttr = Union[Signal, BundleInstance]
@@ -208,6 +211,11 @@ class Bundle:
         """ Roles-Enumeration Accessor Property """
         # Roles often look like a class, so they have a class-style name-accessor
         return self.roles
+
+    def __repr__(self) -> str:
+        if self.name:
+            return f"Bundle(name={self.name})"
+        return f"Bundle(_anon_)"
 
 
 def bundle(cls: type) -> Bundle:
@@ -334,6 +342,8 @@ class BundleRef:
 
     _specialcases = [
         "parent",
+        "path",
+        "root",
         "connected_ports",
         "_bundle_ref",
         "_module",
@@ -361,9 +371,30 @@ class BundleRef:
         """ Hash references as the tuple of their instance-address and name """
         return hash((id(self.inst), self.attrname))
 
+    def path(self) -> List[str]:
+        """ Get the path to this potentially nested reference. """
+        if isinstance(self.parent, BundleRef):
+            return self.parent.path() + [self.attrname]
+        if isinstance(self.parent, BundleInstance):
+            return [self.attrname]
+        raise TypeError
+
+    def root(self) -> "BundleInstance":
+        """ Get the root `BundleInstance` of this potentially nested reference. """
+        if isinstance(self.parent, BundleRef):
+            return self.parent.root()
+        if isinstance(self.parent, BundleInstance):
+            return self.parent
+        raise TypeError
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(root={self.root()} path={self.path()})"
+
 
 def resolve_bundle_ref(bref: BundleRef) -> Union[Signal, BundleInstance]:
-    """ Resolve a bundle-reference to either a Signal or sub-Bundle Instance. """
+    """ 
+    Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance. 
+    """
 
     if isinstance(bref.parent, BundleInstance):
         # Parent is a BundleInstance. Get the attribute from its namespace.

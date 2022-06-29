@@ -32,7 +32,8 @@ class SliceResolver(Elaborator):
             # Update all `Slice` and `Concat` valued connections to remove nested `Slice`s
             for portname, conn in inst.conns.items():
                 if isinstance(conn, (Slice, Concat)):
-                    inst.conns[portname] = _resolve_sliceable(conn)
+                    resolved = _resolve_sliceable(conn)
+                    inst.connect(portname, resolved)
                 # All other connection-types (Signals, Interfaces) are fine
 
         return module

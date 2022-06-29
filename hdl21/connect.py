@@ -100,12 +100,18 @@ def call_and_setattr_connects(cls: type) -> type:
             conn = AnonymousBundle(**conn)
         if not is_connectable(conn):
             raise TypeError(f"{self} attempting to connect non-connectable {conn}")
+
+        # The main event: actually stick `conn` in the `conns` dict
         if portname in self.conns:
-            # Disconnect any prior connection
-            _ = self.disconnect(portname)
-        self.conns[portname] = conn
-        if does_track_connected_ports(conn):
-            conn.connected_ports.add(PortRef(self, portname))
+            # Replace and disconnect any prior connection
+            self.replace(portname, conn)
+        else:
+            self.conns[portname] = conn
+            # If `conn` tracks them, add a reference back to us
+            if does_track_connected_ports(conn):
+                conn.connected_ports.add(PortRef(self, portname))
+
+        # And return `self` to aid in method-chaining use-cases
         return self
 
     def disconnect(self, portname: str) -> Connectable:
@@ -115,15 +121,39 @@ def call_and_setattr_connects(cls: type) -> type:
         from .instance import PortRef
 
         conn = self.conns.pop(portname)
-        if does_track_connected_ports(conn): 
+        if does_track_connected_ports(conn):
             conn.connected_ports.remove(PortRef(self, portname))
         return conn
 
+    def replace(self, portname: str, conn: Connectable) -> Connectable:
+        """ 
+        Replace the connection to `portname` with `conn`. 
+        Returns the formerly-connected `Connectable`. 
+        Raises a KeyError if the port is not connected. 
+        
+        The `replace` method is functionally identical to serial calls to `disconnect` and `connect`, 
+        but allows for in-place modification of the `conns` dict, e.g. while iterating over its items. 
+        """
+        from .instance import PortRef
+
+        # Get a reference to the old connection in the `conns` dict, without removing it
+        old = self.conns[portname]
+        if does_track_connected_ports(old):
+            old.connected_ports.remove(PortRef(self, portname))
+        
+        # And replace it in the `conns` dict
+        self.conns[portname] = conn
+        # If `conn` tracks them, add a reference back to us
+        if does_track_connected_ports(conn):
+            conn.connected_ports.add(PortRef(self, portname))
+
+        return old
 
     # Attach all of these to the class
     cls.__call__ = __call__
     cls.__setattr__ = __setattr__
     cls.connect = connect
+    cls.replace = replace
     cls.disconnect = disconnect
     cls.__call_and_setattr_connects__ = True
 

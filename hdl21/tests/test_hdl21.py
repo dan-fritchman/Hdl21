@@ -1938,7 +1938,7 @@ def test_array_bundle():
 
 @pytest.mark.xfail(reason="#19 https://github.com/dan-fritchman/Hdl21/issues/19")
 def test_sub_bundle_conn():
-    """ Test connecting via PortRef to a sub-Bundle """
+    """ Test connecting via BundleRef to a sub-Bundle """
 
     @h.bundle
     class B1:
@@ -2068,7 +2068,6 @@ def test_bad_conns():
     assert "Missing connection to" in str(e.value)
 
 
-# @pytest.mark.xfail(reason="#22 https://github.com/dan-fritchman/Hdl21/issues/22")
 def test_anon_bundle_refs():
     """ Test adding `BundleRef`s to `AnonymousBundle`s. """
 
