@@ -389,20 +389,3 @@ class BundleRef:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(root={self.root()} path={self.path()})"
-
-
-def resolve_bundle_ref(bref: BundleRef) -> Union[Signal, BundleInstance]:
-    """ 
-    Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance. 
-    """
-
-    if isinstance(bref.parent, BundleInstance):
-        # Parent is a BundleInstance. Get the attribute from its namespace.
-        return bref.parent.of.get(bref.attrname)
-
-    if isinstance(bref.parent, BundleRef):
-        # Nested reference. Recursively resolve the parent.
-        resolved_parent = resolve_bundle_ref(bref.parent)
-        return resolved_parent.of.get(bref.attrname)
-
-    raise TypeError(f"BundleRef parent for {bref}")
