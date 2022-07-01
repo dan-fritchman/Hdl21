@@ -232,14 +232,16 @@ R = Res = Resistor = IdealResistor
 
 @paramclass
 class PhysicalResistorParams:
-    r = Param(dtype=float, desc="Resistance (ohms)")
+    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
 PhysicalResistor = Primitive(
     name="PhysicalResistor",
     desc="Physical Resistor",
-    port_list=[Port(name="p"), Port(name="n")],
-    paramtype=ResistorParams,
+    port_list=[Port(name="p"), Port(name="n"), Port(name="b")],
+    paramtype=PhysicalResistorParams,
     primtype=PrimitiveType.PHYSICAL,
 )
 
