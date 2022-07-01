@@ -7,7 +7,7 @@ import copy
 from typing import Any, Union, get_args
 
 # Local imports
-from ...connect import connectable, Connectable
+from ...connect import is_connectable, Connectable
 from ...module import Module
 from ...instance import InstArray, Instance
 from ...signal import Sliceable, Signal
@@ -151,12 +151,12 @@ class ConnTypes(Elaborator):
     def assert_compatible(self, port: Connectable, conn: Connectable) -> None:
         """ Assert that `port` and `conn` are compatible for connection. """
 
-        if not connectable(conn):
+        if not is_connectable(conn):
             self.fail(f"Invalid Connection {conn}")
 
         if isinstance(conn, BundleRef):
             # Recursively call this function on the ref's resolved value
-            return self.assert_compatible(port, resolve_bundleref_type(conn))
+            return self.assert_compatible(port, self.resolve_bundleref_type(conn))
 
         if isinstance(port, get_args(Sliceable)):
             return self.assert_signals_compatible(port, conn)
@@ -167,24 +167,27 @@ class ConnTypes(Elaborator):
         self.fail(f"Invalid Port {port}")
 
 
-def resolve_bundleref_type(bref: BundleRef) -> Union[Signal, BundleInstance]:
-    """ 
-    Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance. 
+    def resolve_bundleref_type(self, bref: BundleRef) -> Union[Signal, BundleInstance]:
+        """ 
+        Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance. 
 
-    NOTE this returns a *representative* signal or bundle instance, 
-    i.e. one with the correct type and width - not *the signal* for a given instance. 
-    In other words: this is fine for connection-validity checking, 
-    but *not* for copying signals during flattening. 
-    Hence the "type" name suffix, although what we return is not really a type. 
-    """
+        NOTE this returns a *representative* signal or bundle instance, 
+        i.e. one with the correct type and width - not *the signal* for a given instance. 
+        In other words: this is fine for connection-validity checking, 
+        but *not* for copying signals during flattening. 
+        Hence the "type" name suffix, although what we return is not really a type. 
+        """
 
-    if isinstance(bref.parent, BundleInstance):
-        # Parent is a BundleInstance. Get the attribute from its namespace.
-        return bref.parent.of.get(bref.attrname)
+        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance. 
+            parent = bref.parent
+        elif isinstance(bref.parent, BundleRef):  # Nested reference. Recursively resolve the parent.
+            parent = self.resolve_bundleref_type(bref.parent)
+        else:
+            self.fail(f"Invalid BundleRef parent for {bref}")
 
-    if isinstance(bref.parent, BundleRef):
-        # Nested reference. Recursively resolve the parent.
-        resolved_parent = resolve_bundleref_type(bref.parent)
-        return resolved_parent.of.get(bref.attrname)
-
-    raise TypeError(f"BundleRef parent for {bref}")
+        # Get the attribute from the parent namespace, or fail if not available.
+        attr = parent.of.get(bref.attrname)
+        if attr is None:
+            msg = f"Bundle `{bref.parent.of.name}` has no attribute `{bref.attrname}`"
+            self.fail(msg)
+        return attr
