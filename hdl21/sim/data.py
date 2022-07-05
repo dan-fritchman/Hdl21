@@ -4,11 +4,11 @@ Spice-Class Simulation Interface
 
 from decimal import Decimal
 from enum import Enum
-from typing import Union, Any, Optional, List, get_args
+from typing import Union, Any, Optional, List, Sequence, get_args
 from pathlib import Path
 from dataclasses import field
 
-import vlsirtools
+import vlsirtools.spice as vsp
 
 # Local Imports
 from ..datatype import datatype
@@ -346,13 +346,22 @@ class Sim:
             return attrs[0]
         return list(attrs)
 
-    def run(
-        self, opts: Optional[vlsirtools.spice.SimOptions] = None
-    ) -> vlsirtools.spice.SimResultUnion:
+    def run(self, opts: Optional[vsp.SimOptions] = None) -> vsp.SimResultUnion:
         """ Invoke simulation via `vlsirtools.spice`. """
         from .to_proto import to_proto
 
-        return vlsirtools.spice.sim(inp=to_proto(self), opts=opts)
+        return vsp.sim(inp=to_proto(self), opts=opts)
+
+
+def run(inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None):
+    """ Invoke one or more `Sim`s via `vlsirtools.spice`. """
+
+    from .to_proto import to_proto
+
+    if not isinstance(inp, Sequence):
+        inp = [inp]
+
+    return vsp.sim(inp=[to_proto(s) for s in inp], opts=opts)
 
 
 def _add_attr_func(name: str, cls: type):
