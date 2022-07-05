@@ -79,7 +79,7 @@ class ProtoImporter:
             domain=pmod.name.domain,
             desc=pmod.desc,
             port_list=self.import_ports(pmod.ports),
-            paramtype=object,  # FIXME: should these be stored in the serialization schema?
+            paramtype=dict,  # FIXME: should these be stored in the serialization schema?
         )
         # Give it a (non-initializer) value for its `importpath`
         emod.importpath = [pmod.name.domain]

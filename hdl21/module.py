@@ -9,12 +9,12 @@ This module primarily defines:
 
 import inspect
 from types import ModuleType
-from typing import Any, Optional, List, Union, get_args, Type
+from typing import Any, Optional, List, Union, get_args, Type, Dict
 from pydantic.dataclasses import dataclass
 from dataclasses import field
 
 # Local imports
-from .params import NoParams, HasNoParams
+from .params import NoParams, HasNoParams, isparamclass
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, Instance, InstArray
 from .bundle import BundleInstance
@@ -320,6 +320,7 @@ class ExternalModule:
     Unlike `Modules`, `ExternalModules` include parameters to support legacy HDLs.
     Said parameters may only take on a limited number of datatypes, and may not be nested.
     Each `ExternalModule` stores a parameter-type field `paramtype`. 
+    Parameter types may be either `hdl21.paramclass`es or the built-in `dict`. 
     Parameter-values are checked to be instances of `paramtype` at creation time. 
     """
 
@@ -332,6 +333,11 @@ class ExternalModule:
     importpath: Optional[List[str]] = field(repr=False, init=False, default=None)
 
     def __post_init__(self):
+        # Check for a valid parameter-type
+        if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
+            msg = f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            msg += "Param types must be either `@paramclass`es or `dict`."
+            raise ValueError(msg)
         # Internal tracking data: defining module/import-path
         self.pymodule = _caller_pymodule()
         self.importpath = None

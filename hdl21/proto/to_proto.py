@@ -13,7 +13,7 @@ free-standing functions to enable use elsewhere.
 
 from decimal import Decimal
 from textwrap import dedent
-from dataclasses import is_dataclass, fields
+from dataclasses import fields
 from enum import Enum
 from typing import Optional, List, Union, Dict, Any
 
@@ -23,6 +23,7 @@ import vlsir
 import vlsir.circuit_pb2 as vckt
 
 # HDL
+from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
 from ..elab import Elabables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
@@ -299,8 +300,11 @@ def dictify_params(params: Any) -> Dict[str, ScalarOption]:
     `dataclasses.as_dict`, which we replace for sake of our "near-scalar" types 
     such as `Prefixed` numbers. """
 
-    if not is_dataclass(params):
-        msg = f"Invalid Parameter Call-Argument {params} - must be dataclasses"
+    if isinstance(params, dict):
+        return params
+
+    if not isparamclass(params):
+        msg = f"Invalid Parameter Call-Argument {params} - must be either `dict` or `hdl21.paramclass`"
         raise TypeError(msg)
 
     # And turn its fields into a dictionary
