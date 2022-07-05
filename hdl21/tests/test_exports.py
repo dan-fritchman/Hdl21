@@ -457,3 +457,22 @@ def test_generator_recall():
     ns = rt.hdl21.tests.test_exports
     assert isinstance(ns.Caller, h.Module)
     assert isinstance(getattr(ns, "CallMeTwice"), h.Module)
+
+
+def test_rountrip_external_module():
+    """ Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto """
+
+    @h.paramclass 
+    class P: # Our ExternalModule's parameter-type
+        a = h.Param(dtype=int, desc="a", default=1)
+        b = h.Param(dtype=str, desc="b", default="two")
+
+    E = h.ExternalModule(name="E", port_list=[], paramtype=P)
+
+    @h.module 
+    class HasE:
+        e = E(P())()
+
+    exported = h.to_proto(HasE)
+    imported = h.from_proto(exported)
+    h.to_proto(imported.hdl21.tests.test_exports.HasE)
