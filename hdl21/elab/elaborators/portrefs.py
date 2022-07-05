@@ -125,7 +125,7 @@ class ResolvePortRefs(Elaborator):
         # And re-connect it to each Instance
         non_sources = list(filter(lambda p: self.source(p) is None, group))
         for portref in non_sources:
-            portref.inst.conns[portref.portname] = sig
+            portref.inst.connect(portref.portname, sig)
 
     def source(self, portref: PortRef) -> Optional[Source]:
         """ 
@@ -256,7 +256,7 @@ class ResolvePortRefs(Elaborator):
 
         # Add the new signal, and connect it to `inst`
         module.add(sig)
-        portref.inst.conns[portref.portname] = sig
+        portref.inst.connect(portref.portname, sig)
 
 
 class SetList:

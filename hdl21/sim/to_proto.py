@@ -28,6 +28,7 @@ class ProtoExporter:
     def __init__(self, sim: data.Sim):
         self.sim = sim  # Store the input `Sim`
         self.inp = None  # Initialize our resultant `vsp.SimInput`
+        self.analysis_count = 0
 
     def export(self) -> vsp.SimInput:
         """ Primary export method. Converts `sim.tb` and its dependencies to a `Package`, 
@@ -65,7 +66,9 @@ class ProtoExporter:
 
     def export_analysis(self, an: data.Analysis) -> vsp.Analysis:
         """ Export an `Analysis`, largely dispatching across types and re-assembling into a `vsp.Analysis`. """
-        if isinstance(an, data.Dc):
+        if isinstance(an, data.Op):
+            return vsp.Analysis(op=self.export_op(an))
+        elif isinstance(an, data.Dc):
             return vsp.Analysis(dc=self.export_dc(an))
         elif isinstance(an, data.Ac):
             return vsp.Analysis(ac=self.export_ac(an))
@@ -80,10 +83,25 @@ class ProtoExporter:
         else:
             raise TypeError(f"Invalid Analysis {an}")
 
+    def next_analysis_name(self) -> str:
+        """ Create a name for the next user-unnamed Analysis. 
+        Format: `Analysis{num}`, where `num` increases across all analyses. """
+        name = f"Analysis{self.analysis_count}"
+        self.analysis_count += 1
+        return name
+
+    def export_op(self, op: data.Op) -> vsp.OpInput:
+        """ Export an operating point analysis """
+        analysis_name = op.name or self.next_analysis_name()
+        return vsp.OpInput(
+            analysis_name=analysis_name, ctrls=[],  # FIXME: analysis-specific controls
+        )
+
     def export_dc(self, dc: data.Dc) -> vsp.DcInput:
         """ Export a DC analysis """
+        analysis_name = dc.name or self.next_analysis_name()
         return vsp.DcInput(
-            analysis_name=dc.name,
+            analysis_name=analysis_name,
             indep_name=self.export_sweep_variable(dc.var),
             sweep=self.export_sweep(dc.sweep),
             ctrls=[],  # FIXME: analysis-specific controls
@@ -91,8 +109,9 @@ class ProtoExporter:
 
     def export_ac(self, ac: data.Ac) -> vsp.AcInput:
         """ Export an AC analysis """
+        analysis_name = ac.name or self.next_analysis_name()
         return vsp.AcInput(
-            analysis_name=ac.name,
+            analysis_name=analysis_name,
             fstart=ac.sweep.start,
             fstop=ac.sweep.stop,
             npts=ac.sweep.npts,
@@ -101,8 +120,9 @@ class ProtoExporter:
 
     def export_tran(self, tran: data.Tran) -> vsp.TranInput:
         """ Export a transient analysis """
+        analysis_name = tran.name or self.next_analysis_name()
         return vsp.TranInput(
-            analysis_name=tran.name,
+            analysis_name=analysis_name,
             tstop=tran.tstop,
             tstep=tran.tstep,
             ic={},  # FIXME: initial conditions
@@ -111,8 +131,9 @@ class ProtoExporter:
 
     def export_sweep_analysis(self, swp_an: data.SweepAnalysis) -> vsp.SweepInput:
         """ Export a swept, nested set of one or more inner analyses as a `SweepInput`. """
+        analysis_name = swp_an.name or self.next_analysis_name()
         return vsp.SweepInput(
-            analysis_name=swp_an.name,
+            analysis_name=analysis_name,
             variable=self.export_sweep_variable(swp_an.var),
             sweep=self.export_sweep(swp_an.sweep),
             an=[self.export_analysis(a) for a in swp_an.inner],
@@ -121,8 +142,9 @@ class ProtoExporter:
 
     def export_monte(self, monte: data.MonteCarlo) -> vsp.MonteInput:
         """ Export a monte-carlo analysis """
+        analysis_name = monte.name or self.next_analysis_name()
         return vsp.MonteInput(
-            analysis_name=monte.name,
+            analysis_name=analysis_name,
             npts=monte.npts,
             seed=0,  # FIXME: programmable seeds?
             an=[self.export_analysis(a) for a in monte.inner],
@@ -133,7 +155,12 @@ class ProtoExporter:
         self, an: data.CustomAnalysis
     ) -> vsp.CustomAnalysisInput:
         """ Export a custom analysis """
-        raise NotImplementedError
+        analysis_name = an.name or self.next_analysis_name()
+        return vsp.CustomAnalysisInput(
+            analysis_name=analysis_name,
+            cmd=an.cmd,
+            ctrls=[],  # FIXME: analysis-specific controls
+        )
 
     def export_sweep_variable(self, var: Union[str, data.Param]) -> str:
         """ Export a sweep-variable to its name. """
