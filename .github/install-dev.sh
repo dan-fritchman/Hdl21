@@ -5,7 +5,7 @@
 
 pwd
 cd .. 
-git clone https://github.com/dan-fritchman/Vlsir.git
+git clone https://github.com/Vlsir/Vlsir.git
 cd Vlsir/bindings/python 
 pip install -e .
 cd ../../VlsirTools
