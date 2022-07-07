@@ -119,9 +119,6 @@ class ResolvePortRefs(Elaborator):
         # And if we don't find any, go about naming and creating one.
         sig: Source = self.find_source(group) or self.create_source(module, group)
 
-        # if sig is None:
-        #     sig = self.create_source(module, group)
-
         # And re-connect it to each Instance
         non_sources = list(filter(lambda p: self.source(p) is None, group))
         for portref in non_sources:

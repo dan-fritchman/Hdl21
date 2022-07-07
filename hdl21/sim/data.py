@@ -77,8 +77,10 @@ def simattr(cls) -> type:
 class Param:
     """ Simulation Parameter-Value """
 
-    name: str  # Parameter Name
-    val: ParamVal  # Parameter Value
+    # Parameter Value
+    val: ParamVal  
+    # Parameter Name. Generally required at simulation-time, but `Optional` for during construction stages.
+    name: Optional[str] = None  
 
 
 @datatype
@@ -94,8 +96,8 @@ class LinearSweep:
 class LogSweep:
     """ Logarithmic / Decade Sweep """
 
-    start: float
-    stop: float
+    start: ParamVal
+    stop: ParamVal
     npts: int
 
 
@@ -264,8 +266,8 @@ class Meas:
     """ Measurement """
 
     analysis: Union["Analysis", str]  # Target `Analysis`, or its type-name
-    name: str  # Measurement name
     expr: str  # Measured expression. FIXME: just a string to be evaluated, no in-Python semantics
+    name: Optional[str] = None  # Measurement name
 
 
 @simattr
@@ -273,7 +275,8 @@ class Meas:
 class Include:
     """ Include a File Path """
 
-    path: Path
+    path: Path  # Path to include
+    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
 
 
 @simattr
@@ -281,8 +284,9 @@ class Include:
 class Lib:
     """ Include a Library Section """
 
-    path: Path
-    section: str
+    path: Path  # Path to include
+    section: str  # Library Section
+    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
 
 
 @simattr
@@ -292,6 +296,7 @@ class Literal:
     expressed as netlist-language text for a particular target language. """
 
     txt: str
+    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
 
 
 # Spice-Sim Attribute-Union
@@ -312,6 +317,8 @@ class Options:
     gmin: Optional[float] = None
     reltol: Optional[float] = None
     iabstol: Optional[float] = None
+
+    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
 
 
 # Spice-Sim Attribute-Union
@@ -336,11 +343,15 @@ class Sim:
     tb: Instantiable
     # Simulation Control Attributes
     attrs: List[SimAttr] = field(default_factory=list)
+    # Optional simulation name
+    name: Optional[str] = None
 
     def add(self, *attrs: List[SimAttr]) -> Union[SimAttr, List[SimAttr]]:
         """ Add one or more `SimAttr`s to the simulation. 
         Returns the inserted attributes, either as a list or a single `SimAttr`. """
         for attr in attrs:
+            if not is_simattr(attr):
+                raise TypeError
             self.attrs.append(attr)
         if len(attrs) == 1:
             return attrs[0]
@@ -353,13 +364,13 @@ class Sim:
         return vsp.sim(inp=to_proto(self), opts=opts)
 
 
-def run(inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None):
+def run(inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None) -> Union[vsp.SimResultUnion, Sequence[vsp.SimResultUnion]]:
     """ Invoke one or more `Sim`s via `vlsirtools.spice`. """
 
     from .to_proto import to_proto
 
     if not isinstance(inp, Sequence):
-        inp = [inp]
+        return vsp.sim(inp=inp, opts=opts)
 
     return vsp.sim(inp=[to_proto(s) for s in inp], opts=opts)
 
@@ -380,3 +391,105 @@ def _add_attr_func(name: str, cls: type):
 # Add all the `simattrs` as methods on `Sim`
 for name, cls in _simattrs.items():
     _add_attr_func(name, cls)
+
+
+def sim(cls: type) -> Sim:
+    """ 
+    # `Sim` Definition Decorator 
+
+    Converts a class-body full of simulation attributes (`SimAttr`s) to a `Sim`.  
+    Example Usage: 
+
+    ```python
+    import hdl21 as h 
+    from hdl21.sim import * 
+
+    @sim
+    class MySim:
+        tb = tb(name="mytb")
+
+        x = Param(5)
+        y = Param(6)
+        mydc = Dc(var=x, sweep=PointSweep([1]))
+        myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
+        mytran = Tran(tstop=11 * h.prefix.PICO)
+        mysweep = SweepAnalysis(
+            inner=[mytran],
+            var=x,
+            sweep=LinearSweep(0, 1, 2),
+        )
+        mymc = MonteCarlo(
+            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
+            npts=11,
+        )
+        delay = Meas(analysis=mytran, expr="trig_targ_something")
+        opts = Options(reltol=1e-9)
+
+        # Attributes whose names don't really matter can be called anything, 
+        # but must be *assigned* into the class, not just constructed.
+        _ = Save(SaveMode.ALL)
+        
+        # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition, 
+        # but can be referred to by the following attributes. 
+        a_path = "/home/models" 
+        _ = Include(a_path)
+        _ = Lib(path=a_path, section="fast")
+    ```
+
+    Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others. 
+    Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend, 
+    such as the `a_path` field in the example aboe. 
+
+    Classes decoratated by `sim` have two special field names: 
+
+    * (Required) `tb` sets the simulation testbench
+    * (Optional) `name` sets the name of the simulation
+
+    Several other names are disallowed in `sim` class-definitions, 
+    generally corresponding to the names of the `Sim` class's fields and methods. 
+    Disallowed names include: `["attrs", "add", "run", "namespace"]`. 
+    """
+
+    if cls.__bases__ != (object,):
+        raise RuntimeError(f"Invalid @hdl21.sim inheriting from {cls.__bases__}")
+
+    protected_names = ["attrs", "add", "run", "namespace"]
+    
+    # Initialize the content of the eventual `Sim`. 
+    # Note we largely can't create it now because the `tb` field is required at construction time. 
+    name: Optional[str] = None
+    tb: Optional[Instantiable] = None
+    attrs: List[SimAttr] = list()
+
+    # Any class-body content that isn't either (a) one of those special names, or (b) a `SimAttr`, 
+    # will be "forgotten" from the `Sim` definition. 
+    # This can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend. 
+    forgetme: List[Any] = list()
+
+    # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the sim
+    for key, val in cls.__dict__.items():
+        if key in protected_names:
+            raise RuntimeError(f"Invalid field name {key} in Sim {cls}")
+        elif key == "tb": # Set the test-bench attribute
+            tb = val
+        elif key == "name": # Set the sim-name attribute
+            name = val
+        elif is_simattr(val):  
+            # Add to the sim-attributes list 
+            # Special case Python's conventional "ignored" name, the underscore. 
+            # Leave attributes named "_"'s `name` field set to `None`.
+            if key != "_":
+                val.name = key
+            attrs.append(val)
+        else:
+            forgetme.append(val)
+
+    if tb is None:
+        raise RuntimeError(f"No `tb` defined in Sim {cls}")
+        
+    # Create the `Sim` object
+    name = name or cls.__name__
+    sim = Sim(name=name, tb=tb, attrs=attrs)
+
+    # And return the `Sim`
+    return sim

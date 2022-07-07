@@ -51,6 +51,9 @@ class Generator:
         """ Parameter-Type Property """
         return self.paramtype
 
+    def __repr__(self) -> str:
+        return f"Generator(name={self.name})"
+
 
 @calls_instantiate
 @dataclass
@@ -77,6 +80,9 @@ class GeneratorCall:
         * *Value* of its parameters. 
         The two are joined for hashing as a two-element tuple. """
         return hash((id(self.gen), pickle.dumps(self.arg)))
+
+    def __repr__(self) -> str:
+        return f"GeneratorCall(gen={self.gen.name})"
 
     @property
     def name(self) -> str:

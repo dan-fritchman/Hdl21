@@ -405,7 +405,7 @@ class ExternalModuleCall:
     def __post_init_post_parse__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.module.paramtype):
-            msg = f"Invalid parameters {self.params} for ExternalModule {self.module}. Must be {self.module.paramtype}"
+            msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"
             raise TypeError(msg)
 
     @property

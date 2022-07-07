@@ -1652,3 +1652,29 @@ def test_anon_bundle_refs():
 
     h.elaborate(HasHasDiff)
 
+
+@pytest.mark.xfail(reason="#21 https://github.com/dan-fritchman/Hdl21/issues/21")
+def test_generator_port_slice():
+    """ Test taking a slice from a Generator `PortRef`. """
+
+    @h.paramclass 
+    class Width:
+        width: h.Param(dtype=int, desc="Width")
+
+    @h.generator 
+    def SliceMyP(params: Width) -> h.Module:
+        m = h.Module()
+        m.p = h.Port(width=params.width) # Port with parametrized width
+        return m 
+
+    @h.module
+    class ScalarPort:
+        p = h.Port() # A width-one port 
+
+    @h.module
+    class HasGen:
+        g = SliceMyP(width=8)()
+        # Connect the MSB of `g.p` to `s.p`
+        s = ScalarPort(p=g.p[-1])
+
+    h.elaborate(HasGen)

@@ -30,7 +30,7 @@ from .connect import connectable, is_connectable
 from .instance import PortRef
 
 
-def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
+def _slice_(*, parent: "Sliceable", key: Union[int, slice]) -> "Slice":
     """ Square-bracket slicing into Signals, Concatenations, and Slices. 
     Assuming valid inputs, returns a signal-`Slice`.  
 
@@ -297,12 +297,14 @@ class Concat:
 class Slice:
     """ Signal Slice, comprising a subset of its width """
 
-    signal: Union[Signal, Concat, "Slice"]  # Parent Signal
+    signal: "Sliceable"  # Parent Signal
     top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
     start: Optional[int]  # Python-convention start index
     stop: Optional[int]  # Python-convention stop index
     step: Optional[int]  # Python-convention step size
+
+    index: Optional[Union[int, slice]] = None  # Python-convention index
 
     def __post_init_post_parse__(self):
         if self.step is not None and self.step == 0:
@@ -331,10 +333,10 @@ class Slice:
         )
 
 
-Slice.__pydantic_model__.update_forward_refs()
-
 # Slice-compatible type aliases
 Sliceable = Union[Signal, Concat, Slice]
+
+Slice.__pydantic_model__.update_forward_refs()
 
 
 @connectable

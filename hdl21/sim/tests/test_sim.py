@@ -63,6 +63,50 @@ def test_simattrs():
     s.options(reltol=1e-9)
 
 
+def test_sim_decorator():
+    """ Test creating the same Sim, via the class decorator """
+
+    @h.sim.sim
+    class MySim:
+        tb = tb(name="mytb")
+
+        x = Param(5)
+        y = Param(6)
+        mydc = Dc(var=x, sweep=PointSweep([1]))
+        myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
+        mytran = Tran(tstop=11 * h.prefix.p)
+        mysweep = SweepAnalysis(
+            inner=[mytran],
+            var=x,
+            sweep=LinearSweep(0, 1, 2),
+        )
+        mymc = MonteCarlo(
+            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+            npts=11,
+        )
+        a_delay = Meas(analysis=mytran, expr="trig_targ_something")
+        opts = Options(reltol=1e-9)
+
+        # Attributes whose names don't really matter can be called anything, 
+        # but must be *assigned* into the class, not just constructed.
+        _ = Save(SaveMode.ALL)
+        
+        # The `a_path` field will be dropped from the `Sim` definition, 
+        # but can be referred to by the following attributes. 
+        a_path = "/home/models" 
+        _ = Include(a_path)
+        _ = Lib(path=a_path, section="fast")
+
+    assert isinstance(MySim, Sim)
+    assert MySim.name == "MySim"
+    assert isinstance(MySim.tb, h.Module)
+    assert MySim.tb.name == "mytb"
+    assert isinstance(MySim.attrs, list)
+    for attr in MySim.attrs:
+        assert is_simattr(attr)
+    assert not hasattr(MySim, "a_path")
+
+
 def test_tb():
     mytb = tb("mytb")
     assert isinstance(mytb, h.Module)
