@@ -1,12 +1,14 @@
 """ 
 # Differential Pair Elaborator Pass
+
+# FIXME: this is amid `Diff`/`Pair` specific code and more general `InstanceBundle`s
 """
 
 from typing import get_args
 
 # Local imports
 from ...module import Module
-from ...diff_pair import Diff, Pair
+from ...instance import Instance, InstanceBundle
 
 # Import the base class
 from .base import Elaborator
@@ -28,24 +30,36 @@ class DiffPairElaborator(Elaborator):
         
         return module
 
-    def elaborate_instance_bundle(self, module: Module, inst: Pair) -> Pair:
+    def elaborate_instance_bundle(self, module: Module, inst: InstanceBundle) -> InstanceBundle:
         """ # Elaborate an Instance Bundle 
         Replace it with "scalar" Instances and reconnect them. """
 
         from ...bundle import AnonymousBundle, BundleInstance
-        from ...instance import Instance
         from ...signal import Sliceable
 
-        # Create the two replacement instances
-        inst_p, inst_n = Instance(of=inst.of), Instance(of=inst.of)
+        # Create a replacement instance for each Signal in the Bundle
+        name_p = self.flatname(
+            segments=[inst.name, "p"],
+            avoid=module.namespace,
+        )
+        name_n = self.flatname(
+            segments=[inst.name, "n"],
+            avoid=module.namespace,
+        )
+        inst_p, inst_n = Instance(name=name_p, of=inst.of), Instance(name=name_n, of=inst.of)
+        module.add(inst_p)
+        module.add(inst_n)
         
-        for portname, conn in inst.conns.items(): 
+        # Disconnect each port from the `InstanceBundle`, and map it into the new scalar `Instance`s
+        for portname in list(inst.conns.keys()): 
+            conn = inst.disconnect(portname)
+
             if isinstance(conn, BundleInstance):
                 if conn.of is not inst.bundle:
                     raise ValueError
                 # If the connection is a `Diff` instance, connect each leg to a new instance
-                inst_p.connect(portname, conn.signals["p"])
-                inst_n.connect(portname, conn.signals["n"])
+                inst_p.connect(portname, conn._bundle_ref("p"))
+                inst_n.connect(portname, conn._bundle_ref("n"))
             elif isinstance(conn, AnonymousBundle):
                 # FIXME: where to stick the checking for "diff compatibility"
                 raise NotImplementedError # FIXME!

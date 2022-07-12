@@ -28,3 +28,6 @@ def inverse(d: Diff) -> AnonymousBundle:
 
 
 Pair = InstanceBundleType(name="Pair", bundle=Diff)
+
+
+__all__ = ["Diff", "inverse", "Pair"]

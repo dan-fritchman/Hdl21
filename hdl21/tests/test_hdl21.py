@@ -1680,8 +1680,8 @@ def test_generator_port_slice():
     h.elaborate(HasGen)
 
 
-@pytest.mark.xfail
 def test_pair1():
+    """ Test of the `Diff` and `Pair` signal and instance bundles """
     @h.module
     class I:
         pd = h.Port(desc="Port we'll connect to a diff")
@@ -1694,3 +1694,14 @@ def test_pair1():
         pair = h.Pair(I)(pd=d, ps=s)
 
     h.elaborate(O)
+
+    assert len(O.instances) == 2
+    assert "pair_p" in O.instances
+    assert "pair_n" in O.instances
+    assert O.pair_p.conns["ps"] is O.s
+    assert O.pair_n.conns["ps"] is O.s
+    assert O.pair_p.conns["pd"] is O.d_p
+    assert O.pair_n.conns["pd"] is O.d_n
+    assert len(O.signals) == 3
+    assert len(O.bundles) == 0
+    assert len(O.instbundles) == 0
