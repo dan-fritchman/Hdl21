@@ -20,7 +20,7 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 
 """
 
-from typing import Callable, Optional, Any, List, Union
+from typing import Callable, Optional, Any, List, Union, Set 
 from enum import Enum
 from dataclasses import field
 from pydantic.dataclasses import dataclass
@@ -152,7 +152,7 @@ class Signal:
 
     # Internal, ideally private fields
     # Connected port references
-    connected_ports: List[PortRef] = field(init=False, repr=False, default_factory=list)
+    connected_ports: Set[PortRef] = field(init=False, repr=False, default_factory=set)
 
     def __post_init_post_parse__(self):
         if self.width < 1:
@@ -354,7 +354,7 @@ class NoConn:
 
     # Internal, ideally private fields
     # Connected port references
-    connected_ports: List[PortRef] = field(init=False, repr=False, default_factory=list)
+    connected_ports: Set[PortRef] = field(init=False, repr=False, default_factory=set)
 
     def __eq__(self, other: "NoConn") -> bool:
         """ `NoConn`s are "equal" only if identical objects. """

@@ -61,7 +61,7 @@ for tp, tpname in _mos_typenames.items():
             name=modname,
             desc=f"ASAP7 PDK Mos {modname}",
             port_list=copy.deepcopy(Mos.port_list),
-            paramtype=object,
+            paramtype=dict,
         )
 
         # Add it to the `params => ExternalModules` lookup table

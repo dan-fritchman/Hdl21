@@ -5,7 +5,7 @@ Structured connection objects, instances thereof, and associated utilities.
 """
 
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args, Dict, List
+from typing import Optional, Union, Any, get_args, Dict, Set, List
 
 # Local Imports
 from .connect import connectable, track_connected_ports
@@ -27,7 +27,7 @@ def getattr_bundle_refs(cls: type) -> type:
         """ Return a reference to name `key`, creating it if necessary. """
 
         # Check in our existing references
-        bundle_refs = self.__getattribute__("refs")
+        bundle_refs = self.__getattribute__("refs_to_me")
         if key in bundle_refs:
             return bundle_refs[key]
 
@@ -38,7 +38,7 @@ def getattr_bundle_refs(cls: type) -> type:
 
     def __getattr__(self, key: str) -> Any:
         """ BundleRef access by getattr """
-        if not self.__getattribute__("_initialized") or key.startswith("_"):
+        if key.startswith("_") or not self.__getattribute__("_initialized"):
             # Bootstrapping phase: do regular getattrs to get started
             return object.__getattribute__(self, key)
 
@@ -47,7 +47,7 @@ def getattr_bundle_refs(cls: type) -> type:
 
         # After elaboration, the fancy BundleRef creation below goes away. Only return ready-made refs.
         if self.__getattribute__("_elaborated"):
-            refs = self.__getattribute__("refs")
+            refs = self.__getattribute__("refs_to_me")
             if key in refs.keys():
                 return refs[key]
             raise AttributeError(f"No attribute {key} for {self}")
@@ -73,8 +73,8 @@ def has_getattr_bundle_refs(obj: Any) -> bool:
 @track_connected_ports
 @connectable
 class BundleInstance:
-    """ Instance of an Bundle, 
-    Generally in a Module or another Bundle """
+    """ # Instance of a `Bundle` 
+    Generally in a `Module` or another `Bundle` """
 
     _specialcases = [
         "name",
@@ -84,7 +84,7 @@ class BundleInstance:
         "src",
         "dest",
         "desc",
-        "refs",
+        "refs_to_me",
         "connected_ports",
         "_bundle_ref",
         "_elaborated",
@@ -109,15 +109,19 @@ class BundleInstance:
         self.src = src
         self.dest = dest
         self.desc = desc
-        self.refs: Dict[str, "BundleRef"] = dict()
+        # References handed out to our children
+        self.refs_to_me: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: List["BundleRef"] = []
+        self.connected_ports: Set["BundleRef"] = set()
         self._elaborated = False
         self._initialized = True
 
     @property
     def _resolved(self) -> "Bundle":
         return self.of
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name} of={self.of})"
 
 
 # Type-alias for HDL objects storable as `Module` attributes
@@ -155,9 +159,8 @@ class Bundle:
         # Protected attrs - the internal dicts
         banned = ["signals", "bundles", "namespace"]
         if key in banned:
-            raise RuntimeError(
-                f"Error attempting to over-write protected attribute {key} of Bundle {self}"
-            )
+            msg = f"Error attempting to over-write protected attribute {key} of Bundle {self}"
+            raise RuntimeError(msg)
         # Special case(s)
         if key == "name":
             return super().__setattr__(key, val)
@@ -208,6 +211,11 @@ class Bundle:
         """ Roles-Enumeration Accessor Property """
         # Roles often look like a class, so they have a class-style name-accessor
         return self.roles
+
+    def __repr__(self) -> str:
+        if self.name:
+            return f"Bundle(name={self.name})"
+        return f"Bundle(_anon_)"
 
 
 def bundle(cls: type) -> Bundle:
@@ -286,11 +294,17 @@ class AnonymousBundle:
     def __init__(self, **kwargs: Dict[str, "Connectable"]):
         # Create our internal structures
         self.signals: Dict[str, "Signal"] = dict()
-        self.bundles: Dict[str, "BundleInstance"] = dict()
-        self.anons: Dict[str, "AnonymousBundle"] = dict()
-        self.refs: Dict[str, "BundleRef"] = dict()
+
+        # NotImplemented:
+        # self.bundles: Dict[str, "BundleInstance"] = dict()
+        # self.anons: Dict[str, "AnonymousBundle"] = dict()
+
+        # Bundle references to others, stored as members,
+        # e.g. AnonBundle(sig=OtherBundle.sig)
+        self.refs_to_others: Dict[str, "BundleRef"] = dict()
+
         # Connected port references
-        self.connected_ports: List["BundleRef"] = []
+        self.connected_ports: Set["PortRef"] = set()
 
         # And add each keyword-arg
         for key, val in kwargs.items():
@@ -301,18 +315,24 @@ class AnonymousBundle:
 
         if isinstance(val, Signal):
             self.signals[name] = val
+        elif isinstance(val, BundleRef):
+            self.refs_to_others[name] = val
         elif isinstance(val, (BundleInstance, AnonymousBundle)):
             raise NotImplementedError(f"Nested Anonymous Bundle")
-        # elif isinstance(val, BundleInstance): # FIXME: NO
-        #     self.bundles[name] = val
-        # elif isinstance(val, AnonymousBundle):
-        #     self.anons[name] = val
-        # elif isinstance(val, BundleRef): # FIXME: enable these! 
-        #     self.portrefs[name] = val
         else:
             msg = f"Invalid Bundle attribute for `{self}`: `{val}`"
             raise TypeError(msg)
         return val
+
+    def get(self, name: str) -> Optional[Union[Signal, "BundleRef"]]:
+        """ Get attribute `name`. Returns `None` if not present. 
+        Note unlike Python built-ins such as `getattr`, `get` returns solely 
+        from the HDL namespace-worth of attributes. """
+        if name in self.signals:
+            return self.signals[name]
+        if name in self.refs_to_others:
+            return self.refs_to_others[name]
+        return None
 
 
 @track_connected_ports
@@ -322,7 +342,8 @@ class BundleRef:
 
     _specialcases = [
         "parent",
-        "refs",
+        "path",
+        "root",
         "connected_ports",
         "_bundle_ref",
         "_module",
@@ -336,9 +357,8 @@ class BundleRef:
     ):
         self.parent = parent
         self.attrname = attrname
-        self.refs: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: List["BundleRef"] = []
+        self.connected_ports: Set["PortRef"] = set()
         self._elaborated = False
         self._initialized = True
 
@@ -351,17 +371,21 @@ class BundleRef:
         """ Hash references as the tuple of their instance-address and name """
         return hash((id(self.inst), self.attrname))
 
+    def path(self) -> List[str]:
+        """ Get the path to this potentially nested reference. """
+        if isinstance(self.parent, BundleRef):
+            return self.parent.path() + [self.attrname]
+        if isinstance(self.parent, BundleInstance):
+            return [self.attrname]
+        raise TypeError
 
-def resolve_bundle_ref(bref: BundleRef) -> Union[Signal, BundleInstance]:
-    """ Resolve a bundle-reference to either a Signal or sub-Bundle Instance. """
+    def root(self) -> "BundleInstance":
+        """ Get the root `BundleInstance` of this potentially nested reference. """
+        if isinstance(self.parent, BundleRef):
+            return self.parent.root()
+        if isinstance(self.parent, BundleInstance):
+            return self.parent
+        raise TypeError
 
-    if isinstance(bref.parent, BundleInstance):
-        # Parent is a BundleInstance. Get the attribute from its namespace.
-        return bref.parent.of.get(bref.attrname)
-
-    if isinstance(bref.parent, BundleRef):
-        # Nested reference. Recursively resolve the parent.
-        resolved_parent = resolve_bundle_ref(bref.parent)
-        return resolved_parent.of.get(bref.attrname)
-
-    raise TypeError(f"BundleRef parent for {bref}")
+    def __repr__(self):
+        return f"{self.__class__.__name__}(root={self.root()} path={self.path()})"
