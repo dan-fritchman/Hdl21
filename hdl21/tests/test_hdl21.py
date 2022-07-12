@@ -1682,16 +1682,18 @@ def test_generator_port_slice():
 
 def test_pair1():
     """ Test of the `Diff` and `Pair` signal and instance bundles """
+    
     @h.module
     class I:
-        pd = h.Port(desc="Port we'll connect to a diff")
         ps = h.Port(desc="Port we'll connect to a scalar")
+        pd = h.Port(desc="Port we'll connect to a diff")
+        pa = h.Port(desc="Port we'll connect to an AnonymousBundle")
 
     @h.module
     class O:
         d = h.Diff()
         s = h.Signal()
-        pair = h.Pair(I)(pd=d, ps=s)
+        pair = h.Pair(I)(pd=d, ps=s, pa=h.inverse(d))
 
     h.elaborate(O)
 
@@ -1702,6 +1704,8 @@ def test_pair1():
     assert O.pair_n.conns["ps"] is O.s
     assert O.pair_p.conns["pd"] is O.d_p
     assert O.pair_n.conns["pd"] is O.d_n
+    assert O.pair_p.conns["pa"] is O.d_n
+    assert O.pair_n.conns["pa"] is O.d_p
     assert len(O.signals) == 3
     assert len(O.bundles) == 0
     assert len(O.instbundles) == 0
