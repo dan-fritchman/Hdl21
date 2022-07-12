@@ -4,10 +4,12 @@
 Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
+# Std-Lib Imports
 from typing import Optional, Any, Dict
+from textwrap import dedent
 
 # Local imports
-from .attrmagic import init 
+from .attrmagic import init
 from .connect import (
     call_and_setattr_connects,
     getattr_port_refs,
@@ -97,6 +99,7 @@ class Instance(_Instance):
 class InstanceBundle(_Instance):
     """ Named set of Instances, paired with a Signal Bundle. """
 
+    # The paired signal-Bundle type. Note this is a class-level attribute.
     bundle: Optional["Bundle"] = None
 
     _specialcases = [
@@ -115,7 +118,7 @@ class InstanceBundle(_Instance):
         self._initialized = True
 
 
-def InstanceBundleType(name: str, bundle: "Bundle") -> type:
+def InstanceBundleType(name: str, bundle: "Bundle", doc: Optional[str] = None) -> type:
     """ Create a new sub-class of `InstanceBundle`, tied to Bundle-type `bundle`. """
 
     from .bundle import Bundle
@@ -125,8 +128,12 @@ def InstanceBundleType(name: str, bundle: "Bundle") -> type:
     if not isinstance(bundle, Bundle):
         raise TypeError
 
+    # Set a default doc-string
+    doc = doc or f"`InstanceBundle` type `{name}` of `Bundle` `{bundle.name}`"
+    doc = dedent(doc)
+
     # Create and return the new type
-    return type(name, (InstanceBundle,), {"bundle": bundle})
+    return type(name, (InstanceBundle,), {"bundle": bundle, "__doc__": doc})
 
 
 class InstArray(_Instance):
@@ -175,4 +182,10 @@ def calls_instantiate(cls: type) -> type:
     return cls
 
 
-__all__ = ["Instance", "InstArray", "calls_instantiate"]
+__all__ = [
+    "Instance",
+    "InstArray",
+    "InstanceBundle",
+    "InstanceBundleType",
+    "calls_instantiate",
+]

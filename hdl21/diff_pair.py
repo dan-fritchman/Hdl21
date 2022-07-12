@@ -27,7 +27,35 @@ def inverse(d: Diff) -> AnonymousBundle:
     return AnonymousBundle(p=d.n, n=d.p)
 
 
-Pair = InstanceBundleType(name="Pair", bundle=Diff)
+# Instance Pair Class
+Pair = InstanceBundleType(
+    name="Pair",
+    bundle=Diff,
+    doc=f"""
+        # Differential Instance Pair 
+
+        Two identical instances of the same `Module` which can be connected to either `Diff` signal bundles or scalar `Signal`s.  
+        The rules for connecting to the ports of `Pair`s are: 
+
+        * When connecting to a `Diff`, the `p` and `n` signals are connected to the `p` and `n` instances, respectively. 
+        * When connecting to a `Signal`, the `p` and `n` instances are connected in parallel to that signal. 
+        * All other connections are disallowed. 
+
+        Example: 
+    
+        ```python 
+        import hdl21 as h
+
+        @h.module 
+        class DiffResistors:
+            # Two identical, differential resistors to VSS
+            VSS = h.Port()
+            diff = h.Diff()
+            # The `Pair` instance
+            rs = h.Pair(MyResistor)(p=diff, n=VSS)
+        ```
+    """,
+)
 
 
 __all__ = ["Diff", "inverse", "Pair"]
