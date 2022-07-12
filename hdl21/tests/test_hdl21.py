@@ -1657,19 +1657,19 @@ def test_anon_bundle_refs():
 def test_generator_port_slice():
     """ Test taking a slice from a Generator `PortRef`. """
 
-    @h.paramclass 
+    @h.paramclass
     class Width:
         width: h.Param(dtype=int, desc="Width")
 
-    @h.generator 
+    @h.generator
     def SliceMyP(params: Width) -> h.Module:
         m = h.Module()
-        m.p = h.Port(width=params.width) # Port with parametrized width
-        return m 
+        m.p = h.Port(width=params.width)  # Port with parametrized width
+        return m
 
     @h.module
     class ScalarPort:
-        p = h.Port() # A width-one port 
+        p = h.Port()  # A width-one port
 
     @h.module
     class HasGen:
@@ -1680,13 +1680,14 @@ def test_generator_port_slice():
     h.elaborate(HasGen)
 
 
+@pytest.mark.xfail
 def test_pair1():
-    @h.module 
+    @h.module
     class I:
         pd = h.Port(desc="Port we'll connect to a diff")
         ps = h.Port(desc="Port we'll connect to a scalar")
 
-    @h.module 
+    @h.module
     class O:
         d = h.Diff()
         s = h.Signal()

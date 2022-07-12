@@ -39,13 +39,13 @@ class DiffPairElaborator(Elaborator):
         # Create the two replacement instances
         inst_p, inst_n = Instance(of=inst.of), Instance(of=inst.of)
         
-        for portname, conn in inst.conns: 
+        for portname, conn in inst.conns.items(): 
             if isinstance(conn, BundleInstance):
-                if conn.bundle is not Diff:
+                if conn.of is not inst.bundle:
                     raise ValueError
                 # If the connection is a `Diff` instance, connect each leg to a new instance
-                inst_p.connect(portname, conn.p)
-                inst_n.connect(portname, conn.n)
+                inst_p.connect(portname, conn.signals["p"])
+                inst_n.connect(portname, conn.signals["n"])
             elif isinstance(conn, AnonymousBundle):
                 # FIXME: where to stick the checking for "diff compatibility"
                 raise NotImplementedError # FIXME!

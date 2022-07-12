@@ -4,33 +4,27 @@
 
 # Std-Lib Imports
 from enum import Enum, auto
-from typing import Dict, Any
-from dataclasses import dataclass, field
 
 # Local imports
-from .datatype import datatype
-from .connect import getattr_port_refs, call_and_setattr_connects
 from .signal import Signals
 from .instance import InstanceBundleType
 from .bundle import bundle, AnonymousBundle
 
 
-# @bundle
-# class Diff:
-#     """ Differential Bundle """
+@bundle
+class Diff:
+    """ Differential Bundle """
 
-#     class Roles(Enum):
-#         SOURCE = auto()
-#         SINK = auto()
+    class Roles(Enum):
+        SOURCE = auto()
+        SINK = auto()
 
-#     p, n = Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
+    p, n = Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
 
 
-# def inverse(d: Diff) -> AnonymousBundle:
-#     """ Create a Bundle with the same signals as `d`, but with `p` and `n` reversed. """
-#     return AnonymousBundle(p=d.n, n=d.p)
+def inverse(d: Diff) -> AnonymousBundle:
+    """ Create a Bundle with the same signals as `d`, but with `p` and `n` reversed. """
+    return AnonymousBundle(p=d.n, n=d.p)
 
-# Pair = InstanceBundleType(name="Pair", bundle=Diff)
 
-Diff = None
-Pair = None
+Pair = InstanceBundleType(name="Pair", bundle=Diff)

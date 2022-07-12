@@ -14,6 +14,7 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 
 # Local imports
+from .attrmagic import init 
 from .params import NoParams, HasNoParams, isparamclass
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
@@ -25,6 +26,7 @@ ModuleAttr = Union[Signal, _Instance, BundleInstance]
 
 
 @calls_instantiate
+@init
 class Module:
     """ # Module
     

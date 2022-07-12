@@ -23,10 +23,6 @@ class PortRef:
     portrefs: Dict[str, "PortRef"] = field(default_factory=dict, init=False, repr=False)
     connected_ports: Set["PortRef"] = field(default_factory=set, init=False, repr=False)
 
-    def __post_init__(self):
-        self._elaborated = False
-        self._initialized = True
-
     def __eq__(self, other) -> bool:
         """ Port-reference equality requires *identity* between instances 
         (and of course equality of port-name). """

@@ -7,6 +7,7 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 from typing import Optional, Any, Dict
 
 # Local imports
+from .attrmagic import init 
 from .connect import (
     call_and_setattr_connects,
     getattr_port_refs,
@@ -15,6 +16,7 @@ from .connect import (
 
 @call_and_setattr_connects
 @getattr_port_refs
+@init
 class _Instance:
     """ Shared base class for Instance-like types (Instance, InstArray) """
 
@@ -32,7 +34,6 @@ class _Instance:
         self.portrefs: Dict[str, "PortRef"] = dict()
         self._parent_module = None  # Instantiating module
         self._elaborated = False
-        self._initialized = True
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
@@ -85,12 +86,13 @@ class Instance(_Instance):
         "portrefs",
         "connect",
         "disconnect",
-        "_port_ref",
-        "_module",
-        "_resolved",
-        "_elaborated",
-        "_initialized",
+        "replace",
     ]
+
+    def __init__(self, *_, **__):
+        super().__init__(*_, **__)
+        self._initialized = True
+
 
 class InstanceBundle(_Instance):
     """ Named set of Instances, paired with a Signal Bundle. """
@@ -105,12 +107,12 @@ class InstanceBundle(_Instance):
         "portrefs",
         "connect",
         "disconnect",
-        "_port_ref",
-        "_module",
-        "_resolved",
-        "_elaborated",
-        "_initialized",
+        "replace",
     ]
+
+    def __init__(self, *_, **__):
+        super().__init__(*_, **__)
+        self._initialized = True
 
 
 def InstanceBundleType(name: str, bundle: "Bundle") -> type:
@@ -119,10 +121,10 @@ def InstanceBundleType(name: str, bundle: "Bundle") -> type:
     from .bundle import Bundle
 
     if not isinstance(name, str):
-        raise TypeError 
+        raise TypeError
     if not isinstance(bundle, Bundle):
-        raise TypeError 
-    
+        raise TypeError
+
     # Create and return the new type
     return type(name, (InstanceBundle,), {"bundle": bundle})
 
@@ -136,21 +138,17 @@ class InstArray(_Instance):
         "conns",
         "portref",
         "portrefs",
-        "_port_ref",
-        "instrefs",
         "connect",
         "disconnect",
-        "_elaborated",
-        "_initialized",
-        "_module",
+        "replace",
     ]
 
     def __init__(
         self, of: "Instantiable", n: int, name: Optional[str] = None,
     ):
-        self.instrefs = dict()
-        self.n = n
         super().__init__(of=of, name=name)
+        self.n = n
+        self._initialized = True
 
     def __getitem__(self, idx: int):
         return RuntimeError(f"Illegal indexing into Array {self}")

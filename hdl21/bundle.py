@@ -8,6 +8,7 @@ from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args, Dict, Set, List
 
 # Local Imports
+from .attrmagic import init 
 from .connect import connectable, track_connected_ports
 from .signal import Signal
 
@@ -36,11 +37,6 @@ def getattr_bundle_refs(cls: type) -> type:
         bundle_refs[key] = bundle_ref
         return bundle_ref
 
-    def __new__(cls, *args, **kwargs):
-        inst = object().__new__(cls)
-        inst._initialized = False 
-        return inst 
-
     def __getattr__(self, key: str) -> Any:
         """ BundleRef access by getattr """
         if key.startswith("_") or not self.__getattribute__("_initialized"):
@@ -62,7 +58,6 @@ def getattr_bundle_refs(cls: type) -> type:
         return self._bundle_ref(key)
 
     cls._bundle_ref = _bundle_ref
-    cls.__new__ = __new__
     cls.__getattr__ = __getattr__
     cls.__getattr_bundle_refs__ = True
 
@@ -75,9 +70,10 @@ def has_getattr_bundle_refs(obj: Any) -> bool:
     return getattr(obj, "__getattr_bundle_refs__", False)
 
 
-@getattr_bundle_refs
 @track_connected_ports
+@getattr_bundle_refs
 @connectable
+@init
 class BundleInstance:
     """ # Instance of a `Bundle` 
     Generally in a `Module` or another `Bundle` """
@@ -92,9 +88,6 @@ class BundleInstance:
         "desc",
         "refs_to_me",
         "connected_ports",
-        "_bundle_ref",
-        "_elaborated",
-        "_initialized",
     ]
 
     def __init__(
@@ -139,6 +132,7 @@ def is_bundle_attr(val: Any) -> bool:
     return isinstance(val, get_args(BundleAttr))
 
 
+@init
 class Bundle:
     """ 
     # hdl21 Bundle
@@ -146,14 +140,7 @@ class Bundle:
     Bundles are structured hierarchical connection objects which include Signals and other Bundles. 
     """
 
-    # def __new__(cls, *args, **kwargs):
-    #     inst = object().__new__(cls)
-    #     setattr(inst, "_initialized", False)
-    #     # inst._initialized = False 
-    #     return inst 
-
     def __init__(self, *, name=None):
-        self._initialized = False
         self.name = name
         self.roles = None
         self.signals = dict()
@@ -210,7 +197,7 @@ class Bundle:
         raise RuntimeError(msg)
 
     def add(self, val: BundleAttr, *, name: Optional[str] = None) -> BundleAttr:
-        raise NotImplementedError
+        raise NotImplementedError  # FIXME!
 
     def get(self, name: str) -> Optional[BundleAttr]:
         """ Get module-attribute `name`. Returns `None` if not present. 
@@ -358,11 +345,6 @@ class BundleRef:
         "path",
         "root",
         "connected_ports",
-        "_bundle_ref",
-        "_module",
-        "_resolved",
-        "_elaborated",
-        "_initialized",
     ]
 
     def __init__(
@@ -373,7 +355,6 @@ class BundleRef:
         # Connected port references
         self.connected_ports: Set["PortRef"] = set()
         self._elaborated = False
-        self._initialized = True
 
     def __eq__(self, other) -> bool:
         """ Port-reference equality requires *identity* between parents 
