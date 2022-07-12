@@ -8,6 +8,7 @@ from typing import List
 # Import all the defined passes
 from .elaborators import (
     GeneratorElaborator,
+    DiffPairElaborator,
     Orphanage,
     ConnTypes,
     BundleFlattener,
@@ -31,6 +32,7 @@ class ElabPass(Enum):
 
     RUN_GENERATORS = GeneratorElaborator
     ORPHANAGE = Orphanage
+    DIFF_PAIRS = DiffPairElaborator
     RESOLVE_PORT_REFS = ResolvePortRefs
     CONN_TYPES = ConnTypes
     FLATTEN_BUNDLES = BundleFlattener

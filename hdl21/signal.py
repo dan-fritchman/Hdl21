@@ -27,7 +27,7 @@ from pydantic.dataclasses import dataclass
 
 # Local imports
 from .connect import connectable, is_connectable
-from .instance import PortRef
+from .portref import PortRef
 
 
 def _slice_(*, parent: "Sliceable", key: Union[int, slice]) -> "Slice":

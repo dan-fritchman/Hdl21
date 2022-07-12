@@ -10,7 +10,8 @@ from typing import Union, Dict, List, Optional, Sequence, get_args
 
 # Local imports
 from ...module import Module
-from ...instance import PortRef, Instance, InstArray
+from ...portref import PortRef
+from ...instance import  Instance, InstArray
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
 from ...signal import PortDir, Signal, Visibility, NoConn
 

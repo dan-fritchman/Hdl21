@@ -16,11 +16,12 @@ from dataclasses import field
 # Local imports
 from .params import NoParams, HasNoParams, isparamclass
 from .signal import Signal, Visibility
-from .instance import calls_instantiate, Instance, InstArray
+from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
 from .bundle import BundleInstance
 
+
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, Instance, InstArray, BundleInstance]
+ModuleAttr = Union[Signal, _Instance, BundleInstance]
 
 
 @calls_instantiate
@@ -57,6 +58,7 @@ class Module:
         self.signals = dict()
         self.instances = dict()
         self.instarrays = dict()
+        self.instbundles = dict()
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
@@ -79,6 +81,7 @@ class Module:
             "signals",
             "instances",
             "instarrays",
+            "instbundles",
             "bundles",
             "namespace",
             "add",
@@ -151,6 +154,9 @@ class Module:
             self.namespace[val.name] = val
         elif isinstance(val, InstArray):
             self.instarrays[val.name] = val
+            self.namespace[val.name] = val
+        elif isinstance(val, InstanceBundle):
+            self.instbundles[val.name] = val
             self.namespace[val.name] = val
         elif isinstance(val, BundleInstance):
             self.bundles[val.name] = val

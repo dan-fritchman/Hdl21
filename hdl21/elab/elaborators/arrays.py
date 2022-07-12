@@ -4,7 +4,8 @@
 
 # Local imports
 from ...module import Module
-from ...instance import Instance, PortRef
+from ...instance import Instance
+from ...portref import PortRef
 from ...bundle import BundleInstance
 from ...signal import Signal, Slice, Concat
 

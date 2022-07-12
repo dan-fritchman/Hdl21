@@ -24,6 +24,7 @@ from .netlist import *
 from .elab import *
 from .walker import HierarchyWalker
 from .instantiable import *
+from .diff_pair import * 
 from . import prefix
 from .prefix import Prefix, Prefixed
 from . import sim

@@ -1678,3 +1678,18 @@ def test_generator_port_slice():
         s = ScalarPort(p=g.p[-1])
 
     h.elaborate(HasGen)
+
+
+def test_pair1():
+    @h.module 
+    class I:
+        pd = h.Port(desc="Port we'll connect to a diff")
+        ps = h.Port(desc="Port we'll connect to a scalar")
+
+    @h.module 
+    class O:
+        d = h.Diff()
+        s = h.Signal()
+        pair = h.Pair(I)(pd=d, ps=s)
+
+    h.elaborate(O)

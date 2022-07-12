@@ -36,6 +36,11 @@ def getattr_bundle_refs(cls: type) -> type:
         bundle_refs[key] = bundle_ref
         return bundle_ref
 
+    def __new__(cls, *args, **kwargs):
+        inst = object().__new__(cls)
+        inst._initialized = False 
+        return inst 
+
     def __getattr__(self, key: str) -> Any:
         """ BundleRef access by getattr """
         if key.startswith("_") or not self.__getattribute__("_initialized"):
@@ -57,6 +62,7 @@ def getattr_bundle_refs(cls: type) -> type:
         return self._bundle_ref(key)
 
     cls._bundle_ref = _bundle_ref
+    cls.__new__ = __new__
     cls.__getattr__ = __getattr__
     cls.__getattr_bundle_refs__ = True
 
@@ -140,7 +146,14 @@ class Bundle:
     Bundles are structured hierarchical connection objects which include Signals and other Bundles. 
     """
 
+    # def __new__(cls, *args, **kwargs):
+    #     inst = object().__new__(cls)
+    #     setattr(inst, "_initialized", False)
+    #     # inst._initialized = False 
+    #     return inst 
+
     def __init__(self, *, name=None):
+        self._initialized = False
         self.name = name
         self.roles = None
         self.signals = dict()

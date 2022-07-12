@@ -4,57 +4,17 @@
 Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
-from typing import Optional, Union, Set, Any, Dict
+from typing import Optional, Any, Dict
 
 # Local imports
 from .connect import (
-    connectable,
-    track_connected_ports,
     call_and_setattr_connects,
     getattr_port_refs,
 )
 
 
-@track_connected_ports
-@connectable
-class PortRef:
-    """ Reference to a Port 
-    Created from a combination of a parent `inst` and a port-name. """
-
-    _specialcases = [
-        "inst",
-        "portrefs",
-        "connect",
-        "disconnect",
-        "connected_ports",
-        "_port_ref",
-        "_module",
-        "_resolved",
-        "_elaborated",
-        "_initialized",
-    ]
-
-    def __init__(
-        self, inst: Union["Instance", "InstArray"], portname: str,
-    ):
-        self.inst = inst
-        self.portname = portname
-        self.portrefs: Dict[str, "PortRef"] = dict()
-        # Connected port references
-        self.connected_ports: Set["PortRef"] = set()
-        self._elaborated = False
-        self._initialized = True
-
-    def __eq__(self, other) -> bool:
-        """ Port-reference equality requires *identity* between instances 
-        (and of course equality of port-name). """
-        return self.inst is other.inst and self.portname == other.portname
-
-    def __hash__(self):
-        """ Hash references as the tuple of their instance-address and name """
-        return hash((id(self.inst), self.portname))
-
-
+@call_and_setattr_connects
+@getattr_port_refs
 class _Instance:
     """ Shared base class for Instance-like types (Instance, InstArray) """
 
@@ -66,10 +26,10 @@ class _Instance:
         if not is_instantiable(of):
             raise RuntimeError(f"Invalid Instance of {of}")
 
-        self.name = name
-        self.of = of
-        self.conns = dict()
-        self.portrefs = dict()
+        self.name: Optional[str] = name
+        self.of: "Instantiable" = of
+        self.conns: Dict[str, "Connectable"] = dict()
+        self.portrefs: Dict[str, "PortRef"] = dict()
         self._parent_module = None  # Instantiating module
         self._elaborated = False
         self._initialized = True
@@ -88,10 +48,34 @@ class _Instance:
         return self.of
 
 
-@call_and_setattr_connects
-@getattr_port_refs
+def _to_array(inst: "Instance", num: int) -> "InstArray":
+    """ Create an Instance Array from an Instance """
+    # Several contraints asserted here which may eventually be relaxed.
+    # * No port-references (yet)
+    # * Not a member of a module (yet)
+    if len(inst.portrefs) > 0:
+        msg = f"Cannot convert Instance {inst} with outstanding port-references {inst.portrefs} to Array"
+        raise RuntimeError(msg)
+    if inst._parent_module is not None:
+        msg = f"Cannot convert Instance {inst} already inserted in Module {inst._parent_module} to Array"
+        raise RuntimeError(msg)
+
+    # Checks out. Create the array.
+    return InstArray(of=inst.of, n=num, name=inst.name)(**inst.conns)
+
+
+def _mult(inst: "Instance", other: int) -> "InstArray":
+    """ Instance by integer multiplication. 
+    Creates an Instance Array of size `other`. """
+    if not isinstance(other, int):
+        return NotImplemented
+    return _to_array(inst=inst, num=other)
+
+
 class Instance(_Instance):
     """ Hierarchical Instance of another Module or Generator """
+
+    __mul__ = __rmul__ = _mult  # Apply `_mult` on both left and right
 
     _specialcases = [
         "name",
@@ -108,33 +92,41 @@ class Instance(_Instance):
         "_initialized",
     ]
 
-    def _mult(self, other: int) -> "InstArray":
-        """ Instance by integer multiplication. 
-        Creates an Instance Array of size `other`. """
-        if not isinstance(other, int):
-            return NotImplemented
-        return self._to_array(num=other)
+class InstanceBundle(_Instance):
+    """ Named set of Instances, paired with a Signal Bundle. """
 
-    __mul__ = __rmul__ = _mult  # Apply `_mult` on both left and right
+    bundle: Optional["Bundle"] = None
 
-    def _to_array(self, num: int) -> "InstArray":
-        """ Create an Instance Array from an Instance """
-        # Several contraints asserted here which may eventually be relaxed.
-        # * No port-references (yet)
-        # * Not a member of a module (yet)
-        if len(self.portrefs) > 0:
-            msg = f"Cannot convert Instance {self} with outstanding port-references {self.portrefs} to Array"
-            raise RuntimeError(msg)
-        if self._parent_module is not None:
-            msg = f"Cannot convert Instance {self} already inserted in Module {self._parent_module} to Array"
-            raise RuntimeError(msg)
-
-        # Checks out. Create the array.
-        return InstArray(of=self.of, n=num, name=self.name)(**self.conns)
+    _specialcases = [
+        "name",
+        "of",
+        "conns",
+        "portref",
+        "portrefs",
+        "connect",
+        "disconnect",
+        "_port_ref",
+        "_module",
+        "_resolved",
+        "_elaborated",
+        "_initialized",
+    ]
 
 
-@call_and_setattr_connects
-@getattr_port_refs
+def InstanceBundleType(name: str, bundle: "Bundle") -> type:
+    """ Create a new sub-class of `InstanceBundle`, tied to Bundle-type `bundle`. """
+
+    from .bundle import Bundle
+
+    if not isinstance(name, str):
+        raise TypeError 
+    if not isinstance(bundle, Bundle):
+        raise TypeError 
+    
+    # Create and return the new type
+    return type(name, (InstanceBundle,), {"bundle": bundle})
+
+
 class InstArray(_Instance):
     """ Array of `n` Instances """
 
@@ -183,3 +175,6 @@ def calls_instantiate(cls: type) -> type:
 
     cls.__call__ = __call__
     return cls
+
+
+__all__ = ["Instance", "InstArray", "calls_instantiate"]
