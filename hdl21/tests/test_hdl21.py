@@ -1729,3 +1729,21 @@ def test_pair1():
     assert len(O.signals) == 3
     assert len(O.bundles) == 0
     assert len(O.instbundles) == 0
+
+
+@pytest.mark.xfail(reason="#33 https://github.com/dan-fritchman/Hdl21/issues/33")
+def test_noconn_types():
+    """ Test connecting `NoConn`s to a variety of port-types. """
+
+    @h.module
+    class Inner():
+        # Inner module with a handful of port-types
+        s = h.Port()
+        b = h.Port(width=11)
+        d = h.Diff(port=True)
+
+    @h.module 
+    class Outer:
+        i = Inner(s=h.NoConn(), b=h.NoConn(), d=h.NoConn())
+    
+    h.elaborate(Outer)
