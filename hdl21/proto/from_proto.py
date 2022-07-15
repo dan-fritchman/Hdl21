@@ -2,22 +2,23 @@
 hdl21 ProtoBuf Import 
 """
 from types import SimpleNamespace
-from typing import Union, Any, Dict, List, Type
+from typing import Union, Any, Dict, List
 
 # Local imports
 # Proto-definitions
 import vlsir
+import vlsir.circuit_pb2 as vckt
 
 # HDL
+from ..prefix import Prefix, Prefixed
 from ..module import Module, ExternalModule
 from ..instance import Instance
-from ..signal import Signal, Port, PortDir, Slice, Concat
+from ..signal import Signal, PortDir, Slice, Concat, Visibility
 from .. import primitives
 from ..primitives import Primitive
-from ..prefix import Prefix, Prefixed
 
 
-def from_proto(pkg: vlsir.circuit.Package) -> SimpleNamespace:
+def from_proto(pkg: vckt.Package) -> SimpleNamespace:
     """ Convert Proto-defined Package `pkg` to a namespace-full of Modules. """
     importer = ProtoImporter(pkg)
     return importer.import_()
@@ -27,7 +28,7 @@ class ProtoImporter:
     """ Protobuf Package Importer. 
     Collects all `Modules` defined in Protobuf-sourced primary-argument `pkg` into a Python `types.SimpleNamespace`. """
 
-    def __init__(self, pkg: vlsir.circuit.Package):
+    def __init__(self, pkg: vckt.Package):
         self.pkg = pkg
         self.modules = dict()  # Dict of names to Modules
         self.ext_modules = dict()  # Dict of qual-names to ExternalModules
@@ -61,9 +62,7 @@ class ProtoImporter:
                 raise RuntimeError(f"Invalid namespace path {path} overwriting {attr}")
         return ns
 
-    def import_external_module(
-        self, pmod: vlsir.circuit.ExternalModule
-    ) -> ExternalModule:
+    def import_external_module(self, pmod: vckt.ExternalModule) -> ExternalModule:
         """ Convert Proto-Module `emod` to an `hdl21.ExternalModule` """
 
         # Check our cache for whether a module by the same name has been imported
@@ -73,12 +72,15 @@ class ProtoImporter:
             msg = f"Cannot import conflicting definitions of {pmod} and {conflict}"
             raise RuntimeError(msg)
 
+        # Import the port list
+        port_list = import_ports_and_signals(pmod)
+
         # Create the ExternalModule
         emod = ExternalModule(
             name=pmod.name.name,
             domain=pmod.name.domain,
             desc=pmod.desc,
-            port_list=self.import_ports(pmod.ports),
+            port_list=port_list,
             paramtype=dict,  # FIXME: should these be stored in the serialization schema?
         )
         # Give it a (non-initializer) value for its `importpath`
@@ -87,7 +89,7 @@ class ProtoImporter:
         self.ext_modules[key] = emod
         return emod
 
-    def import_module(self, pmod: vlsir.circuit.Module) -> Module:
+    def import_module(self, pmod: vckt.Module) -> Module:
         """ Convert Proto-Module `pmod` to an `hdl21.Module` """
         if pmod.name in self.modules:
             raise RuntimeError(f"Proto Import Error: Redefined Module {pmod.name}")
@@ -101,12 +103,8 @@ class ProtoImporter:
         module._importpath = path[:-1]
         module.name = path[-1]
 
-        # Import its ports
-        [module.add(port) for port in self.import_ports(pmod.ports)]
-
-        # Import its signals
-        for psig in pmod.signals:
-            sig = Signal(name=psig.name, width=psig.width)
+        # Import its signals and ports
+        for sig in import_ports_and_signals(pmod):
             module.add(sig)
 
         # Lap through instances, connecting them, creating internal Signals if necessary (bleh)
@@ -115,22 +113,21 @@ class ProtoImporter:
             module.add(inst)
 
             # Make the instance's connections
-            for pname, pconn in pinst.connections.items():
-                if pname not in inst._resolved.ports:
-                    raise RuntimeError(
-                        f"Invalid Port {pname} on {inst} in Module {module.name}"
-                    )
+            for pconn in pinst.connections:
+                if pconn.portname not in inst._resolved.ports:
+                    msg = f"Invalid Port {pconn.portname} on {inst} in Module {module.name}"
+                    raise RuntimeError(msg)
                 # Import the Signal-object
-                sig = self.import_connection(pconn, module)
+                conn = import_connection_target(pconn.target, module)
                 # And connect it to the Instance
-                setattr(inst, pname, sig)
+                inst.connect(pconn.portname, conn)
 
         # Add the Module to our cache and return-namespace, and return it
         self.modules[pmod.name] = module
         setattr(ns, module.name, module)
         return module
 
-    def import_instance(self, pinst: vlsir.circuit.Instance) -> Instance:
+    def import_instance(self, pinst: vckt.Instance) -> Instance:
         """ Convert Proto-Instance `pinst` to an `hdl21.Instance`. 
         Requires an available Module-definition to be referenced. 
         Connections are *not* performed inside this method. """
@@ -149,17 +146,17 @@ class ProtoImporter:
 
         elif ref.WhichOneof("to") == "external":  # Defined outside package
             # Import all of its instance parameters to a dict
-            params = self.import_parameters(pinst.parameters)
+            params = import_parameters(pinst.parameters)
 
             # First check the priviledged/ internally-defined domains
             if ref.external.domain == "vlsir.primitives":
                 # Import a VLSIR primitive to an ideal element, and convert its parameters
-                target = self.import_vlsir_primitive(ref.external)
+                target = import_vlsir_primitive(ref.external)
                 params = target.Params(**params)
 
             elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
                 # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
-                target = self.import_hdl21_primitive(ref.external)
+                target = import_hdl21_primitive(ref.external)
                 params = target.Params(**params)
 
             else:  # Externally-defined `ExternalModule`
@@ -173,130 +170,147 @@ class ProtoImporter:
             # Call the `target` ExternalModule/ Primitive it with the parameters, making an instantiable `Call`-object.
             target = target(params)
 
+        else:
+            raise ValueError
+
         return Instance(name=pinst.name, of=target)
 
-    @classmethod
-    def import_hdl21_primitive(cls, pref: vlsir.utils.QualifiedName) -> Primitive:
-        """ Convert an `hdl21.primitives` or `hdl21.ideal` qualified name to a Primitive. """
-        if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
-            raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
-        # Get the Primitive from `hdl21.primitives`, or fail
-        prim = getattr(primitives, pref.name, None)
-        if not isinstance(prim, Primitive):
-            msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+def import_ports_and_signals(
+    pmod: Union[vckt.Module, vckt.ExternalModule]
+) -> List[Signal]:
+    """ Import all Ports and Signals from Proto-Module `pmod`. 
+    Returns them as a single list, which can serve as arguments to `Module.add` or `ExternalModule.port_list`. """
+
+    # Keep a dictionary from name: Signal imported
+    signals: Dict[str, Signal] = {}
+    for psig in pmod.signals:
+        signals[psig.name] = Signal(name=psig.name, width=psig.width)
+
+    # Convert the entries of `signals` that are ports
+    for pport in pmod.ports:
+        dir_ = import_port_dir(pport)
+        if pport.signal not in signals:
+            msg = f"Port {pport} missing Signal in {signals}"
             raise RuntimeError(msg)
-        return prim
+        signals[pport.signal].direction = dir_
+        signals[pport.signal].vis = Visibility.PORT
 
-    @classmethod
-    def import_vlsir_primitive(cls, pref: vlsir.utils.QualifiedName) -> Primitive:
-        """ Import a VLSIR-defined Primitive """
-        if pref.domain != "vlsir.primitives":
-            raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
+    return list(signals.values())
 
-        # Mapping from `vlsir.primitives` to Hdl21's ideal elements
-        # FIXME: specialized importing of their parameters!
-        prim_map = {
-            "vdc": "DcVoltageSource",
-            "vpluse": "PulseVoltageSource",
-            "isource": "CurrentSource",
-            "resistor": "IdealResistor",
-            "capacitor": "IdealCapacitor",
-            "inductor": "IdealInductor",
-        }
-        if pref.name not in prim_map:
-            msg = f"Invalid or unsupported VLSIR Primitive: {pref.name}"
-            raise RuntimeError(msg)
 
-        # Get the Hdl21 Primitive class
-        prim = getattr(primitives, prim_map[pref.name], None)
-        if not isinstance(prim, Primitive):
-            msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
-            raise RuntimeError(msg)
-        return prim
+def import_hdl21_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
+    """ Convert an `hdl21.primitives` or `hdl21.ideal` qualified name to a Primitive. """
+    if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
+        raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
-    @classmethod
-    def import_parameters(cls, pparams: Dict[str, vlsir.Param]) -> dict:
-        pdict = {}
-        for pname, pparam in pparams.items():
-            pdict[pname] = cls.import_parameter(pparam)
-        return pdict
+    # Get the Primitive from `hdl21.primitives`, or fail
+    prim = getattr(primitives, pref.name, None)
+    if not isinstance(prim, Primitive):
+        msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+        raise RuntimeError(msg)
+    return prim
 
-    @classmethod
-    def import_parameter(cls, pparam: vlsir.Param) -> Any:
-        """ Import a `Param` """
-        ptype = pparam.WhichOneof("value")
-        if ptype == "integer":
-            return int(pparam.integer)
-        if ptype == "double":
-            return float(pparam.double)
-        if ptype == "string":
-            return str(pparam.string)
-        if ptype == "prefixed":
-            return import_prefixed(pparam.prefixed)
-        if ptype == "literal":
-            raise NotImplementedError
-        raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
-    def import_connection(
-        self, pconn: vlsir.circuit.Connection, module: Module
-    ) -> Union[Signal, Slice, Concat]:
-        """ Import a Proto-defined `Connection` into a Signal, Slice, or Concatenation """
-        # Connections are a proto `oneof` union; figure out which to import
-        stype = pconn.WhichOneof("stype")
-        # Concatenations are more complicated and need their own method
-        if stype == "concat":
-            return self.import_concat(pconn.concat, module)
-        # For signals & slices, first sort out the signal-name, so we can grab the object from `module.namespace`
-        if stype == "sig":
-            sname = pconn.sig.name
-        elif stype == "slice":
-            sname = pconn.slice.signal
-        else:
-            raise ValueError(f"Invalid Connection Type: {pconn}")
-        # Grab this Signal, if it exists
-        sig = module.namespace.get(sname, None)
-        if sig is None:
-            # This block has held, at some points in code-history,
-            # the SPICE-style "create nets from thin air" behavior.
-            # That's outta here; undeclared signals produce errors instead.
-            raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
-        # Now chop this up if it's a Slice
-        if stype == "slice":
-            start = bot = pconn.slice.bot
-            stop = top = pconn.slice.top + 1  # Move to Python-style exclusive indexing
-            sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
-        return sig
+def import_vlsir_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
+    """ Import a VLSIR-defined Primitive """
+    if pref.domain != "vlsir.primitives":
+        raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
-    def import_concat(self, pconc: vlsir.circuit.Concat, module: Module) -> Concat:
-        """ Import a (potentially nested) Concatenation """
-        parts = []
-        for ppart in pconc.parts:
-            part = self.import_connection(ppart, module)
-            parts.append(part)
-        return Concat(*parts)
+    # Mapping from `vlsir.primitives` to Hdl21's ideal elements
+    # FIXME: specialized importing of their parameters!
+    prim_map = {
+        "vdc": "DcVoltageSource",
+        "vpluse": "PulseVoltageSource",
+        "isource": "CurrentSource",
+        "resistor": "IdealResistor",
+        "capacitor": "IdealCapacitor",
+        "inductor": "IdealInductor",
+    }
+    if pref.name not in prim_map:
+        msg = f"Invalid or unsupported VLSIR Primitive: {pref.name}"
+        raise RuntimeError(msg)
 
-    def import_ports(self, pports: List[vlsir.circuit.Port]) -> List[Signal]:
-        """ Import a list of proto-ports """
-        ports = []
-        for pport in pports:
-            dir_ = self.import_port_dir(pport)
-            ports.append(
-                Port(name=pport.signal.name, width=pport.signal.width, direction=dir_,)
-            )
-        return ports
+    # Get the Hdl21 Primitive class
+    prim = getattr(primitives, prim_map[pref.name], None)
+    if not isinstance(prim, Primitive):
+        msg = f"Attempt to import invalid `hdl21.primitive` {pref.external.name}"
+        raise RuntimeError(msg)
+    return prim
 
-    def import_port_dir(self, pport: vlsir.circuit.Port) -> PortDir:
-        """ Convert between Port-Direction Enumerations """
-        if pport.direction == vlsir.circuit.Port.Direction.INPUT:
-            return PortDir.INPUT
-        if pport.direction == vlsir.circuit.Port.Direction.OUTPUT:
-            return PortDir.OUTPUT
-        if pport.direction == vlsir.circuit.Port.Direction.INOUT:
-            return PortDir.INOUT
-        if pport.direction == vlsir.circuit.Port.Direction.NONE:
-            return PortDir.NONE
-        raise ValueError
+
+def import_parameters(pparams: List[vlsir.Param]) -> Dict[str, Any]:
+    """ Import a list of Vlsir parameters to a Hdl21-style {name: value} dict. """
+    return {pparam.name: import_parameter_value(pparam.value) for pparam in pparams}
+
+
+def import_parameter_value(pparam: vlsir.ParamValue) -> Any:
+    """ Import a `ParamValue` """
+    ptype = pparam.WhichOneof("value")
+    if ptype == "integer":
+        return int(pparam.integer)
+    if ptype == "double":
+        return float(pparam.double)
+    if ptype == "string":
+        return str(pparam.string)
+    if ptype == "prefixed":
+        return import_prefixed(pparam.prefixed)
+    if ptype == "literal":
+        raise NotImplementedError
+    raise ValueError(f"Invalid Parameter Type: `{ptype}`")
+
+
+def import_connection_target(
+    pconn: vckt.ConnectionTarget, module: Module
+) -> Union[Signal, Slice, Concat]:
+    """ Import a Proto-defined `ConnectionTarget` into a Signal, Slice, or Concatenation """
+    # Connections are a proto `oneof` union; figure out which to import
+    stype = pconn.WhichOneof("stype")
+    # Concatenations are more complicated and need their own method
+    if stype == "concat":
+        return import_concat(pconn.concat, module)
+    # For signals & slices, first sort out the signal-name, so we can grab the object from `module.namespace`
+    if stype == "sig":
+        sname = pconn.sig
+    elif stype == "slice":
+        sname = pconn.slice.signal
+    else:
+        raise ValueError(f"Invalid Connection Type: {pconn}")
+    # Grab this Signal, if it exists
+    sig = module.namespace.get(sname, None)
+    if sig is None:
+        # This block has held, at some points in code-history,
+        # the SPICE-style "create nets from thin air" behavior.
+        # That's outta here; undeclared signals produce errors instead.
+        raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
+    # Now chop this up if it's a Slice
+    if stype == "slice":
+        start = bot = pconn.slice.bot
+        stop = top = pconn.slice.top + 1  # Move to Python-style exclusive indexing
+        sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
+    return sig
+
+
+def import_concat(pconc: vckt.Concat, module: Module) -> Concat:
+    """ Import a (potentially nested) Concatenation """
+    parts = []
+    for ppart in pconc.parts:
+        part = import_connection_target(ppart, module)
+        parts.append(part)
+    return Concat(*parts)
+
+
+def import_port_dir(pport: vckt.Port) -> PortDir:
+    """ Convert between Port-Direction Enumerations """
+    if pport.direction == vckt.Port.Direction.INPUT:
+        return PortDir.INPUT
+    if pport.direction == vckt.Port.Direction.OUTPUT:
+        return PortDir.OUTPUT
+    if pport.direction == vckt.Port.Direction.INOUT:
+        return PortDir.INOUT
+    if pport.direction == vckt.Port.Direction.NONE:
+        return PortDir.NONE
+    raise ValueError
 
 
 def import_prefix(vpre: vlsir.SIPrefix) -> Prefix:
@@ -337,11 +351,13 @@ def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
     # And import the numeric part, dispatched across its type.
     ptype = vpref.WhichOneof("number")
     if ptype == "integer":
-        return int(vpref.integer)
-    if ptype == "double":
-        return float(vpref.double)
-    if ptype == "string":
-        return str(vpref.string)
+        number = vpref.integer
+    elif ptype == "double":
+        number = vpref.double
+    elif ptype == "string":
+        number = vpref.string
+    else:
+        raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
-    raise ValueError(f"Invalid Parameter Type: `{ptype}`")
+    return Prefixed(prefix=prefix, number=number)
 

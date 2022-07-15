@@ -6,10 +6,9 @@
 * Importing back from VLSIR
 """
 
-import sys, copy, pytest
+import sys, pytest
 from io import StringIO
 from types import SimpleNamespace
-from enum import Enum, EnumMeta, auto
 from textwrap import dedent
 
 # Import the PUT (package under test)
@@ -126,7 +125,7 @@ def test_proto2():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.Child1"
     assert len(pm.ports) == 2
-    assert len(pm.signals) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 0
     assert len(pm.parameters) == 0
 
@@ -135,7 +134,7 @@ def test_proto2():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.Child2"
     assert len(pm.ports) == 2
-    assert len(pm.signals) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 0
     assert len(pm.parameters) == 0
 
@@ -144,6 +143,7 @@ def test_proto2():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.TestProto2"
     assert len(pm.ports) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 2
     assert len(pm.parameters) == 0
 
@@ -172,7 +172,7 @@ def test_proto3():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.M1"
     assert len(pm.ports) == 2
-    assert len(pm.signals) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 0
     assert len(pm.parameters) == 0
 

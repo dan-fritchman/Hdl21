@@ -144,3 +144,12 @@ def test_prefix_scaling():
 
     # 11.11e14, scaled to 1111e12
     assert 11.11 * e(15) * h.Prefix.DECI == 1111 * e(12)
+
+
+def test_prefix_conversion():
+    """ Test types that can be converted to `Prefixed`'s internal `Decimal`. """
+
+    h.Prefixed(number="11.11", prefix=h.Prefix.YOCTO)
+    h.Prefixed(number=11.11, prefix=h.Prefix.YOCTO)
+    h.Prefixed(number=11, prefix=h.Prefix.YOCTO)
+

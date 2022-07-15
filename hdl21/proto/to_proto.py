@@ -27,14 +27,18 @@ from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
 from ..elab import Elabables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
-from ..primitives import PrimitiveCall, PrimitiveType, ScalarOption
 from ..instance import Instance
 from .. import signal
-from hdl21 import primitives
+from ..primitives import (
+    PrimitiveCall,
+    PrimitiveType,
+    ScalarOption,
+    PulseVoltageSourceParams,
+)
 
 
 def to_proto(top: Elabables, domain: Optional[str] = None, **kwargs,) -> vckt.Package:
-    """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`"""
+    """ Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`. """
     # Elaborate all the top-level Modules
     tops = elab_all(top)
     exporter = ProtoExporter(tops=tops, domain=domain)
@@ -42,10 +46,12 @@ def to_proto(top: Elabables, domain: Optional[str] = None, **kwargs,) -> vckt.Pa
 
 
 class ProtoExporter:
-    """Hierarchical Protobuf Exporter.
+    """ 
+    Hierarchical Protobuf Exporter  
     Walks a Module hierarchy from Module `self.top`, defining each required Module along the way.
     Modules are defined in `self.pkg` in dependency order.
-    Upon round-tripping, all dependent child-modules will be encountered before their parent instantiators."""
+    Upon round-tripping, all dependent child-modules will be encountered before their parent instantiators. 
+    """
 
     def __init__(self, tops: List[Module], domain: Optional[str] = None):
         self.tops = tops
@@ -84,6 +90,8 @@ class ProtoExporter:
         return mname
 
     def export_module(self, module: Module) -> vckt.Module:
+        """ Export a Module `module` and all its dependencies. """
+
         if id(module) in self.modules:  # Already done
             return self.modules[id(module)]
 
@@ -97,14 +105,14 @@ class ProtoExporter:
         # Create its serialized name
         pmod.name = self.export_module_name(module)
 
+        # Create its Signal-objects, which include the hdl21.Module's Ports
+        for sig in list(module.signals.values()) + list(module.ports.values()):
+            psig = vckt.Signal(name=sig.name, width=sig.width)
+            pmod.signals.append(psig)
+
         # Create its Port-objects
         for port in module.ports.values():
             pmod.ports.append(export_port(port))
-
-        # Create its Signal-objects
-        for sig in module.signals.values():
-            psig = vckt.Signal(name=sig.name, width=sig.width)
-            pmod.signals.append(psig)
 
         # Create each Proto-Instance
         for inst in module.instances.values():
@@ -129,8 +137,10 @@ class ProtoExporter:
         qname = vlsir.utils.QualifiedName(name=emod.name, domain=emod.domain)
         pmod = vckt.ExternalModule(name=qname)
 
-        # Create its Port-objects
-        for port in emod.ports.values():
+        # Create its Port-objects, which also require Vlsir Signal objects
+        for port in emod.port_list:
+            psig = vckt.Signal(name=port.name, width=port.width)
+            pmod.signals.append(psig)
             pmod.ports.append(export_port(port))
 
         # Store references to the result, and return it
@@ -196,16 +206,20 @@ class ProtoExporter:
                 if val is None:
                     continue  # None-valued parameters go un-set
                 # Otherwise export and copy it into place
-                pinst.parameters[key].CopyFrom(export_param_value(val))
+                vparam = vlsir.Param(name=key, value=export_param_value(val))
+                pinst.parameters.append(vparam)
 
         else:
             raise TypeError(f"Un-exportable Instance {inst} of {inst._resolved}")
 
         # Create its connections mapping
-        for pname, sig in inst.conns.items():
+        for pname, conn in inst.conns.items():
             # Assign each item into the connections dict.
             # The proto interface requires copying it along the way
-            pinst.connections[pname].CopyFrom(export_conn(sig))
+            pconn = vckt.Connection(
+                portname=pname, target=export_connection_target(conn)
+            )
+            pinst.connections.append(pconn)
 
         return pinst
 
@@ -214,8 +228,7 @@ def export_port(port: signal.Port) -> vckt.Port:
     """ Export a `Port` """
     pport = vckt.Port()
     pport.direction = export_port_dir(port)
-    pport.signal.name = port.name
-    pport.signal.width = port.width
+    pport.signal = port.name
     return pport
 
 
@@ -229,18 +242,17 @@ def export_port_dir(port: signal.Port) -> vckt.Port.Direction:
         return vckt.Port.Direction.INOUT
     if port.direction == signal.PortDir.NONE:
         return vckt.Port.Direction.NONE
-    raise ValueError
+    raise ValueError(f"Invalid PortDir {port.direction}")
 
 
-def export_conn(
+def export_connection_target(
     sig: Union[signal.Signal, signal.Slice, signal.Concat]
 ) -> vckt.Connection:
-    """ Export a proto Connection """
+    """ Export a proto `ConnectionTarget` """
 
-    pconn = vckt.Connection()  # Create a proto-Connection
+    pconn = vckt.ConnectionTarget()  # Create a proto-Connection
     if isinstance(sig, signal.Signal):
-        pconn.sig.name = sig.name
-        pconn.sig.width = sig.width
+        pconn.sig = sig.name
     elif isinstance(sig, signal.Slice):
         pslice = export_slice(sig)
         pconn.slice.CopyFrom(pslice)
@@ -248,7 +260,8 @@ def export_conn(
         pconc = export_concat(sig)
         pconn.concat.CopyFrom(pconc)
     else:
-        raise TypeError(f"Invalid argument to `ProtoExporter.export_conn`: {sig}")
+        msg = f"Invalid argument to `export_connection_target`: {sig}"
+        raise TypeError(msg)
     return pconn
 
 
@@ -271,7 +284,7 @@ def export_concat(concat: signal.Concat) -> vckt.Concat:
     """ Export (potentially recursive) Signal Concatenations """
     pconc = vckt.Concat()
     for part in concat.parts:
-        pconc.parts.append(export_conn(part))
+        pconc.parts.append(export_connection_target(part))
     return pconc
 
 
@@ -279,7 +292,7 @@ def export_primitive_params(params: Any) -> Dict[str, ScalarOption]:
     """ Convert the parameters of an `IDEAL` primitive into their VLSIR form. 
     Returns the result as a dictionary of {name: ScalarOption}s. """
 
-    if isinstance(params, primitives.PulseVoltageSourceParams):
+    if isinstance(params, PulseVoltageSourceParams):
         return dict(
             v1=params.v1,
             v2=params.v2,
@@ -372,6 +385,7 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
     prefix = export_prefix(pref.prefix)
 
     # And export the numeric part, dispatched across its type.
+    # FIXME: `hdl21.Prefixed` numbers are *all* `Decimal` now, this could probably be retired.  
     if isinstance(pref.number, int):
         return vlsir.Prefixed(prefix=prefix, integer=pref.number)
     elif isinstance(pref.number, float):
