@@ -4,9 +4,10 @@
 
 # Local imports
 from ...module import Module, ModuleAttr
+from ...instance import _Instance
 
 # Import the base class
-from .base import Elaborator
+from .base import Elaborator, ElabStackEnum
 
 
 class Orphanage(Elaborator):
@@ -51,18 +52,75 @@ class Orphanage(Elaborator):
         for attr in module.namespace.values():
             self.assert_parentage(module, attr)
 
-        # FIXME: check instance connections, which are not in the module namespace. https://github.com/dan-fritchman/Hdl21/issues/32
+        # Check instance connections, which are not in the module namespace. 
+        instlike = list(module.instances.values()) + list(module.instarrays.values()) + list(module.instbundles.values())
+        for inst in instlike:
+            self.check_instance(module, inst)
         
         # Checks out! Return the module unchanged.
         return module
 
-    def assert_parentage(self, module: Module, attr: ModuleAttr):
+    def check_instance(self, module: Module, inst: _Instance) -> None:
+        """ Check the connections of `inst` in parent `module` """
+        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
+
+        # Check each of the instance's connections
+        for conn in inst.conns.values():
+            self.check_connectable(module, conn)
+
+        self.stack_pop()
+
+    def check_connectable(self, module: Module, conn: "Connectable") -> None:
+        """ Check a Connectable for orphanage. 
+        Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements. """
+
+        from ...signal import Signal, Slice, Concat, NoConn
+        from ...bundle import BundleInstance, BundleRef, AnonymousBundle
+        from ...portref import PortRef
+
+        # Check owned types first: Signals and Bundle Instances
+        if isinstance(conn, (Signal, BundleInstance)):
+            return self.assert_parentage(module, conn)
+        
+        if isinstance(conn, Slice):
+            # Recursively check the parent-signals of slices
+            return self.check_connectable(module, conn.signal)
+        
+        if isinstance(conn, Concat):
+            # Check each of the concatenated signals, also recursively across inner types
+            for part in conn.parts:
+                self.check_connectable(module, part)
+            return
+
+        if isinstance(conn, NoConn):
+            # `NoConn`s are not "parented" by anything; they are essentially exempt from this check. 
+            return 
+
+        if isinstance(conn, PortRef):
+            # For Port references, check that `module` owns their target Instance 
+            return self.assert_parentage(module, conn.inst)
+        
+        if isinstance(conn, BundleRef):
+            # For Bundle references, check that `module` owns their root Bundle Instance
+            return self.assert_parentage(module, conn.root())
+
+        if isinstance(conn, AnonymousBundle):
+            for sig in conn.signals.values():
+                self.check_connectable(module, sig)
+            # FIXME: add sub-bundles when available
+            return
+
+        raise TypeError(f"Orphanage: Unhandled Connectable `{conn}`")
+        
+    def assert_parentage(self, module: Module, attr: ModuleAttr) -> None:
+        """ Assert that `attr` is parented by `module`, or fail. """
+
         if attr._parent_module is None:
-            msg = f"Orphanage: Module {module} attribute {attr}!"
+            msg = f"Orphanage! Module `{module.name}` depends on orphan attribute `{attr}`! "
+            msg += "Did you forget to `add()` or assign it into `{module.name}`? "
             self.fail(msg)
 
         if attr._parent_module is not module:
             msg = f"Orphanage: Module {module} attribute {attr} is actually owned by another Module {attr._parent_module}!"
             self.fail(msg)
-        
-        # Checks out! Carry on.
+

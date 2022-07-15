@@ -870,7 +870,7 @@ def test_signal_concat1():
 
 
 def test_slice_module1():
-    # Make use of slicing and concatenation in a module
+    """ Make use of slicing and concatenation in a module """
 
     C = h.Module(name="C")
     C.p1 = h.Port(width=1)
@@ -878,9 +878,9 @@ def test_slice_module1():
     C.p7 = h.Port(width=7)
 
     P = h.Module(name="P")
-    C.s4 = h.Signal(width=4)
-    C.s2 = h.Signal(width=2)
-    P.ic = C(p1=C.s4[0], p4=C.s4, p7=h.Concat(C.s4, C.s2, C.s2[0]))
+    P.s4 = h.Signal(width=4)
+    P.s2 = h.Signal(width=2)
+    P.ic = C(p1=P.s4[0], p4=P.s4, p7=h.Concat(P.s4, P.s2, P.s2[0]))
 
     h.elaborate(P)
 
@@ -1259,7 +1259,6 @@ def test_orphanage3():
         h.elaborate(m1)
 
 
-@pytest.mark.xfail(reason="#32 https://github.com/dan-fritchman/Hdl21/issues/32")
 def test_orphanage4():
     """ Test an orphan Instance connection """
 

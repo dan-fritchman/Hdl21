@@ -16,7 +16,7 @@ from vlsirtools.spice import sim_data as sd, SimResultUnion
 
 # Local Imports
 from ..module import Module
-from ..signal import Signal, Port, Visibility, PortDir
+from ..signal import Signal, Port, Visibility, PortDir, _copy_to_internal
 from ..instantiable import Instantiable
 from ..prefix import Prefix
 from ..primitives import Vdc, Vpu, Cap
@@ -144,7 +144,7 @@ def create_sim(p: DelaySimParams) -> Sim:
         sig = p.dut.get(vname)
         if sig is None:
             raise RuntimeError(f"Invalid Supply {vname} in creating delay for {p.dut}")
-        sig = _copy_to_internal(sig)
+        sig = tb.add(_copy_to_internal(sig))
         tb.add(Vdc(Vdc.Params(dc=vval))(p=sig, n=tb.vss), name=f"v{sig.name}")
         tb.dut.connect(sig.name, sig)
 
@@ -154,10 +154,9 @@ def create_sim(p: DelaySimParams) -> Sim:
             continue  # Skip the primary input
 
         # Create a Signal for each DUT input
-        inp = _copy_to_internal(inp)
+        inp = tb.add(_copy_to_internal(inp))
         if inp.width != 1:
             raise RuntimeError(f"Unsupported `Delay` sim for bus input {inp}")
-        tb.add(inp)
         tb.dut.connect(inp.name, inp)
 
         # Get its logic state
@@ -177,7 +176,7 @@ def create_sim(p: DelaySimParams) -> Sim:
     # Create everything associated with each output - load caps and measurements
     dut_outputs = [s for s in p.dut.ports.values() if s.direction == PortDir.OUTPUT]
     for out in dut_outputs:
-        out = _copy_to_internal(out)
+        out = tb.add(_copy_to_internal(out))
         if out.width != 1:
             raise RuntimeError(f"Unsupported `Delay` sim for bus output {inp}")
         tb.dut.connect(out.name, out)
@@ -235,11 +234,3 @@ def get_meas(results: SimResultUnion) -> Dict[str, Optional[float]]:
     if isinstance(results, vsp.SimResult):
         return results.an[0].tran.measurements
     raise TypeError
-
-
-def _copy_to_internal(sig: Signal) -> Signal:
-    """ Make a copy of `sig`, replacing its visibility and port-direction to be internal. """
-    sig = copy(sig)
-    sig.vis = Visibility.INTERNAL
-    sig.direction = PortDir.NONE
-    return sig

@@ -2,7 +2,7 @@
 # Hdl21 Built-In Generators Library 
 """
 
-import copy
+from copy import copy
 from dataclasses import asdict, replace
 from typing import Optional, Tuple, Union
 
@@ -61,7 +61,7 @@ def Mos(params: MosParams) -> Module:
     m = Module()
     # Copy the unit-cell ports
     for p in primitives.Mos.port_list:
-        m.add(copy.copy(p))
+        m.add(copy(p))
 
     # Add instances, starting at the source-side
     inst = m.add(name="unit0", val=unit_xtor(s=m.s, g=m.g, b=m.b))
@@ -103,11 +103,14 @@ class SeriesParParams:
 
 @generator
 def SeriesPar(params: SeriesParParams) -> Module:
-    """ Series-Parallel Generator 
+    """ 
+    # Series-Parallel Generator 
+    
     Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`. 
     The generated `Module` includes the same ports as `unit`. 
     The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`. 
-    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`. """
+    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`. 
+    """
 
     unit = params.unit
 
@@ -115,7 +118,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
     m = Module()
     # Copy the unit-cell ports
     for p in unit.ports.values():
-        m.add(copy.copy(p))
+        m.add(copy(p))
 
     # Check for validity of the series-ports
     if isinstance(params.series_conns[0], str):
@@ -133,11 +136,15 @@ def SeriesPar(params: SeriesParParams) -> Module:
     if ser0 is None or ser1 is None:
         raise ValueError(f"SeriesPar: unit does not have ports {params.series_conns}")
 
-    # Extract all the parallel-connected ports
+    # Extract all the parallel-connected ports, and 
+    par_ports = [ 
+        port 
+        for port in unit.ports.values() 
+        if port.name not in params.series_conns 
+    ]
     par_conns = {
-        port.name: port
-        for port in unit.ports.values()
-        if port.name not in params.series_conns
+        port.name: m.add(copy(port))
+        for port in par_ports
     }
 
     for ipar in range(params.npar):
@@ -175,7 +182,7 @@ def Wrapper(m: Module) -> Module:
 
     # Copy the unit-cell ports
     for p in m.io.values():
-        wrapper.add(copy.copy(p))
+        wrapper.add(copy(p))
 
     # Create a connections-dict mirroring them
     conns = {port.name: port for port in wrapper.io.values()}

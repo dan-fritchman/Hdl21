@@ -20,9 +20,10 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 
 """
 
-from typing import Callable, Optional, Any, List, Union, Set 
+from copy import copy
 from enum import Enum
 from dataclasses import field
+from typing import Callable, Optional, Any, List, Union, Set 
 from pydantic.dataclasses import dataclass
 
 # Local imports
@@ -155,8 +156,18 @@ class Signal:
     connected_ports: Set[PortRef] = field(init=False, repr=False, default_factory=set)
 
     def __post_init_post_parse__(self):
+        self._parent_module: Optional["Module"] = None
         if self.width < 1:
             raise ValueError(f"Signal {self.name} width must be positive")
+
+
+def _copy_to_internal(sig: Signal) -> Signal:
+    """ Make a copy of `sig`, replacing its visibility and port-direction to be internal. """
+    sig = copy(sig)
+    sig.vis = Visibility.INTERNAL
+    sig.direction = PortDir.NONE
+    sig._parent_module = None
+    return sig
 
 
 def Signals(num: int, **kwargs) -> List[Signal]:
