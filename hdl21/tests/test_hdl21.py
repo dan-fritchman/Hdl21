@@ -1204,6 +1204,7 @@ def test_bundle_destructure():
 
 def test_orphanage():
     """ Test that orphaned Module-attributes fail at elaboration """
+
     m1 = h.Module(name="m1")
     m1.s = h.Signal()  # Signal `s` is now "parented" by `m1`
 
@@ -1256,6 +1257,26 @@ def test_orphanage3():
     with pytest.raises(RuntimeError):
         # Elaborating `m1` should fail, since `s` is orphaned
         h.elaborate(m1)
+
+
+@pytest.mark.xfail(reason="#32 https://github.com/dan-fritchman/Hdl21/issues/32")
+def test_orphanage4():
+    """ Test an orphan Instance connection """
+
+    m1 = h.Module(name="m1")
+    m1.p = h.Port() 
+
+    # The "orphan signal" will not be owned by any module
+    the_orphan_signal = h.Signal()
+    m2 = h.Module(name="m2")
+    m2.i = m1(p=the_orphan_signal) # <= Problem's here
+
+    # Note elaborating `m1` continues to work
+    h.elaborate(m1)
+
+    with pytest.raises(RuntimeError):
+        # Elaborating `m2` should fail
+        h.elaborate(m2)
 
 
 @pytest.mark.xfail(reason="#6 https://github.com/dan-fritchman/Hdl21/issues/6")

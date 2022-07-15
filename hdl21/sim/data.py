@@ -9,6 +9,10 @@ from pathlib import Path
 from dataclasses import field
 
 import vlsirtools.spice as vsp
+# Create a few aliases to the VLSIR sim-results types
+from vlsirtools.spice import SimResultUnion
+from vlsirtools.spice.sim_data import SimResult 
+from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
 from ..datatype import datatype

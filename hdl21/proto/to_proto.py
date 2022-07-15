@@ -247,7 +247,7 @@ def export_port_dir(port: signal.Port) -> vckt.Port.Direction:
 
 def export_connection_target(
     sig: Union[signal.Signal, signal.Slice, signal.Concat]
-) -> vckt.Connection:
+) -> vckt.ConnectionTarget:
     """ Export a proto `ConnectionTarget` """
 
     pconn = vckt.ConnectionTarget()  # Create a proto-Connection

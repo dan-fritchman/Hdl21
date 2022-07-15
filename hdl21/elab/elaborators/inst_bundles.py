@@ -16,6 +16,7 @@ FIXME: this is amid `Diff`/`Pair` specific code and more general `InstanceBundle
 from typing import get_args
 
 # Local imports
+from ...portref import PortRef
 from ...module import Module
 from ...instance import Instance, InstanceBundle
 
@@ -82,11 +83,13 @@ class InstBundleElaborator(Elaborator):
                 for signame, new_inst in signal_names_to_instances.items():
                     new_inst.connect(portname, conn.get(signame))
 
-            elif isinstance(conn, get_args(Sliceable)):
+            elif isinstance(conn, get_args(Sliceable)) or isinstance(conn, PortRef):
                 # If the connection is a scalar, connect it to each new instance
-                if conn.width != 1:
-                    msg = f"InstanceBundle {instbundle.name} connection {conn} is not a scalar, but has width {conn.width}"
-                    self.fail(msg)
+                
+                # FIXME: check for unit width, when the `Ref` types can handle it 
+                # if conn.width != 1:
+                #     msg = f"InstanceBundle {instbundle.name} connection {conn} is not a scalar, but has width {conn.width}"
+                #     self.fail(msg)
 
                 for new_inst in signal_names_to_instances.values():
                     new_inst.connect(portname, conn)

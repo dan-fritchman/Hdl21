@@ -3,7 +3,7 @@
 """
 
 # Local imports
-from ...module import Module
+from ...module import Module, ModuleAttr
 
 # Import the base class
 from .base import Elaborator
@@ -46,10 +46,23 @@ class Orphanage(Elaborator):
 
     def elaborate_module(self, module: Module) -> Module:
         """ Elaborate a Module """
+        
         # Check each attribute in the module namespace for orphanage.
         for attr in module.namespace.values():
-            if attr._parent_module is not module:
-                msg = f"Orphanage: Module {module} attribute {attr} is actually owned by another Module {attr._parent_module}!"
-                self.fail(msg)
+            self.assert_parentage(module, attr)
+
+        # FIXME: check instance connections, which are not in the module namespace. https://github.com/dan-fritchman/Hdl21/issues/32
+        
         # Checks out! Return the module unchanged.
         return module
+
+    def assert_parentage(self, module: Module, attr: ModuleAttr):
+        if attr._parent_module is None:
+            msg = f"Orphanage: Module {module} attribute {attr}!"
+            self.fail(msg)
+
+        if attr._parent_module is not module:
+            msg = f"Orphanage: Module {module} attribute {attr} is actually owned by another Module {attr._parent_module}!"
+            self.fail(msg)
+        
+        # Checks out! Carry on.
