@@ -48,7 +48,8 @@ class Prefix(Enum):
     @classmethod
     def from_exp(cls, exp: int) -> Optional["Prefix"]:
         """ Get the prefix from the exponent.
-        Returns None if the exponent does not correspond to a valid prefix. """
+        Returns None if the exponent does not correspond to a valid prefix. 
+        FIXME: apply scaling here for non first class exponents."""
         inverted = {v.value: v for v in cls.__members__.values()}
         return inverted.get(exp, None)
 
@@ -163,6 +164,11 @@ class Prefixed:
         newnum = self.number * 10 ** (self.prefix.value - prefix.value)
         return Prefixed(newnum, prefix)
 
+    def __repr__(self) -> str:
+        return f"{self.number}*{self.prefix.name}"
+
+    # FIXME: add comparison operations 
+
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     """ `Prefixed` Addition """
@@ -220,5 +226,5 @@ def e(exp: int) -> Optional[Prefix]:
 
 
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
-# They can be explicityle imported from `hdl21.units` instead.
+# They can be explicityle imported from `hdl21.prefix` instead.
 __all__ = ["Prefix", "Prefixed"]

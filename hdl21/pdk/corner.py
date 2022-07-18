@@ -21,6 +21,9 @@ class Corner(Enum):
     FAST = auto()
     SLOW = auto()
 
+    def __repr__(self) -> str:
+        return self.name
+
 
 class CornerType(Enum):
     """ Enumerated Types of PDK Content to be Corner-Varied """
@@ -29,6 +32,9 @@ class CornerType(Enum):
     CMOS = auto()  # A pair of transistors, e.g. NMOS/PMOS
     RES = auto()  # Resistors
     CAP = auto()  # Capacitors
+
+    def __repr__(self) -> str:
+        return self.name
 
 
 @dataclass
@@ -50,3 +56,5 @@ class CmosCorner(Enum):
     FS = CmosCornerPair(Corner.FAST, Corner.SLOW)
     SF = CmosCornerPair(Corner.SLOW, Corner.FAST)
 
+    def __repr__(self) -> str:
+        return self.name
