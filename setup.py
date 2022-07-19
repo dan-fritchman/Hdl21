@@ -31,7 +31,7 @@ setup(
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
-        "pydantic==1.8.2",  # Note we are especially sensitive to this version of `pydantic`, see https://github.com/dan-fritchman/Hdl21/issues/15
+        "pydantic==1.9.1",
     ],
     extras_require={
         "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==19.10b0", "twine"]

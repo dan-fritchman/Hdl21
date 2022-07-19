@@ -86,18 +86,18 @@ def paramclass(cls: type) -> type:
         elif isinstance(val, Param):
             params[key] = val
         else:
-            raise RuntimeError(
-                f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
-            )
+            msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
+            raise RuntimeError(msg)
+            
     # Translate the Params into dataclass.field-compatible tuples
     fields = list()
     for name, par in params.items():
         field = [name, par.dtype]
         if par.default is not _default:
             field.append(dataclasses.field(default=par.default))
-        # Default factories: not supported, yet. See `Param` below.
-        # elif par.default_factory is not _default:
-        #     field.append(dataclasses.field(default_factory=par.default_factory))
+        elif par.default_factory is not _default:
+            raise NotImplementedError(f"Param.default_factory for {cls}")
+            field.append(dataclasses.field(default_factory=par.default_factory))
         fields.append(tuple(field))
     # Add a few helpers to the class namespace
     ns = dict(
@@ -140,9 +140,7 @@ class Param:
     dtype: Any  # Datatype. Required
     desc: str  # Description. Required
     default: Optional[Any] = _default  # Default Value. Optional
-
-    # Default factories are supported in std-lib dataclasses, but "in beta" in `pydantic.dataclasses`.
-    # default_factory: Optional[Any] = _default  # Default Call-Factory
+    default_factory: Optional[Any] = _default  # Default Call-Factory. Optional
 
 
 def _unique_name(params: Any) -> str:
