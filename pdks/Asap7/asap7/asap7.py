@@ -8,7 +8,7 @@ and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitiv
 The primitive components of the ASAP7 PDK are comprised solely of core Mos transistors `{n,p}mos_{rvt,lvt,slvt,sram}`. 
 
 FIXME!: Unlike the common subckt-based models provided by physical PDKs, the ASAP7 transistors are provided solely 
-as BSIM-CMG `.model` definitions. These are represented in the `vlsir` proto-schema as (FIXME: ...)
+as BSIM-CMG `.model` definitions. These are represented as (FIXME: ...)
 
 """
 
@@ -22,7 +22,6 @@ from pydantic.dataclasses import dataclass
 import hdl21 as h
 from hdl21.pdk import PdkInstallation
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
-from vlsir import circuit as vckt
 
 
 @dataclass
@@ -122,8 +121,6 @@ class Asap7Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: vckt.Package) -> vckt.Package:
-    """ Compile proto-Package `src` to the ASAP7 technology """
-    ns = h.from_proto(src)
-    Asap7Walker().visit_namespace(ns)
-    return h.to_proto(ns)
+def compile(src: h.Elaboratables) -> None:
+    """ Compile `src` to the ASAP7 technology """
+    return Asap7Walker().visit_elaboratables(src)

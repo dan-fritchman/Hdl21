@@ -12,41 +12,41 @@ from typing import Any, List, Optional
 
 # Local imports
 from ..module import Module
-from .elaboratable import Elabable, Elabables, is_elabable
+from .elaboratable import Elaboratable, Elaboratables, is_elaboratable
 from .context import Context
 from .elabpass import ElabPass
 
 
-def elab_all(top: Elabables, **kwargs) -> List[Elabable]:
-    """ Elaborate everything we can find - potentially recursively - in `Elabables` `top`. 
+def elab_all(top: Elaboratables, **kwargs) -> List[Elaboratable]:
+    """ Elaborate everything we can find - potentially recursively - in `Elaboratables` `top`. 
 
     Results are returned in a list, not necessarily reproducing the structure of `top`. 
     Note the *attributes* of `top` are also generally modified in-place, allowing access to their elaboration results. """
     # Recursively create a list of all elab-able types in `obj`
     ls = []
-    _list_elabables_helper(top, ls)
+    _list_elaboratables_helper(top, ls)
     # Elaborate each, and return them as a list
     return [elaborate(top=t, **kwargs) for t in ls]
 
 
-def _list_elabables_helper(obj: Any, accum: list) -> None:
+def _list_elaboratables_helper(obj: Any, accum: list) -> None:
     """ Recursive helper for hierarchically finding elaborate-able things in `obj`. 
     Newly-found items are appended to accumulation-list `accum`. """
-    if is_elabable(obj):
+    if is_elaboratable(obj):
         accum.append(obj)
     elif isinstance(obj, list):
-        [_list_elabables_helper(i, accum) for i in obj]
+        [_list_elaboratables_helper(i, accum) for i in obj]
     elif isinstance(obj, SimpleNamespace):
         # Note this skips over non-elaboratable items (e.g. names), where the list demands all be suitable.
         for i in obj.__dict__.values():
-            if isinstance(i, (SimpleNamespace, list)) or is_elabable(i):
-                _list_elabables_helper(i, accum)
+            if isinstance(i, (SimpleNamespace, list)) or is_elaboratable(i):
+                _list_elaboratables_helper(i, accum)
     else:
         raise TypeError(f"Attempting Invalid Elaboration of {obj}")
 
 
 def elaborate(
-    top: Elabable,
+    top: Elaboratable,
     *,
     ctx: Optional[Context] = None,
     passes: Optional[List[ElabPass]] = None,
@@ -59,7 +59,7 @@ def elaborate(
     Optional `Context` field `ctx` is not yet supported. 
 
     `elaborate` executes elaboration of a *single* `top` object. 
-    For (plural) combinations of `Elabable` objects, use `elab_all`. 
+    For (plural) combinations of `Elaboratable` objects, use `elab_all`. 
     """
     # Expand default values
     ctx = ctx or Context()

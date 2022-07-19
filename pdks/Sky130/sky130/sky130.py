@@ -34,7 +34,6 @@ from pydantic.dataclasses import dataclass
 import hdl21 as h
 from hdl21.pdk import PdkInstallation
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
-from vlsir import circuit as vckt
 
 
 @dataclass
@@ -143,8 +142,6 @@ class Sky130Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: vckt.Package) -> vckt.Package:
-    """ Compile proto-Package `src` to the SkyWater 130nm technology """
-    ns = h.from_proto(src)
-    Sky130Walker().visit_namespace(ns)
-    return h.to_proto(ns)
+def compile(src: h.Elaboratables) -> None:
+    """ Compile `src` to the Sample technology """
+    return Sky130Walker().visit_elaboratables(src)

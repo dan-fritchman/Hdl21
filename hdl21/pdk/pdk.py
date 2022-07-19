@@ -8,18 +8,34 @@ PDK packages typically include:
 * (b) A transformation method for converting genertic `Primitive` elements to the technology-specific `ExternalModule`s.
 
 The latter manifests as a "compiler pass" over the Hdl21 circuit-proto tree. 
-An `vlsir.circuit.Package` is hierarchically traversed, and instances of `hdl21.Primitive`s 
+An Hdl21 design hierarchically traversed and instances of `hdl21.Primitive`s 
 are transformed, typically to technology-specific `ExternalModule`s. 
 
 The PDK API consists of one required method `compile`: 
 
 ```python
-def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package
+def compile(src: Elaboratables) -> None
 ```
 
-The core method `compile` transforms a process-generic `vlsir.circuit.Package` into PDK-specific content. 
+The core method `compile` transforms a process-generic design hierarchy into PDK-specific content. 
 This will commonly manifest as replacement of `hdl21.Primitive` instances with PDK-specific `ExternalModule`s. 
-Mutation of the `src` package is allowed, although not recommended (or often terribly helpful).  
+
+The `Elaboratables` union type which serves as the input of `compile` can be any of: 
+
+* An `hdl21.Module`
+* A call to an `hdl21.Generator`
+* Lists thereof
+
+A typical implementation of `compile`, shown in the `hdl21.pdk.sample_pdk` package, is to call the base class `visit_elaboratables` 
+method on a `Walker` subclass which implements the desired PDK transformations. For example: 
+
+```python
+def compile(src: h.Elaboratables) -> None:
+    # Compile `src` to the Sample technology 
+    return SamplePdkWalker().visit_elaboratables(src)
+```
+
+## Plug-in System 
 
 Plug-in-style registration of `hdl21.PDK`s makes them available to `hdl21.Generator`s, 
 and generally allows for a full program-worth of comprehension of the target process.  
@@ -45,7 +61,7 @@ import hdl21 as h
 MyMos = h.ExternalModule(name='MyMos', ...) 
 
 # Compilation method 
-def compile(src: vlsir.circuit.Package) -> vlsir.circuit.Package:
+def compile(src: h.Elaboratables) -> h.Elaboratables:
     ...
 
 """
@@ -54,8 +70,7 @@ import inspect
 from typing import Optional, Union
 from types import ModuleType
 
-# Local Imports
-import vlsir
+from ..elab import Elaboratables
 
 
 class _PdkManager:
@@ -103,14 +118,14 @@ def register(module: ModuleType) -> None:
 
     # Extract the parameters-argument type
     paramtype = args[0].annotation
-    if paramtype is not vlsir.circuit.Package:
-        msg = f"Invalid call signature for {module}.compile. Argument type must be `vlsir.circuit.circuit.Package`, not {paramtype}"
+    if paramtype is not Elaboratables:
+        msg = f"Invalid call signature for {module}.compile. Argument type must be `hdl21.Elaboratables`, not {paramtype}"
         raise RuntimeError(msg)
 
     # Validate the return type is also `Package`
     rt = sig.return_annotation
-    if rt is not vlsir.circuit.Package:
-        msg = f"Invalid call signature for {module}.compile. Return type must be `vlsir.circuit.circuit.Package`, not {paramtype}"
+    if rt not in (None, type(None)):
+        msg = f"Invalid call signature for {module}.compile. Return type must be `None`, not {paramtype}"
         raise RuntimeError(msg)
 
     # Checks out. Add it.
@@ -119,8 +134,9 @@ def register(module: ModuleType) -> None:
 
 
 def compile(
-    src: vlsir.circuit.Package, pdk: Optional[Union[str, ModuleType]] = None
-) -> vlsir.circuit.Package:
+    src: Elaboratables, 
+    pdk: Optional[Union[str, ModuleType]] = None
+) -> Elaboratables:
     """ 
     Compile to a target PDK. 
 

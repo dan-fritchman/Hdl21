@@ -1,7 +1,7 @@
 """
 # VLSIR ProtoBuf Schema Export
 
-Primary entrypoint `to_proto` turns a set of elaborate-able `Elabables`, 
+Primary entrypoint `to_proto` turns a set of elaborate-able `Elaboratables`, 
 and turns them into a `vlsir.circuit.Package`. 
 
 Most export-machinery is accomplished by primary implementation-class `ProtoExporter`, 
@@ -25,7 +25,7 @@ import vlsir.circuit_pb2 as vckt
 # HDL
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
-from ..elab import Elabables, elab_all
+from ..elab import Elaboratables, elab_all
 from ..module import Module, ExternalModule, ExternalModuleCall
 from ..instance import Instance
 from .. import signal
@@ -37,7 +37,7 @@ from ..primitives import (
 )
 
 
-def to_proto(top: Elabables, domain: Optional[str] = None, **kwargs,) -> vckt.Package:
+def to_proto(top: Elaboratables, domain: Optional[str] = None, **kwargs,) -> vckt.Package:
     """ Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`. """
     # Elaborate all the top-level Modules
     tops = elab_all(top)

@@ -18,7 +18,7 @@ from ...bundle import BundleInstance
 from ...generator import GeneratorCall
 from ...instantiable import Instantiable
 
-from ..elaboratable import Elabable
+from ..elaboratable import Elaboratable
 from ..context import Context
 
 
@@ -63,11 +63,11 @@ class Elaborator:
     """
 
     @classmethod
-    def elaborate(cls, top: Elabable, ctx: Context) -> Module:
+    def elaborate(cls, top: Elaboratable, ctx: Context) -> Module:
         """ Elaboration entry-point. Elaborate the top-level object. """
         return cls(top, ctx).elaborate_top()
 
-    def __init__(self, top: Elabable, ctx: Context):
+    def __init__(self, top: Elaboratable, ctx: Context):
         self.top = top
         self.ctx = ctx
         self.stack: List[ElabStackEntry] = list()

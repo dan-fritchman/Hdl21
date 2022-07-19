@@ -13,7 +13,6 @@ from pydantic.dataclasses import dataclass
 import hdl21 as h
 from hdl21.primitives import Mos, MosType, MosParams
 from hdl21.pdk import PdkInstallation
-from vlsir import circuit as vckt
 
 
 @dataclass
@@ -114,8 +113,6 @@ class SamplePdkWalker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: vckt.Package) -> vckt.Package:
-    """ Compile proto-Package `src` to the Sample technology """
-    ns = h.from_proto(src)
-    SamplePdkWalker().visit_namespace(ns)
-    return h.to_proto(ns)
+def compile(src: h.Elaboratables) -> None:
+    """ Compile `src` to the Sample technology """
+    return SamplePdkWalker().visit_elaboratables(src)
