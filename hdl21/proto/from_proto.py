@@ -360,4 +360,3 @@ def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
         raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
     return Prefixed(prefix=prefix, number=number)
-

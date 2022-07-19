@@ -141,7 +141,7 @@ def call_and_setattr_connects(cls: type) -> type:
         old = self.conns[portname]
         if does_track_connected_ports(old):
             old.connected_ports.remove(PortRef(self, portname))
-        
+
         # And replace it in the `conns` dict
         self.conns[portname] = conn
         # If `conn` tracks them, add a reference back to us

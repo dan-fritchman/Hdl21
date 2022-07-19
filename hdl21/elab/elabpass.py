@@ -45,6 +45,6 @@ class ElabPass(Enum):
         # Returns each in definition order, then a final few tests.
         return list(ElabPass) + [ElabPass.CONN_TYPES, ElabPass.ORPHANAGE]
 
-    @property 
+    @property
     def elaborate(self):
         return self.value.elaborate

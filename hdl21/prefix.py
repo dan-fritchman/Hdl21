@@ -167,7 +167,7 @@ class Prefixed:
     def __repr__(self) -> str:
         return f"{self.number}*{self.prefix.name}"
 
-    # FIXME: add comparison operations 
+    # FIXME: add comparison operations
 
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:

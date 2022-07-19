@@ -1,5 +1,5 @@
-
 from .corner import Corner, CornerType, CmosCorner
+
 
 def test_corner1():
     assert str(Corner.TYP) == "Corner.TYP"
@@ -20,4 +20,3 @@ def test_cmos1():
     assert str(CmosCorner.SS) == "CmosCorner.SS"
     assert str(CmosCorner.FS) == "CmosCorner.FS"
     assert str(CmosCorner.SF) == "CmosCorner.SF"
-    

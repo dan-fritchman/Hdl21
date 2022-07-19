@@ -8,7 +8,7 @@ from dataclasses import field
 from enum import Enum, EnumMeta, auto
 
 from pydantic import ValidationError
-from pydantic.dataclasses import dataclass 
+from pydantic.dataclasses import dataclass
 
 # Import the PUT (package under test)
 import hdl21 as h
@@ -181,13 +181,13 @@ def test_bad_params1():
 def test_param_default_factory():
     """ Test the `default_factory` feature of `Param` """
 
-    # Test the pydantic versions without `paramclass` first 
+    # Test the pydantic versions without `paramclass` first
 
-    @dataclass 
+    @dataclass
     class NoFactory:
         i: int = 11
-    
-    @dataclass 
+
+    @dataclass
     class HasFactory:
         a: int = field(default_factory=lambda: 5)
         l: list = field(default_factory=list)
@@ -195,10 +195,10 @@ def test_param_default_factory():
 
     has = HasFactory()
 
-    assert has.a == 5 
+    assert has.a == 5
     assert has.l == []
     assert has.no == NoFactory(i=11)
-    
+
     # And test `paramclass`es
 
     @h.paramclass
@@ -213,6 +213,6 @@ def test_param_default_factory():
 
     has = HasFactory()
 
-    assert has.a == 5 
+    assert has.a == 5
     assert has.l == []
     assert has.no == NoFactory(i=11)

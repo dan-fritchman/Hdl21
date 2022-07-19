@@ -123,7 +123,7 @@ class ProtoExporter:
         analysis_name = tran.name or self.next_analysis_name()
         return vsp.TranInput(
             analysis_name=analysis_name,
-            tstop=export_float(tran.tstop), # FIXME: move schema to Param / Prefixed
+            tstop=export_float(tran.tstop),  # FIXME: move schema to Param / Prefixed
             tstep=export_float(tran.tstep),
             ic={},  # FIXME: initial conditions
             ctrls=[],  # FIXME: analysis-specific controls
@@ -288,7 +288,7 @@ def export_float(num: Union[float, int, Decimal, Prefixed]) -> float:
     """ Export a `Number` union-type to a float, or protobuf float/double. """
     if num is None:
         # FIXME: this is the protobuf default, but we really wanna make fields that use it optional
-        return 0.0 
+        return 0.0
     if isinstance(num, float):
         return num
     if isinstance(num, (int, Decimal, Prefixed)):

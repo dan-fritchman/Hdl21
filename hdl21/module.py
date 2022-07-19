@@ -14,7 +14,7 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 
 # Local imports
-from .attrmagic import init 
+from .attrmagic import init
 from .params import NoParams, HasNoParams, isparamclass
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
@@ -343,7 +343,9 @@ class ExternalModule:
     def __post_init__(self):
         # Check for a valid parameter-type
         if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
-            msg = f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            msg = (
+                f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            )
             msg += "Param types must be either `@paramclass`es or `dict`."
             raise ValueError(msg)
         # Internal tracking data: defining module/import-path

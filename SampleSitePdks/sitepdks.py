@@ -34,7 +34,4 @@ sky130.install = sky130.Install(
 # ASAP7
 import asap7
 
-asap7.install = asap7.Install(
-    model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm"
-)
-
+asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")

@@ -216,4 +216,3 @@ class Elaborator:
         state = ["\t" + str(s) + " \n" for s in self.stack]
         state = "Elaboration Error at hierarchical path: \n" + "".join(state)
         raise RuntimeError(state + msg)
-

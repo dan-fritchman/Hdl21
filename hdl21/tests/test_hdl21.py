@@ -150,7 +150,6 @@ def test_generator3():
     assert HasGen.c.of is M
 
 
-
 def test_array1():
     @h.module
     class InArray:
@@ -1101,12 +1100,12 @@ def test_orphanage4():
     """ Test an orphan Instance connection """
 
     m1 = h.Module(name="m1")
-    m1.p = h.Port() 
+    m1.p = h.Port()
 
     # The "orphan signal" will not be owned by any module
     the_orphan_signal = h.Signal()
     m2 = h.Module(name="m2")
-    m2.i = m1(p=the_orphan_signal) # <= Problem's here
+    m2.i = m1(p=the_orphan_signal)  # <= Problem's here
 
     # Note elaborating `m1` continues to work
     h.elaborate(m1)
@@ -1540,7 +1539,7 @@ def test_generator_port_slice():
 
 def test_pair1():
     """ Test of the `Diff` and `Pair` signal and instance bundles """
-    
+
     @h.module
     class I:
         ps = h.Port(desc="Port we'll connect to a scalar")
@@ -1574,14 +1573,14 @@ def test_noconn_types():
     """ Test connecting `NoConn`s to a variety of port-types. """
 
     @h.module
-    class Inner():
+    class Inner:
         # Inner module with a handful of port-types
         s = h.Port()
         b = h.Port(width=11)
         d = h.Diff(port=True)
 
-    @h.module 
+    @h.module
     class Outer:
         i = Inner(s=h.NoConn(), b=h.NoConn(), d=h.NoConn())
-    
+
     h.elaborate(Outer)

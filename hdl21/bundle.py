@@ -8,7 +8,7 @@ from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args, Dict, Set, List
 
 # Local Imports
-from .attrmagic import init 
+from .attrmagic import init
 from .connect import connectable, track_connected_ports
 from .signal import Signal
 

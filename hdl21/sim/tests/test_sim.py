@@ -75,25 +75,20 @@ def test_sim_decorator():
         mydc = Dc(var=x, sweep=PointSweep([1]))
         myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
         mytran = Tran(tstop=11 * h.prefix.p)
-        mysweep = SweepAnalysis(
-            inner=[mytran],
-            var=x,
-            sweep=LinearSweep(0, 1, 2),
-        )
+        mysweep = SweepAnalysis(inner=[mytran], var=x, sweep=LinearSweep(0, 1, 2),)
         mymc = MonteCarlo(
-            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
-            npts=11,
+            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11,
         )
         a_delay = Meas(analysis=mytran, expr="trig_targ_something")
         opts = Options(reltol=1e-9)
 
-        # Attributes whose names don't really matter can be called anything, 
+        # Attributes whose names don't really matter can be called anything,
         # but must be *assigned* into the class, not just constructed.
         _ = Save(SaveMode.ALL)
-        
-        # The `a_path` field will be dropped from the `Sim` definition, 
-        # but can be referred to by the following attributes. 
-        a_path = "/home/models" 
+
+        # The `a_path` field will be dropped from the `Sim` definition,
+        # but can be referred to by the following attributes.
+        a_path = "/home/models"
         _ = Include(a_path)
         _ = Lib(path=a_path, section="fast")
 

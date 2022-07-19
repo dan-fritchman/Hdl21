@@ -6,16 +6,19 @@ from typing import IO, Union
 
 # Import the core netlisting from `vlsirtools`
 import vlsir
-from vlsirtools.netlist import netlist as vlisr_netlist, NetlistFormat, NetlistFormatSpec, NetlistOptions
+from vlsirtools.netlist import (
+    netlist as vlisr_netlist,
+    NetlistFormat,
+    NetlistFormatSpec,
+    NetlistOptions,
+)
 
 from .elab import Elaboratables
 from .proto.to_proto import to_proto
 
 
 def netlist(
-    src: Union[Elaboratables, vlsir.circuit.Package],
-    dest: IO,
-    *args, **kwargs
+    src: Union[Elaboratables, vlsir.circuit.Package], dest: IO, *args, **kwargs
 ) -> None:
     """ 
     # Hdl21 Netlisting

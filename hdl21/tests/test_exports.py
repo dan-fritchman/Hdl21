@@ -462,14 +462,14 @@ def test_generator_recall():
 def test_rountrip_external_module():
     """ Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto """
 
-    @h.paramclass 
-    class P: # Our ExternalModule's parameter-type
+    @h.paramclass
+    class P:  # Our ExternalModule's parameter-type
         a = h.Param(dtype=int, desc="a", default=1)
         b = h.Param(dtype=str, desc="b", default="two")
 
     E = h.ExternalModule(name="E", port_list=[], paramtype=P)
 
-    @h.module 
+    @h.module
     class HasE:
         e = E(P())()
 

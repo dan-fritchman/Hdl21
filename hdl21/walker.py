@@ -32,7 +32,7 @@ class HierarchyWalker:
             return self.visit_generator_call(src)
         if isinstance(src, List):
             for x in src:
-                self.visit_elaboratables(x) 
+                self.visit_elaboratables(x)
             return
         raise TypeError
 
