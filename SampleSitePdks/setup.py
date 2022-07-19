@@ -33,6 +33,6 @@ setup(
         f"asap7-hdl21=={_VLSIR_VERSION}",
     ],
     extras_require={
-        "dev": ["pytest==5.2", "coverage", "pytest-cov", "black==19.10b0", "twine"]
+        "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==19.10b0", "twine"]
     },
 )

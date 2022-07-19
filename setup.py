@@ -34,6 +34,6 @@ setup(
         "pydantic==1.8.2",  # Note we are especially sensitive to this version of `pydantic`, see https://github.com/dan-fritchman/Hdl21/issues/15
     ],
     extras_require={
-        "dev": ["pytest==5.2", "coverage", "pytest-cov", "black==19.10b0", "twine"]
+        "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==19.10b0", "twine"]
     },
 )
