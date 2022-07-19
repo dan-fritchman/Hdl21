@@ -25,7 +25,7 @@ import vlsir.circuit_pb2 as vckt
 # HDL
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
-from ..elab import Elaboratables, elab_all
+from ..elab import Elaboratables, elaborate
 from ..module import Module, ExternalModule, ExternalModuleCall
 from ..instance import Instance
 from .. import signal
@@ -40,7 +40,9 @@ from ..primitives import (
 def to_proto(top: Elaboratables, domain: Optional[str] = None, **kwargs,) -> vckt.Package:
     """ Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`. """
     # Elaborate all the top-level Modules
-    tops = elab_all(top)
+    tops = elaborate(top)
+    if not isinstance(tops, list):
+        tops = [tops]
     exporter = ProtoExporter(tops=tops, domain=domain)
     return exporter.export()
 

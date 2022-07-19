@@ -4,8 +4,6 @@
 
 # Std-Lib
 from typing import List
-from types import SimpleNamespace
-
 
 # Local imports
 from .elab import Elaboratables
@@ -20,9 +18,8 @@ class HierarchyWalker:
     """
     # Hierarchical Walker 
     
-    Walks a hierarchical `Module` or `SimpleNamespace` thereof.
-    Designed to be used as a base-class for extensions such as
-    process-specific instance-replacements.
+    Walks a hierarchical design tree.
+    Designed to be used as a base-class for extensions such as process-specific instance-replacements.
     """
 
     def visit_elaboratables(self, src: Elaboratables) -> None:
@@ -33,20 +30,11 @@ class HierarchyWalker:
             return self.visit_module(src)
         if isinstance(src, GeneratorCall):
             return self.visit_generator_call(src)
-        if isinstance(src, SimpleNamespace):
-            return self.visit_namespace(src)
         if isinstance(src, List):
             for x in src:
                 self.visit_elaboratables(x) 
             return
         raise TypeError
-
-    def visit_namespace(self, ns: SimpleNamespace) -> None:
-        for k, v in ns.__dict__.items():
-            if isinstance(v, Module):
-                self.visit_module(v)
-            if isinstance(v, SimpleNamespace):
-                self.visit_namespace(v)
 
     def visit_generator_call(self, call: GeneratorCall) -> None:
         """ Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`. """

@@ -44,3 +44,7 @@ class ElabPass(Enum):
         """ Return the default ordered Elaborator Passes. """
         # Returns each in definition order, then a final few tests.
         return list(ElabPass) + [ElabPass.CONN_TYPES, ElabPass.ORPHANAGE]
+
+    @property 
+    def elaborate(self):
+        return self.value.elaborate
