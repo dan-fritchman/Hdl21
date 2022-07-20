@@ -3,13 +3,13 @@ from decimal import Decimal
 
 
 def test_decimal():
-    """ This isnt a test of Hdl21 so much as a demo and reminder of how 
-    the standard library's `Decimal` works, particularly in conjunction with 
-    our widely-used `pydantic.dataclasses`. 
+    """This isnt a test of Hdl21 so much as a demo and reminder of how
+    the standard library's `Decimal` works, particularly in conjunction with
+    our widely-used `pydantic.dataclasses`.
 
     In short: `pydantic` converts `Decimal` valued fields to strings before
-    passing them to the `Decimal` constructor. 
-    https://pydantic-docs.helpmanual.io/usage/types/ """
+    passing them to the `Decimal` constructor.
+    https://pydantic-docs.helpmanual.io/usage/types/"""
 
     # Decimal-only
     assert Decimal(11) == Decimal(11)
@@ -33,7 +33,7 @@ def test_decimal():
 
 
 def test_prefix_numbers():
-    """ Check that we get the numeric types we expect in each `Prefixed` """
+    """Check that we get the numeric types we expect in each `Prefixed`"""
 
     x = h.Prefixed(11, h.Prefix.FEMTO)
     assert isinstance(x.number, Decimal)
@@ -62,7 +62,7 @@ def test_prefix_shortname():
 
 
 def test_prefix_from_exp():
-    """ Test creating `Prefix` from an integer exponent. """
+    """Test creating `Prefix` from an integer exponent."""
 
     assert h.Prefix.from_exp(-24) == h.Prefix.YOCTO
     assert h.Prefix.from_exp(-21) == h.Prefix.ZEPTO
@@ -92,7 +92,7 @@ def test_prefix_from_exp():
 
 
 def test_prefix_mul():
-    """ Test `Prefix` multiplication. """
+    """Test `Prefix` multiplication."""
     from hdl21.prefix import µ
 
     assert 5 * µ == 5 * h.Prefix.MICRO
@@ -100,7 +100,7 @@ def test_prefix_mul():
 
 
 def test_e():
-    """ Test the `e` shorthand notation for exponential creation """
+    """Test the `e` shorthand notation for exponential creation"""
     from hdl21.prefix import e
 
     assert e(-24) == h.Prefix.YOCTO
@@ -126,14 +126,14 @@ def test_e():
 
 
 def test_e_mult():
-    """ Test multiplying by the `e` function results, e.g. `11 * e(-9) """
+    """Test multiplying by the `e` function results, e.g. `11 * e(-9)"""
     from hdl21.prefix import e
 
     assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
 
 
 def test_prefix_scaling():
-    """ Test cases of `Prefixed` multiplication which do not land on other `Prefix`es, and require scaling """
+    """Test cases of `Prefixed` multiplication which do not land on other `Prefix`es, and require scaling"""
     from hdl21.prefix import e
 
     # 1e-11, scaled to 10e-12
@@ -144,3 +144,11 @@ def test_prefix_scaling():
 
     # 11.11e14, scaled to 1111e12
     assert 11.11 * e(15) * h.Prefix.DECI == 1111 * e(12)
+
+
+def test_prefix_conversion():
+    """Test types that can be converted to `Prefixed`'s internal `Decimal`."""
+
+    h.Prefixed(number="11.11", prefix=h.Prefix.YOCTO)
+    h.Prefixed(number=11.11, prefix=h.Prefix.YOCTO)
+    h.Prefixed(number=11, prefix=h.Prefix.YOCTO)

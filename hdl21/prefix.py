@@ -21,8 +21,8 @@ from typing import Optional, Any
 
 
 class Prefix(Enum):
-    """ Enumerated Unit Prefixes
-    Values are equal to the associated power-of-ten exponent. """
+    """Enumerated Unit Prefixes
+    Values are equal to the associated power-of-ten exponent."""
 
     YOCTO = -24
     ZEPTO = -21
@@ -47,13 +47,14 @@ class Prefix(Enum):
 
     @classmethod
     def from_exp(cls, exp: int) -> Optional["Prefix"]:
-        """ Get the prefix from the exponent.
-        Returns None if the exponent does not correspond to a valid prefix. """
+        """Get the prefix from the exponent.
+        Returns None if the exponent does not correspond to a valid prefix.
+        FIXME: apply scaling here for non first class exponents."""
         inverted = {v.value: v for v in cls.__members__.values()}
         return inverted.get(exp, None)
 
     def __rmul__(self, other: Any):
-        """ Right-hand-side multiplication operator, e.g. `5 * µ`. """
+        """Right-hand-side multiplication operator, e.g. `5 * µ`."""
 
         if isinstance(other, (Decimal, float, int, str)):
             # The usual use-case, e.g. `5 * µ`
@@ -116,20 +117,20 @@ from pydantic.dataclasses import dataclass
 
 @dataclass
 class Prefixed:
-    """ 
-    # Prefixed 
-    
-    Combination of a literal value and a unit-indicating prefix. 
-    Colloquially, the numbers in expressions like "5ns", "11MV", and "1µA" 
-    are represented as `Prefixed`. 
+    """
+    # Prefixed
+
+    Combination of a literal value and a unit-indicating prefix.
+    Colloquially, the numbers in expressions like "5ns", "11MV", and "1µA"
+    are represented as `Prefixed`.
     """
 
     number: Decimal  # Numeric Portion. See the long note above.
     prefix: Prefix  # Enumerated SI Prefix
 
     def __float__(self) -> float:
-        """ Convert to float """
-        return float(self.number) * 10 ** self.prefix.value
+        """Convert to float"""
+        return float(self.number) * 10**self.prefix.value
 
     def __mul__(self, other) -> "Prefixed":
         if not isinstance(other, (int, float, Decimal)):
@@ -159,13 +160,18 @@ class Prefixed:
         return _subtract(lhs=other, rhs=self)
 
     def scaleto(self, prefix: Prefix) -> "Prefixed":
-        """ Scale to a new `Prefix` """
+        """Scale to a new `Prefix`"""
         newnum = self.number * 10 ** (self.prefix.value - prefix.value)
         return Prefixed(newnum, prefix)
 
+    def __repr__(self) -> str:
+        return f"{self.number}*{self.prefix.name}"
+
+    # FIXME: add comparison operations
+
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
-    """ `Prefixed` Addition """
+    """`Prefixed` Addition"""
     if not isinstance(lhs, Prefixed) or not isinstance(rhs, Prefixed):
         return NotImplemented
 
@@ -179,7 +185,7 @@ def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
 
 
 def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
-    """ `Prefixed` Subtraction """
+    """`Prefixed` Subtraction"""
     if not isinstance(lhs, Prefixed) or not isinstance(rhs, Prefixed):
         return NotImplemented
 
@@ -206,19 +212,19 @@ P = PETA = Prefix.PETA
 
 
 def e(exp: int) -> Optional[Prefix]:
-    """ # Exponential `Prefix` Creation 
-    
-    Returns a `Prefix` for power-of-ten exponent `exp`. 
+    """# Exponential `Prefix` Creation
 
-    In many cases HDL parameters must be non-integer values, 
-    e.g. `1nm`, but using `float` can prove undesirable 
-    as rounding errors can turn them into subtly different values. 
-    The `e()` function is most commonly useful with multiplication, 
-    to create "floating point" values such as `11 * e(-9)`. 
+    Returns a `Prefix` for power-of-ten exponent `exp`.
+
+    In many cases HDL parameters must be non-integer values,
+    e.g. `1nm`, but using `float` can prove undesirable
+    as rounding errors can turn them into subtly different values.
+    The `e()` function is most commonly useful with multiplication,
+    to create "floating point" values such as `11 * e(-9)`.
     """
     return Prefix.from_exp(exp)
 
 
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
-# They can be explicityle imported from `hdl21.units` instead.
+# They can be explicityle imported from `hdl21.prefix` instead.
 __all__ = ["Prefix", "Prefixed"]

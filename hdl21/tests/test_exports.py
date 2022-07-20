@@ -6,10 +6,9 @@
 * Importing back from VLSIR
 """
 
-import sys, copy, pytest
+import sys, pytest
 from io import StringIO
 from types import SimpleNamespace
-from enum import Enum, EnumMeta, auto
 from textwrap import dedent
 
 # Import the PUT (package under test)
@@ -19,7 +18,7 @@ import vlsir
 
 @pytest.mark.xfail(reason="#1 https://github.com/dan-fritchman/Hdl21/issues/1")
 def test_export_strides():
-    """ Test exporting connections with non-unit Slice-strides """
+    """Test exporting connections with non-unit Slice-strides"""
 
     c = h.Module(name="c")
     c.p = h.Input(width=2)
@@ -28,7 +27,7 @@ def test_export_strides():
     p.s = h.Signal(width=20)
     p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
 
-    h.netlist(h.to_proto(p), sys.stdout, "verilog")
+    h.netlist(h.to_proto(p), sys.stdout, fmt="verilog")
 
 
 def test_prim_proto1():
@@ -126,7 +125,7 @@ def test_proto2():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.Child1"
     assert len(pm.ports) == 2
-    assert len(pm.signals) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 0
     assert len(pm.parameters) == 0
 
@@ -135,7 +134,7 @@ def test_proto2():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.Child2"
     assert len(pm.ports) == 2
-    assert len(pm.signals) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 0
     assert len(pm.parameters) == 0
 
@@ -144,6 +143,7 @@ def test_proto2():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.TestProto2"
     assert len(pm.ports) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 2
     assert len(pm.parameters) == 0
 
@@ -172,7 +172,7 @@ def test_proto3():
     assert isinstance(pm, vlsir.circuit.Module)
     assert pm.name == "hdl21.tests.test_exports.M1"
     assert len(pm.ports) == 2
-    assert len(pm.signals) == 0
+    assert len(pm.signals) == 2
     assert len(pm.instances) == 0
     assert len(pm.parameters) == 0
 
@@ -293,7 +293,7 @@ def test_proto_roundtrip2():
 
 
 def test_netlist_fmts():
-    """ Test netlisting basic types to several formats """
+    """Test netlisting basic types to several formats"""
 
     @h.module
     class Bot:
@@ -314,7 +314,7 @@ def test_netlist_fmts():
 
     # Convert the proto-package to a netlist
     nl = StringIO()
-    h.netlist(ppkg, nl, "spectre")
+    h.netlist(ppkg, nl, fmt="spectre")
     nl = nl.getvalue()
 
     # Basic checks on its contents
@@ -328,7 +328,7 @@ def test_netlist_fmts():
 
     # Convert the proto-package to another netlist format
     nl = StringIO()
-    h.netlist(ppkg, nl, "verilog")
+    h.netlist(ppkg, nl, fmt="verilog")
     nl = nl.getvalue()
 
     # Basic checks on its contents
@@ -342,7 +342,7 @@ def test_netlist_fmts():
     assert "endmodule // Top" in nl
 
     nl = StringIO()
-    h.netlist(ppkg, nl, "spice")
+    h.netlist(ppkg, nl, fmt="spice")
     nl = nl.getvalue()
     assert ".SUBCKT Bot \n+ s_2 s_1 s_0 p" in nl
     assert ".SUBCKT Top \n+ p" in nl
@@ -360,7 +360,7 @@ def test_spice_netlister():
 
     ppkg = h.to_proto(DUT)
     nl = StringIO()
-    h.netlist(ppkg, nl, "spice")
+    h.netlist(ppkg, nl, fmt="spice")
     good = dedent(
         """\
         .SUBCKT DUT 
@@ -393,9 +393,9 @@ def test_spice_netlister():
 
 
 def test_bad_proto_naming():
-    """ Test some naming cases which are alright in Python, 
-    but generate naming conflicts in serialization. 
-    Generally these boil down to "same `Module`-names in same Python module". """
+    """Test some naming cases which are alright in Python,
+    but generate naming conflicts in serialization.
+    Generally these boil down to "same `Module`-names in same Python module"."""
 
     # Create a naming conflict between Module definitions
     Ma1 = h.Module(name="Ma")
@@ -428,7 +428,7 @@ def test_bad_proto_naming():
 
 
 def test_generator_recall():
-    """ Test multi-calling generators """
+    """Test multi-calling generators"""
 
     @h.generator
     def CallMeTwice(_: h.HasNoParams) -> h.Module:
@@ -460,16 +460,16 @@ def test_generator_recall():
 
 
 def test_rountrip_external_module():
-    """ Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto """
+    """Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto"""
 
-    @h.paramclass 
-    class P: # Our ExternalModule's parameter-type
+    @h.paramclass
+    class P:  # Our ExternalModule's parameter-type
         a = h.Param(dtype=int, desc="a", default=1)
         b = h.Param(dtype=str, desc="b", default="two")
 
     E = h.ExternalModule(name="E", port_list=[], paramtype=P)
 
-    @h.module 
+    @h.module
     class HasE:
         e = E(P())()
 

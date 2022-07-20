@@ -34,20 +34,19 @@ from pydantic.dataclasses import dataclass
 import hdl21 as h
 from hdl21.pdk import PdkInstallation
 from hdl21.primitives import Mos, MosType, MosVth, MosParams
-from vlsir import circuit as vckt
 
 
 @dataclass
 class Install(PdkInstallation):
-    """ Pdk Installation Data 
-    External data provided by site-specific installations """
+    """Pdk Installation Data
+    External data provided by site-specific installations"""
 
     model_lib: Path  # Path to the transistor models included in this module
 
 
 @h.paramclass
 class Sky130MosParams:
-    """ Parameters for the PDK MOS transistor modules """
+    """Parameters for the PDK MOS transistor modules"""
 
     # l = 1 w = 1 ad = 0 as = 0 pd = 0 ps = 0 nrd = 0 nrs = 0 sa = 0 sb = 0 sd = 0 mult = 1 nf = 1.0
 
@@ -58,7 +57,7 @@ class Sky130MosParams:
 
 
 def _xtor_module(modname: str) -> h.ExternalModule:
-    """ Transistor module creator, with module-name `name`."""
+    """Transistor module creator, with module-name `name`."""
     return h.ExternalModule(
         domain="sky130",
         name=modname,
@@ -88,13 +87,13 @@ for xtor in xtors.values():
 
 
 class Sky130Walker(h.HierarchyWalker):
-    """ Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s. """
+    """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
 
     def __init__(self):
         self.mos_modcalls = dict()
 
     def visit_instance(self, inst: h.Instance):
-        """ Replace instances of `h.Primitive` with our `ExternalModule`s """
+        """Replace instances of `h.Primitive` with our `ExternalModule`s"""
         if isinstance(inst.of, h.PrimitiveCall):
             inst.of = self.replace_primitive(inst.of)
             return
@@ -111,7 +110,7 @@ class Sky130Walker(h.HierarchyWalker):
         return primcall
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
-        """ Retrieve or create an `ExternalModule` for a MOS of parameters `params`. """
+        """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         mod = xtors.get((params.tp, params.vth), None)
         if mod is None:
             raise RuntimeError(
@@ -120,7 +119,7 @@ class Sky130Walker(h.HierarchyWalker):
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
-        """ Retrieve or create a `Call` for MOS parameters `params`."""
+        """Retrieve or create a `Call` for MOS parameters `params`."""
         # First check our cache
         if params in self.mos_modcalls:
             return self.mos_modcalls[params]
@@ -134,7 +133,10 @@ class Sky130Walker(h.HierarchyWalker):
         w = "650n" if params.w is None else params.w
         l = "150n" if params.l is None else params.l
         modparams = Sky130MosParams(
-            w=f"({w} * 1e6)", l=f"({l} * 1e6)", nf=params.npar, mult=1,
+            w=f"({w} * 1e6)",
+            l=f"({l} * 1e6)",
+            nf=params.npar,
+            mult=1,
         )
 
         # Combine the two into a call, cache and return it
@@ -143,8 +145,6 @@ class Sky130Walker(h.HierarchyWalker):
         return modcall
 
 
-def compile(src: vckt.Package) -> vckt.Package:
-    """ Compile proto-Package `src` to the SkyWater 130nm technology """
-    ns = h.from_proto(src)
-    Sky130Walker().visit_namespace(ns)
-    return h.to_proto(ns)
+def compile(src: h.Elaboratables) -> None:
+    """Compile `src` to the Sample technology"""
+    return Sky130Walker().visit_elaboratables(src)

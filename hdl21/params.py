@@ -17,14 +17,14 @@ from dataclasses import FrozenInstanceError
 
 
 class _Default:
-    """ The cardinal value for unspecified parameter-declaration defaults.
+    """The cardinal value for unspecified parameter-declaration defaults.
     Normally the class-object itself would work for this, but `pydantic.dataclasses`
-    seems to have some problems accepting class-objects. 
+    seems to have some problems accepting class-objects.
     https://github.com/samuelcolvin/pydantic/issues/1537
-    So we create this singleton instance `_default`, AKA `_Default._the_one`. 
+    So we create this singleton instance `_default`, AKA `_Default._the_one`.
 
-    FIXME: this pydantic issue was updated and closed at some point, 
-    potentially enabling removint this singleton stuff. 
+    FIXME: this pydantic issue was updated and closed at some point,
+    potentially enabling removint this singleton stuff.
     Check out the pydantic updates along with https://github.com/dan-fritchman/Hdl21/issues/15
     """
 
@@ -41,33 +41,33 @@ _default = _Default()
 
 
 def paramclass(cls: type) -> type:
-    """ Parameter-Class Creation Decorator 
+    """Parameter-Class Creation Decorator
 
-    Transforms a class-definition full of Params into a type-validated dataclass, 
-    with methods for default value and description-dictionary retrieval. 
+    Transforms a class-definition full of Params into a type-validated dataclass,
+    with methods for default value and description-dictionary retrieval.
 
-    Hdl21's `paramclass`es are immutable, strongly-typed data-storage structures. 
-    They are defined through a syntax similar to `@dataclass`, but using the `Param` 
-    constructor, and assignment rather than type annotation. 
+    Hdl21's `paramclass`es are immutable, strongly-typed data-storage structures.
+    They are defined through a syntax similar to `@dataclass`, but using the `Param`
+    constructor, and assignment rather than type annotation.
 
     @paramclass
     class C:
         reqd = Param(dtype=int, desc="A Required Parameter")
         optn = Param(dtype=int, desc="An Optional Parameter", default=11)
 
-    `Param`s each have required datatype (`dtype`) and description (`desc`) fields, 
-    and optional default values. 
-    Each `paramclass` constructor can be called with ordered arguments, 
-    in the order defined in the `paramclass`, or with named arguments. 
-    Named arguments are highly recommended for more than a single parameter. 
-    Note Python's function-argument ordering requirements also dictate 
-    that all `paramclass` required-arguments be declared *before* any optional arguments. 
+    `Param`s each have required datatype (`dtype`) and description (`desc`) fields,
+    and optional default values.
+    Each `paramclass` constructor can be called with ordered arguments,
+    in the order defined in the `paramclass`, or with named arguments.
+    Named arguments are highly recommended for more than a single parameter.
+    Note Python's function-argument ordering requirements also dictate
+    that all `paramclass` required-arguments be declared *before* any optional arguments.
     This also reinforces good practice for communicating which parameters are required.
 
-    Each `paramclass` comes with class-methods `descriptions` and `defaults`, 
-    which return dictionaries of the parameter names to descriptions and 
-    names to default values (for those with defaults), respectively. 
-    
+    Each `paramclass` comes with class-methods `descriptions` and `defaults`,
+    which return dictionaries of the parameter names to descriptions and
+    names to default values (for those with defaults), respectively.
+
     Requirements of the input `cls`:
     * *All* non-Python-internal fields must be of type `Param`
     * Inheritance is not supported
@@ -86,18 +86,18 @@ def paramclass(cls: type) -> type:
         elif isinstance(val, Param):
             params[key] = val
         else:
-            raise RuntimeError(
-                f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
-            )
+            msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
+            raise RuntimeError(msg)
+
     # Translate the Params into dataclass.field-compatible tuples
     fields = list()
     for name, par in params.items():
         field = [name, par.dtype]
         if par.default is not _default:
             field.append(dataclasses.field(default=par.default))
-        # Default factories: not supported, yet. See `Param` below.
-        # elif par.default_factory is not _default:
-        #     field.append(dataclasses.field(default_factory=par.default_factory))
+        elif par.default_factory is not _default:
+            raise NotImplementedError(f"Param.default_factory for {cls}")
+            field.append(dataclasses.field(default_factory=par.default_factory))
         fields.append(tuple(field))
     # Add a few helpers to the class namespace
     ns = dict(
@@ -129,24 +129,22 @@ def paramclass(cls: type) -> type:
 
 
 def isparamclass(cls: type) -> bool:
-    """ Boolean indication of whether `cls` has been `@paramclass`-decorated """
+    """Boolean indication of whether `cls` has been `@paramclass`-decorated"""
     return getattr(cls, "__paramclass__", False)
 
 
 @pydantic.dataclasses.dataclass
 class Param:
-    """ Parameter Declaration """
+    """Parameter Declaration"""
 
     dtype: Any  # Datatype. Required
     desc: str  # Description. Required
     default: Optional[Any] = _default  # Default Value. Optional
-
-    # Default factories are supported in std-lib dataclasses, but "in beta" in `pydantic.dataclasses`.
-    # default_factory: Optional[Any] = _default  # Default Call-Factory
+    default_factory: Optional[Any] = _default  # Default Call-Factory. Optional
 
 
 def _unique_name(params: Any) -> str:
-    """ Create a unique name for parameter-class instance `params` """
+    """Create a unique name for parameter-class instance `params`"""
     if not isparamclass(params):
         raise RuntimeError(f"Invalid parameter-class instance {params}")
 
@@ -168,7 +166,7 @@ def _unique_name(params: Any) -> str:
         # Format: `pname1=pval1 pname2=pval2 pname3=pval3`
         keys = params.__params__.keys()
         name = " ".join(f"{k}={str(getattr(params, k))}" for k in keys)
-        
+
         # These names must also be limited in length, for sake of our favorite output formats.
         # If the generated name is too long, use the hashing method below instead
         if len(name) < 128:  # Probably(?) a reasonable length limit
@@ -195,15 +193,15 @@ def _unique_name(params: Any) -> str:
 
 
 def hdl21_naming_encoder(obj: Any) -> Any:
-    """ JSON encoder for naming of Hdl21 parameter-values. 
+    """JSON encoder for naming of Hdl21 parameter-values.
 
-    "Extends" `pydantic.json.pydantic_encoder` by first checking for 
-    each of the non-serializable Hdl21 types (`Module`, `Instance`, `Generator`, etc.), 
-    then hands everything else off to `pydantic.json.pydantic_encoder`. 
+    "Extends" `pydantic.json.pydantic_encoder` by first checking for
+    each of the non-serializable Hdl21 types (`Module`, `Instance`, `Generator`, etc.),
+    then hands everything else off to `pydantic.json.pydantic_encoder`.
 
-    Note this *does not fully serialize `Module`s and the like - 
-    see `hdl21.to_proto` for this. This JSON-ization is just good enough 
-    to enable unique naming of Hdl-object-value parameters. """
+    Note this *does not fully serialize `Module`s and the like -
+    see `hdl21.to_proto` for this. This JSON-ization is just good enough
+    to enable unique naming of Hdl-object-value parameters."""
 
     from .module import Module, ExternalModule, ExternalModuleCall
     from .instance import Instance

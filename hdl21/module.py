@@ -14,24 +14,28 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 
 # Local imports
+from .source_info import source_info, SourceInfo
+from .attrmagic import init
 from .params import NoParams, HasNoParams, isparamclass
 from .signal import Signal, Visibility
-from .instance import calls_instantiate, Instance, InstArray
+from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
 from .bundle import BundleInstance
 
+
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, Instance, InstArray, BundleInstance]
+ModuleAttr = Union[Signal, _Instance, BundleInstance]
 
 
 @calls_instantiate
+@init
 class Module:
-    """ # Module
-    
-    The central element of hardware re-use.
-    Hdl21 `Module`s are static combinations of HDL objects such as `Signal`s, `Instance`s of other `Module`s, and `Bundle`s. 
+    """# Module
 
-    Two primary methods (directly) create `Module`s. The `Module` (capital M) class-constructor accepts a single optional `name` field. 
-    This serves as the name of an initially-empty Module-definition. Attributes can then be added programmatically. 
+    The central element of hardware re-use.
+    Hdl21 `Module`s are static combinations of HDL objects such as `Signal`s, `Instance`s of other `Module`s, and `Bundle`s.
+
+    Two primary methods (directly) create `Module`s. The `Module` (capital M) class-constructor accepts a single optional `name` field.
+    This serves as the name of an initially-empty Module-definition. Attributes can then be added programmatically.
     ```
     m = Module(name="MyModule")
     m.inp = h.Input(width=5)
@@ -41,14 +45,14 @@ class Module:
     The `hdl21.module` (lower-case m) decorator-function is a convenient way to create a `Module` from a Python class-definition.
     Each attribute in the class-body is converted to a module attribute, and the class name is used as the module's name.
     ```
-    @h.module 
+    @h.module
     class MyModule:
         inp = h.Input(width=5)
         out = h.Output(width=4)
     ```
 
-    Hdl21 Modules *do not* contain behavior in the sense of procedural HDLs. Nor do they contain parameters. 
-    Parametric hardware is produced through Hdl21's `generator` facility, which defines python functions which create and return `Module`s. 
+    Hdl21 Modules *do not* contain behavior in the sense of procedural HDLs. Nor do they contain parameters.
+    Parametric hardware is produced through Hdl21's `generator` facility, which defines python functions which create and return `Module`s.
     """
 
     def __init__(self, *, name: Optional[str] = None):
@@ -57,17 +61,22 @@ class Module:
         self.signals = dict()
         self.instances = dict()
         self.instarrays = dict()
+        self.instbundles = dict()
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._pymodule = _caller_pymodule()  #  (Python) module where called
+        self._source_info = source_info([__file__])
+        self._pymodule = (
+            self._source_info.pymodule
+        )  # FIXME: move to operating on `SourceInfo` instead
+
         self._importpath = None  # Optional field set by importers
         self._moduledata = None  # Optional[ModuleData]
         self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
         self._initialized = True
 
     def __setattr__(self, key: str, val: Any) -> None:
-        """ Set-attribute over-ride, organizing into type-based containers """
+        """Set-attribute over-ride, organizing into type-based containers"""
 
         if key.startswith("_") or not getattr(self, "_initialized", False):
             # Bootstrapping phase. Pass along to "regular" setattr.
@@ -79,6 +88,7 @@ class Module:
             "signals",
             "instances",
             "instarrays",
+            "instbundles",
             "bundles",
             "namespace",
             "add",
@@ -100,7 +110,7 @@ class Module:
         return None
 
     def add(self, val: ModuleAttr, *, name: Optional[str] = None) -> ModuleAttr:
-        """ Add a Module attribute.
+        """Add a Module attribute.
 
         `Module.add` allows for programmatic insertion of attributes whose names are not legal Python identifiers,
         such as keywords ('in', 'from') and those including invalid characters.
@@ -108,13 +118,13 @@ class Module:
         The added object `val` is also provided as the return value, enabling chaining-style usages such as
         ```python
         instance.inp = MyModule.add(h.Input(name="in", width=5))
-        ``` 
-        and similar. 
+        ```
+        and similar.
 
-        Attribute naming comes from one of either: 
-        * `val`'s `name` attribute, if it has one, or 
+        Attribute naming comes from one of either:
+        * `val`'s `name` attribute, if it has one, or
         * The optional `name` argument.
-        Only one of the two name-sources is allowed per call. 
+        Only one of the two name-sources is allowed per call.
         """
 
         # Check it's a valid attribute-type
@@ -137,8 +147,8 @@ class Module:
         return self._add(val)
 
     def _add(self, val: ModuleAttr) -> ModuleAttr:
-        """ Internal `add` and `setattr` implementation. Primarily sort `val` into one of our type-based containers. 
-        Layers above `_add` must ensure that `val` has its `name` attribute before calling this method. """
+        """Internal `add` and `setattr` implementation. Primarily sort `val` into one of our type-based containers.
+        Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
 
         if isinstance(val, Signal):
             self.namespace[val.name] = val
@@ -151,6 +161,9 @@ class Module:
             self.namespace[val.name] = val
         elif isinstance(val, InstArray):
             self.instarrays[val.name] = val
+            self.namespace[val.name] = val
+        elif isinstance(val, InstanceBundle):
+            self.instbundles[val.name] = val
             self.namespace[val.name] = val
         elif isinstance(val, BundleInstance):
             self.bundles[val.name] = val
@@ -180,14 +193,14 @@ class Module:
         return val
 
     def get(self, name: str) -> Optional[ModuleAttr]:
-        """ Get module-attribute `name`. Returns `None` if not present. 
-        Note unlike Python built-ins such as `getattr`, `get` returns solely 
-        from the HDL namespace-worth of `ModuleAttr`s. """
+        """Get module-attribute `name`. Returns `None` if not present.
+        Note unlike Python built-ins such as `getattr`, `get` returns solely
+        from the HDL namespace-worth of `ModuleAttr`s."""
         ns = self.__getattribute__("namespace")
         return ns.get(name, None)
 
     def __getattr__(self, key: str) -> Any:
-        """ Include our namespace-worth of HDL objects in dot-access retrievals """
+        """Include our namespace-worth of HDL objects in dot-access retrievals"""
         if key.startswith("_"):
             return object.__getattribute__(self, key)
         ns = self.__getattribute__("namespace")
@@ -196,7 +209,7 @@ class Module:
         return object.__getattribute__(self, key)
 
     def __init_subclass__(cls, *_, **__):
-        """ Sub-Classing Disable-ization """
+        """Sub-Classing Disable-ization"""
         msg = f"Error attempting to create {cls.__name__}. Sub-Typing {cls} is not supported."
         raise RuntimeError(msg)
 
@@ -207,30 +220,30 @@ class Module:
 
     @property
     def bundle_ports(self) -> dict:
-        """ Port-Exposed Bundle Instances """
+        """Port-Exposed Bundle Instances"""
         return {name: bundle for name, bundle in self.bundles.items() if bundle.port}
 
     @property
     def io(self) -> dict:
-        """ Combined Dictionary of `Signal`-valued and `Bundle`-valued ports """
+        """Combined Dictionary of `Signal`-valued and `Bundle`-valued ports"""
         rv = self.bundle_ports
         rv.update(self.ports)
         return rv
 
     def _defpath(self) -> str:
-        """ Helper for exporting. 
-        Returns a string representing "where" this module was defined. 
-        This is generally one of a few things: 
-        * If "normally" defined via Python code, it's the Python module path 
-        * If *imported*, it's the path inferred during import """
+        """Helper for exporting.
+        Returns a string representing "where" this module was defined.
+        This is generally one of a few things:
+        * If "normally" defined via Python code, it's the Python module path
+        * If *imported*, it's the path inferred during import"""
         if self._importpath:  # Imported. Return the period-separated import path.
             return ".".join(self._importpath)
         # Defined the old fashioned way. Use the Python module name.
         return self._pymodule.__name__
 
     def _qualname(self) -> Optional[str]:
-        """ Helper for exporting. Returns the path-qualified name including 
-        `_defpath` options above, and the `Module.name`. """
+        """Helper for exporting. Returns the path-qualified name including
+        `_defpath` options above, and the `Module.name`."""
         if self.name is None:
             return None
         return self._defpath() + "." + self.name
@@ -319,9 +332,9 @@ class ExternalModule:
 
     Unlike `Modules`, `ExternalModules` include parameters to support legacy HDLs.
     Said parameters may only take on a limited number of datatypes, and may not be nested.
-    Each `ExternalModule` stores a parameter-type field `paramtype`. 
-    Parameter types may be either `hdl21.paramclass`es or the built-in `dict`. 
-    Parameter-values are checked to be instances of `paramtype` at creation time. 
+    Each `ExternalModule` stores a parameter-type field `paramtype`.
+    Parameter types may be either `hdl21.paramclass`es or the built-in `dict`.
+    Parameter-values are checked to be instances of `paramtype` at creation time.
     """
 
     name: str  # Module name. Used *directly* when exporting.
@@ -335,7 +348,9 @@ class ExternalModule:
     def __post_init__(self):
         # Check for a valid parameter-type
         if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
-            msg = f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            msg = (
+                f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            )
             msg += "Param types must be either `@paramclass`es or `dict`."
             raise ValueError(msg)
         # Internal tracking data: defining module/import-path
@@ -359,19 +374,19 @@ class ExternalModule:
         return {p.name: p for p in self.port_list}
 
     def _defpath(self) -> str:
-        """ Helper for exporting. 
-        Returns a string representing "where" this module was defined. 
-        This is generally one of a few things: 
-        * If "normally" defined via Python code, it's the Python module path 
-        * If *imported*, it's the path inferred during import """
+        """Helper for exporting.
+        Returns a string representing "where" this module was defined.
+        This is generally one of a few things:
+        * If "normally" defined via Python code, it's the Python module path
+        * If *imported*, it's the path inferred during import"""
         if self.importpath:  # Imported. Return the period-separated import path.
             return ".".join(self.importpath)
         # Defined the old fashioned way. Use the Python module name.
         return self.pymodule.__name__
 
     def _qualname(self) -> Optional[str]:
-        """ Helper for exporting. Returns the path-qualified name including 
-        `_defpath` options above, and the `Module.name`. """
+        """Helper for exporting. Returns the path-qualified name including
+        `_defpath` options above, and the `Module.name`."""
         if self.name is None:
             return None
         return self._defpath() + "." + self.name
@@ -395,9 +410,9 @@ class ExternalModule:
 @calls_instantiate
 @dataclass
 class ExternalModuleCall:
-    """ External Module Call
+    """External Module Call
     A combination of an `ExternalModule` and its Parameter-values,
-    typically generated by calling the Module. """
+    typically generated by calling the Module."""
 
     module: ExternalModule
     params: Any
@@ -405,7 +420,7 @@ class ExternalModuleCall:
     def __post_init_post_parse__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.module.paramtype):
-            msg = f"Invalid parameters {self.params} for ExternalModule {self.module}. Must be {self.module.paramtype}"
+            msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"
             raise TypeError(msg)
 
     @property
@@ -421,18 +436,18 @@ Could be methods, but are generally kept here to prevent expanding the `Module` 
 
 
 def _is_module_attr(val: Any) -> bool:
-    """ Boolean indication of whether `val` is a valid `hdl21.Module` attribute. """
+    """Boolean indication of whether `val` is a valid `hdl21.Module` attribute."""
     return isinstance(val, get_args(ModuleAttr))
 
 
 def _assert_module_attr(m: Module, val: Any) -> None:
-    """ Raise a TypeError if `val` is not a valid Module attribute. """
+    """Raise a TypeError if `val` is not a valid Module attribute."""
     if not _is_module_attr(val):
         _attr_type_error(m, val)
 
 
 def _attr_type_error(m: Module, val: Any) -> None:
-    """ Raise a `TypeError` with debug info for invalid attribute `val`. """
+    """Raise a `TypeError` with debug info for invalid attribute `val`."""
 
     # Give more specific error-messages for our common types.
     # Especially those that are easily confused, e.g. all the `Call` types, `Module`s, and `Instance`s thereof.
@@ -451,17 +466,17 @@ def _attr_type_error(m: Module, val: Any) -> None:
 
 
 def _caller_pymodule() -> Optional[ModuleType]:
-    """ # Caller Py-Module
-    Find the (python) module of the first python-stack-frame not from *this* file. 
-    
-    Sometimes this will be `hdl21.generator`. That's OK, `Generator`s know how to figure it out. 
+    """# Caller Py-Module
+    Find the (python) module of the first python-stack-frame not from *this* file.
 
-    Returns `None` if *no* python modules are in the call-stack. 
-    This can happen, for example when running `python -c "import hdl21 as h; h.Module()"`, 
-    or (probably) through other interactive interpreter setups. 
+    Sometimes this will be `hdl21.generator`. That's OK, `Generator`s know how to figure it out.
 
-    These "(python) module-less Modules" will generally fail in later steps 
-    such as exporting to ProtoBuf and netlists, but can be created in-memory. 
+    Returns `None` if *no* python modules are in the call-stack.
+    This can happen, for example when running `python -c "import hdl21 as h; h.Module()"`,
+    or (probably) through other interactive interpreter setups.
+
+    These "(python) module-less Modules" will generally fail in later steps
+    such as exporting to ProtoBuf and netlists, but can be created in-memory.
     """
     for fr in inspect.stack():
         # Note frames produce an `Optional[ModuleType]`.

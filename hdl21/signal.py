@@ -20,26 +20,27 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 
 """
 
-from typing import Callable, Optional, Any, List, Union, Set 
+from copy import copy
 from enum import Enum
 from dataclasses import field
+from typing import Callable, Optional, Any, List, Union, Set
 from pydantic.dataclasses import dataclass
 
 # Local imports
 from .connect import connectable, is_connectable
-from .instance import PortRef
+from .portref import PortRef
 
 
-def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
-    """ Square-bracket slicing into Signals, Concatenations, and Slices. 
-    Assuming valid inputs, returns a signal-`Slice`.  
+def _slice_(*, parent: "Sliceable", key: Union[int, slice]) -> "Slice":
+    """Square-bracket slicing into Signals, Concatenations, and Slices.
+    Assuming valid inputs, returns a signal-`Slice`.
 
-    Signal slices are indexed "Python style", in the senses that: 
+    Signal slices are indexed "Python style", in the senses that:
     * Negative indices are supported, and count from the "end" of the Signal.
-    * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index. 
+    * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index.
     * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
-    Popular HDLs commonly use different signal-indexing conventions. 
-    Hdl21's own primary exchange format (in ProtoBuf) does as well, 
+    Popular HDLs commonly use different signal-indexing conventions.
+    Hdl21's own primary exchange format (in ProtoBuf) does as well,
     eschewing adopting inclusive-endpoints and negative-indexing.
     """
 
@@ -101,7 +102,7 @@ def _slice_(*, parent: Union["Signal", "Slice", "Concat"], key: Any) -> "Slice":
 
 
 def slices(cls: type) -> type:
-    """ Decorator to add the 'square-bracket indexing produces `Slice`s' behavior. """
+    """Decorator to add the 'square-bracket indexing produces `Slice`s' behavior."""
 
     if getattr(cls, "__getitem__", None) is not None:
         msg = f"Internal hdl21 Error: invavlid `slices`-decoration of {cls} with existing __getitem__"
@@ -118,7 +119,7 @@ def slices(cls: type) -> type:
 
 
 class PortDir(Enum):
-    """ Port-Direction Enumeration """
+    """Port-Direction Enumeration"""
 
     INPUT = 0
     OUTPUT = 1
@@ -127,7 +128,7 @@ class PortDir(Enum):
 
 
 class Visibility(Enum):
-    """ Port-Visibility Enumeration """
+    """Port-Visibility Enumeration"""
 
     INTERNAL = 0  # Internal, Module-private Signal
     PORT = 1  # Exposed as a Port
@@ -155,104 +156,114 @@ class Signal:
     connected_ports: Set[PortRef] = field(init=False, repr=False, default_factory=set)
 
     def __post_init_post_parse__(self):
+        self._parent_module: Optional["Module"] = None
         if self.width < 1:
             raise ValueError(f"Signal {self.name} width must be positive")
 
 
+def _copy_to_internal(sig: Signal) -> Signal:
+    """Make a copy of `sig`, replacing its visibility and port-direction to be internal."""
+    sig = copy(sig)
+    sig.vis = Visibility.INTERNAL
+    sig.direction = PortDir.NONE
+    sig._parent_module = None
+    return sig
+
+
 def Signals(num: int, **kwargs) -> List[Signal]:
-    """ 
-    Create `num` new Signals.  
-    Typical usage: 
+    """
+    Create `num` new Signals.
+    Typical usage:
     ```python
-    @h.module 
+    @h.module
     class UsesSignals:
         bias, fold, mirror = h.Signals(3)
     ```
-    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    Note the `num` value is required to support the tuple-destructuring use-case shown above.
     """
     return _plural(fn=Signal, num=num, **kwargs)
 
 
 def Input(**kwargs) -> Signal:
-    """ Input Port Constructor. Thin wrapper around `hdl21.Signal` """
+    """Input Port Constructor. Thin wrapper around `hdl21.Signal`"""
     return Signal(vis=Visibility.PORT, direction=PortDir.INPUT, **kwargs)
 
 
 def Inputs(num: int, **kwargs) -> List[Signal]:
-    """ 
-    Create `num` new Input Ports.  
-    Typical usage: 
+    """
+    Create `num` new Input Ports.
+    Typical usage:
     ```python
-    @h.module 
+    @h.module
     class UsesInputs:
         a, b, c, VDD, VSS = h.Inputs(5)
     ```
-    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    Note the `num` value is required to support the tuple-destructuring use-case shown above.
     """
     return _plural(fn=Input, num=num, **kwargs)
 
 
 def Output(**kwargs) -> Signal:
-    """ Output Port Constructor. Thin wrapper around `hdl21.Signal` """
+    """Output Port Constructor. Thin wrapper around `hdl21.Signal`"""
     return Signal(vis=Visibility.PORT, direction=PortDir.OUTPUT, **kwargs)
 
 
 def Outputs(num: int, **kwargs) -> List[Signal]:
-    """ 
-    Create `num` new Output Ports.  
-    Typical usage: 
+    """
+    Create `num` new Output Ports.
+    Typical usage:
     ```python
-    @h.module 
+    @h.module
     class UsesOutputs:
         tdo, tms, tck = h.Outputs(3)
     ```
-    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    Note the `num` value is required to support the tuple-destructuring use-case shown above.
     """
     return _plural(fn=Output, num=num, **kwargs)
 
 
 def Inout(**kwargs) -> Signal:
-    """ Inout Port Constructor. Thin wrapper around `hdl21.Signal` """
+    """Inout Port Constructor. Thin wrapper around `hdl21.Signal`"""
     return Signal(vis=Visibility.PORT, direction=PortDir.INOUT, **kwargs)
 
 
 def Inouts(num: int, **kwargs) -> List[Signal]:
-    """ 
-    Create `num` new Inout Ports.  
-    Typical usage: 
+    """
+    Create `num` new Inout Ports.
+    Typical usage:
     ```python
-    @h.module 
+    @h.module
     class UsesInouts:
         gpio1, gpio2 = h.Inouts(2)
     ```
-    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    Note the `num` value is required to support the tuple-destructuring use-case shown above.
     """
     return _plural(fn=Inout, num=num, **kwargs)
 
 
 def Port(direction=PortDir.NONE, **kwargs) -> Signal:
-    """ Port Constructor. Thin wrapper around `hdl21.Signal`.
+    """Port Constructor. Thin wrapper around `hdl21.Signal`.
     The `direction` argument sets the Port's direction,
-    and defaults to the unknown direction `PortDir.NONE`. """
+    and defaults to the unknown direction `PortDir.NONE`."""
     return Signal(direction=direction, vis=Visibility.PORT, **kwargs)
 
 
 def Ports(num: int, **kwargs) -> List[Signal]:
-    """ 
-    Create `num` new Ports.  
-    Typical usage: 
+    """
+    Create `num` new Ports.
+    Typical usage:
     ```python
-    @h.module 
+    @h.module
     class UsesPorts:
         inp, out = h.Ports(2)
     ```
-    Note the `num` value is required to support the tuple-destructuring use-case shown above. 
+    Note the `num` value is required to support the tuple-destructuring use-case shown above.
     """
     return _plural(fn=Port, num=num, **kwargs)
 
 
 def _plural(*, fn: Callable, num: int, **kwargs) -> List[Signal]:
-    """ Internal helper method for creating `num` identical `Signal` objects via callable `fn`. """
+    """Internal helper method for creating `num` identical `Signal` objects via callable `fn`."""
     rv = list()
     for _ in range(num):
         rv.append(fn(**kwargs))
@@ -262,8 +273,8 @@ def _plural(*, fn: Callable, num: int, **kwargs) -> List[Signal]:
 @slices
 @connectable
 class Concat:
-    """ Signal Concatenation
-    Uses *Python-convention* ordering, in which "LSBs", i.e. index 0, are specified first. """
+    """Signal Concatenation
+    Uses *Python-convention* ordering, in which "LSBs", i.e. index 0, are specified first."""
 
     def __init__(self, *parts):
         for p in parts:
@@ -295,14 +306,16 @@ class Concat:
 @connectable
 @dataclass
 class Slice:
-    """ Signal Slice, comprising a subset of its width """
+    """Signal Slice, comprising a subset of its width"""
 
-    signal: Union[Signal, Concat, "Slice"]  # Parent Signal
+    signal: "Sliceable"  # Parent Signal
     top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
     start: Optional[int]  # Python-convention start index
     stop: Optional[int]  # Python-convention stop index
     step: Optional[int]  # Python-convention step size
+
+    index: Optional[Union[int, slice]] = None  # Python-convention index
 
     def __post_init_post_parse__(self):
         if self.step is not None and self.step == 0:
@@ -315,12 +328,12 @@ class Slice:
 
     @property
     def width(self) -> int:
-        """ Slice Width Accessor """
+        """Slice Width Accessor"""
         step = 1 if self.step is None else abs(self.step)
         return (self.top - self.bot) // step
 
     def __eq__(self, other: "Slice") -> bool:
-        """ Slice equality requires *identity* between parent Signals """
+        """Slice equality requires *identity* between parent Signals"""
         if not isinstance(other, Slice):
             return NotImplemented
         return (
@@ -331,23 +344,23 @@ class Slice:
         )
 
 
-Slice.__pydantic_model__.update_forward_refs()
-
 # Slice-compatible type aliases
 Sliceable = Union[Signal, Concat, Slice]
+
+Slice.__pydantic_model__.update_forward_refs()
 
 
 @connectable
 @dataclass
 class NoConn:
     """
-    # No-Connect 
-    
+    # No-Connect
+
     Special placeholder connectable-object which indicates "unconnected" Ports,
     typically unconnected outputs.
-    
-    An optional `name` field allows guidance for external netlisting, 
-    for cases in which consistent naming is desirable (e.g. for waveform probing). 
+
+    An optional `name` field allows guidance for external netlisting,
+    for cases in which consistent naming is desirable (e.g. for waveform probing).
     """
 
     name: Optional[str] = None
@@ -357,9 +370,9 @@ class NoConn:
     connected_ports: Set[PortRef] = field(init=False, repr=False, default_factory=set)
 
     def __eq__(self, other: "NoConn") -> bool:
-        """ `NoConn`s are "equal" only if identical objects. """
+        """`NoConn`s are "equal" only if identical objects."""
         return self is other
 
     def __hash__(self) -> int:
-        """ `NoConn`s are "equal" only if identical objects. """
+        """`NoConn`s are "equal" only if identical objects."""
         return hash(id(self))

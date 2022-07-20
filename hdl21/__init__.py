@@ -24,14 +24,14 @@ from .netlist import *
 from .elab import *
 from .walker import HierarchyWalker
 from .instantiable import *
+from .diff_pair import *
 from . import prefix
 from .prefix import Prefix, Prefixed
 from . import sim
+from . import proto
+from .proto import to_proto, from_proto
 
 # Update all the forward type-references throughout our many `@datatype`s
 from .datatype import _update_forward_refs
 
 _update_forward_refs()
-
-from . import proto
-from .proto import to_proto, from_proto

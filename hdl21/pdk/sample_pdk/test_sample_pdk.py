@@ -34,26 +34,20 @@ def test_compile():
     hasmos = mosmodule()
 
     # Compile it for the PDK
-    pkg = h.to_proto(hasmos)
-    pdk_pkg = sample_pdk.compile(pkg)
-
-    # Import it back into Modules & Namespaces
-    ns = h.from_proto(pdk_pkg)
-    rt = ns.hdl21.pdk.sample_pdk.test_sample_pdk.hasmos
+    sample_pdk.compile(hasmos)
 
     # And check what came back
-    assert isinstance(rt.n, h.Instance)
-    assert isinstance(rt.p, h.Instance)
-    assert isinstance(rt.n.of, h.ExternalModuleCall)
-    assert isinstance(rt.p.of, h.ExternalModuleCall)
-    assert isinstance(rt.n.of.params, dict)
-    assert isinstance(rt.p.of.params, dict)
+    assert isinstance(hasmos.n, h.Instance)
+    assert isinstance(hasmos.p, h.Instance)
+    assert isinstance(hasmos.n.of, h.ExternalModuleCall)
+    assert isinstance(hasmos.p.of, h.ExternalModuleCall)
+    assert isinstance(hasmos.n.of.params, sample_pdk.SamplePdkMosParams)
+    assert isinstance(hasmos.p.of.params, sample_pdk.SamplePdkMosParams)
 
 
 def test_netlist():
     hasmos = mosmodule()
 
     # Netlist it for the PDK
-    pkg = h.to_proto(hasmos)
-    pkg = sample_pdk.compile(pkg)
-    h.netlist(pkg, StringIO(), "spectre")
+    sample_pdk.compile(hasmos)
+    h.netlist(hasmos, StringIO(), fmt="spectre")

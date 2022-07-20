@@ -19,23 +19,23 @@ from ...bundle import (
 )
 
 # Import the base class
-from .base import Elaborator, ElabStackEnum
+from .base import Elaborator
 
 
 class ConnTypes(Elaborator):
-    """ 
-    Check for connection-type-validity on each Instance connection. 
-    
-    "Connection type validity" includes: 
+    """
+    Check for connection-type-validity on each Instance connection.
+
+    "Connection type validity" includes:
     * All connections must be Signal-like or Bundle-like
     * Signal-valued ports must be connected to Signals of the same width
-    * Bundle-valued ports must be connected to Bundles of compatible type 
+    * Bundle-valued ports must be connected to Bundles of compatible type
 
-    Note this stage *does not* perform port-direction checking or modification. 
+    Note this stage *does not* perform port-direction checking or modification.
     """
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Check each Instance's connections in `module` """
+        """Check each Instance's connections in `module`"""
 
         # Check each Instance
         for inst in module.instances.values():
@@ -51,8 +51,8 @@ class ConnTypes(Elaborator):
         return module
 
     def check_instance(self, module: Module, inst: Union[Instance, InstArray]) -> None:
-        """ Check the connections of `inst` in parent `module` """
-        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
+        """Check the connections of `inst` in parent `module`"""
+        self.stack.append(inst)
 
         # Get copies of both the instance's ports and connections.
         # These will be two {str: Signal-like} dictionaries, who should have the same keys,
@@ -92,14 +92,14 @@ class ConnTypes(Elaborator):
             msg = f"Connection to invalid Port `{portname}` on Instance `{inst.name}` in Module `{module.name}`"
             self.fail(msg)
 
-        self.stack_pop()  # Checks out, we good, pop this Instance from our elab-stack.
+        self.stack.pop()  # Checks out, we good, pop this Instance from our elab-stack.
 
     def assert_bundles_compatible(
         self, bundle: Bundle, other: Union[BundleInstance, AnonymousBundle]
     ):
-        """ Assert that `bundle` is compatible for connection with `other`. 
-        Raises a `RuntimeError` if not compatible. 
-        This includes key-matching and Signal-width matching, but *does not* examine Signal directions. 
+        """Assert that `bundle` is compatible for connection with `other`.
+        Raises a `RuntimeError` if not compatible.
+        This includes key-matching and Signal-width matching, but *does not* examine Signal directions.
         """
 
         if isinstance(other, BundleInstance):
@@ -135,7 +135,7 @@ class ConnTypes(Elaborator):
         self.fail(msg)
 
     def assert_signals_compatible(self, sig: Sliceable, other: Any) -> None:
-        """ Assert that `Sliceable`s (generally `Signal`s) a and b are compatible for connection. """
+        """Assert that `Sliceable`s (generally `Signal`s) a and b are compatible for connection."""
 
         if not isinstance(other, get_args(Sliceable)):
             self.fail(f"Invalid connection to non-Signal {other}")
@@ -149,7 +149,7 @@ class ConnTypes(Elaborator):
         return None  # Checks out.
 
     def assert_compatible(self, port: Connectable, conn: Connectable) -> None:
-        """ Assert that `port` and `conn` are compatible for connection. """
+        """Assert that `port` and `conn` are compatible for connection."""
 
         if not is_connectable(conn):
             self.fail(f"Invalid Connection {conn}")
@@ -166,21 +166,22 @@ class ConnTypes(Elaborator):
 
         self.fail(f"Invalid Port {port}")
 
-
     def resolve_bundleref_type(self, bref: BundleRef) -> Union[Signal, BundleInstance]:
-        """ 
-        Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance. 
+        """
+        Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance.
 
-        NOTE this returns a *representative* signal or bundle instance, 
-        i.e. one with the correct type and width - not *the signal* for a given instance. 
-        In other words: this is fine for connection-validity checking, 
-        but *not* for copying signals during flattening. 
-        Hence the "type" name suffix, although what we return is not really a type. 
+        NOTE this returns a *representative* signal or bundle instance,
+        i.e. one with the correct type and width - not *the signal* for a given instance.
+        In other words: this is fine for connection-validity checking,
+        but *not* for copying signals during flattening.
+        Hence the "type" name suffix, although what we return is not really a type.
         """
 
-        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance. 
+        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance.
             parent = bref.parent
-        elif isinstance(bref.parent, BundleRef):  # Nested reference. Recursively resolve the parent.
+        elif isinstance(
+            bref.parent, BundleRef
+        ):  # Nested reference. Recursively resolve the parent.
             parent = self.resolve_bundleref_type(bref.parent)
         else:
             self.fail(f"Invalid BundleRef parent for {bref}")

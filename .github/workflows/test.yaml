@@ -27,15 +27,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    
     - name: Install dependencies
       run: bash .github/install-${{ matrix.dep-installer }}.sh
+
     - name: Test with pytest
       run: |
         pytest -sv --cov=./ --cov-report=xml
+
+    - name: Black Formatting Check 
+      uses: psf/black@stable
+      with:
+        version: "22.6"
+
     - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
       uses: codecov/codecov-action@v1
       with:

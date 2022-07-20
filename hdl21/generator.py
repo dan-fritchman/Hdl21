@@ -17,17 +17,17 @@ from .instance import calls_instantiate
 
 @dataclass
 class Default:
-    """ Default value for generator arguments """
+    """Default value for generator arguments"""
 
     ...  # Empty contents
 
 
 @dataclass
 class Generator:
-    """ # Generator Object 
-    Typically created by the `@hdl.generator` decorator. 
-    Stores a function-object and parameters-type, 
-    along with some auxiliary data. 
+    """# Generator Object
+    Typically created by the `@hdl.generator` decorator.
+    Stores a function-object and parameters-type,
+    along with some auxiliary data.
     """
 
     func: Callable  # The generator function
@@ -36,29 +36,32 @@ class Generator:
     pymodule: ModuleType  # Python module where function defined
 
     def __call__(self, arg: Any = Default, **kwargs) -> "GeneratorCall":
-        """ Calls to Generators create GeneratorCall-objects
-        to be expanded during elaboration. """
+        """Calls to Generators create GeneratorCall-objects
+        to be expanded during elaboration."""
         return GeneratorCall(gen=self, arg=arg, kwargs=kwargs)
 
     @property
     def name(self) -> str:
-        """ Generator Name
-        Equal to its callable-function's name. """
+        """Generator Name
+        Equal to its callable-function's name."""
         return self.func.__name__
 
     @property
     def Params(self) -> type:
-        """ Parameter-Type Property """
+        """Parameter-Type Property"""
         return self.paramtype
+
+    def __repr__(self) -> str:
+        return f"Generator(name={self.name})"
 
 
 @calls_instantiate
 @dataclass
 class GeneratorCall:
-    """ Generator 'Bare Calls' 
-    Stored for expansion during elaboration. 
-    Only single-argument calls with `Params` are supported. 
-    Any application of a `Context` is done during elaboration.  """
+    """Generator 'Bare Calls'
+    Stored for expansion during elaboration.
+    Only single-argument calls with `Params` are supported.
+    Any application of a `Context` is done during elaboration."""
 
     gen: Generator
     arg: Any
@@ -66,30 +69,33 @@ class GeneratorCall:
     result: Optional[Module] = field(init=False, default=None)
 
     def __eq__(self, other) -> bool:
-        """ Generator-Call equality requires:
-        * *Identity* between generators, and 
-        * *Equality* between parameter-values. """
+        """Generator-Call equality requires:
+        * *Identity* between generators, and
+        * *Equality* between parameter-values."""
         return self.gen is other.gen and self.arg == other.arg
 
     def __hash__(self):
-        """ Generator-Call hashing, consistent with `__eq__` above, uses:
-        * *Identity* of its generator, and 
-        * *Value* of its parameters. 
-        The two are joined for hashing as a two-element tuple. """
+        """Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its generator, and
+        * *Value* of its parameters.
+        The two are joined for hashing as a two-element tuple."""
         return hash((id(self.gen), pickle.dumps(self.arg)))
+
+    def __repr__(self) -> str:
+        return f"GeneratorCall(gen={self.gen.name})"
 
     @property
     def name(self) -> str:
-        """ GeneratorCall Naming 
-        Once elaborated, returns the name of the generated Module. 
-        If not elaborated, raises a `RuntimeError`. """
+        """GeneratorCall Naming
+        Once elaborated, returns the name of the generated Module.
+        If not elaborated, raises a `RuntimeError`."""
         if self.result is None:
             raise RuntimeError(f"Cannot name un-elaborated GeneratorCall {self}")
         return self.result.name
 
 
 def generator(f: Callable) -> Generator:
-    """ Decorator for Generator Functions """
+    """Decorator for Generator Functions"""
     from .params import isparamclass
     from .elab import Context
 

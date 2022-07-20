@@ -16,7 +16,7 @@ from vlsirtools.spice import sim_data as sd, SimResultUnion
 
 # Local Imports
 from ..module import Module
-from ..signal import Signal, Port, Visibility, PortDir
+from ..signal import Signal, Port, Visibility, PortDir, _copy_to_internal
 from ..instantiable import Instantiable
 from ..prefix import Prefix
 from ..primitives import Vdc, Vpu, Cap
@@ -70,23 +70,23 @@ class DelaySimParams:
 
 @dataclass
 class DelaySimResult:
-    """ Results from a `DelaySim` """
+    """Results from a `DelaySim`"""
 
     # Per-output delays, keyed by output signal name
     delays: Dict[str, Optional[float]]
 
 
 def delays(p: DelaySimParams, opts: Optional[vsp.SimOptions] = None) -> DelaySimResult:
-    """ Create and run a delay `Sim`. 
-    
-    Executes four discrete steps, all defined in this module: 
+    """Create and run a delay `Sim`.
+
+    Executes four discrete steps, all defined in this module:
 
     * `create_sim`
     * `run` the generated `Sim`
-    * `get_meas` is a short step to gather the measurement dictionary. It will (should) eventually disappear. 
+    * `get_meas` is a short step to gather the measurement dictionary. It will (should) eventually disappear.
     * `collect_result`
 
-    Each individually for cases needing to "get in between" them. 
+    Each individually for cases needing to "get in between" them.
     """
     sim = create_sim(p)
     results = sim.run(opts=opts)
@@ -95,7 +95,7 @@ def delays(p: DelaySimParams, opts: Optional[vsp.SimOptions] = None) -> DelaySim
 
 
 def create_sim(p: DelaySimParams) -> Sim:
-    """ Create a delay `Sim` """
+    """Create a delay `Sim`"""
 
     # Create the testbench `Module` and `Sim` input
     tb = Module(name=f"{p.dut.name}Tb")
@@ -144,7 +144,7 @@ def create_sim(p: DelaySimParams) -> Sim:
         sig = p.dut.get(vname)
         if sig is None:
             raise RuntimeError(f"Invalid Supply {vname} in creating delay for {p.dut}")
-        sig = _copy_to_internal(sig)
+        sig = tb.add(_copy_to_internal(sig))
         tb.add(Vdc(Vdc.Params(dc=vval))(p=sig, n=tb.vss), name=f"v{sig.name}")
         tb.dut.connect(sig.name, sig)
 
@@ -154,10 +154,9 @@ def create_sim(p: DelaySimParams) -> Sim:
             continue  # Skip the primary input
 
         # Create a Signal for each DUT input
-        inp = _copy_to_internal(inp)
+        inp = tb.add(_copy_to_internal(inp))
         if inp.width != 1:
             raise RuntimeError(f"Unsupported `Delay` sim for bus input {inp}")
-        tb.add(inp)
         tb.dut.connect(inp.name, inp)
 
         # Get its logic state
@@ -177,7 +176,7 @@ def create_sim(p: DelaySimParams) -> Sim:
     # Create everything associated with each output - load caps and measurements
     dut_outputs = [s for s in p.dut.ports.values() if s.direction == PortDir.OUTPUT]
     for out in dut_outputs:
-        out = _copy_to_internal(out)
+        out = tb.add(_copy_to_internal(out))
         if out.width != 1:
             raise RuntimeError(f"Unsupported `Delay` sim for bus output {inp}")
         tb.dut.connect(out.name, out)
@@ -207,10 +206,10 @@ def create_sim(p: DelaySimParams) -> Sim:
 def collect_result(
     p: DelaySimParams, meas: Dict[str, Optional[float]]
 ) -> DelaySimResult:
-    """ 
-    Collect measured output delays 
-    After simulation has run and data has been pulled back into memory, 
-    extract the delay value for each of `p.module`'s outputs. 
+    """
+    Collect measured output delays
+    After simulation has run and data has been pulled back into memory,
+    extract the delay value for each of `p.module`'s outputs.
     """
     delays = {}
     dut_outputs = [s for s in p.dut.ports.values() if s.direction == PortDir.OUTPUT]
@@ -227,19 +226,11 @@ def collect_result(
 
 
 def get_meas(results: SimResultUnion) -> Dict[str, Optional[float]]:
-    """ Get the `measurements` dict from either of the `VlsirTools` sim-results types. 
-    FIXME: this should get pushed down to `VlsirTools`. """
+    """Get the `measurements` dict from either of the `VlsirTools` sim-results types.
+    FIXME: this should get pushed down to `VlsirTools`."""
 
     if isinstance(results, sd.SimResult):
         return results.an[0].measurements
     if isinstance(results, vsp.SimResult):
         return results.an[0].tran.measurements
     raise TypeError
-
-
-def _copy_to_internal(sig: Signal) -> Signal:
-    """ Make a copy of `sig`, replacing its visibility and port-direction to be internal. """
-    sig = copy(sig)
-    sig.vis = Visibility.INTERNAL
-    sig.direction = PortDir.NONE
-    return sig

@@ -57,59 +57,59 @@ from pydantic.dataclasses import dataclass
 
 @dataclass
 class PdkInstallation:
-    """ 
-    # PDK Installation 
+    """
+    # PDK Installation
 
-    A named set of PDK-related data, typically including details of 
-    a particular "site installation" of external files and settings. 
-    
-    While often comprised of file-system `Path`s, the content of a `PdkInstallation` 
-    can in principle be anything related to the installation, 
+    A named set of PDK-related data, typically including details of
+    a particular "site installation" of external files and settings.
+
+    While often comprised of file-system `Path`s, the content of a `PdkInstallation`
+    can in principle be anything related to the installation,
     e.g. compilation settings for a particular tool, or metadata indicating
-    relevant tool versions. 
+    relevant tool versions.
 
-    Most PDK modules should generally create a `pydantic.dataclass` which is also 
-    a sub-class of `PdkInstallation`, e.g. 
+    Most PDK modules should generally create a `pydantic.dataclass` which is also
+    a sub-class of `PdkInstallation`, e.g.
 
     ```python
-    # mypdk.py 
+    # mypdk.py
 
     from pathlib import Path
-    from pydantic.dataclasses import dataclass 
-    from hdl21.pdk import PdkInstallation 
+    from pydantic.dataclasses import dataclass
+    from hdl21.pdk import PdkInstallation
 
-    @dataclass 
+    @dataclass
     class Install(PdkInstallation):
         model_file: Path
         options: Dict[str, str]
     ```
-    
+
     ```python
     # site.py
     import mypdk
 
     mypdk.install = mypdk.Install(
-        model_file = "/my/pdk/models", 
+        model_file = "/my/pdk/models",
         options = {"opt" : "max"}
     )
     ```
 
-    ```python 
+    ```python
     # Application-Level Code
     # Running an example simulation with `mypdk`
 
     import site   # Creates the site-specific `PdkInstallation`s
-    import mypdk  # Import the target PDK 
+    import mypdk  # Import the target PDK
 
     sim = Sim(tb=tb)
     sim.lib(mypdk.install.models, "ss")
     sim.run()
     ```
 
-    This "installation data" can in principle be store anywhere, or in unstructured types. 
-    The primary goal of the `PdkInstallation` type is to centralize this data, 
-    and to enable shorthand registration and recall, particularly for 
-    the common case of a single in-memory `PdkInstallation`. 
+    This "installation data" can in principle be store anywhere, or in unstructured types.
+    The primary goal of the `PdkInstallation` type is to centralize this data,
+    and to enable shorthand registration and recall, particularly for
+    the common case of a single in-memory `PdkInstallation`.
     """
 
     ...  # No content

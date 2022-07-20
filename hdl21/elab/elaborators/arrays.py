@@ -4,27 +4,28 @@
 
 # Local imports
 from ...module import Module
-from ...instance import Instance, PortRef
+from ...instance import Instance
+from ...portref import PortRef
 from ...bundle import BundleInstance
 from ...signal import Signal, Slice, Concat
 
 # Import the base class
-from .base import Elaborator, ElabStackEnum
+from .base import Elaborator
 
 
 class ArrayFlattener(Elaborator):
-    """ 
-    Elaboration Pass to Flatten `InstArray`s into `Instance`s, broadcast and remake their connections. 
+    """
+    Elaboration Pass to Flatten `InstArray`s into `Instance`s, broadcast and remake their connections.
     """
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. 
-        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances. """
+        """Elaborate Module `module`.
+        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances."""
 
         # Flatten Instance arrays
         while module.instarrays:
             name, array = module.instarrays.popitem()
-            self.stack_push(ElabStackEnum.ARRAY, name)
+            self.stack.append(array)
             module.namespace.pop(name)
             # Visit the array's target
             target = self.elaborate_instance_array(array)
@@ -79,6 +80,6 @@ class ArrayFlattener(Elaborator):
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     self.fail(msg)
-            self.stack_pop()
+            self.stack.pop()
 
         return module

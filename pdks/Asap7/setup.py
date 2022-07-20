@@ -28,5 +28,5 @@ setup(
     packages=find_packages(),
     python_requires=">=3.8, <4",
     install_requires=[f"hdl21=={_VLSIR_VERSION}"],
-    extras_require={"dev": ["pytest==5.2", "coverage", "pytest-cov", "twine"]},
+    extras_require={"dev": ["pytest==7.1", "coverage", "pytest-cov", "twine"]},
 )

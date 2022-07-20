@@ -16,7 +16,7 @@ def test_version():
 
 
 def test_module1():
-    """ Initial Module Test """
+    """Initial Module Test"""
 
     @h.module
     class M1:
@@ -150,169 +150,6 @@ def test_generator3():
     assert HasGen.c.of is M
 
 
-def test_params1():
-    # Initial param-class test
-
-    @h.paramclass
-    class MyParams:
-        a = h.Param(dtype=int, default=5, desc="your fave")
-
-    assert h.isparamclass(MyParams)
-
-    m = MyParams()
-    assert isinstance(m.a, int)
-    assert m.a == 5
-    assert isinstance(m.__params__["a"], h.Param)
-    assert m.defaults() == dict(a=5)
-    assert m.descriptions() == dict(a="your fave")
-
-
-def test_params2():
-    @h.paramclass
-    class Pc2:
-        # Required
-        r = h.Param(dtype=str, desc="required")
-        # Optional
-        o = h.Param(dtype=str, default="hmmm", desc="optional")
-
-    assert h.isparamclass(Pc2)
-    assert Pc2.defaults() == dict(o="hmmm")
-    assert Pc2.descriptions() == dict(r="required", o="optional")
-
-    p = Pc2(r="provided")
-    assert isinstance(p.r, str)
-    assert p.r == "provided"
-    assert isinstance(p.o, str)
-    assert p.o == "hmmm"
-    assert p.defaults() == dict(o="hmmm")
-    assert p.descriptions() == dict(r="required", o="optional")
-
-
-def test_params3():
-    # Test parameters with a creation-time list-tuple conversion
-    @h.paramclass
-    class HasTuple:
-        t = h.Param(dtype=tuple, desc="Go ahead, try a list")
-
-    ht = HasTuple(t=[1, 2, 3])
-    assert isinstance(ht.t, tuple)
-    assert ht.t == (1, 2, 3)
-
-
-def test_params4():
-    # Test some param-class nesting
-    from dataclasses import asdict
-
-    @h.paramclass
-    class Inner:
-        i = h.Param(dtype=int, desc="Inner int-field")
-
-    @h.paramclass
-    class Outer:
-        inner = h.Param(dtype=Inner, desc="Inner fields")
-        f = h.Param(dtype=float, desc="A float", default=3.14159)
-
-    o = Outer(inner=Inner(11))
-    assert isinstance(o, Outer)
-    assert isinstance(o.inner, Inner)
-    assert o.inner == Inner(11)
-    assert o.inner.i == 11
-    assert o.f == 3.14159
-
-    # Create from a (nested) dictionary
-    d1 = {"inner": {"i": 11}, "f": 22.2}
-    o1 = Outer(**d1)
-    uname1 = h.params._unique_name(o1)
-    # Convert back to another dictionary
-    d2 = asdict(o1)
-    # And check they line up
-    assert d1 == d2
-    # Round-trip back to an `Outer`
-    o2 = Outer(**d2)
-    uname2 = h.params._unique_name(o2)
-    assert uname1 == uname2
-    assert uname1 == "3dcc309796996b3a8a61db66631c5a93"
-
-
-def test_bad_params1():
-    # Test a handful of errors Params and paramclasses should raise.
-
-    from hdl21 import (
-        paramclass,
-        Param,
-        FrozenInstanceError,
-    )
-
-    with pytest.raises(RuntimeError):
-        # Test that creating a paramclass with parent-class(es) fails
-
-        @paramclass
-        class C(TabError):  # Of course this is a sub-class of the best built-in class
-            ...
-
-    @paramclass
-    class C:
-        a = Param(dtype=int, desc="Gonna Fail!")
-
-    with pytest.raises(RuntimeError):
-        # Test that sub-classing a paramclass fails
-
-        class D(C):
-            ...
-
-    with pytest.raises(TypeError):
-        # Test that missing arguments fail
-        c = C()
-
-    with pytest.raises(ValidationError):
-        # Test invalid argument types fail
-
-        c = C(a=TabError)
-
-    with pytest.raises(FrozenInstanceError):
-        # Test that attempts at mutating paramclasses fail
-        c = C(a=3)
-        c.a = 4
-
-    with pytest.raises(RuntimeError):
-        # Test "no Module sub-classing"
-
-        class E(h.Module):
-            ...
-
-    with pytest.raises(RuntimeError):
-        # Test "no decorating inherited types"
-
-        @h.module
-        class E2(TabError):
-            ...
-
-    with pytest.raises(RuntimeError):
-        # Test bad parameter names
-
-        @h.paramclass
-        class P:
-            descriptions = h.Param(dtype=str, desc="", default="BAD!")
-
-    with pytest.raises(RuntimeError):
-        # Test bad parameter names
-
-        @h.paramclass
-        class P:
-            defaults = h.Param(dtype=str, desc="", default="BAD!")
-
-    with pytest.raises(RuntimeError):
-        # Test non-params in `@paramclass`
-
-        @h.paramclass
-        class P:
-            something = 11
-
-    with pytest.raises(RuntimeError):
-        # Test a bad argument type
-        h.params._unique_name(33)
-
-
 def test_array1():
     @h.module
     class InArray:
@@ -330,7 +167,7 @@ def test_array1():
 
 
 def test_array2():
-    """ Basic Instance-Array Test """
+    """Basic Instance-Array Test"""
     a = h.Module(name="a")
     a.inp = h.Port(width=1)
     a.out = h.Port(width=1)
@@ -353,7 +190,7 @@ def test_array2():
 
 
 def test_cycle1():
-    """ Test cyclical connection-graphs, i.e. a back-to-back pair of instances """
+    """Test cyclical connection-graphs, i.e. a back-to-back pair of instances"""
 
     @h.module
     class Thing:
@@ -622,7 +459,7 @@ def test_bundle4():
 
 
 def test_bigger_bundles():
-    """ Test a slightly more elaborate Bundle-based system """
+    """Test a slightly more elaborate Bundle-based system"""
 
     class HostDevice(Enum):
         HOST = auto()
@@ -870,7 +707,7 @@ def test_signal_concat1():
 
 
 def test_slice_module1():
-    # Make use of slicing and concatenation in a module
+    """Make use of slicing and concatenation in a module"""
 
     C = h.Module(name="C")
     C.p1 = h.Port(width=1)
@@ -878,15 +715,15 @@ def test_slice_module1():
     C.p7 = h.Port(width=7)
 
     P = h.Module(name="P")
-    C.s4 = h.Signal(width=4)
-    C.s2 = h.Signal(width=2)
-    P.ic = C(p1=C.s4[0], p4=C.s4, p7=h.Concat(C.s4, C.s2, C.s2[0]))
+    P.s4 = h.Signal(width=4)
+    P.s2 = h.Signal(width=2)
+    P.ic = C(p1=P.s4[0], p4=P.s4, p7=h.Concat(P.s4, P.s2, P.s2[0]))
 
     h.elaborate(P)
 
 
 def test_module_as_param():
-    """ Test using a `Module` as a parameter-value """
+    """Test using a `Module` as a parameter-value"""
 
     @h.paramclass
     class HasModuleParam:
@@ -904,7 +741,7 @@ def test_module_as_param():
 
 
 def test_mos_generator():
-    """ Initial test of built-in series-Mos generator """
+    """Initial test of built-in series-Mos generator"""
 
     Mos = h.generators.Mos
     m = Mos(Mos.Params(nser=2))
@@ -929,7 +766,7 @@ def test_mos_generator():
 
 
 def test_series_parallel_generator():
-    """ Initial test of the general-purpose series-parallel generator """
+    """Initial test of the general-purpose series-parallel generator"""
 
     from hdl21.generators import SeriesPar
 
@@ -962,7 +799,7 @@ def test_series_parallel_generator():
 
 
 def test_instance_mult():
-    """ Initial tests of instance-array-generation by multiplication """
+    """Initial tests of instance-array-generation by multiplication"""
 
     Child = h.Module(name="Child")
     Parent = h.Module(name="Parent")
@@ -1004,7 +841,7 @@ def test_instance_mult():
 
 
 def test_instance_mult2():
-    """ Test connecting to multiplication-generated InstArrays """
+    """Test connecting to multiplication-generated InstArrays"""
 
     @h.module
     class Child:
@@ -1032,7 +869,7 @@ def test_instance_mult2():
 
 
 def test_instance_mult3():
-    """ Test connecting to an "already connected" Instance """
+    """Test connecting to an "already connected" Instance"""
 
     @h.module
     class Child:
@@ -1057,7 +894,7 @@ def test_instance_mult3():
 
 
 def test_instance_mult4():
-    """ Test connecting non-unit-width Arrays """
+    """Test connecting non-unit-width Arrays"""
 
     @h.module
     class Child:
@@ -1087,7 +924,7 @@ def test_instance_mult4():
 
 
 def test_bad_width_conn():
-    """ Test invalid connection-widths """
+    """Test invalid connection-widths"""
     c = h.Module(name="c")
     c.p = h.Port(width=3)  # Width-3 Port
     q = h.Module(name="q")
@@ -1099,7 +936,7 @@ def test_bad_width_conn():
 
 
 def test_bad_bundle_conn():
-    """ Test invalid Bundle connections """
+    """Test invalid Bundle connections"""
 
     @h.bundle
     class P:
@@ -1123,7 +960,7 @@ def test_bad_bundle_conn():
 
 
 def test_illegal_module_attrs():
-    """ Test attempting to add illegal attributes """
+    """Test attempting to add illegal attributes"""
 
     m = h.Module()
     with pytest.raises(TypeError):
@@ -1164,18 +1001,18 @@ def test_illegal_module_attrs():
 
 
 def test_copy_signal():
-    """ Copying a Signal """
+    """Copying a Signal"""
     copy.copy(h.Signal())
 
 
 def test_copy_bundle_instance():
-    """ Copying a BundleInstance """
+    """Copying a BundleInstance"""
     # This generally fails when run in the debugger, but seems alright stand-alone (?)
     copy.copy(h.BundleInstance(name="inst", of=h.Bundle()))
 
 
 def test_bundle_destructure():
-    """ Test de-structuring bundles to individual Signals """
+    """Test de-structuring bundles to individual Signals"""
 
     @h.bundle
     class B:
@@ -1203,7 +1040,8 @@ def test_bundle_destructure():
 
 
 def test_orphanage():
-    """ Test that orphaned Module-attributes fail at elaboration """
+    """Test that orphaned Module-attributes fail at elaboration"""
+
     m1 = h.Module(name="m1")
     m1.s = h.Signal()  # Signal `s` is now "parented" by `m1`
 
@@ -1219,7 +1057,7 @@ def test_orphanage():
 
 
 def test_orphanage2():
-    """ Test orphaning a bundle instance """
+    """Test orphaning a bundle instance"""
 
     @h.bundle
     class B:
@@ -1241,7 +1079,7 @@ def test_orphanage2():
 
 
 def test_orphanage3():
-    """ Test orphaning an instance """
+    """Test orphaning an instance"""
     I = h.Module(name="I")
     i = I()  # Instance to be orphaned
 
@@ -1258,9 +1096,28 @@ def test_orphanage3():
         h.elaborate(m1)
 
 
+def test_orphanage4():
+    """Test an orphan Instance connection"""
+
+    m1 = h.Module(name="m1")
+    m1.p = h.Port()
+
+    # The "orphan signal" will not be owned by any module
+    the_orphan_signal = h.Signal()
+    m2 = h.Module(name="m2")
+    m2.i = m1(p=the_orphan_signal)  # <= Problem's here
+
+    # Note elaborating `m1` continues to work
+    h.elaborate(m1)
+
+    with pytest.raises(RuntimeError):
+        # Elaborating `m2` should fail
+        h.elaborate(m2)
+
+
 @pytest.mark.xfail(reason="#6 https://github.com/dan-fritchman/Hdl21/issues/6")
 def test_wrong_decorator():
-    """ Mistake `Module` for `module` """
+    """Mistake `Module` for `module`"""
 
     with pytest.raises(RuntimeError):
 
@@ -1270,7 +1127,7 @@ def test_wrong_decorator():
 
 
 def test_elab_noconn():
-    """ Initial test of elaborating a `NoConn` """
+    """Initial test of elaborating a `NoConn`"""
 
     @h.module
     class Inner:
@@ -1287,7 +1144,7 @@ def test_elab_noconn():
 
 
 def test_bad_noconn():
-    """ Test that a doubly-connected `NoConn` should fail """
+    """Test that a doubly-connected `NoConn` should fail"""
 
     @h.module
     class Inner:
@@ -1310,7 +1167,7 @@ def test_bad_noconn():
 
 
 def test_array_concat_conn():
-    """ Test connecting a `Concat` to an `InstArray` """
+    """Test connecting a `Concat` to an `InstArray`"""
 
     Child = h.Module(name="Child")
     Child.p3 = h.Input(width=3)
@@ -1325,7 +1182,7 @@ def test_array_concat_conn():
 
 
 def test_slice_resolution():
-    """ Test resolutions of slice combinations """
+    """Test resolutions of slice combinations"""
 
     # This is a very private import of the slice-resolver function
     from hdl21.elab.elaborators.slices import _resolve_slice
@@ -1366,8 +1223,8 @@ def test_slice_resolution():
 
 
 def test_common_attr_errors():
-    """ Test that common errors provide helpful feedback. 
-    For example, adding `Module`s where one wants an `Instance`. """
+    """Test that common errors provide helpful feedback.
+    For example, adding `Module`s where one wants an `Instance`."""
 
     M = h.Module(name="M")
 
@@ -1420,7 +1277,7 @@ def test_common_attr_errors():
 
 
 def test_generator_call_by_kwargs():
-    """ Test the capacity for generators to create their param-classes inline. """
+    """Test the capacity for generators to create their param-classes inline."""
 
     @h.paramclass
     class P:
@@ -1447,10 +1304,14 @@ def test_generator_call_by_kwargs():
 
 
 def test_instance_array_portrefs():
-    """ Test Instance Arrays connected by port-references """
+    """Test Instance Arrays connected by port-references"""
 
     Inv = h.ExternalModule(
-        name="Inv", port_list=[h.Input(name="i"), h.Output(name="z"),],
+        name="Inv",
+        port_list=[
+            h.Input(name="i"),
+            h.Output(name="z"),
+        ],
     )
 
     m = h.Module(name="TestArrayPortRef")
@@ -1468,7 +1329,7 @@ def test_instance_array_portrefs():
 
 
 def test_array_bundle():
-    """ Test bundle-valued connections to instance arrays. """
+    """Test bundle-valued connections to instance arrays."""
 
     @h.bundle
     class B:
@@ -1495,7 +1356,7 @@ def test_array_bundle():
 
 @pytest.mark.xfail(reason="#19 https://github.com/dan-fritchman/Hdl21/issues/19")
 def test_sub_bundle_conn():
-    """ Test connecting via BundleRef to a sub-Bundle """
+    """Test connecting via BundleRef to a sub-Bundle"""
 
     @h.bundle
     class B1:
@@ -1518,7 +1379,7 @@ def test_sub_bundle_conn():
 
 
 def test_anon_bundle_port_conn():
-    """ Test connecting via PortRef to an AnonymousBundle """
+    """Test connecting via PortRef to an AnonymousBundle"""
 
     @h.bundle
     class B:
@@ -1550,10 +1411,10 @@ def test_anon_bundle_port_conn():
 
 
 def test_multiple_signals_in_port_group():
-    """ Test, or at least try to test, jamming more than one Signal 
-    into the `group` concept used by the `ResolvePortRefs` elaborator pass. 
-    Based on the design of `ResolvePortRefs`, this is a thing that (we think) 
-    is not possible. """
+    """Test, or at least try to test, jamming more than one Signal
+    into the `group` concept used by the `ResolvePortRefs` elaborator pass.
+    Based on the design of `ResolvePortRefs`, this is a thing that (we think)
+    is not possible."""
 
     @h.module
     class I:
@@ -1582,7 +1443,7 @@ def test_multiple_signals_in_port_group():
 
 
 def test_bad_conns():
-    """ Test the errors produced by elaborating with invalid Port connections """
+    """Test the errors produced by elaborating with invalid Port connections"""
 
     @h.module
     class I:
@@ -1626,7 +1487,7 @@ def test_bad_conns():
 
 
 def test_anon_bundle_refs():
-    """ Test adding `BundleRef`s to `AnonymousBundle`s. """
+    """Test adding `BundleRef`s to `AnonymousBundle`s."""
 
     @h.bundle
     class Diff:
@@ -1652,3 +1513,105 @@ def test_anon_bundle_refs():
 
     h.elaborate(HasHasDiff)
 
+
+@pytest.mark.xfail(reason="#21 https://github.com/dan-fritchman/Hdl21/issues/21")
+def test_generator_port_slice():
+    """Test taking a slice from a Generator `PortRef`."""
+
+    @h.paramclass
+    class Width:
+        width: h.Param(dtype=int, desc="Width")
+
+    @h.generator
+    def SliceMyP(params: Width) -> h.Module:
+        m = h.Module()
+        m.p = h.Port(width=params.width)  # Port with parametrized width
+        return m
+
+    @h.module
+    class ScalarPort:
+        p = h.Port()  # A width-one port
+
+    @h.module
+    class HasGen:
+        g = SliceMyP(width=8)()
+        # Connect the MSB of `g.p` to `s.p`
+        s = ScalarPort(p=g.p[-1])
+
+    h.elaborate(HasGen)
+
+
+def test_pair1():
+    """Test of the `Diff` and `Pair` signal and instance bundles"""
+
+    @h.module
+    class I:
+        ps = h.Port(desc="Port we'll connect to a scalar")
+        pd = h.Port(desc="Port we'll connect to a diff")
+        pa = h.Port(desc="Port we'll connect to an AnonymousBundle")
+
+    @h.module
+    class O:
+        d = h.Diff()
+        s = h.Signal()
+        pair = h.Pair(I)(pd=d, ps=s, pa=h.inverse(d))
+
+    h.elaborate(O)
+
+    assert len(O.instances) == 2
+    assert "pair_p" in O.instances
+    assert "pair_n" in O.instances
+    assert O.pair_p.conns["ps"] is O.s
+    assert O.pair_n.conns["ps"] is O.s
+    assert O.pair_p.conns["pd"] is O.d_p
+    assert O.pair_n.conns["pd"] is O.d_n
+    assert O.pair_p.conns["pa"] is O.d_n
+    assert O.pair_n.conns["pa"] is O.d_p
+    assert len(O.signals) == 3
+    assert len(O.bundles) == 0
+    assert len(O.instbundles) == 0
+
+
+@pytest.mark.xfail(reason="#33 https://github.com/dan-fritchman/Hdl21/issues/33")
+def test_noconn_types():
+    """Test connecting `NoConn`s to a variety of port-types."""
+
+    @h.module
+    class Inner:
+        # Inner module with a handful of port-types
+        s = h.Port()
+        b = h.Port(width=11)
+        d = h.Diff(port=True)
+
+    @h.module
+    class Outer:
+        i = Inner(s=h.NoConn(), b=h.NoConn(), d=h.NoConn())
+
+    h.elaborate(Outer)
+
+
+def test_deep_hierarchy():
+    """Test a deep hierarchy, without much content."""
+
+    # Create the leaf level module. Empty with a single Port `p`.
+    M0 = h.Module(name=f"M0")
+    M0.p = h.Port()
+    prev = M0
+    M1 = None
+
+    # Create lots of layers above it, each of which instantiates the previous.
+    for k in range(100):
+        m = h.Module(name=f"M{k}")
+        m.p = h.Port()
+        m.i = h.Instance(of=prev)(p=m.p)
+        if M1 is None:
+            M1 = m
+        prev = m
+
+    # Elaborate the final, highest-level module.
+    h.elaborate(m)
+
+    # Screw up a connection, and check we get a RuntimeError.
+    M1.i.not_a_real_port = M1.p
+    with pytest.raises(RuntimeError):
+        h.elaborate(m)

@@ -26,7 +26,7 @@ GatedInv = h.ExternalModule(
 
 @h.module
 class GatedInvWrapper:
-    """ Thin wrapper over `GatedInv` """
+    """Thin wrapper over `GatedInv`"""
 
     inp, enb, VDD, VSS = h.Inputs(4)
     out = h.Output()
@@ -57,7 +57,7 @@ class RoParams:
 
 @h.generator
 def Ro(params: RoParams) -> h.Module:
-    """ Create a parametric oscillator """
+    """Create a parametric oscillator"""
     from hdl21.primitives import IdealCapacitor as C
 
     ro = h.Module()
@@ -87,16 +87,16 @@ def Ro(params: RoParams) -> h.Module:
 
 @h.generator
 def RoTb(params: RoParams) -> h.Module:
-    """ Ring Osc Testbench
-    Primarily instantiates the RO and a thermometer-encoder for its control code. 
+    """Ring Osc Testbench
+    Primarily instantiates the RO and a thermometer-encoder for its control code.
 
-    This module includes a bit of hacking into the SPICE-domain world. 
-    It has no ports and is meant to be "the entirety" of a sim, save for analysis and control statements. 
-    Don't try it on its own! At minimum, it relies on: 
-    * SPICE/ Spectre's concept of "node zero", which it instantiates, and 
-    * A SPICE-level parameter `code` which sets the integer control value. 
-    This serves as an early case-study for how hdl21 modules and 
-    these SPICE-native things can play together (and perhaps how they shouldn't). 
+    This module includes a bit of hacking into the SPICE-domain world.
+    It has no ports and is meant to be "the entirety" of a sim, save for analysis and control statements.
+    Don't try it on its own! At minimum, it relies on:
+    * SPICE/ Spectre's concept of "node zero", which it instantiates, and
+    * A SPICE-level parameter `code` which sets the integer control value.
+    This serves as an early case-study for how hdl21 modules and
+    these SPICE-native things can play together (and perhaps how they shouldn't).
     """
     from hdl21.primitives import V
 

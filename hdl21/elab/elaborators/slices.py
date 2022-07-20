@@ -14,11 +14,11 @@ from .base import Elaborator
 
 
 class SliceResolver(Elaborator):
-    """ Elaboration pass to resolve slices and concatenations to concrete signals. 
-    Modifies connections to any nested slices, nested concatenations, or combinations thereof. 
+    """Elaboration pass to resolve slices and concatenations to concrete signals.
+    Modifies connections to any nested slices, nested concatenations, or combinations thereof.
     "Full-width" `Slice`s e.g. `sig[:]` are replaced with their parent `Signal`s.
 
-    TODO: `Slice`s with non-unit `step` are converted to `Concat`s. """
+    TODO: `Slice`s with non-unit `step` are converted to `Concat`s."""
 
     def elaborate_module(self, module: Module) -> Module:
         # All arrays must be flattened before getting here, or fail
@@ -40,7 +40,7 @@ class SliceResolver(Elaborator):
 
 
 def _resolve_sliceable(conn: Sliceable) -> Sliceable:
-    """ Resolve a `Sliceable` to flat-concatenation-amenable elements. """
+    """Resolve a `Sliceable` to flat-concatenation-amenable elements."""
     if isinstance(conn, Signal):
         return conn  # Nothing to do
     if isinstance(conn, Slice):
@@ -51,8 +51,8 @@ def _resolve_sliceable(conn: Sliceable) -> Sliceable:
 
 
 def _list_slice(slize: Slice) -> List[Slice]:
-    """ Internal recursive helper for `resolve_slice`. 
-    Returns a list of Slices in which each element has a concrete Signal for its parent. """
+    """Internal recursive helper for `resolve_slice`.
+    Returns a list of Slices in which each element has a concrete Signal for its parent."""
 
     # Resolve "full-width" slices to their parent Signals
     if slize.width == slize.signal.width:
@@ -97,23 +97,23 @@ def _list_slice(slize: Slice) -> List[Slice]:
 
 
 def _resolve_slice(slize: Slice) -> Sliceable:
-    """ Resolve a `Slice` to one or more with "concrete" `Signal`s as parents. 
-    
-    Slices of other Slices and Slices of Concats are both valid design-time constructions. 
-    For example: 
+    """Resolve a `Slice` to one or more with "concrete" `Signal`s as parents.
+
+    Slices of other Slices and Slices of Concats are both valid design-time constructions.
+    For example:
     ```python
     h.Concat(sig1, sig2, sig3)[1] # Slice of a Concat
     sig4[0:2][1] # Slice of a Slice
     ```
 
-    While these may not frequently be created by designers, they are (at least) often created by array broadcasting. 
-    As some point their parents must be resolved to their original Signals, at minimum before export-level name resolution. 
+    While these may not frequently be created by designers, they are (at least) often created by array broadcasting.
+    As some point their parents must be resolved to their original Signals, at minimum before export-level name resolution.
 
-    Resolving Concatenations can generally resolve to more than one Slice, as in: 
+    Resolving Concatenations can generally resolve to more than one Slice, as in:
     ```python
     h.Concat(sig1[0], sig2[0], sig3[0])[0:1] # Requires slices of `sig1` and `sig2`
-    ``` 
-    Such cases create and return a Concatenation. """
+    ```
+    Such cases create and return a Concatenation."""
 
     # Break out the slice elements in a list
     ls = _list_slice(slize)
@@ -127,8 +127,8 @@ def _resolve_slice(slize: Slice) -> Sliceable:
 
 
 def _resolve_concat(conc: Concat) -> Concat:
-    """ Resolve a Concatenation into (a) concrete Signals and (b) Slices of concrete Signals. 
-    Removes nested concatenations and resolves slices along the way. """
+    """Resolve a Concatenation into (a) concrete Signals and (b) Slices of concrete Signals.
+    Removes nested concatenations and resolves slices along the way."""
 
     if not len(conc.parts):
         raise RuntimeError("Concatenation with no parts")
@@ -163,11 +163,11 @@ def _resolve_concat(conc: Concat) -> Concat:
 
 
 def _flat_concatable(s: Sliceable) -> bool:
-    """ Boolean indication of whether `s` is suitable for flattened Concatenations. 
-    Such objects must be either: 
+    """Boolean indication of whether `s` is suitable for flattened Concatenations.
+    Such objects must be either:
     * (a) A Signal, or
     * (b) A Slice into a Signal
-    Notable exceptions include Concats and nested Slices of Concats and other Slices. """
+    Notable exceptions include Concats and nested Slices of Concats and other Slices."""
     return isinstance(s, Signal) or (
         isinstance(s, Slice) and isinstance(s.signal, Signal)
     )

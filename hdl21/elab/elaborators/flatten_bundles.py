@@ -26,7 +26,7 @@ from .base import Elaborator
 
 @dataclass
 class Path:
-    """ Hierarchical String-Valued Path """
+    """Hierarchical String-Valued Path"""
 
     segs: List[str]  # List of path segments
 
@@ -45,7 +45,7 @@ _MAGIC_PATH_SEP = "~!@#$%^&*()"
 
 @dataclass(frozen=True)
 class PathStr:
-    """ Single-String Representation of `Path` """
+    """Single-String Representation of `Path`"""
 
     val: str
 
@@ -70,7 +70,7 @@ class PathStr:
 
 
 class BundleScope:
-    """ Scope-worth of Signals for a flattened Bundle """
+    """Scope-worth of Signals for a flattened Bundle"""
 
     path: Path
     pathstr: PathStr
@@ -79,7 +79,7 @@ class BundleScope:
 
 @dataclass
 class FlatBundleDef:
-    """ Flattened Bundle Definition """
+    """Flattened Bundle Definition"""
 
     # Source/ Original Bundle
     src: Bundle
@@ -89,7 +89,7 @@ class FlatBundleDef:
 
 @dataclass
 class FlatBundleInst:
-    """ Flattened Bundle Instance """
+    """Flattened Bundle Instance"""
 
     # Source/ Original Bundle
     src: BundleInstance
@@ -98,7 +98,7 @@ class FlatBundleInst:
 
 
 class BundleFlattener(Elaborator):
-    """ Bundle-Flattening Elaborator Pass """
+    """Bundle-Flattening Elaborator Pass"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -116,28 +116,34 @@ class BundleFlattener(Elaborator):
         self.module_attrs: Dict[Tuple[int, str], FlatBundleInst] = dict()
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Flatten Module `module`s Bundles, replacing them with newly-created Signals.
-        Reconnect the flattened Signals to any Instances connected to said Bundles. """
+        """Flatten Module `module`s Bundles, replacing them with newly-created Signals.
+        Reconnect the flattened Signals to any Instances connected to said Bundles."""
 
         # Remove and replace each `BundleInstance` from the Module
         while module.bundles:
             name, bundle_inst = module.bundles.popitem()
             module.namespace.pop(name)
             self.replace_bundle_inst(module, bundle_inst)
-        
+
         # Go through each Instance, replacing `AnonymousBundle`s with their referents
-        # Note `Module`s do not store `AnonymousBundle`s directly, so we don't have a quicker way 
-        # to find them all than traversing the connections to each instance and array. 
+        # Note `Module`s do not store `AnonymousBundle`s directly, so we don't have a quicker way
+        # to find them all than traversing the connections to each instance and array.
         for inst in instances_and_arrays(module):
-            anon_conns = {portname: conn for portname, conn in inst.conns.items() if isinstance(conn, AnonymousBundle)}
+            anon_conns = {
+                portname: conn
+                for portname, conn in inst.conns.items()
+                if isinstance(conn, AnonymousBundle)
+            }
             for portname, anon_bundle in anon_conns.items():
-                self.replace_anon_bundle_conn(inst=inst, portname=portname, anon=anon_bundle)
+                self.replace_anon_bundle_conn(
+                    inst=inst, portname=portname, anon=anon_bundle
+                )
 
         return module
-    
+
     def replace_bundle_inst(self, module: Module, bundle_inst: BundleInstance):
-        """ Replace a `BundleInstance`, flattening its Signals into `module`'s namespace, 
-        and replacing all of its Instance connections with their flattened replacements. """
+        """Replace a `BundleInstance`, flattening its Signals into `module`'s namespace,
+        and replacing all of its Instance connections with their flattened replacements."""
 
         # Check we haven't (somehow) already flattened it
         if id(bundle_inst) in self.bundle_insts:
@@ -179,7 +185,9 @@ class BundleFlattener(Elaborator):
 
         # Replace connections to any connected instances
         for portref in list(bundle_inst.connected_ports):
-            self.replace_bundle_conn(inst=portref.inst, portname=portref.portname, flat=flat)
+            self.replace_bundle_conn(
+                inst=portref.inst, portname=portref.portname, flat=flat
+            )
 
         # Re-connect any BundleRefs that `bundle` has given out, as in the form:
         # i = SomeBundle()       # Theoretical Bundle with signal-attribute `s`
@@ -193,8 +201,10 @@ class BundleFlattener(Elaborator):
             for portref in list(bref.connected_ports):
                 portref.inst.replace(portref.portname, flatsig)
 
-    def replace_anon_bundle_conn(self, inst: Instance, portname: str, anon: AnonymousBundle):
-        """ Replace an `AnonymousBundle` connection with its (already) flattened referents. """
+    def replace_anon_bundle_conn(
+        self, inst: Instance, portname: str, anon: AnonymousBundle
+    ):
+        """Replace an `AnonymousBundle` connection with its (already) flattened referents."""
 
         flat_bundle_port = self.module_attrs.get((id(inst._resolved), portname), None)
         if flat_bundle_port is None:
@@ -210,7 +220,7 @@ class BundleFlattener(Elaborator):
                 msg = f"Connection {pathstr.val} missing from AnonymousBundle connected to Port {portname} on Instance {inst}"
                 self.fail(msg)
 
-            if isinstance(attr, BundleRef): # Resolve any references
+            if isinstance(attr, BundleRef):  # Resolve any references
                 attr = self.resolve_bundleref(attr)
             elif isinstance(attr, Signal):
                 ...  # Nothing to do, carry along with the Module-owned `Signal` attribute
@@ -218,13 +228,12 @@ class BundleFlattener(Elaborator):
                 raise TypeError(f"Invalid AnonymousBundle attribute {attr}")
 
             inst.connect(flat_port.name, attr)
-        
-        # And now we can remove the `AnonymousBundle` connection 
+
+        # And now we can remove the `AnonymousBundle` connection
         inst.disconnect(portname)
 
-
     def replace_bundle_conn(self, inst: Instance, portname: str, flat: FlatBundleInst):
-        """ Replace a connection to a `BundleInstance` with a connections to the Signals of a `FlatBundleInst` """
+        """Replace a connection to a `BundleInstance` with a connections to the Signals of a `FlatBundleInst`"""
 
         flat_bundle_port = self.module_attrs.get((id(inst._resolved), portname), None)
         if flat_bundle_port is None:
@@ -241,9 +250,9 @@ class BundleFlattener(Elaborator):
             inst.connect(flat_port.name, flat.signals[pathstr])
 
     def flatten_bundle_def(self, bundle: Bundle) -> FlatBundleDef:
-        """ Flatten a `Bundle` (definition). 
-        Note Signals *are not* copied upon `FlatBundleDef` creation, 
-        but must be while unrolling to each `FlatBundleInst`. """
+        """Flatten a `Bundle` (definition).
+        Note Signals *are not* copied upon `FlatBundleDef` creation,
+        but must be while unrolling to each `FlatBundleInst`."""
 
         if id(bundle) in self.bundle_defs:
             return self.bundle_defs[id(bundle)]  # Already done!
@@ -272,8 +281,8 @@ class BundleFlattener(Elaborator):
         return flat
 
     def flatten_bundle_inst(self, bundle: BundleInstance) -> FlatBundleInst:
-        """ Convert nested Bundle `bundle` into a flattened `FlatBundleInst` of scalar Signals. 
-        Signals are copied in the creation of each `BundleInstance`, so no further copying is required at the Module-level. """
+        """Convert nested Bundle `bundle` into a flattened `FlatBundleInst` of scalar Signals.
+        Signals are copied in the creation of each `BundleInstance`, so no further copying is required at the Module-level."""
 
         # Get the (flattened) Bundle-definition
         flatdef = self.flatten_bundle_def(bundle.of)
@@ -289,9 +298,9 @@ class BundleFlattener(Elaborator):
         return FlatBundleInst(src=bundle, signals=signals)
 
     def flatten_anonymous_bundle(self, anon: AnonymousBundle) -> FlatBundleInst:
-        """ Flatten an `AnonymousBundle`. 
-        Differs from bundle-class instances in that each attribute of anonymous-bundles 
-        are generally "references", owned by something else, commonly a Module. """
+        """Flatten an `AnonymousBundle`.
+        Differs from bundle-class instances in that each attribute of anonymous-bundles
+        are generally "references", owned by something else, commonly a Module."""
 
         raise NotImplementedError
 
@@ -316,18 +325,17 @@ class BundleFlattener(Elaborator):
         self.anon_bundles[id(anon)] = flat
         return flat
 
-
     def resolve_bundleref(self, bref: BundleRef) -> Union[Signal, FlatBundleInst]:
-        """ Resolve a bundle-reference to a Signal or Flattened Bundle thereof. 
-        NOTE: currently only the scalar Signal resolution case is supported; nested Bundles are TBC. """
+        """Resolve a bundle-reference to a Signal or Flattened Bundle thereof.
+        NOTE: currently only the scalar Signal resolution case is supported; nested Bundles are TBC."""
 
         if isinstance(bref.parent, BundleInstance):
-            # Get the flattened version of the parent 
+            # Get the flattened version of the parent
             flat_parent = self.bundle_insts.get(id(bref.parent), None)
             if flat_parent is None:
                 msg = f"Invalid BundleRef to {bref.parent}"
                 self.fail(msg)
-            
+
             # And look up the Signal in the flattened version
             flatsig = flat_parent.signals.get(PathStr(bref.attrname), None)
             if flatsig is None:
@@ -336,15 +344,16 @@ class BundleFlattener(Elaborator):
             if not isinstance(flatsig, Signal):
                 msg = f"Unsupported: BundleRef to non-Signal {flatsig}"
                 raise TypeError(msg)
-            
+
             # Success! Return the Signal
             return flatsig
 
         if isinstance(bref.parent, BundleRef):
-            raise NotImplementedError # Nested bundle refs, TBC
+            raise NotImplementedError  # Nested bundle refs, TBC
 
         raise TypeError(f"BundleRef parent for {bref}")
 
+
 def instances_and_arrays(module: Module) -> List[Instance]:
-    """ Get a list of `module`'s instances and instance arrays. """
+    """Get a list of `module`'s instances and instance arrays."""
     return list(module.instances.values()) + list(module.instarrays.values())

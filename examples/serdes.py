@@ -10,12 +10,19 @@ import sitepdks as _
 
 Inv = h.ExternalModule(
     name="Inv",
-    port_list=[h.Input(name="i"), h.Output(name="z"),],
+    port_list=[
+        h.Input(name="i"),
+        h.Output(name="z"),
+    ],
     desc="Generic Inverter",
 )
 And2 = h.ExternalModule(
     name="And2",
-    port_list=[h.Input(name="a"), h.Input(name="b"), h.Output(name="z"),],
+    port_list=[
+        h.Input(name="a"),
+        h.Input(name="b"),
+        h.Output(name="z"),
+    ],
     desc="Generic 3-Input And Gate",
 )
 And3 = h.ExternalModule(
@@ -30,12 +37,20 @@ And3 = h.ExternalModule(
 )
 TriInv = h.ExternalModule(
     name="TriInv",
-    port_list=[h.Input(name="i"), h.Input(name="en"), h.Output(name="z"),],
+    port_list=[
+        h.Input(name="i"),
+        h.Input(name="en"),
+        h.Output(name="z"),
+    ],
     desc="Generic Tri-State Inverter",
 )
 Flop = h.ExternalModule(
     name="Flop",
-    port_list=[h.Input(name="d"), h.Input(name="clk"), h.Output(name="q"),],
+    port_list=[
+        h.Input(name="d"),
+        h.Input(name="clk"),
+        h.Output(name="q"),
+    ],
     desc="Generic Rising-Edge D Flip Flop",
 )
 FlopResetLow = h.ExternalModule(
@@ -60,14 +75,18 @@ FlopResetHigh = h.ExternalModule(
 )
 Latch = h.ExternalModule(
     name="Latch",
-    port_list=[h.Input(name="d"), h.Input(name="clk"), h.Output(name="q"),],
+    port_list=[
+        h.Input(name="d"),
+        h.Input(name="clk"),
+        h.Output(name="q"),
+    ],
     desc="Generic Active High Level-Sensitive Latch",
 )
 
 
 @h.bundle
 class Diff:
-    """ Differential Bundle """
+    """Differential Bundle"""
 
     class Roles(Enum):
         SOURCE = auto()
@@ -78,18 +97,18 @@ class Diff:
 
 @h.paramclass
 class Width:
-    """ Parameter class for Generators with a single integer-valued `width` parameter. """
+    """Parameter class for Generators with a single integer-valued `width` parameter."""
 
     width = h.Param(dtype=int, desc="Parametric Width", default=1)
 
 
 @h.module
 class OneHotEncoder2to4:
-    """ 
+    """
     # One-Hot Encoder
-    2b to 4b with enable. 
-    Also serves as the base-case for the recursive `OneHotEncoder` generator. 
-    All outputs are low if enable-input `en` is low. 
+    2b to 4b with enable.
+    Also serves as the base-case for the recursive `OneHotEncoder` generator.
+    All outputs are low if enable-input `en` is low.
     """
 
     # IO Interface
@@ -113,11 +132,11 @@ class OneHotEncoder2to4:
 
 @h.generator
 def OneHotEncoder(p: Width) -> h.Module:
-    """ 
-    # One-Hot Encoder Generator 
-    Recursively creates a `p.width`-bit one-hot encoder Module comprised of `OneHotEncoder2to4`s. 
-    Also generates `OneHotEncoder` Modules for `p.width-2`, `p.width-4`, et al, down to 
-    the base case two to four bit Module. 
+    """
+    # One-Hot Encoder Generator
+    Recursively creates a `p.width`-bit one-hot encoder Module comprised of `OneHotEncoder2to4`s.
+    Also generates `OneHotEncoder` Modules for `p.width-2`, `p.width-4`, et al, down to
+    the base case two to four bit Module.
     """
 
     if p.width < 2:
@@ -132,7 +151,7 @@ def OneHotEncoder(p: Width) -> h.Module:
     m = h.Module()
     m.en = h.Input(width=1, desc="Enable input. Active high.")
     m.bin = h.Input(width=p.width, desc="Binary valued input")
-    m.th = h.Output(width=2 ** p.width, desc="Thermometer encoded output")
+    m.th = h.Output(width=2**p.width, desc="Thermometer encoded output")
 
     # Thermo-encode the two MSBs, creating select signals for the LSBs
     m.lsb_sel = h.Signal(width=4)
@@ -148,7 +167,7 @@ def OneHotEncoder(p: Width) -> h.Module:
 
 @h.generator
 def OneHotMux(p: Width) -> h.Module:
-    """ # One-Hot Selected Mux """
+    """# One-Hot Selected Mux"""
 
     m = h.Module()
 
@@ -165,7 +184,7 @@ def OneHotMux(p: Width) -> h.Module:
 
 @h.generator
 def Counter(p: Width) -> h.Module:
-    """ # Binary Counter Generator """
+    """# Binary Counter Generator"""
 
     m = h.Module()
     m.clk = h.Input(desc="Primary input. Increments state on each rising edge.")
@@ -179,9 +198,9 @@ def Counter(p: Width) -> h.Module:
 
 @h.generator
 def OneHotRotator(p: Width) -> h.Module:
-    """ # One Hot Rotator 
-    A set of `p.width` flops with a one-hot state, 
-    which rotates by one bit on each clock cycle. """
+    """# One Hot Rotator
+    A set of `p.width` flops with a one-hot state,
+    which rotates by one bit on each clock cycle."""
 
     m = h.Module()
     # IO Interface: Clock, Reset, and a `width`-bit One-Hot output
@@ -207,8 +226,8 @@ def OneHotRotator(p: Width) -> h.Module:
 
 @h.generator
 def TxSerializer(_: h.HasNoParams) -> h.Module:
-    """ Transmit Serializer 
-    Includes parallel-clock generation divider """
+    """Transmit Serializer
+    Includes parallel-clock generation divider"""
 
     m = h.Module()
     m.pdata = h.Input(width=16, desc="Parallel Input Data")
@@ -231,8 +250,8 @@ def TxSerializer(_: h.HasNoParams) -> h.Module:
 
 @h.generator
 def RxDeSerializer(_: h.HasNoParams) -> h.Module:
-    """ RX De-Serializer 
-    Includes parallel-clock generation divider """
+    """RX De-Serializer
+    Includes parallel-clock generation divider"""
 
     m = h.Module()
     m.pdata = h.Output(width=16, desc="Parallel Output Data")
@@ -260,7 +279,7 @@ def RxDeSerializer(_: h.HasNoParams) -> h.Module:
 
 @h.generator
 def TxDriver(_: h.HasNoParams) -> h.Module:
-    """ Transmit Driver """
+    """Transmit Driver"""
 
     m = h.Module()
 
@@ -276,15 +295,15 @@ def TxDriver(_: h.HasNoParams) -> h.Module:
 
 @h.module
 class SerdesShared:
-    """ Serdes 'Shared' Module 
-    Central, re-used elements amortized across lanes """
+    """Serdes 'Shared' Module
+    Central, re-used elements amortized across lanes"""
 
     ...  # So far, empty
 
 
 @h.bundle
 class TxData:
-    """ Transmit Data Bundle """
+    """Transmit Data Bundle"""
 
     pdata = h.Input(width=10, desc="Parallel Data Input")
     pclk = h.Output(desc="Output Parallel-Domain Clock")
@@ -292,14 +311,14 @@ class TxData:
 
 @h.bundle
 class TxConfig:
-    """ Transmit Config Bundle """
+    """Transmit Config Bundle"""
 
     ...  # FIXME: contents!
 
 
 @h.bundle
 class TxIo:
-    """ Transmit Lane IO """
+    """Transmit Lane IO"""
 
     pads = Diff(desc="Differential Transmit Pads", role=Diff.Roles.SOURCE)
     data = TxData(desc="Data IO from Core")
@@ -308,7 +327,7 @@ class TxIo:
 
 @h.module
 class SerdesTxLane:
-    """ Transmit Lane """
+    """Transmit Lane"""
 
     # IO
     # io = TxIo(port=True) # FIXME: combined bundle
@@ -329,7 +348,7 @@ class SerdesTxLane:
 
 @h.module
 class SerdesRxLane:
-    """ Receive Lane """
+    """Receive Lane"""
 
     # IO
     # io = RxIo(port=True) # FIXME: combined bundle
@@ -355,14 +374,14 @@ class SerdesRxLane:
 
 @h.bundle
 class SerdesCoreIf:
-    """ # Serdes to Core Interface """
+    """# Serdes to Core Interface"""
 
     ...  #
 
 
 @h.module
 class SerdesLane:
-    """ TX + RX Lane """
+    """TX + RX Lane"""
 
     # IO Interface
     pads = Diff(desc="Differential Pads", port=True, role=None)
@@ -379,7 +398,7 @@ class SerdesParams:
 
 @h.generator
 def Serdes(p: SerdesParams) -> h.Module:
-    """ Serdes Generator """
+    """Serdes Generator"""
     s = h.Module()
     s.lanes = p.lanes * SerdesLane()
     s.shared = SerdesShared()
@@ -397,12 +416,24 @@ def rotator_tb() -> h.Module:
 
     tb.vsclk = h.primitives.Vpulse(
         Vpulse.Params(
-            delay=0, v1=0, v2=1800 * m, period=2, rise=1 * p, fall=1 * p, width=1,
+            delay=0,
+            v1=0,
+            v2=1800 * m,
+            period=2,
+            rise=1 * p,
+            fall=1 * p,
+            width=1,
         )
     )(p=tb.dut.sclk, n=tb.VSS)
     tb.vrstn = h.primitives.Vpulse(
         Vpulse.Params(
-            delay=0, v1=0, v2=1800 * m, period=2, rise=1 * p, fall=1 * p, width=1,
+            delay=0,
+            v1=0,
+            v2=1800 * m,
+            period=2,
+            rise=1 * p,
+            fall=1 * p,
+            width=1,
         )
     )(p=tb.dut.rstn, n=tb.VSS)
 
@@ -444,4 +475,3 @@ results = sim.run(
 )
 
 print(results)
-

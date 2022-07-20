@@ -35,29 +35,23 @@ def test_compile():
     hasmos = mosmodule()
 
     # Compile it for the PDK
-    pkg = h.to_proto(hasmos)
-    pdk_pkg = sky130.compile(pkg)
-
-    # Import it back into Modules & Namespaces
-    ns = h.from_proto(pdk_pkg)
-    rt = ns.sky130.test_sky130.hasmos
+    sky130.compile(hasmos)
 
     # And check what came back
-    assert isinstance(rt.n, h.Instance)
-    assert isinstance(rt.p, h.Instance)
-    assert isinstance(rt.n.of, h.ExternalModuleCall)
-    assert isinstance(rt.p.of, h.ExternalModuleCall)
-    assert isinstance(rt.n.of.params, dict)
-    assert isinstance(rt.p.of.params, dict)
+    assert isinstance(hasmos.n, h.Instance)
+    assert isinstance(hasmos.p, h.Instance)
+    assert isinstance(hasmos.n.of, h.ExternalModuleCall)
+    assert isinstance(hasmos.p.of, h.ExternalModuleCall)
+    assert isinstance(hasmos.n.of.params, sky130.Sky130MosParams)
+    assert isinstance(hasmos.p.of.params, sky130.Sky130MosParams)
 
 
 def test_netlist():
     hasmos = mosmodule()
 
     # Netlist it for the PDK
-    pkg = h.to_proto(hasmos)
-    pkg = sky130.compile(pkg)
-    h.netlist(pkg, StringIO(), "spectre")
+    sky130.compile(hasmos)
+    h.netlist(hasmos, StringIO(), fmt="spectre")
 
 
 def test_module1():

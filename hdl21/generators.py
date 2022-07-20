@@ -2,7 +2,7 @@
 # Hdl21 Built-In Generators Library 
 """
 
-import copy
+from copy import copy
 from dataclasses import asdict, replace
 from typing import Optional, Tuple, Union
 
@@ -17,7 +17,7 @@ from .instantiable import Instantiable
 
 @paramclass
 class MosParams:
-    """ Mos Series-Stack Generator Parameters """
+    """Mos Series-Stack Generator Parameters"""
 
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
@@ -27,7 +27,7 @@ class MosParams:
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
 
     def __post_init_post_parse__(self):
-        """ Value Checks """
+        """Value Checks"""
         if self.w <= 0:
             raise ValueError(f"MosParams with invalid width {self.w}")
         if self.l <= 0:
@@ -44,9 +44,9 @@ class MosParams:
 
 @generator
 def Mos(params: MosParams) -> Module:
-    """ Mos Series-Stack Generator 
-    Generates a `Module` including `nser` identical series instances of unit-Mos `primitives.Mos`.  
-    Unit-Mos gate and bulk ports are connected in parallel. """
+    """Mos Series-Stack Generator
+    Generates a `Module` including `nser` identical series instances of unit-Mos `primitives.Mos`.
+    Unit-Mos gate and bulk ports are connected in parallel."""
 
     # Extract the number of series fingers
     nser = params.nser
@@ -61,7 +61,7 @@ def Mos(params: MosParams) -> Module:
     m = Module()
     # Copy the unit-cell ports
     for p in primitives.Mos.port_list:
-        m.add(copy.copy(p))
+        m.add(copy(p))
 
     # Add instances, starting at the source-side
     inst = m.add(name="unit0", val=unit_xtor(s=m.s, g=m.g, b=m.b))
@@ -76,19 +76,19 @@ def Mos(params: MosParams) -> Module:
 
 @generator
 def Nmos(params: MosParams) -> Module:
-    """ Nmos Generator. A thin wrapper around `hdl21.generators.Mos` """
+    """Nmos Generator. A thin wrapper around `hdl21.generators.Mos`"""
     return Mos(replace(params, tp=MosType.NMOS))
 
 
 @generator
 def Pmos(params: MosParams) -> Module:
-    """ Pmos Constructor. A thin wrapper around `hdl21.generators.Mos` """
+    """Pmos Constructor. A thin wrapper around `hdl21.generators.Mos`"""
     return Mos(replace(params, tp=MosType.PMOS))
 
 
 @paramclass
 class SeriesParParams:
-    """ Series-Parallel Generator Parameters """
+    """Series-Parallel Generator Parameters"""
 
     # Required
     unit = Param(dtype=Instantiable, desc="Unit cell")
@@ -103,11 +103,14 @@ class SeriesParParams:
 
 @generator
 def SeriesPar(params: SeriesParParams) -> Module:
-    """ Series-Parallel Generator 
-    Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`. 
-    The generated `Module` includes the same ports as `unit`. 
-    The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`. 
-    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`. """
+    """
+    # Series-Parallel Generator
+
+    Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`.
+    The generated `Module` includes the same ports as `unit`.
+    The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`.
+    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`.
+    """
 
     unit = params.unit
 
@@ -115,7 +118,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
     m = Module()
     # Copy the unit-cell ports
     for p in unit.ports.values():
-        m.add(copy.copy(p))
+        m.add(copy(p))
 
     # Check for validity of the series-ports
     if isinstance(params.series_conns[0], str):
@@ -133,12 +136,11 @@ def SeriesPar(params: SeriesParParams) -> Module:
     if ser0 is None or ser1 is None:
         raise ValueError(f"SeriesPar: unit does not have ports {params.series_conns}")
 
-    # Extract all the parallel-connected ports
-    par_conns = {
-        port.name: port
-        for port in unit.ports.values()
-        if port.name not in params.series_conns
-    }
+    # Extract all the parallel-connected ports, and
+    par_ports = [
+        port for port in unit.ports.values() if port.name not in params.series_conns
+    ]
+    par_conns = {port.name: m.add(copy(port)) for port in par_ports}
 
     for ipar in range(params.npar):
         # Add instances, starting at the `series_conns[0]`-side
@@ -156,16 +158,16 @@ def SeriesPar(params: SeriesParParams) -> Module:
 
 
 def Wrapper(m: Module) -> Module:
-    """ 
+    """
     # Module Wrapper Creator
 
-    Adds a `Module` hierarchy layer around argument-`Module` `m`. 
-    Creates an `Instance` of `m` and clones its ports, connecting each. 
-    
-    Note: `Wrapper` is generally aways more helpful when the returned `Module` is modified after the fact. 
-    Hence while `Wrapper` is a *function that returns a `Module`*, it is *not* an `hdl21.Generator`, 
-    which cache and unique-name their results. 
-    Callers of `Wrapper` are therefore responsible for considerations such as unique naming. 
+    Adds a `Module` hierarchy layer around argument-`Module` `m`.
+    Creates an `Instance` of `m` and clones its ports, connecting each.
+
+    Note: `Wrapper` is generally aways more helpful when the returned `Module` is modified after the fact.
+    Hence while `Wrapper` is a *function that returns a `Module`*, it is *not* an `hdl21.Generator`,
+    which cache and unique-name their results.
+    Callers of `Wrapper` are therefore responsible for considerations such as unique naming.
     """
 
     # FIXME: find this function a home with a less-confusing name!
@@ -175,7 +177,7 @@ def Wrapper(m: Module) -> Module:
 
     # Copy the unit-cell ports
     for p in m.io.values():
-        wrapper.add(copy.copy(p))
+        wrapper.add(copy(p))
 
     # Create a connections-dict mirroring them
     conns = {port.name: port for port in wrapper.io.values()}

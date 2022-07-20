@@ -8,13 +8,14 @@ from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args, Dict, Set, List
 
 # Local Imports
+from .attrmagic import init
 from .connect import connectable, track_connected_ports
 from .signal import Signal
 
 
 def getattr_bundle_refs(cls: type) -> type:
-    """ Decorator to add the "__getattr__ generates BundleRefs" functionality to `cls`. 
-    Adds the `_bundle_ref` method and `__getattr__` access to it. """
+    """Decorator to add the "__getattr__ generates BundleRefs" functionality to `cls`.
+    Adds the `_bundle_ref` method and `__getattr__` access to it."""
 
     # First check and fail if any of the methods to be defined here are already defined elsewhere
     defined_here = ["_bundle_ref", "__getattr__"]
@@ -24,7 +25,7 @@ def getattr_bundle_refs(cls: type) -> type:
             raise RuntimeError(msg)
 
     def _bundle_ref(self, key: str) -> "BundleRef":
-        """ Return a reference to name `key`, creating it if necessary. """
+        """Return a reference to name `key`, creating it if necessary."""
 
         # Check in our existing references
         bundle_refs = self.__getattribute__("refs_to_me")
@@ -37,7 +38,7 @@ def getattr_bundle_refs(cls: type) -> type:
         return bundle_ref
 
     def __getattr__(self, key: str) -> Any:
-        """ BundleRef access by getattr """
+        """BundleRef access by getattr"""
         if key.startswith("_") or not self.__getattribute__("_initialized"):
             # Bootstrapping phase: do regular getattrs to get started
             return object.__getattribute__(self, key)
@@ -65,16 +66,17 @@ def getattr_bundle_refs(cls: type) -> type:
 
 
 def has_getattr_bundle_refs(obj: Any) -> bool:
-    """ Boolean indication of "getattr bundle refs" functionality """
+    """Boolean indication of "getattr bundle refs" functionality"""
     return getattr(obj, "__getattr_bundle_refs__", False)
 
 
-@getattr_bundle_refs
 @track_connected_ports
+@getattr_bundle_refs
 @connectable
+@init
 class BundleInstance:
-    """ # Instance of a `Bundle` 
-    Generally in a `Module` or another `Bundle` """
+    """# Instance of a `Bundle`
+    Generally in a `Module` or another `Bundle`"""
 
     _specialcases = [
         "name",
@@ -86,9 +88,6 @@ class BundleInstance:
         "desc",
         "refs_to_me",
         "connected_ports",
-        "_bundle_ref",
-        "_elaborated",
-        "_initialized",
     ]
 
     def __init__(
@@ -113,6 +112,7 @@ class BundleInstance:
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
         # Connected port references
         self.connected_ports: Set["BundleRef"] = set()
+        self._parent_module: Optional["Module"] = None
         self._elaborated = False
         self._initialized = True
 
@@ -129,15 +129,16 @@ BundleAttr = Union[Signal, BundleInstance]
 
 
 def is_bundle_attr(val: Any) -> bool:
-    """ Boolean indication of whether `val` is a valid `hdl21.Bundle` attribute. """
+    """Boolean indication of whether `val` is a valid `hdl21.Bundle` attribute."""
     return isinstance(val, get_args(BundleAttr))
 
 
+@init
 class Bundle:
-    """ 
+    """
     # hdl21 Bundle
-    
-    Bundles are structured hierarchical connection objects which include Signals and other Bundles. 
+
+    Bundles are structured hierarchical connection objects which include Signals and other Bundles.
     """
 
     def __init__(self, *, name=None):
@@ -150,7 +151,7 @@ class Bundle:
         self._initialized = True
 
     def __setattr__(self, key: str, val: object):
-        """ Set-attribute over-ride, organizing into type-based containers """
+        """Set-attribute over-ride, organizing into type-based containers"""
         from .signal import Signal
 
         if not getattr(self, "_initialized", False) or key.startswith("_"):
@@ -188,27 +189,27 @@ class Bundle:
         return object.__getattribute__(self, key)
 
     def __call__(self, **kwargs):
-        """ Calls to Bundles return Bundle Instances """
+        """Calls to Bundles return Bundle Instances"""
         return BundleInstance(of=self, **kwargs)
 
     def __init_subclass__(cls, *_args, **_kwargs):
-        """ Sub-Classing Disable-ization """
+        """Sub-Classing Disable-ization"""
         msg = f"Error attempting to create {cls.__name__}. Sub-Typing hdl21.Bundle is not supported."
         raise RuntimeError(msg)
 
     def add(self, val: BundleAttr, *, name: Optional[str] = None) -> BundleAttr:
-        raise NotImplementedError
+        raise NotImplementedError  # FIXME!
 
     def get(self, name: str) -> Optional[BundleAttr]:
-        """ Get module-attribute `name`. Returns `None` if not present. 
-        Note unlike Python built-ins such as `getattr`, `get` returns solely 
-        from the HDL namespace-worth of `BundleAttr`s. """
+        """Get module-attribute `name`. Returns `None` if not present.
+        Note unlike Python built-ins such as `getattr`, `get` returns solely
+        from the HDL namespace-worth of `BundleAttr`s."""
         ns = self.__getattribute__("namespace")
         return ns.get(name, None)
 
     @property
     def Roles(self):
-        """ Roles-Enumeration Accessor Property """
+        """Roles-Enumeration Accessor Property"""
         # Roles often look like a class, so they have a class-style name-accessor
         return self.roles
 
@@ -219,10 +220,10 @@ class Bundle:
 
 
 def bundle(cls: type) -> Bundle:
-    """ # Bundle Definition Decorator 
-    
-    Converts a class-body full of Bundle-storable attributes (Signals, other Bundles) to an `hdl21.Bundle`. 
-    Example Usage: 
+    """# Bundle Definition Decorator
+
+    Converts a class-body full of Bundle-storable attributes (Signals, other Bundles) to an `hdl21.Bundle`.
+    Example Usage:
 
     ```python
     import hdl21 as h
@@ -238,10 +239,10 @@ def bundle(cls: type) -> Bundle:
         aux = h.Signal()
     ```
 
-    Bundles may also define a `Roles` enumeration, inline within this class-body. 
-    `Roles` are optional pieces of enumerated endpoint-labels which aid in dictating `Signal` directions. 
-    Each `Signal` accepts optional source (`src`) and destination (`dst`) fields which (if set) must be one of these roles. 
-    
+    Bundles may also define a `Roles` enumeration, inline within this class-body.
+    `Roles` are optional pieces of enumerated endpoint-labels which aid in dictating `Signal` directions.
+    Each `Signal` accepts optional source (`src`) and destination (`dst`) fields which (if set) must be one of these roles.
+
     ```python
     import hdl21 as h
     from enum import Enum, auto
@@ -287,9 +288,9 @@ def bundle(cls: type) -> Bundle:
 @track_connected_ports
 @connectable
 class AnonymousBundle:
-    """ # Anonymous Connection Bundle 
-    Commonly used for "collecting" Signals into `h.Bundle`s, 
-    or for re-jiggering connections between `h.Bundle`s. """
+    """# Anonymous Connection Bundle
+    Commonly used for "collecting" Signals into `h.Bundle`s,
+    or for re-jiggering connections between `h.Bundle`s."""
 
     def __init__(self, **kwargs: Dict[str, "Connectable"]):
         # Create our internal structures
@@ -311,7 +312,7 @@ class AnonymousBundle:
             self.add(key, val)
 
     def add(self, name: str, val: BundleAttr) -> BundleAttr:
-        """ Add attribute `val`. """
+        """Add attribute `val`."""
 
         if isinstance(val, Signal):
             self.signals[name] = val
@@ -325,9 +326,9 @@ class AnonymousBundle:
         return val
 
     def get(self, name: str) -> Optional[Union[Signal, "BundleRef"]]:
-        """ Get attribute `name`. Returns `None` if not present. 
-        Note unlike Python built-ins such as `getattr`, `get` returns solely 
-        from the HDL namespace-worth of attributes. """
+        """Get attribute `name`. Returns `None` if not present.
+        Note unlike Python built-ins such as `getattr`, `get` returns solely
+        from the HDL namespace-worth of attributes."""
         if name in self.signals:
             return self.signals[name]
         if name in self.refs_to_others:
@@ -338,41 +339,37 @@ class AnonymousBundle:
 @track_connected_ports
 @connectable
 class BundleRef:
-    """ Reference into a Bundle Instance """
+    """Reference into a Bundle Instance"""
 
     _specialcases = [
         "parent",
         "path",
         "root",
         "connected_ports",
-        "_bundle_ref",
-        "_module",
-        "_resolved",
-        "_elaborated",
-        "_initialized",
     ]
 
     def __init__(
-        self, parent: Union["BundleInstance", "BundleRef"], attrname: str,
+        self,
+        parent: Union["BundleInstance", "BundleRef"],
+        attrname: str,
     ):
         self.parent = parent
         self.attrname = attrname
         # Connected port references
         self.connected_ports: Set["PortRef"] = set()
         self._elaborated = False
-        self._initialized = True
 
     def __eq__(self, other) -> bool:
-        """ Port-reference equality requires *identity* between parents 
-        (and of course equality of attribute-name). """
+        """Port-reference equality requires *identity* between parents
+        (and of course equality of attribute-name)."""
         return self.inst is other.inst and self.attrname == other.attrname
 
     def __hash__(self):
-        """ Hash references as the tuple of their instance-address and name """
+        """Hash references as the tuple of their instance-address and name"""
         return hash((id(self.inst), self.attrname))
 
     def path(self) -> List[str]:
-        """ Get the path to this potentially nested reference. """
+        """Get the path to this potentially nested reference."""
         if isinstance(self.parent, BundleRef):
             return self.parent.path() + [self.attrname]
         if isinstance(self.parent, BundleInstance):
@@ -380,7 +377,7 @@ class BundleRef:
         raise TypeError
 
     def root(self) -> "BundleInstance":
-        """ Get the root `BundleInstance` of this potentially nested reference. """
+        """Get the root `BundleInstance` of this potentially nested reference."""
         if isinstance(self.parent, BundleRef):
             return self.parent.root()
         if isinstance(self.parent, BundleInstance):

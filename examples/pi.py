@@ -9,8 +9,8 @@ import hdl21 as h
 
 @h.bundle
 class QuadClock:
-    """ # Quadrature Clock Bundle 
-    Includes four 90-degree-separated phases. """
+    """# Quadrature Clock Bundle
+    Includes four 90-degree-separated phases."""
 
     class Roles(Enum):
         # Clock roles: source or sink
@@ -23,22 +23,37 @@ class QuadClock:
 
 Inv = h.ExternalModule(
     name="Inv",
-    port_list=[h.Input(name="i"), h.Output(name="z"),],
+    port_list=[
+        h.Input(name="i"),
+        h.Output(name="z"),
+    ],
     desc="Generic Inverter",
 )
 TriInv = h.ExternalModule(
     name="TriInv",
-    port_list=[h.Input(name="i"), h.Input(name="en"), h.Output(name="z"),],
+    port_list=[
+        h.Input(name="i"),
+        h.Input(name="en"),
+        h.Output(name="z"),
+    ],
     desc="Generic Tri-State Inverter",
 )
 Flop = h.ExternalModule(
     name="Flop",
-    port_list=[h.Input(name="d"), h.Input(name="clk"), h.Output(name="q"),],
+    port_list=[
+        h.Input(name="d"),
+        h.Input(name="clk"),
+        h.Output(name="q"),
+    ],
     desc="Generic Rising-Edge D Flip Flop",
 )
 Latch = h.ExternalModule(
     name="Latch",
-    port_list=[h.Input(name="d"), h.Input(name="clk"), h.Output(name="q"),],
+    port_list=[
+        h.Input(name="d"),
+        h.Input(name="clk"),
+        h.Output(name="q"),
+    ],
     desc="Generic Active High Level-Sensitive Latch",
 )
 
@@ -50,7 +65,10 @@ class WeightInvParams:
 
 WeightInv = h.ExternalModule(
     name="WeightInv",
-    port_list=[h.Input(name="i"), h.Output(name="z"),],
+    port_list=[
+        h.Input(name="i"),
+        h.Output(name="z"),
+    ],
     desc="Weighting Inverter",
     paramtype=WeightInvParams,
 )
@@ -64,9 +82,9 @@ class PhaseWeighterParams:
 
 @h.generator
 def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
-    """ # Phase-Weighter
-    Drives a single output with two out-of-phase inputs `a` and `b`, 
-    with weights dictates by params `wta` and `wtb`. """
+    """# Phase-Weighter
+    Drives a single output with two out-of-phase inputs `a` and `b`,
+    with weights dictates by params `wta` and `wtb`."""
 
     @h.module
     class PhaseWeighter:
@@ -91,24 +109,24 @@ def PhaseWeighter(p: PhaseWeighterParams) -> h.Module:
 
 @h.paramclass
 class PiParams:
-    """ Phase Interpolator Parameters """
+    """Phase Interpolator Parameters"""
 
     nbits = h.Param(dtype=int, default=5, desc="Resolution, or width of select-input.")
 
 
 @h.generator
 def PhaseGenerator(p: PiParams) -> h.Module:
-    """ # Phase Generator (Generator) (Get it?) 
-    
-    Takes a primary input `QuadClock` and interpolates to produce 
-    an array of equally-spaced output phases. """
+    """# Phase Generator (Generator) (Get it?)
+
+    Takes a primary input `QuadClock` and interpolates to produce
+    an array of equally-spaced output phases."""
 
     PhaseGen = h.Module()
     ckq = PhaseGen.ckq = QuadClock(
         role=QuadClock.Roles.SINK, port=True, desc="Quadrature input"
     )
     phases = PhaseGen.phases = h.Output(
-        width=2 ** p.nbits, desc="Array of equally-spaced phases"
+        width=2**p.nbits, desc="Array of equally-spaced phases"
     )
 
     if p.nbits != 5:
@@ -150,7 +168,7 @@ def PhaseGenerator(p: PiParams) -> h.Module:
 
 @h.generator
 def OneHotEncode5to32(_: h.HasNoParams) -> h.Module:
-    """ 5 to 32b One-Hot Encoder """
+    """5 to 32b One-Hot Encoder"""
     m = h.Module()
     m.inp = h.Input(width=5, desc="Binary-Encoded Input")
     m.out = h.Output(width=32, desc="One-Hot-Encoded Output")
@@ -160,12 +178,12 @@ def OneHotEncode5to32(_: h.HasNoParams) -> h.Module:
 
 @h.generator
 def PhaseSelector(p: PiParams) -> h.Module:
-    """ # Phase Selector Mux """
+    """# Phase Selector Mux"""
 
     @h.module
     class PhaseSelector:
         # IO Interface
-        phases = h.Input(width=2 ** p.nbits, desc="Array of equally-spaced phases")
+        phases = h.Input(width=2**p.nbits, desc="Array of equally-spaced phases")
         sel = h.Input(width=p.nbits, desc="Selection input")
         out = h.Output(width=1, desc="Clock output")
 
@@ -178,7 +196,7 @@ def PhaseSelector(p: PiParams) -> h.Module:
 
 @h.generator
 def PhaseInterp(p: PiParams) -> h.Module:
-    """ Phase Interpolator Generator """
+    """Phase Interpolator Generator"""
 
     @h.module
     class PhaseInterp:
@@ -188,7 +206,7 @@ def PhaseInterp(p: PiParams) -> h.Module:
         out = h.Output(width=1, desc="Clock output")
 
         # Internal Signals
-        phases = h.Signal(width=2 ** p.nbits, desc="Array of equally-spaced phases")
+        phases = h.Signal(width=2**p.nbits, desc="Array of equally-spaced phases")
 
         # Instantiate the phase-generator and phase-selector
         phgen = PhaseGenerator(p)(ckq=ckq, phases=phases)
@@ -201,4 +219,3 @@ def PhaseInterp(p: PiParams) -> h.Module:
 import sys
 
 h.netlist(h.to_proto(PhaseInterp()), dest=sys.stdout)
-
