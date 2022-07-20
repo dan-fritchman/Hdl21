@@ -47,20 +47,9 @@ class GeneratorElaborator(Elaborator):
         """Elaborate Generator-function-call `call`. Returns the generated Module."""
         self.stack.append(call)
 
-        # Support the "no paramclass constructor" invocation.
-        # Create an instance of the generator's parameter-class if keyword args were provided instead.
-        # If both were provided, fail.
-        if call.kwargs and call.arg is not GenDefault:
-            msg = f"Invalid Generator Call {call}: either provide a single {call.gen.Params} instance or keyword arguments, not both."
-            self.fail(msg)
-        elif call.arg is GenDefault:
-            # Create an instance of the generator's parameter-class, and wipe out the keyword-args dict.
-            call.arg = call.gen.Params(**call.kwargs)
-            call.kwargs = dict()
-
-        # After all that, check that the call has a valid instance of the generator's parameter-class
-        if not isinstance(call.arg, call.gen.Params):
-            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.arg}"
+        # Check that the call has a valid instance of the generator's parameter-class
+        if not isinstance(call.params, call.gen.Params):
+            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.params}"
             self.fail(msg)
 
         # At this point the `Call` has a valid `Generator` and `arg`.
@@ -74,9 +63,9 @@ class GeneratorElaborator(Elaborator):
 
         # The main event: Run the generator-function
         if call.gen.usecontext:
-            m = call.gen.func(call.arg, self.ctx)
+            m = call.gen.func(call.params, self.ctx)
         else:
-            m = call.gen.func(call.arg)
+            m = call.gen.func(call.params)
 
         # Type-check the result
         # Generators may return other (potentially nested) generator-calls; unwind any of them
@@ -98,8 +87,8 @@ class GeneratorElaborator(Elaborator):
             m.name = call.gen.func.__name__
 
         # Then add a unique suffix per its parameter-values
-        if not isinstance(call.arg, HasNoParams):
-            m.name += "(" + _unique_name(call.arg) + ")"
+        if not isinstance(call.params, HasNoParams):
+            m.name += "(" + _unique_name(call.params) + ")"
 
         # Update the Module's `pymodule`, which generally at this point is `hdl21.generator`
         m._pymodule = call.gen.pymodule

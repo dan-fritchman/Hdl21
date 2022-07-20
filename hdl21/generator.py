@@ -11,15 +11,10 @@ from pydantic.dataclasses import dataclass
 from pydantic import ValidationError
 
 # Local imports
+from .default import Default
+from .params import param_call
 from .module import Module
 from .instance import calls_instantiate
-
-
-@dataclass
-class Default:
-    """Default value for generator arguments"""
-
-    ...  # Empty contents
 
 
 @dataclass
@@ -35,10 +30,11 @@ class Generator:
     usecontext: bool  # Boolean indication of `Context` usage
     pymodule: ModuleType  # Python module where function defined
 
-    def __call__(self, arg: Any = Default, **kwargs) -> "GeneratorCall":
+    def __call__(self, arg: Any = Default, **kwargs: Dict) -> "GeneratorCall":
         """Calls to Generators create GeneratorCall-objects
         to be expanded during elaboration."""
-        return GeneratorCall(gen=self, arg=arg, kwargs=kwargs)
+        params = param_call(callee=self, arg=arg, **kwargs)
+        return GeneratorCall(gen=self, params=params)
 
     @property
     def name(self) -> str:
@@ -64,22 +60,21 @@ class GeneratorCall:
     Any application of a `Context` is done during elaboration."""
 
     gen: Generator
-    arg: Any
-    kwargs: Dict[str, Any]
+    params: Any
     result: Optional[Module] = field(init=False, default=None)
 
     def __eq__(self, other) -> bool:
         """Generator-Call equality requires:
         * *Identity* between generators, and
         * *Equality* between parameter-values."""
-        return self.gen is other.gen and self.arg == other.arg
+        return self.gen is other.gen and self.params == other.params
 
     def __hash__(self):
         """Generator-Call hashing, consistent with `__eq__` above, uses:
         * *Identity* of its generator, and
         * *Value* of its parameters.
         The two are joined for hashing as a two-element tuple."""
-        return hash((id(self.gen), pickle.dumps(self.arg)))
+        return hash((id(self.gen), pickle.dumps(self.params)))
 
     def __repr__(self) -> str:
         return f"GeneratorCall(gen={self.gen.name})"

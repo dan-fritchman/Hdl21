@@ -136,7 +136,7 @@ def test_generator3():
     assert isinstance(HasGen.a, h.Instance)
     assert isinstance(HasGen.a.of, h.GeneratorCall)
     assert HasGen.a.of.gen is g3a
-    assert HasGen.a.of.arg == P3()
+    assert HasGen.a.of.params == P3()
     assert isinstance(HasGen.a.of.result, h.Module)
     assert HasGen.a.of.result.name == "g3a(width=1)"
     assert isinstance(HasGen.b, h.Instance)
@@ -144,7 +144,7 @@ def test_generator3():
     assert isinstance(HasGen.b.of.result, h.Module)
     assert HasGen.b.of.result.name == "g3b(width=5)"
     assert HasGen.b.of.gen is g3b
-    assert HasGen.b.of.arg == P3(width=5)
+    assert HasGen.b.of.params == P3(width=5)
     assert isinstance(HasGen.c, h.Instance)
     assert isinstance(HasGen.c.of, h.Module)
     assert HasGen.c.of is M
@@ -747,7 +747,7 @@ def test_mos_generator():
     m = Mos(Mos.Params(nser=2))
 
     assert isinstance(m, h.GeneratorCall)
-    assert isinstance(m.arg, Mos.Params)
+    assert isinstance(m.params, Mos.Params)
 
     m = h.elaborate(m)
 
@@ -778,7 +778,7 @@ def test_series_parallel_generator():
     m = SeriesPar(params)
 
     assert isinstance(m, h.GeneratorCall)
-    assert isinstance(m.arg, SeriesPar.Params)
+    assert isinstance(m.params, SeriesPar.Params)
 
     m = h.elaborate(m)
 
@@ -1286,7 +1286,7 @@ def test_generator_call_by_kwargs():
         c = h.Param(dtype=str, desc="c")
 
     @h.generator
-    def M(p: P) -> h.Module:
+    def M(_: P) -> h.Module:
         return h.Module()
 
     # Call without constructing a `P`
@@ -1297,10 +1297,8 @@ def test_generator_call_by_kwargs():
     assert isinstance(m, h.Module)
 
     # Check that type-checking continue
-    m = M(a=TabError, b=TabError, c=TabError)
-    assert isinstance(m, h.GeneratorCall)
     with pytest.raises(ValidationError):
-        m = h.elaborate(m)
+        m = M(a=TabError, b=TabError, c=TabError)
 
 
 def test_instance_array_portrefs():
@@ -1615,3 +1613,66 @@ def test_deep_hierarchy():
     M1.i.not_a_real_port = M1.p
     with pytest.raises(RuntimeError):
         h.elaborate(m)
+
+
+def test_generator_eq():
+    """Test equality and hashing of Generator calls using `Default`."""
+
+    @h.paramclass
+    class Params:
+        p = h.Param(dtype=int, desc="p", default=111)
+
+    @h.generator
+    def Gen(_: Params) -> h.Module:
+        return h.Module()
+
+    assert Gen() == Gen()
+    assert Gen() == Gen(Params(p=111))
+    assert Gen() == Gen(p=111)
+    assert Gen().params == Params()
+    assert Gen().params == Params(p=111)
+
+    assert hash(Gen()) == hash(Gen(Params(p=111)))
+    assert hash(Gen()) == hash(Gen(p=111))
+
+
+def test_param_calls():
+    """ " Test creation of `Primitive`s and `ExternalModule` calls with inline construction of their parameters."""
+
+    Ext = h.ExternalModule(name="Ext", port_list=[], paramtype=dict)
+    call = Ext(a=1, b="c", d=TabError)
+    assert isinstance(call, h.ExternalModuleCall)
+    assert call.params == dict(a=1, b="c", d=TabError)
+
+    with pytest.raises(TypeError):
+        Ext("not_a_dict_as_positional_arg")
+    with pytest.raises(RuntimeError):
+        Ext(dict(), b="d")
+
+    @h.paramclass
+    class P:
+        reqd = h.Param(dtype=float, desc="reqd")
+        a = h.Param(dtype=int, desc="a", default=111)
+        b = h.Param(dtype=str, desc="b", default="c")
+
+    Ext = h.ExternalModule(name="Ext", port_list=[], paramtype=P)
+    call = Ext(reqd=3.14159, a=1, b="q")
+    assert isinstance(call, h.ExternalModuleCall)
+    assert call.params == P(reqd=3.14159, a=1, b="q")
+
+    with pytest.raises(TypeError):
+        Ext("not_a_P_as_positional_arg")
+    with pytest.raises(RuntimeError):
+        Ext(P(reqd=3.14159), a=12)
+
+    from hdl21.primitives import R, ResistorParams
+
+    call = R(r=11)
+    assert isinstance(call, h.PrimitiveCall)
+    assert call == R(R.Params(r=11))
+    assert call == R(ResistorParams(r=11))
+
+    with pytest.raises(TypeError):
+        R("not_a_ResistorParams_as_positional_arg")
+    with pytest.raises(RuntimeError):
+        R(R.Params(r=11), z=12)

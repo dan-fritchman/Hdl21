@@ -40,11 +40,12 @@ for these physically-specified cells is commonly suggestive or optional.
 import copy
 from dataclasses import replace
 from enum import Enum
-from typing import Optional, Any, List, Type, Union
+from typing import Optional, Any, List, Type, Union, Dict
 from pydantic.dataclasses import dataclass
 
 # Local imports
-from .params import paramclass, Param, isparamclass, NoParams
+from .default import Default
+from .params import paramclass, Param, isparamclass, NoParams, param_call
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
 from .prefix import Prefixed
@@ -88,7 +89,8 @@ class Primitive:
                 msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
                 raise ValueError(msg)
 
-    def __call__(self, params: Any = NoParams) -> "PrimitiveCall":
+    def __call__(self, arg: Any = Default, **kwargs) -> "PrimitiveCall":
+        params = param_call(callee=self, arg=arg, **kwargs)
         return PrimitiveCall(prim=self, params=params)
 
     @property
@@ -96,7 +98,7 @@ class Primitive:
         return self.paramtype
 
     @property
-    def ports(self) -> dict:
+    def ports(self) -> Dict[str, Signal]:
         return {p.name: p for p in self.port_list}
 
 
