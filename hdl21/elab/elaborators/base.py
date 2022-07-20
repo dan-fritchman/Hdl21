@@ -4,12 +4,9 @@
 
 
 # Std-Lib Imports
-from enum import Enum
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Union
-
-# PyPi Imports
-from pydantic.dataclasses import dataclass
 
 # Local imports
 from ...module import Module, ExternalModuleCall
@@ -190,17 +187,21 @@ class Elaborator:
 
         lines = []
         for s in self.stack:
-            # Format:  Module          MyModule
+            # Format: `  Module          MyModule      `
             line = "  " + type(s).__name__.ljust(14) + str(s.name).ljust(28)
 
             source_info = getattr(s, "_source_info", None)
-            if (
-                source_info is not None
-            ):  # The entry has source/line info. Add it to the error line.
+            if source_info is not None:
+                # The entry has source/line info. Add it to the error line.
 
+                # For source-paths in the run-directory, print the (presumably shorter) relative-path only
                 filepath = source_info.filepath
-                # For paths in the run-directory, print the (presumably shorter) relative-path only
-                if filepath.is_relative_to(Path.cwd()):
+
+                # Path.is_relative_to() was added in Python 3.9. And writing a replacement seems harder than you'd think.
+                # Use it for Python versions where it works, and skip it for 3.8.
+                if (
+                    sys.version_info.major > 3 or sys.version_info.minor > 8
+                ) and filepath.is_relative_to(Path.cwd()):
                     filepath = filepath.relative_to(Path.cwd())
                 else:  # Otherwise print the full absolute path
                     filepath = filepath.resolve()
