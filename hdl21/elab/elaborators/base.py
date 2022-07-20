@@ -4,15 +4,16 @@
 
 
 # Std-Lib Imports
-from typing import Dict, List, Optional
 from enum import Enum
+from pathlib import Path 
+from typing import Dict, List, Optional, Union 
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
 
 # Local imports
 from ...module import Module, ExternalModuleCall
-from ...instance import InstArray, Instance
+from ...instance import InstArray, Instance, InstanceBundle
 from ...primitives import PrimitiveCall
 from ...bundle import BundleInstance
 from ...generator import GeneratorCall
@@ -22,27 +23,8 @@ from ..elaboratable import Elaboratable
 from ..context import Context
 
 
-class ElabStackEnum(Enum):
-    """ Enumerated Types of Entries in the Elaboration Stack """
-
-    GENERATOR = "Generator"
-    MODULE = "Module"
-    BUNDLE = "Bundle"
-    INSTANCE = "Instance"
-    ARRAY = "Array"
-
-
-@dataclass
-class ElabStackEntry:
-    """ Entry in the Elaboration Stack """
-
-    enum: ElabStackEnum
-    name: str
-
-    def __repr__(self):
-        """ Formatting: `Module ModuleName`, with second column aligned to print in a stack. """
-        return f"{self.enum.value.ljust(14)} {self.name}"
-
+# Union of entry-types in the elaboration stack 
+ElabStackEntry = Union[GeneratorCall, Module, Instance, InstArray, InstanceBundle]
 
 class Elaborator:
     """ 
@@ -107,7 +89,7 @@ class Elaborator:
             msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
             self.fail(msg)
 
-        self.stack_push(ElabStackEnum.MODULE, module.name)
+        self.stack.append(module)
 
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
@@ -122,7 +104,7 @@ class Elaborator:
 
         # Store a reference to the now-elaborated Module in our cache, and return it
         self.modules[id(module)] = result
-        self.stack_pop()
+        self.stack.pop()
         return result
 
     def elaborate_module(self, module: Module) -> Module:
@@ -145,12 +127,12 @@ class Elaborator:
 
     def elaborate_instance_array(self, array: InstArray) -> Instantiable:
         """ Elaborate an InstArray """
-        self.stack_push(ElabStackEnum.ARRAY, array.name)
+        self.stack.append(array)
         # Turn off `PortRef` magic
         array._elaborated = True
         # And visit the Instance's target
         rv = self.elaborate_instantiable(array._resolved)
-        self.stack_pop()
+        self.stack.pop()
         return rv
 
     def elaborate_instance(self, inst: Instance) -> Instantiable:
@@ -158,12 +140,12 @@ class Elaborator:
         # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
         # The Generator-elaborator is different, and overrides it.
 
-        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
+        self.stack.append(inst)
         # Turn off `PortRef` magic
         inst._elaborated = True
         # And visit the Instance's target
         rv = self.elaborate_instantiable(inst._resolved)
-        self.stack_pop()
+        self.stack.pop()
         return rv
 
     def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
@@ -202,18 +184,32 @@ class Elaborator:
             name += "_"  # Collision; append underscore
         return name
 
-    def stack_push(self, enum: ElabStackEnum, name: str):
-        """ Stack helper, pushing the combination of `enum` and `name` """
-        self.stack.append(ElabStackEntry(enum, name))
-
-    def stack_pop(self) -> ElabStackEntry:
-        """ Stack helper, popping the top entry """
-        return self.stack.pop()
-
     def fail(self, msg: str):
         """ Error helper, adding stack and state info to an error """
+        
+        lines = []
+        for s in self.stack:
+            # Format:  Module          MyModule
+            line = "  " + type(s).__name__.ljust(14) + str(s.name).ljust(28)
+            
+            source_info = getattr(s, "_source_info", None)
+            if source_info is not None:  # The entry has source/line info. Add it to the error line.  
+                
+                filepath = source_info.filepath
+                # For paths in the run-directory, print the (presumably shorter) relative-path only
+                if filepath.is_relative_to(Path.cwd()):
+                    filepath = filepath.relative_to(Path.cwd())
+                else:  # Otherwise print the full absolute path
+                    filepath = filepath.resolve()
+                
+                # Format: /path/to/file.py:123
+                # Serves as a clickable link in popular IDEs. 
+                line += f"{str(filepath)}:{source_info.linenum}"
+
+            line += "\n"
+            lines.append(line)
+
+        msg = "Elaboration Error at hierarchical path: \n" + "".join(lines) + msg
         # This also serves as a very helpful place for a debugger breakpoint.
-        state = ["\t" + str(s) + " \n" for s in self.stack]
-        state = "Elaboration Error at hierarchical path: \n" + "".join(state)
-        raise RuntimeError(state + msg)
+        raise RuntimeError(msg)
 

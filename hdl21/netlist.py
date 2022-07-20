@@ -2,7 +2,7 @@
 # Hdl21 Netlisting 
 """
 
-from typing import IO, Union
+from typing import IO, Union, Optional
 
 # Import the core netlisting from `vlsirtools`
 import vlsir
@@ -15,7 +15,9 @@ from .proto.to_proto import to_proto
 def netlist(
     src: Union[Elaboratables, vlsir.circuit.Package],
     dest: IO,
-    *args, **kwargs
+    *, 
+    domain: Optional[str] = None,
+    **kwargs
 ) -> None:
     """ 
     # Hdl21 Netlisting
@@ -39,9 +41,9 @@ def netlist(
 
     # Convert to the Vlsir `Package` if necessary
     if not isinstance(src, vlsir.circuit.Package):
-        pkg = to_proto(top=src, domain=None)
+        pkg = to_proto(top=src, domain=domain)
     else:
         pkg = src
 
     # And invoke the VLSIR netlister
-    return vlisr_netlist(pkg, dest, *args, **kwargs)
+    return vlisr_netlist(pkg=pkg, dest=dest, **kwargs)

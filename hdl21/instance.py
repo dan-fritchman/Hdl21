@@ -9,6 +9,7 @@ from typing import Optional, Any, Dict
 from textwrap import dedent
 
 # Local imports
+from .source_info import source_info, SourceInfo
 from .attrmagic import init
 from .connect import (
     call_and_setattr_connects,
@@ -36,6 +37,7 @@ class _Instance:
         self.portrefs: Dict[str, "PortRef"] = dict()
         self._parent_module = None  # Instantiating module
         self._elaborated = False
+        self._source_info: Optional[SourceInfo] = source_info([__file__])
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"

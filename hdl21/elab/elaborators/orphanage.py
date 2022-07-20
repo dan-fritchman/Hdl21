@@ -7,7 +7,7 @@ from ...module import Module, ModuleAttr
 from ...instance import _Instance
 
 # Import the base class
-from .base import Elaborator, ElabStackEnum
+from .base import Elaborator
 
 
 class Orphanage(Elaborator):
@@ -62,13 +62,13 @@ class Orphanage(Elaborator):
 
     def check_instance(self, module: Module, inst: _Instance) -> None:
         """ Check the connections of `inst` in parent `module` """
-        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
+        self.stack.append(inst)
 
         # Check each of the instance's connections
         for conn in inst.conns.values():
             self.check_connectable(module, conn)
 
-        self.stack_pop()
+        self.stack.pop()
 
     def check_connectable(self, module: Module, conn: "Connectable") -> None:
         """ Check a Connectable for orphanage. 

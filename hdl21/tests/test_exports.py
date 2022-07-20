@@ -27,7 +27,7 @@ def test_export_strides():
     p.s = h.Signal(width=20)
     p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
 
-    h.netlist(h.to_proto(p), sys.stdout, "verilog")
+    h.netlist(h.to_proto(p), sys.stdout, fmt="verilog")
 
 
 def test_prim_proto1():
@@ -314,7 +314,7 @@ def test_netlist_fmts():
 
     # Convert the proto-package to a netlist
     nl = StringIO()
-    h.netlist(ppkg, nl, "spectre")
+    h.netlist(ppkg, nl, fmt="spectre")
     nl = nl.getvalue()
 
     # Basic checks on its contents
@@ -328,7 +328,7 @@ def test_netlist_fmts():
 
     # Convert the proto-package to another netlist format
     nl = StringIO()
-    h.netlist(ppkg, nl, "verilog")
+    h.netlist(ppkg, nl, fmt="verilog")
     nl = nl.getvalue()
 
     # Basic checks on its contents
@@ -342,7 +342,7 @@ def test_netlist_fmts():
     assert "endmodule // Top" in nl
 
     nl = StringIO()
-    h.netlist(ppkg, nl, "spice")
+    h.netlist(ppkg, nl, fmt="spice")
     nl = nl.getvalue()
     assert ".SUBCKT Bot \n+ s_2 s_1 s_0 p" in nl
     assert ".SUBCKT Top \n+ p" in nl
@@ -360,7 +360,7 @@ def test_spice_netlister():
 
     ppkg = h.to_proto(DUT)
     nl = StringIO()
-    h.netlist(ppkg, nl, "spice")
+    h.netlist(ppkg, nl, fmt="spice")
     good = dedent(
         """\
         .SUBCKT DUT 

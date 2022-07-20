@@ -1585,3 +1585,30 @@ def test_noconn_types():
         i = Inner(s=h.NoConn(), b=h.NoConn(), d=h.NoConn())
     
     h.elaborate(Outer)
+
+
+def test_deep_hierarchy():
+    """ Test a deep hierarchy, without much content. """
+    
+    # Create the leaf level module. Empty with a single Port `p`. 
+    M0 = h.Module(name=f"M0")
+    M0.p = h.Port()
+    prev = M0
+    M1 = None
+
+    # Create lots of layers above it, each of which instantiates the previous.
+    for k in range(100):
+        m = h.Module(name=f"M{k}")
+        m.p = h.Port()
+        m.i = h.Instance(of=prev)(p=m.p)
+        if M1 is None:
+            M1 = m
+        prev = m 
+
+    # Elaborate the final, highest-level module.
+    h.elaborate(m)
+    
+    # Screw up a connection, and check we get a RuntimeError.
+    M1.i.not_a_real_port = M1.p 
+    with pytest.raises(RuntimeError):
+        h.elaborate(m)

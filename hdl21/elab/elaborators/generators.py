@@ -10,7 +10,7 @@ from ...params import HasNoParams, _unique_name
 from ...instantiable import Instantiable
 
 # Import the base class
-from .base import Elaborator, ElabStackEnum
+from .base import Elaborator
 
 
 class GeneratorElaborator(Elaborator):
@@ -45,7 +45,7 @@ class GeneratorElaborator(Elaborator):
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """ Elaborate Generator-function-call `call`. Returns the generated Module. """
-        self.stack_push(ElabStackEnum.GENERATOR, call.gen.name)
+        self.stack.append(call)
 
         # Support the "no paramclass constructor" invocation.
         # Create an instance of the generator's parameter-class if keyword args were provided instead.
@@ -106,7 +106,7 @@ class GeneratorElaborator(Elaborator):
 
         # And elaborate the module
         m = self.elaborate_module_base(m)  # Note the `_base` here!
-        self.stack_pop()
+        self.stack.pop()
         return m
 
     def elaborate_instance(self, inst: Instance) -> Instantiable:
@@ -114,12 +114,12 @@ class GeneratorElaborator(Elaborator):
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
 
-        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
+        self.stack.append(inst)
         # Turn off `PortRef` magic
         inst._elaborated = True
         # And visit the Instance's target
         rv = self.elaborate_instantiable(inst.of)
-        self.stack_pop()
+        self.stack.pop()
         return rv
 
     def elaborate_instance_array(self, arr: InstArray) -> Instantiable:
@@ -127,12 +127,12 @@ class GeneratorElaborator(Elaborator):
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
 
-        self.stack_push(ElabStackEnum.INSTANCE, arr.name)
+        self.stack.append(arr)
         # Turn off `PortRef` magic
         arr._elaborated = True
         # And visit the Instance's target
         rv = self.elaborate_instantiable(arr.of)
-        self.stack_pop()
+        self.stack.pop()
         return rv
 
     def elaborate_instantiable(self, of: Instantiable) -> Instantiable:

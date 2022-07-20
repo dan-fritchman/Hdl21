@@ -10,7 +10,7 @@ from ...bundle import BundleInstance
 from ...signal import Signal, Slice, Concat
 
 # Import the base class
-from .base import Elaborator, ElabStackEnum
+from .base import Elaborator
 
 
 class ArrayFlattener(Elaborator):
@@ -25,7 +25,7 @@ class ArrayFlattener(Elaborator):
         # Flatten Instance arrays
         while module.instarrays:
             name, array = module.instarrays.popitem()
-            self.stack_push(ElabStackEnum.ARRAY, name)
+            self.stack.append(array)
             module.namespace.pop(name)
             # Visit the array's target
             target = self.elaborate_instance_array(array)
@@ -80,6 +80,6 @@ class ArrayFlattener(Elaborator):
                 else:
                     msg = f"Invalid connection to {conn} in InstArray {array}"
                     self.fail(msg)
-            self.stack_pop()
+            self.stack.pop()
 
         return module

@@ -14,6 +14,7 @@ from pydantic.dataclasses import dataclass
 from dataclasses import field
 
 # Local imports
+from .source_info import source_info, SourceInfo
 from .attrmagic import init 
 from .params import NoParams, HasNoParams, isparamclass
 from .signal import Signal, Visibility
@@ -64,7 +65,9 @@ class Module:
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._pymodule = _caller_pymodule()  #  (Python) module where called
+        self._source_info = source_info([__file__])
+        self._pymodule = self._source_info.pymodule # FIXME: move to operating on `SourceInfo` instead
+
         self._importpath = None  # Optional field set by importers
         self._moduledata = None  # Optional[ModuleData]
         self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`

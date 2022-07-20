@@ -260,10 +260,10 @@ def main():
     proto = h.to_proto([rladder(rparams), mux_tree(mparams)], domain="rdac")
 
     # And netlist in a handful of formats
-    h.netlist(proto, sys.stdout, "verilog")
-    h.netlist(proto, sys.stdout, "spectre")
-    h.netlist(proto, sys.stdout, "spice")
-    h.netlist(proto, sys.stdout, "xyce")
+    h.netlist(proto, sys.stdout, fmt="verilog")
+    h.netlist(proto, sys.stdout, fmt="spectre")
+    h.netlist(proto, sys.stdout, fmt="spice")
+    h.netlist(proto, sys.stdout, fmt="xyce")
 
 
 if __name__ == "__main__":

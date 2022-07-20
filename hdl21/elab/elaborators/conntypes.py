@@ -19,7 +19,7 @@ from ...bundle import (
 )
 
 # Import the base class
-from .base import Elaborator, ElabStackEnum
+from .base import Elaborator
 
 
 class ConnTypes(Elaborator):
@@ -52,7 +52,7 @@ class ConnTypes(Elaborator):
 
     def check_instance(self, module: Module, inst: Union[Instance, InstArray]) -> None:
         """ Check the connections of `inst` in parent `module` """
-        self.stack_push(ElabStackEnum.INSTANCE, inst.name)
+        self.stack.append(inst)
 
         # Get copies of both the instance's ports and connections.
         # These will be two {str: Signal-like} dictionaries, who should have the same keys,
@@ -92,7 +92,7 @@ class ConnTypes(Elaborator):
             msg = f"Connection to invalid Port `{portname}` on Instance `{inst.name}` in Module `{module.name}`"
             self.fail(msg)
 
-        self.stack_pop()  # Checks out, we good, pop this Instance from our elab-stack.
+        self.stack.pop()  # Checks out, we good, pop this Instance from our elab-stack.
 
     def assert_bundles_compatible(
         self, bundle: Bundle, other: Union[BundleInstance, AnonymousBundle]
