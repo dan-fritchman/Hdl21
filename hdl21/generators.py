@@ -136,16 +136,11 @@ def SeriesPar(params: SeriesParParams) -> Module:
     if ser0 is None or ser1 is None:
         raise ValueError(f"SeriesPar: unit does not have ports {params.series_conns}")
 
-    # Extract all the parallel-connected ports, and 
-    par_ports = [ 
-        port 
-        for port in unit.ports.values() 
-        if port.name not in params.series_conns 
+    # Extract all the parallel-connected ports, and
+    par_ports = [
+        port for port in unit.ports.values() if port.name not in params.series_conns
     ]
-    par_conns = {
-        port.name: m.add(copy(port))
-        for port in par_ports
-    }
+    par_conns = {port.name: m.add(copy(port)) for port in par_ports}
 
     for ipar in range(params.npar):
         # Add instances, starting at the `series_conns[0]`-side

@@ -32,7 +32,7 @@ def HasClk(_: h.HasNoParams, ctx: Context) -> h.Module:
 
 # Std-Lib Imports
 from enum import Enum, auto
-from typing import Optional, List, Tuple 
+from typing import Optional, List, Tuple
 from dataclasses import dataclass, field
 
 # Local Imports
@@ -74,7 +74,7 @@ class Context:
     grounds: List[Signal] = field(default_factory=lambda _: [Signal(name="VSS")])
     clocks: List[Signal] = field(default_factory=lambda _: [Signal(name="clk")])
 
-    def mark(self, tp: ContextUseType, signal: Signal)-> None:
+    def mark(self, tp: ContextUseType, signal: Signal) -> None:
         """ Mark a usage of the Context """
         if self.session.current is None:
             msg = "Invalid `Context.use` outside of `Generator`!"
@@ -86,7 +86,7 @@ class Context:
     def pwrgnd(self) -> Tuple[Signal, Signal]:
         """ Get Power and Ground `Signal`s. 
         Raises an Exception if the Context is configured for more than one Power or Ground. 
-        Equivalent to back-to-back calls to `pwr()` and `gnd()`. """ 
+        Equivalent to back-to-back calls to `pwr()` and `gnd()`. """
         return self.pwr(), self.gnd()
 
     def pwr(self) -> Signal:
@@ -96,7 +96,7 @@ class Context:
             self.session.elaborator.fail(msg)
         self.mark(ContextUseType.PWR, self.supplies[0])
         return self.supplies[0]
-    
+
     def gnd(self) -> Signal:
         """ Get Ground `Signal` """
         if len(self.grounds) != 1:
@@ -105,7 +105,7 @@ class Context:
 
         self.mark(ContextUseType.GND, self.grounds[0])
         return self.grounds[0]
-    
+
     def clk(self) -> Signal:
         """ Get Clock `Signal` """
         if len(self.clks) != 1:
@@ -114,4 +114,3 @@ class Context:
 
         self.mark(ContextUseType.CLK, self.clocks[0])
         return self.grounds[0]
-    

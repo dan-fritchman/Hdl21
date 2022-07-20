@@ -346,7 +346,9 @@ class ExternalModule:
     def __post_init__(self):
         # Check for a valid parameter-type
         if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
-            msg = f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            msg = (
+                f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
+            )
             msg += "Param types must be either `@paramclass`es or `dict`."
             raise ValueError(msg)
         # Internal tracking data: defining module/import-path

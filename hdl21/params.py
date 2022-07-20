@@ -88,7 +88,7 @@ def paramclass(cls: type) -> type:
         else:
             msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
             raise RuntimeError(msg)
-            
+
     # Translate the Params into dataclass.field-compatible tuples
     fields = list()
     for name, par in params.items():
@@ -166,7 +166,7 @@ def _unique_name(params: Any) -> str:
         # Format: `pname1=pval1 pname2=pval2 pname3=pval3`
         keys = params.__params__.keys()
         name = " ".join(f"{k}={str(getattr(params, k))}" for k in keys)
-        
+
         # These names must also be limited in length, for sake of our favorite output formats.
         # If the generated name is too long, use the hashing method below instead
         if len(name) < 128:  # Probably(?) a reasonable length limit

@@ -6,7 +6,12 @@ from typing import IO, Union, Optional
 
 # Import the core netlisting from `vlsirtools`
 import vlsir
-from vlsirtools.netlist import netlist as vlisr_netlist, NetlistFormat, NetlistFormatSpec, NetlistOptions
+from vlsirtools.netlist import (
+    netlist as vlisr_netlist,
+    NetlistFormat,
+    NetlistFormatSpec,
+    NetlistOptions,
+)
 
 from .elab import Elaboratables
 from .proto.to_proto import to_proto

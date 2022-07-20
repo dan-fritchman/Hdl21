@@ -9,9 +9,10 @@ from pathlib import Path
 from dataclasses import field
 
 import vlsirtools.spice as vsp
+
 # Create a few aliases to the VLSIR sim-results types
 from vlsirtools.spice import SimResultUnion
-from vlsirtools.spice.sim_data import SimResult 
+from vlsirtools.spice.sim_data import SimResult
 from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
@@ -82,9 +83,9 @@ class Param:
     """ Simulation Parameter-Value """
 
     # Parameter Value
-    val: ParamVal  
+    val: ParamVal
     # Parameter Name. Generally required at simulation-time, but `Optional` for during construction stages.
-    name: Optional[str] = None  
+    name: Optional[str] = None
 
 
 @datatype
@@ -368,7 +369,9 @@ class Sim:
         return vsp.sim(inp=to_proto(self), opts=opts)
 
 
-def run(inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None) -> Union[vsp.SimResultUnion, Sequence[vsp.SimResultUnion]]:
+def run(
+    inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None
+) -> Union[vsp.SimResultUnion, Sequence[vsp.SimResultUnion]]:
     """ Invoke one or more `Sim`s via `vlsirtools.spice`. """
 
     from .to_proto import to_proto
@@ -458,29 +461,29 @@ def sim(cls: type) -> Sim:
         raise RuntimeError(f"Invalid @hdl21.sim inheriting from {cls.__bases__}")
 
     protected_names = ["attrs", "add", "run", "namespace"]
-    
-    # Initialize the content of the eventual `Sim`. 
-    # Note we largely can't create it now because the `tb` field is required at construction time. 
+
+    # Initialize the content of the eventual `Sim`.
+    # Note we largely can't create it now because the `tb` field is required at construction time.
     name: Optional[str] = None
     tb: Optional[Instantiable] = None
     attrs: List[SimAttr] = list()
 
-    # Any class-body content that isn't either (a) one of those special names, or (b) a `SimAttr`, 
-    # will be "forgotten" from the `Sim` definition. 
-    # This can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend. 
+    # Any class-body content that isn't either (a) one of those special names, or (b) a `SimAttr`,
+    # will be "forgotten" from the `Sim` definition.
+    # This can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend.
     forgetme: List[Any] = list()
 
     # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the sim
     for key, val in cls.__dict__.items():
         if key in protected_names:
             raise RuntimeError(f"Invalid field name {key} in Sim {cls}")
-        elif key == "tb": # Set the test-bench attribute
+        elif key == "tb":  # Set the test-bench attribute
             tb = val
-        elif key == "name": # Set the sim-name attribute
+        elif key == "name":  # Set the sim-name attribute
             name = val
-        elif is_simattr(val):  
-            # Add to the sim-attributes list 
-            # Special case Python's conventional "ignored" name, the underscore. 
+        elif is_simattr(val):
+            # Add to the sim-attributes list
+            # Special case Python's conventional "ignored" name, the underscore.
             # Leave attributes named "_"'s `name` field set to `None`.
             if key != "_":
                 val.name = key
@@ -490,7 +493,7 @@ def sim(cls: type) -> Sim:
 
     if tb is None:
         raise RuntimeError(f"No `tb` defined in Sim {cls}")
-        
+
     # Create the `Sim` object
     name = name or cls.__name__
     sim = Sim(name=name, tb=tb, attrs=attrs)

@@ -85,8 +85,8 @@ class InstBundleElaborator(Elaborator):
 
             elif isinstance(conn, get_args(Sliceable)) or isinstance(conn, PortRef):
                 # If the connection is a scalar, connect it to each new instance
-                
-                # FIXME: check for unit width, when the `Ref` types can handle it 
+
+                # FIXME: check for unit width, when the `Ref` types can handle it
                 # if conn.width != 1:
                 #     msg = f"InstanceBundle {instbundle.name} connection {conn} is not a scalar, but has width {conn.width}"
                 #     self.fail(msg)

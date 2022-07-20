@@ -23,7 +23,7 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 from copy import copy
 from enum import Enum
 from dataclasses import field
-from typing import Callable, Optional, Any, List, Union, Set 
+from typing import Callable, Optional, Any, List, Union, Set
 from pydantic.dataclasses import dataclass
 
 # Local imports

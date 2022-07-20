@@ -201,4 +201,3 @@ def PhaseInterp(p: PiParams) -> h.Module:
 import sys
 
 h.netlist(h.to_proto(PhaseInterp()), dest=sys.stdout)
-

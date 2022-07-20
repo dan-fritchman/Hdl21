@@ -47,16 +47,20 @@ class Orphanage(Elaborator):
 
     def elaborate_module(self, module: Module) -> Module:
         """ Elaborate a Module """
-        
+
         # Check each attribute in the module namespace for orphanage.
         for attr in module.namespace.values():
             self.assert_parentage(module, attr)
 
-        # Check instance connections, which are not in the module namespace. 
-        instlike = list(module.instances.values()) + list(module.instarrays.values()) + list(module.instbundles.values())
+        # Check instance connections, which are not in the module namespace.
+        instlike = (
+            list(module.instances.values())
+            + list(module.instarrays.values())
+            + list(module.instbundles.values())
+        )
         for inst in instlike:
             self.check_instance(module, inst)
-        
+
         # Checks out! Return the module unchanged.
         return module
 
@@ -81,11 +85,11 @@ class Orphanage(Elaborator):
         # Check owned types first: Signals and Bundle Instances
         if isinstance(conn, (Signal, BundleInstance)):
             return self.assert_parentage(module, conn)
-        
+
         if isinstance(conn, Slice):
             # Recursively check the parent-signals of slices
             return self.check_connectable(module, conn.signal)
-        
+
         if isinstance(conn, Concat):
             # Check each of the concatenated signals, also recursively across inner types
             for part in conn.parts:
@@ -93,13 +97,13 @@ class Orphanage(Elaborator):
             return
 
         if isinstance(conn, NoConn):
-            # `NoConn`s are not "parented" by anything; they are essentially exempt from this check. 
-            return 
+            # `NoConn`s are not "parented" by anything; they are essentially exempt from this check.
+            return
 
         if isinstance(conn, PortRef):
-            # For Port references, check that `module` owns their target Instance 
+            # For Port references, check that `module` owns their target Instance
             return self.assert_parentage(module, conn.inst)
-        
+
         if isinstance(conn, BundleRef):
             # For Bundle references, check that `module` owns their root Bundle Instance
             return self.assert_parentage(module, conn.root())
@@ -111,7 +115,7 @@ class Orphanage(Elaborator):
             return
 
         raise TypeError(f"Orphanage: Unhandled Connectable `{conn}`")
-        
+
     def assert_parentage(self, module: Module, attr: ModuleAttr) -> None:
         """ Assert that `attr` is parented by `module`, or fail. """
 
@@ -123,4 +127,3 @@ class Orphanage(Elaborator):
         if attr._parent_module is not module:
             msg = f"Orphanage: Module {module} attribute {attr} is actually owned by another Module {attr._parent_module}!"
             self.fail(msg)
-

@@ -166,7 +166,6 @@ class ConnTypes(Elaborator):
 
         self.fail(f"Invalid Port {port}")
 
-
     def resolve_bundleref_type(self, bref: BundleRef) -> Union[Signal, BundleInstance]:
         """ 
         Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance. 
@@ -178,9 +177,11 @@ class ConnTypes(Elaborator):
         Hence the "type" name suffix, although what we return is not really a type. 
         """
 
-        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance. 
+        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance.
             parent = bref.parent
-        elif isinstance(bref.parent, BundleRef):  # Nested reference. Recursively resolve the parent.
+        elif isinstance(
+            bref.parent, BundleRef
+        ):  # Nested reference. Recursively resolve the parent.
             parent = self.resolve_bundleref_type(bref.parent)
         else:
             self.fail(f"Invalid BundleRef parent for {bref}")

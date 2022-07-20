@@ -38,7 +38,7 @@ def elaborate(
 
     # Check whether we are elaborating a single object or a list thereof
     tops = top if isinstance(top, List) else [top]
-    
+
     def run_passes(t: Elaboratable):
         # Pass `t` through each of our passes, in order
         for elabpass in passes:
@@ -47,8 +47,8 @@ def elaborate(
 
     # Pass each of our top-level objects through the passes
     rv = list(map(run_passes, tops))
-    
-    # Extract the single-element case 
-    if not isinstance(top, List): 
+
+    # Extract the single-element case
+    if not isinstance(top, List):
         return rv[0]
     return rv

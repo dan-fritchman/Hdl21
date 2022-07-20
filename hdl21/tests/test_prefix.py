@@ -152,4 +152,3 @@ def test_prefix_conversion():
     h.Prefixed(number="11.11", prefix=h.Prefix.YOCTO)
     h.Prefixed(number=11.11, prefix=h.Prefix.YOCTO)
     h.Prefixed(number=11, prefix=h.Prefix.YOCTO)
-

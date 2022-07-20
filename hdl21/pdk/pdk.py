@@ -134,8 +134,7 @@ def register(module: ModuleType) -> None:
 
 
 def compile(
-    src: Elaboratables, 
-    pdk: Optional[Union[str, ModuleType]] = None
+    src: Elaboratables, pdk: Optional[Union[str, ModuleType]] = None
 ) -> Elaboratables:
     """ 
     Compile to a target PDK. 

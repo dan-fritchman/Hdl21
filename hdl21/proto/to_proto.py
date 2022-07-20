@@ -37,7 +37,9 @@ from ..primitives import (
 )
 
 
-def to_proto(top: Elaboratables, domain: Optional[str] = None, **kwargs,) -> vckt.Package:
+def to_proto(
+    top: Elaboratables, domain: Optional[str] = None, **kwargs,
+) -> vckt.Package:
     """ Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`. """
     # Elaborate all the top-level Modules
     tops = elaborate(top)
@@ -387,7 +389,7 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
     prefix = export_prefix(pref.prefix)
 
     # And export the numeric part, dispatched across its type.
-    # FIXME: `hdl21.Prefixed` numbers are *all* `Decimal` now, this could probably be retired.  
+    # FIXME: `hdl21.Prefixed` numbers are *all* `Decimal` now, this could probably be retired.
     if isinstance(pref.number, int):
         return vlsir.Prefixed(prefix=prefix, integer=pref.number)
     elif isinstance(pref.number, float):
