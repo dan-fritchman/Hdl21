@@ -19,14 +19,14 @@ from ..primitives import Primitive
 
 
 def from_proto(pkg: vckt.Package) -> SimpleNamespace:
-    """ Convert Proto-defined Package `pkg` to a namespace-full of Modules. """
+    """Convert Proto-defined Package `pkg` to a namespace-full of Modules."""
     importer = ProtoImporter(pkg)
     return importer.import_()
 
 
 class ProtoImporter:
-    """ Protobuf Package Importer. 
-    Collects all `Modules` defined in Protobuf-sourced primary-argument `pkg` into a Python `types.SimpleNamespace`. """
+    """Protobuf Package Importer.
+    Collects all `Modules` defined in Protobuf-sourced primary-argument `pkg` into a Python `types.SimpleNamespace`."""
 
     def __init__(self, pkg: vckt.Package):
         self.pkg = pkg
@@ -36,7 +36,7 @@ class ProtoImporter:
         self.ns.name = pkg.domain
 
     def import_(self) -> SimpleNamespace:
-        """ Import the top-level `Package` to a Python namespace """
+        """Import the top-level `Package` to a Python namespace"""
         # Walk through each proto-defined Module
         # External modules first, as we know they have no dependencies
         for emod in self.pkg.ext_modules:
@@ -47,7 +47,7 @@ class ProtoImporter:
         return self.ns
 
     def get_namespace(self, path: List[str]) -> SimpleNamespace:
-        """ Get a (potentially nested) namespace at `path`, creating levels along the way if necessary ."""
+        """Get a (potentially nested) namespace at `path`, creating levels along the way if necessary ."""
         ns = self.ns
         for part in path:
             attr = getattr(ns, part, None)
@@ -63,7 +63,7 @@ class ProtoImporter:
         return ns
 
     def import_external_module(self, pmod: vckt.ExternalModule) -> ExternalModule:
-        """ Convert Proto-Module `emod` to an `hdl21.ExternalModule` """
+        """Convert Proto-Module `emod` to an `hdl21.ExternalModule`"""
 
         # Check our cache for whether a module by the same name has been imported
         key = (pmod.name.domain, pmod.name.name)
@@ -90,7 +90,7 @@ class ProtoImporter:
         return emod
 
     def import_module(self, pmod: vckt.Module) -> Module:
-        """ Convert Proto-Module `pmod` to an `hdl21.Module` """
+        """Convert Proto-Module `pmod` to an `hdl21.Module`"""
         if pmod.name in self.modules:
             raise RuntimeError(f"Proto Import Error: Redefined Module {pmod.name}")
 
@@ -128,9 +128,9 @@ class ProtoImporter:
         return module
 
     def import_instance(self, pinst: vckt.Instance) -> Instance:
-        """ Convert Proto-Instance `pinst` to an `hdl21.Instance`. 
-        Requires an available Module-definition to be referenced. 
-        Connections are *not* performed inside this method. """
+        """Convert Proto-Instance `pinst` to an `hdl21.Instance`.
+        Requires an available Module-definition to be referenced.
+        Connections are *not* performed inside this method."""
 
         # Also a small piece of proof that Google hates Python.
         ref = pinst.module
@@ -154,7 +154,10 @@ class ProtoImporter:
                 target = import_vlsir_primitive(ref.external)
                 params = target.Params(**params)
 
-            elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
+            elif ref.external.domain in (
+                "hdl21.primitives",
+                "hdl21.ideal",
+            ):
                 # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
                 target = import_hdl21_primitive(ref.external)
                 params = target.Params(**params)
@@ -179,8 +182,8 @@ class ProtoImporter:
 def import_ports_and_signals(
     pmod: Union[vckt.Module, vckt.ExternalModule]
 ) -> List[Signal]:
-    """ Import all Ports and Signals from Proto-Module `pmod`. 
-    Returns them as a single list, which can serve as arguments to `Module.add` or `ExternalModule.port_list`. """
+    """Import all Ports and Signals from Proto-Module `pmod`.
+    Returns them as a single list, which can serve as arguments to `Module.add` or `ExternalModule.port_list`."""
 
     # Keep a dictionary from name: Signal imported
     signals: Dict[str, Signal] = {}
@@ -200,7 +203,7 @@ def import_ports_and_signals(
 
 
 def import_hdl21_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
-    """ Convert an `hdl21.primitives` or `hdl21.ideal` qualified name to a Primitive. """
+    """Convert an `hdl21.primitives` or `hdl21.ideal` qualified name to a Primitive."""
     if pref.domain not in ["hdl21.primitives", "hdl21.ideal"]:
         raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
@@ -213,7 +216,7 @@ def import_hdl21_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
 
 
 def import_vlsir_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
-    """ Import a VLSIR-defined Primitive """
+    """Import a VLSIR-defined Primitive"""
     if pref.domain != "vlsir.primitives":
         raise ValueError(f"Invalid Primitive Domain: {pref.domain}")
 
@@ -240,12 +243,12 @@ def import_vlsir_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
 
 
 def import_parameters(pparams: List[vlsir.Param]) -> Dict[str, Any]:
-    """ Import a list of Vlsir parameters to a Hdl21-style {name: value} dict. """
+    """Import a list of Vlsir parameters to a Hdl21-style {name: value} dict."""
     return {pparam.name: import_parameter_value(pparam.value) for pparam in pparams}
 
 
 def import_parameter_value(pparam: vlsir.ParamValue) -> Any:
-    """ Import a `ParamValue` """
+    """Import a `ParamValue`"""
     ptype = pparam.WhichOneof("value")
     if ptype == "integer":
         return int(pparam.integer)
@@ -263,7 +266,7 @@ def import_parameter_value(pparam: vlsir.ParamValue) -> Any:
 def import_connection_target(
     pconn: vckt.ConnectionTarget, module: Module
 ) -> Union[Signal, Slice, Concat]:
-    """ Import a Proto-defined `ConnectionTarget` into a Signal, Slice, or Concatenation """
+    """Import a Proto-defined `ConnectionTarget` into a Signal, Slice, or Concatenation"""
     # Connections are a proto `oneof` union; figure out which to import
     stype = pconn.WhichOneof("stype")
     # Concatenations are more complicated and need their own method
@@ -292,7 +295,7 @@ def import_connection_target(
 
 
 def import_concat(pconc: vckt.Concat, module: Module) -> Concat:
-    """ Import a (potentially nested) Concatenation """
+    """Import a (potentially nested) Concatenation"""
     parts = []
     for ppart in pconc.parts:
         part = import_connection_target(ppart, module)
@@ -301,7 +304,7 @@ def import_concat(pconc: vckt.Concat, module: Module) -> Concat:
 
 
 def import_port_dir(pport: vckt.Port) -> PortDir:
-    """ Convert between Port-Direction Enumerations """
+    """Convert between Port-Direction Enumerations"""
     if pport.direction == vckt.Port.Direction.INPUT:
         return PortDir.INPUT
     if pport.direction == vckt.Port.Direction.OUTPUT:
@@ -314,7 +317,7 @@ def import_port_dir(pport: vckt.Port) -> PortDir:
 
 
 def import_prefix(vpre: vlsir.SIPrefix) -> Prefix:
-    """ Import an enumerated `Prefix` """
+    """Import an enumerated `Prefix`"""
     map = {
         vlsir.SIPrefix.YOCTO: Prefix.YOCTO,
         vlsir.SIPrefix.ZEPTO: Prefix.ZEPTO,
@@ -343,7 +346,7 @@ def import_prefix(vpre: vlsir.SIPrefix) -> Prefix:
 
 
 def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
-    """ Import a `Prefixed` number """
+    """Import a `Prefixed` number"""
 
     # Import the metric prefix
     prefix = import_prefix(vpref.prefix)

@@ -17,7 +17,7 @@ from .instantiable import Instantiable
 
 @paramclass
 class MosParams:
-    """ Mos Series-Stack Generator Parameters """
+    """Mos Series-Stack Generator Parameters"""
 
     w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
@@ -27,7 +27,7 @@ class MosParams:
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
 
     def __post_init_post_parse__(self):
-        """ Value Checks """
+        """Value Checks"""
         if self.w <= 0:
             raise ValueError(f"MosParams with invalid width {self.w}")
         if self.l <= 0:
@@ -44,9 +44,9 @@ class MosParams:
 
 @generator
 def Mos(params: MosParams) -> Module:
-    """ Mos Series-Stack Generator 
-    Generates a `Module` including `nser` identical series instances of unit-Mos `primitives.Mos`.  
-    Unit-Mos gate and bulk ports are connected in parallel. """
+    """Mos Series-Stack Generator
+    Generates a `Module` including `nser` identical series instances of unit-Mos `primitives.Mos`.
+    Unit-Mos gate and bulk ports are connected in parallel."""
 
     # Extract the number of series fingers
     nser = params.nser
@@ -76,19 +76,19 @@ def Mos(params: MosParams) -> Module:
 
 @generator
 def Nmos(params: MosParams) -> Module:
-    """ Nmos Generator. A thin wrapper around `hdl21.generators.Mos` """
+    """Nmos Generator. A thin wrapper around `hdl21.generators.Mos`"""
     return Mos(replace(params, tp=MosType.NMOS))
 
 
 @generator
 def Pmos(params: MosParams) -> Module:
-    """ Pmos Constructor. A thin wrapper around `hdl21.generators.Mos` """
+    """Pmos Constructor. A thin wrapper around `hdl21.generators.Mos`"""
     return Mos(replace(params, tp=MosType.PMOS))
 
 
 @paramclass
 class SeriesParParams:
-    """ Series-Parallel Generator Parameters """
+    """Series-Parallel Generator Parameters"""
 
     # Required
     unit = Param(dtype=Instantiable, desc="Unit cell")
@@ -103,13 +103,13 @@ class SeriesParParams:
 
 @generator
 def SeriesPar(params: SeriesParParams) -> Module:
-    """ 
-    # Series-Parallel Generator 
-    
-    Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`. 
-    The generated `Module` includes the same ports as `unit`. 
-    The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`. 
-    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`. 
+    """
+    # Series-Parallel Generator
+
+    Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`.
+    The generated `Module` includes the same ports as `unit`.
+    The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`.
+    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`.
     """
 
     unit = params.unit
@@ -158,16 +158,16 @@ def SeriesPar(params: SeriesParParams) -> Module:
 
 
 def Wrapper(m: Module) -> Module:
-    """ 
+    """
     # Module Wrapper Creator
 
-    Adds a `Module` hierarchy layer around argument-`Module` `m`. 
-    Creates an `Instance` of `m` and clones its ports, connecting each. 
-    
-    Note: `Wrapper` is generally aways more helpful when the returned `Module` is modified after the fact. 
-    Hence while `Wrapper` is a *function that returns a `Module`*, it is *not* an `hdl21.Generator`, 
-    which cache and unique-name their results. 
-    Callers of `Wrapper` are therefore responsible for considerations such as unique naming. 
+    Adds a `Module` hierarchy layer around argument-`Module` `m`.
+    Creates an `Instance` of `m` and clones its ports, connecting each.
+
+    Note: `Wrapper` is generally aways more helpful when the returned `Module` is modified after the fact.
+    Hence while `Wrapper` is a *function that returns a `Module`*, it is *not* an `hdl21.Generator`,
+    which cache and unique-name their results.
+    Callers of `Wrapper` are therefore responsible for considerations such as unique naming.
     """
 
     # FIXME: find this function a home with a less-confusing name!

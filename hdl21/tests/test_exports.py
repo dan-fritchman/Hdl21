@@ -18,7 +18,7 @@ import vlsir
 
 @pytest.mark.xfail(reason="#1 https://github.com/dan-fritchman/Hdl21/issues/1")
 def test_export_strides():
-    """ Test exporting connections with non-unit Slice-strides """
+    """Test exporting connections with non-unit Slice-strides"""
 
     c = h.Module(name="c")
     c.p = h.Input(width=2)
@@ -293,7 +293,7 @@ def test_proto_roundtrip2():
 
 
 def test_netlist_fmts():
-    """ Test netlisting basic types to several formats """
+    """Test netlisting basic types to several formats"""
 
     @h.module
     class Bot:
@@ -393,9 +393,9 @@ def test_spice_netlister():
 
 
 def test_bad_proto_naming():
-    """ Test some naming cases which are alright in Python, 
-    but generate naming conflicts in serialization. 
-    Generally these boil down to "same `Module`-names in same Python module". """
+    """Test some naming cases which are alright in Python,
+    but generate naming conflicts in serialization.
+    Generally these boil down to "same `Module`-names in same Python module"."""
 
     # Create a naming conflict between Module definitions
     Ma1 = h.Module(name="Ma")
@@ -428,7 +428,7 @@ def test_bad_proto_naming():
 
 
 def test_generator_recall():
-    """ Test multi-calling generators """
+    """Test multi-calling generators"""
 
     @h.generator
     def CallMeTwice(_: h.HasNoParams) -> h.Module:
@@ -460,7 +460,7 @@ def test_generator_recall():
 
 
 def test_rountrip_external_module():
-    """ Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto """
+    """Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto"""
 
     @h.paramclass
     class P:  # Our ExternalModule's parameter-type

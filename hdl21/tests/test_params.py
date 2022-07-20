@@ -179,7 +179,7 @@ def test_bad_params1():
 
 @pytest.mark.xfail(reason="#30 https://github.com/dan-fritchman/Hdl21/issues/30")
 def test_param_default_factory():
-    """ Test the `default_factory` feature of `Param` """
+    """Test the `default_factory` feature of `Param`"""
 
     # Test the pydantic versions without `paramclass` first
 

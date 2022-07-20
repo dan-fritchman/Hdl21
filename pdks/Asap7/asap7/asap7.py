@@ -71,13 +71,13 @@ for tp, tpname in _mos_typenames.items():
 
 
 class Asap7Walker(h.HierarchyWalker):
-    """ Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s. """
+    """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
 
     def __init__(self):
         self.mos_modcalls = dict()
 
     def visit_instance(self, inst: h.Instance):
-        """ Replace instances of `h.Primitive` with our `ExternalModule`s """
+        """Replace instances of `h.Primitive` with our `ExternalModule`s"""
         if isinstance(inst.of, h.PrimitiveCall):
             inst.of = self.replace_primitive(inst.of)
             return
@@ -94,14 +94,14 @@ class Asap7Walker(h.HierarchyWalker):
         return primcall
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
-        """ Retrieve or create an `ExternalModule` for a MOS of parameters `params`. """
+        """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         mod = _mos_modules.get((params.tp, params.vth), None)
         if mod is None:
             raise RuntimeError(f"No Mos module {modname}")
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
-        """ Retrieve or create a `Call` for MOS parameters `params`."""
+        """Retrieve or create a `Call` for MOS parameters `params`."""
         # First check our cache
         if params in self.mos_modcalls:
             return self.mos_modcalls[params]
@@ -122,5 +122,5 @@ class Asap7Walker(h.HierarchyWalker):
 
 
 def compile(src: h.Elaboratables) -> None:
-    """ Compile `src` to the ASAP7 technology """
+    """Compile `src` to the ASAP7 technology"""
     return Asap7Walker().visit_elaboratables(src)

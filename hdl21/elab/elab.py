@@ -21,15 +21,15 @@ def elaborate(
     ctx: Optional[Context] = None,
     passes: Optional[List[ElabPass]] = None,
 ) -> Elaboratables:
-    """ 
+    """
     # Hdl21 Elaboration
-    
-    In-memory elaborates of `Module`s, calls to `Generator`s, and lists thereof. 
-    
-    Optional `passes` lists the ordered `ElabPass`es to run. By default it runs the order specified by `ElabPass.default`. 
-    Note the order of passes is important; many depend upon others to have completed before they can successfully run. 
 
-    Optional `Context` field `ctx` is not yet supported. 
+    In-memory elaborates of `Module`s, calls to `Generator`s, and lists thereof.
+
+    Optional `passes` lists the ordered `ElabPass`es to run. By default it runs the order specified by `ElabPass.default`.
+    Note the order of passes is important; many depend upon others to have completed before they can successfully run.
+
+    Optional `Context` field `ctx` is not yet supported.
     """
 
     # Expand default values

@@ -34,7 +34,7 @@ datatypes = []
 
 
 def datatype(cls: type) -> type:
-    """ Register a class as a datatype. """
+    """Register a class as a datatype."""
 
     # Convert `cls` to a `pydantic.dataclasses.dataclass`,
     # and add it to the list of datatypes
@@ -44,6 +44,6 @@ def datatype(cls: type) -> type:
 
 
 def _update_forward_refs():
-    """ Update all the forward type-references """
+    """Update all the forward type-references"""
     for tp in datatypes:
         tp.__pydantic_model__.update_forward_refs()

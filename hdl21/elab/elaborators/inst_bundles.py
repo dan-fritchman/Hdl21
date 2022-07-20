@@ -25,13 +25,13 @@ from .base import Elaborator
 
 
 class InstBundleElaborator(Elaborator):
-    """ 
+    """
     # Instance Bundle Elaborator Pass
     """
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate a Module 
-        Remove each Instance Bundle, and replace it with "scalar" Instances. """
+        """Elaborate a Module
+        Remove each Instance Bundle, and replace it with "scalar" Instances."""
 
         while module.instbundles:
             name, inst = module.instbundles.popitem()
@@ -43,8 +43,8 @@ class InstBundleElaborator(Elaborator):
     def elaborate_instance_bundle(
         self, module: Module, instbundle: InstanceBundle
     ) -> InstanceBundle:
-        """ # Elaborate an Instance Bundle 
-        Replace it with "scalar" Instances and reconnect them. """
+        """# Elaborate an Instance Bundle
+        Replace it with "scalar" Instances and reconnect them."""
 
         from ...bundle import AnonymousBundle, BundleInstance
         from ...signal import Sliceable

@@ -27,14 +27,14 @@ install: Optional[Install] = None
 
 @h.paramclass
 class SamplePdkMosParams:
-    """ Sample PDK MOS Transistor Parameters """
+    """Sample PDK MOS Transistor Parameters"""
 
     w = h.Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = h.Param(dtype=Optional[int], desc="Length in resolution units", default=None)
     npar = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
 
     def __post_init_post_parse__(self):
-        """ Value Checks """
+        """Value Checks"""
         if self.w <= 0:
             raise ValueError(f"MosParams with invalid width {self.w}")
         if self.l <= 0:
@@ -62,13 +62,13 @@ Nmos = h.ExternalModule(
 
 
 class SamplePdkWalker(h.HierarchyWalker):
-    """ Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s. """
+    """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
 
     def __init__(self):
         self.mos_modcalls = dict()
 
     def visit_instance(self, inst: h.Instance):
-        """ Replace instances of `h.Primitive` with our `ExternalModule`s """
+        """Replace instances of `h.Primitive` with our `ExternalModule`s"""
         if isinstance(inst.of, h.PrimitiveCall):
             inst.of = self.replace_primitive(inst.of)
             return
@@ -85,17 +85,17 @@ class SamplePdkWalker(h.HierarchyWalker):
         return primcall
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
-        """ Retrieve or create an `ExternalModule` for a MOS of parameters `params`. """
+        """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         if params.tp == MosType.PMOS:
             return Pmos
         return Nmos
 
     def mos_params(self, params: MosParams) -> SamplePdkMosParams:
-        """ Convert generic primitive `MosParams` into PDK-specific `SamplePdkMosParams` """
+        """Convert generic primitive `MosParams` into PDK-specific `SamplePdkMosParams`"""
         return SamplePdkMosParams(w=params.w, l=params.l, npar=params.npar)
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
-        """ Retrieve or create a `Call` for MOS parameters `params`."""
+        """Retrieve or create a `Call` for MOS parameters `params`."""
         # First check our cache
         if params in self.mos_modcalls:
             return self.mos_modcalls[params]
@@ -114,5 +114,5 @@ class SamplePdkWalker(h.HierarchyWalker):
 
 
 def compile(src: h.Elaboratables) -> None:
-    """ Compile `src` to the Sample technology """
+    """Compile `src` to the Sample technology"""
     return SamplePdkWalker().visit_elaboratables(src)

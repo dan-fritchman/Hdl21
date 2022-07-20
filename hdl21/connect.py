@@ -24,13 +24,13 @@ from typing import Any, Union, Dict
 
 
 def connectable(cls: type) -> type:
-    """ Decorator for connectable types """
+    """Decorator for connectable types"""
     cls.__connectable__ = True
     return cls
 
 
 def is_connectable(obj: Any) -> bool:
-    """ Boolean indication of connect-ability """
+    """Boolean indication of connect-ability"""
     return getattr(obj, "__connectable__", False)
 
 
@@ -38,8 +38,8 @@ Connectable = Union["Signal", "PortRef", "BundleInstance", "AnonymousBundle"]
 
 
 def track_connected_ports(cls: type) -> type:
-    """ Add an annotation indicating `cls` will track `connected_ports`, 
-    on a `List[PortRef]` valued field by that name. """
+    """Add an annotation indicating `cls` will track `connected_ports`,
+    on a `List[PortRef]` valued field by that name."""
     if not is_connectable(cls):
         raise RuntimeError(f"Must be `@connectable`")
     cls.__track_connected_ports__ = True
@@ -47,17 +47,17 @@ def track_connected_ports(cls: type) -> type:
 
 
 def does_track_connected_ports(obj: Any) -> bool:
-    """ Boolean indication of connected-port tracking """
+    """Boolean indication of connected-port tracking"""
     return getattr(obj, "__track_connected_ports__", False)
 
 
 def call_and_setattr_connects(cls: type) -> type:
-    """ Decorator to add 'connect by call' and 'connect by setattr' semantics. 
-    Applied to hdl21 internal types such as `Instance`, `InstArray` and `BundleInstance`. 
-    
-    `call_and_setattr_connects` classes have a few more subtle requirements, including that they 
-    indicate when their constructors complete via an `_initialized` field, 
-    include a `conns` connections-dict, and a `portrefs` dictionary of past port-references. """
+    """Decorator to add 'connect by call' and 'connect by setattr' semantics.
+    Applied to hdl21 internal types such as `Instance`, `InstArray` and `BundleInstance`.
+
+    `call_and_setattr_connects` classes have a few more subtle requirements, including that they
+    indicate when their constructors complete via an `_initialized` field,
+    include a `conns` connections-dict, and a `portrefs` dictionary of past port-references."""
 
     if not has_getattr_port_refs(cls):
         raise RuntimeError(f"Must be `@getattr_port_refs`")
@@ -70,14 +70,14 @@ def call_and_setattr_connects(cls: type) -> type:
             raise RuntimeError(msg)
 
     def __call__(self, **kwargs) -> "Self":
-        """ Connect-by-call """
+        """Connect-by-call"""
         for key, val in kwargs.items():
             self.connect(key, val)
         # Don't forget to retain ourselves at the call-site!
         return self
 
     def __setattr__(self, key: str, val: Any) -> None:
-        """ Connect-by-setattr """
+        """Connect-by-setattr"""
         if not getattr(self, "_initialized", False) or key.startswith("_"):
             # Bootstrapping phase: do regular setattrs to get started
             return object.__setattr__(self, key, val)
@@ -87,12 +87,12 @@ def call_and_setattr_connects(cls: type) -> type:
         return None
 
     def connect(self, portname: str, conn: Connectable) -> "Self":
-        """ Connect `conn` to port (name) `portname`. 
-        Called by both by-call and by-assignment convenience methods, and usable directly. 
-        Direct calls to `connect` will generally be required for ports with otherwise illegal names, 
-        e.g. Python language keywords (`in`, `from`, etc.), 
-        or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.). 
-        Returns `self` to aid in method-chaining use-cases. """
+        """Connect `conn` to port (name) `portname`.
+        Called by both by-call and by-assignment convenience methods, and usable directly.
+        Direct calls to `connect` will generally be required for ports with otherwise illegal names,
+        e.g. Python language keywords (`in`, `from`, etc.),
+        or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.).
+        Returns `self` to aid in method-chaining use-cases."""
         from .bundle import AnonymousBundle
         from .portref import PortRef
 
@@ -116,9 +116,9 @@ def call_and_setattr_connects(cls: type) -> type:
         return self
 
     def disconnect(self, portname: str) -> Connectable:
-        """ Disconnect the port named `portname`. 
-        Returns the formerly-connected `Connectable`. 
-        Raises a KeyError if the port is not connected. """
+        """Disconnect the port named `portname`.
+        Returns the formerly-connected `Connectable`.
+        Raises a KeyError if the port is not connected."""
         from .portref import PortRef
 
         conn = self.conns.pop(portname)
@@ -127,13 +127,13 @@ def call_and_setattr_connects(cls: type) -> type:
         return conn
 
     def replace(self, portname: str, conn: Connectable) -> Connectable:
-        """ 
-        Replace the connection to `portname` with `conn`. 
-        Returns the formerly-connected `Connectable`. 
-        Raises a KeyError if the port is not connected. 
-        
-        The `replace` method is functionally identical to serial calls to `disconnect` and `connect`, 
-        but allows for in-place modification of the `conns` dict, e.g. while iterating over its items. 
+        """
+        Replace the connection to `portname` with `conn`.
+        Returns the formerly-connected `Connectable`.
+        Raises a KeyError if the port is not connected.
+
+        The `replace` method is functionally identical to serial calls to `disconnect` and `connect`,
+        but allows for in-place modification of the `conns` dict, e.g. while iterating over its items.
         """
         from .portref import PortRef
 
@@ -163,17 +163,17 @@ def call_and_setattr_connects(cls: type) -> type:
 
 
 def does_call_and_setattr_connect(obj: Any) -> bool:
-    """ Boolean indication of "call and setattr connects" functionality """
+    """Boolean indication of "call and setattr connects" functionality"""
     return getattr(obj, "__call_and_setattr_connects__", False)
 
 
 def getattr_port_refs(cls: type) -> type:
-    """ Decorator to add the "__getattr__ generates PortRefs" functionality to `cls`. 
+    """Decorator to add the "__getattr__ generates PortRefs" functionality to `cls`.
 
-    Adds the `_port_ref` method and `__getattr__` access to it. 
+    Adds the `_port_ref` method and `__getattr__` access to it.
 
-    This method is *required* of `@call_and_setattr_connects` types (e.g. `Instance`s), 
-    and is also included on `PortRef`s themselves, largely to support nested Bundled references. """
+    This method is *required* of `@call_and_setattr_connects` types (e.g. `Instance`s),
+    and is also included on `PortRef`s themselves, largely to support nested Bundled references."""
 
     # First check and fail if any of the methods to be defined here are already defined elsewhere
     defined_here = ["_port_ref", "__getattr__"]
@@ -183,7 +183,7 @@ def getattr_port_refs(cls: type) -> type:
             raise RuntimeError(msg)
 
     def _port_ref(self, key: str) -> "PortRef":
-        """ Return a port-reference to name `key`, creating it if necessary. """
+        """Return a port-reference to name `key`, creating it if necessary."""
         from .portref import PortRef
 
         # Check in our existing port-references
@@ -197,7 +197,7 @@ def getattr_port_refs(cls: type) -> type:
         return port_ref
 
     def __getattr__(self, key: str) -> Any:
-        """ Port access by getattr """
+        """Port access by getattr"""
         if not self.__getattribute__("_initialized") or key.startswith("_"):
             # Bootstrapping phase: do regular getattrs to get started
             return object.__getattribute__(self, key)
@@ -230,5 +230,5 @@ def getattr_port_refs(cls: type) -> type:
 
 
 def has_getattr_port_refs(obj: Any) -> bool:
-    """ Boolean indication of "getattr port refs" functionality """
+    """Boolean indication of "getattr port refs" functionality"""
     return getattr(obj, "__getattr_port_refs__", False)

@@ -164,9 +164,9 @@ class MuxTreeParams:
 
 @h.generator
 def mux_tree(params: MuxTreeParams) -> h.Module:
-    """ Binary Mux Tree Generator """
+    """Binary Mux Tree Generator"""
 
-    n_inputs = 2 ** params.nbit
+    n_inputs = 2**params.nbit
     p_ctrl = params.mux_params.nmos is not None
     n_ctrl = params.mux_params.pmos is not None
 
@@ -194,11 +194,11 @@ def mux_tree(params: MuxTreeParams) -> h.Module:
         layer_mux_conns["ctrl_b"] = MuxTree.ctrl_b[layer]
         if layer != 0:
             curr_output = MuxTree.add(
-                name=f"sig_{layer}", val=h.Signal(width=2 ** layer)
+                name=f"sig_{layer}", val=h.Signal(width=2**layer)
             )
         else:
             curr_output = MuxTree.out
-        for mux_idx in range(2 ** layer):
+        for mux_idx in range(2**layer):
             mux_conns = layer_mux_conns.copy()
             mux_conns["sourceA"] = curr_input[2 * mux_idx]
             mux_conns["sourceB"] = curr_input[2 * mux_idx + 1]
@@ -238,7 +238,7 @@ def external_factory(
 
 
 def main():
-    """ Main function, generating an `rladder` and `mux_tree` and netlisting each. """
+    """Main function, generating an `rladder` and `mux_tree` and netlisting each."""
 
     rparams = RLadderParams(
         nseg=15,

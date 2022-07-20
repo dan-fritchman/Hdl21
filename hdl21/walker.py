@@ -16,15 +16,15 @@ from .generator import GeneratorCall
 
 class HierarchyWalker:
     """
-    # Hierarchical Walker 
-    
+    # Hierarchical Walker
+
     Walks a hierarchical design tree.
     Designed to be used as a base-class for extensions such as process-specific instance-replacements.
     """
 
     def visit_elaboratables(self, src: Elaboratables) -> None:
-        """ Visit an `Elaboratables` object. 
-        Largely dispatches across the type-union of elaboratable objects. """
+        """Visit an `Elaboratables` object.
+        Largely dispatches across the type-union of elaboratable objects."""
 
         if isinstance(src, Module):
             return self.visit_module(src)
@@ -37,12 +37,12 @@ class HierarchyWalker:
         raise TypeError
 
     def visit_generator_call(self, call: GeneratorCall) -> None:
-        """ Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`. """
+        """Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`."""
         return self.visit_module(call.gen._resolved)
 
     def visit_module(self, module: Module) -> None:
-        """ Visit a `Module`. 
-        Primary method for most manipulations. """
+        """Visit a `Module`.
+        Primary method for most manipulations."""
 
         for inst in module.instances.values():
             self.visit_instance(inst)
@@ -59,7 +59,7 @@ class HierarchyWalker:
         return
 
     def visit_instance(self, inst: Instance) -> None:
-        """ Visit a hierarchical `Instance`. """
+        """Visit a hierarchical `Instance`."""
 
         if isinstance(inst.of, GeneratorCall):
             return self.visit_generator_call(call=inst.of)

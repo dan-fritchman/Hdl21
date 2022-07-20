@@ -11,11 +11,11 @@ from .base import Elaborator
 
 
 class Orphanage(Elaborator):
-    """ # Orphan-Checking Elaborator Pass 
+    """# Orphan-Checking Elaborator Pass
 
-    Ensures each Module-attribute is "parented" by the `Module` which holds it. 
-    Errant cases can come up for code such as: 
-    
+    Ensures each Module-attribute is "parented" by the `Module` which holds it.
+    Errant cases can come up for code such as:
+
     ```
     m1 = h.Module(name='m1')
     m1.s = h.Signal() # Signal `s` is now "parented" by `m1`
@@ -24,9 +24,9 @@ class Orphanage(Elaborator):
     m2.y = m1.s # Now `s` has been "orphaned" (or perhaps "cradle-robbed") by `m2`
     ```
 
-    This essentially boils down to the difference between Python's native reference-semantics, 
-    and `hdl21.Module`'s notion of "owning" its attributes. 
-    Note other *references* to Module attributes are allowed, such as: 
+    This essentially boils down to the difference between Python's native reference-semantics,
+    and `hdl21.Module`'s notion of "owning" its attributes.
+    Note other *references* to Module attributes are allowed, such as:
 
     ```
     m1 = h.Module(name='m1')
@@ -35,18 +35,18 @@ class Orphanage(Elaborator):
     my_favorite_signals = { "from_m1" : m1.s }
     ```
 
-    Here the dictionary `my_favorite_signals` retains a reference to Signal `s`. 
-    This does not generate an orphan-error complaint, so long as `Module`-parent is unique and unambiguous. 
+    Here the dictionary `my_favorite_signals` retains a reference to Signal `s`.
+    This does not generate an orphan-error complaint, so long as `Module`-parent is unique and unambiguous.
 
-    The orphan-test is very simple: each Module-attribute is annotated with a `_parent_module` member 
-    upon insertion into the Module namespace. 
-    Orphan-testing simply requires that for each attribute, this member is identical to the parent Module. 
-    A `RuntimeError` is raised if orphaned attributes are detected. 
+    The orphan-test is very simple: each Module-attribute is annotated with a `_parent_module` member
+    upon insertion into the Module namespace.
+    Orphan-testing simply requires that for each attribute, this member is identical to the parent Module.
+    A `RuntimeError` is raised if orphaned attributes are detected.
     Otherwise each Module is returned unchanged.
     """
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate a Module """
+        """Elaborate a Module"""
 
         # Check each attribute in the module namespace for orphanage.
         for attr in module.namespace.values():
@@ -65,7 +65,7 @@ class Orphanage(Elaborator):
         return module
 
     def check_instance(self, module: Module, inst: _Instance) -> None:
-        """ Check the connections of `inst` in parent `module` """
+        """Check the connections of `inst` in parent `module`"""
         self.stack.append(inst)
 
         # Check each of the instance's connections
@@ -75,8 +75,8 @@ class Orphanage(Elaborator):
         self.stack.pop()
 
     def check_connectable(self, module: Module, conn: "Connectable") -> None:
-        """ Check a Connectable for orphanage. 
-        Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements. """
+        """Check a Connectable for orphanage.
+        Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements."""
 
         from ...signal import Signal, Slice, Concat, NoConn
         from ...bundle import BundleInstance, BundleRef, AnonymousBundle
@@ -117,7 +117,7 @@ class Orphanage(Elaborator):
         raise TypeError(f"Orphanage: Unhandled Connectable `{conn}`")
 
     def assert_parentage(self, module: Module, attr: ModuleAttr) -> None:
-        """ Assert that `attr` is parented by `module`, or fail. """
+        """Assert that `attr` is parented by `module`, or fail."""
 
         if attr._parent_module is None:
             msg = f"Orphanage! Module `{module.name}` depends on orphan attribute `{attr}`! "

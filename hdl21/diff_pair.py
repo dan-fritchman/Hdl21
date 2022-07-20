@@ -13,7 +13,7 @@ from .bundle import bundle, AnonymousBundle
 
 @bundle
 class Diff:
-    """ Differential Bundle """
+    """Differential Bundle"""
 
     class Roles(Enum):
         SOURCE = auto()
@@ -23,7 +23,7 @@ class Diff:
 
 
 def inverse(d: Diff) -> AnonymousBundle:
-    """ Create a Bundle with the same signals as `d`, but with `p` and `n` reversed. """
+    """Create a Bundle with the same signals as `d`, but with `p` and `n` reversed."""
     return AnonymousBundle(p=d.n, n=d.p)
 
 

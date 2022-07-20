@@ -21,10 +21,13 @@ from .connect import (
 @getattr_port_refs
 @init
 class _Instance:
-    """ Shared base class for Instance-like types (Instance, InstArray) """
+    """Shared base class for Instance-like types (Instance, InstArray)"""
 
     def __init__(
-        self, of: "Instantiable", *, name: Optional[str] = None,
+        self,
+        of: "Instantiable",
+        *,
+        name: Optional[str] = None,
     ):
         from .instantiable import is_instantiable
 
@@ -43,9 +46,11 @@ class _Instance:
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
 
     @property
-    def _resolved(self,) -> Optional["Instantiable"]:
-        """ Property to retrieve the Instance's resolved Module, if complete. 
-        Returns `None` if unresolved. """
+    def _resolved(
+        self,
+    ) -> Optional["Instantiable"]:
+        """Property to retrieve the Instance's resolved Module, if complete.
+        Returns `None` if unresolved."""
         from .generator import GeneratorCall
 
         if isinstance(self.of, GeneratorCall):
@@ -54,7 +59,7 @@ class _Instance:
 
 
 def _to_array(inst: "Instance", num: int) -> "InstArray":
-    """ Create an Instance Array from an Instance """
+    """Create an Instance Array from an Instance"""
     # Several contraints asserted here which may eventually be relaxed.
     # * No port-references (yet)
     # * Not a member of a module (yet)
@@ -70,15 +75,15 @@ def _to_array(inst: "Instance", num: int) -> "InstArray":
 
 
 def _mult(inst: "Instance", other: int) -> "InstArray":
-    """ Instance by integer multiplication. 
-    Creates an Instance Array of size `other`. """
+    """Instance by integer multiplication.
+    Creates an Instance Array of size `other`."""
     if not isinstance(other, int):
         return NotImplemented
     return _to_array(inst=inst, num=other)
 
 
 class Instance(_Instance):
-    """ Hierarchical Instance of another Module or Generator """
+    """Hierarchical Instance of another Module or Generator"""
 
     __mul__ = __rmul__ = _mult  # Apply `_mult` on both left and right
 
@@ -99,7 +104,7 @@ class Instance(_Instance):
 
 
 class InstanceBundle(_Instance):
-    """ Named set of Instances, paired with a Signal Bundle. """
+    """Named set of Instances, paired with a Signal Bundle."""
 
     # The paired signal-Bundle type. Note this is a class-level attribute.
     bundle: Optional["Bundle"] = None
@@ -121,7 +126,7 @@ class InstanceBundle(_Instance):
 
 
 def InstanceBundleType(name: str, bundle: "Bundle", doc: Optional[str] = None) -> type:
-    """ Create a new sub-class of `InstanceBundle`, tied to Bundle-type `bundle`. """
+    """Create a new sub-class of `InstanceBundle`, tied to Bundle-type `bundle`."""
 
     from .bundle import Bundle
 
@@ -139,7 +144,7 @@ def InstanceBundleType(name: str, bundle: "Bundle", doc: Optional[str] = None) -
 
 
 class InstArray(_Instance):
-    """ Array of `n` Instances """
+    """Array of `n` Instances"""
 
     _specialcases = [
         "name",
@@ -153,7 +158,10 @@ class InstArray(_Instance):
     ]
 
     def __init__(
-        self, of: "Instantiable", n: int, name: Optional[str] = None,
+        self,
+        of: "Instantiable",
+        n: int,
+        name: Optional[str] = None,
     ):
         super().__init__(of=of, name=name)
         self.n = n
@@ -167,12 +175,12 @@ class InstArray(_Instance):
 
 
 def calls_instantiate(cls: type) -> type:
-    """ Decorator which adds 'calls produce `hdl21.Instance`s' functionality. """
+    """Decorator which adds 'calls produce `hdl21.Instance`s' functionality."""
 
     def __call__(self, **kwargs) -> Instance:
-        """ Calls Create `hdl21.Instances`, 
-        and pass any (keyword-only) arguments to said `Instances`, 
-        generally to connect-by-call. """
+        """Calls Create `hdl21.Instances`,
+        and pass any (keyword-only) arguments to said `Instances`,
+        generally to connect-by-call."""
         return Instance(of=self)(**kwargs)
 
     # Check for an existing __call__ method, and if there is one, bail

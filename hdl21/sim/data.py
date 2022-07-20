@@ -30,16 +30,16 @@ ParamVal = Union[Prefixed, Decimal, str]
 
 
 def tb(name: str) -> Module:
-    """ Create a new testbench module. 
-    Includes the "testbench interface": 
-    a single, scalar, undirected Port named "VSS". """
+    """Create a new testbench module.
+    Includes the "testbench interface":
+    a single, scalar, undirected Port named "VSS"."""
     tb = Module(name=name)
     tb.VSS = Port(width=1)
     return tb
 
 
 def is_tb(i: Instantiable) -> bool:
-    """ Boolean indication of whether Module `m` meets the test-bench interface. """
+    """Boolean indication of whether Module `m` meets the test-bench interface."""
     if isinstance(i, (Module, ExternalModuleCall)):
         m = i
     elif isinstance(i, GeneratorCall):
@@ -59,16 +59,16 @@ _simattrs = {}
 
 
 def simattr(cls) -> type:
-    """ 
-    Add a class to the `simattrs` set of generation methods. 
-    This is the magic that enables methods including: 
-    ```python 
+    """
+    Add a class to the `simattrs` set of generation methods.
+    This is the magic that enables methods including:
+    ```python
     sim = Sim()
     sim.param(**kwargs)
     sim.dc(**kwargs)
     sim.tran(**kwargs)
     ```
-    To create the classes defined here, and add them to `sim`. 
+    To create the classes defined here, and add them to `sim`.
     """
 
     # Class names are lower-cases to create the dictionary key,
@@ -80,7 +80,7 @@ def simattr(cls) -> type:
 @simattr
 @datatype
 class Param:
-    """ Simulation Parameter-Value """
+    """Simulation Parameter-Value"""
 
     # Parameter Value
     val: ParamVal
@@ -90,7 +90,7 @@ class Param:
 
 @datatype
 class LinearSweep:
-    """ Linear Sweep """
+    """Linear Sweep"""
 
     start: ParamVal
     stop: ParamVal
@@ -99,7 +99,7 @@ class LinearSweep:
 
 @datatype
 class LogSweep:
-    """ Logarithmic / Decade Sweep """
+    """Logarithmic / Decade Sweep"""
 
     start: ParamVal
     stop: ParamVal
@@ -108,7 +108,7 @@ class LogSweep:
 
 @datatype
 class PointSweep:
-    """ List of Points Sweep """
+    """List of Points Sweep"""
 
     points: List[ParamVal]
 
@@ -122,8 +122,8 @@ def is_sweep(val: Any) -> bool:
 
 
 class AnalysisType(Enum):
-    """ Enumerated Analysis-Types 
-    Corresponding to the entries in the `Analysis` type-union. """
+    """Enumerated Analysis-Types
+    Corresponding to the entries in the `Analysis` type-union."""
 
     OP = "op"
     DC = "dc"
@@ -137,7 +137,7 @@ class AnalysisType(Enum):
 @simattr
 @datatype
 class Op:
-    """ Operating Point Analysis """
+    """Operating Point Analysis"""
 
     name: Optional[str] = None  # Optional analysis name
 
@@ -149,7 +149,7 @@ class Op:
 @simattr
 @datatype
 class Dc:
-    """ DC Steady-State Analysis """
+    """DC Steady-State Analysis"""
 
     var: Union[str, Param]  # Swept parameter, or its name
     sweep: Sweep  # Sweep values
@@ -163,7 +163,7 @@ class Dc:
 @simattr
 @datatype
 class Ac:
-    """ AC Small-Signal Analysis """
+    """AC Small-Signal Analysis"""
 
     sweep: LogSweep  # Sweep values. Always log-valued.
     name: Optional[str] = None  # Optional analysis name
@@ -176,7 +176,7 @@ class Ac:
 @simattr
 @datatype
 class Tran:
-    """ Transient Analysis """
+    """Transient Analysis"""
 
     tstop: ParamVal  # Stop time
     tstep: Optional[ParamVal] = None  # Optional time-step recommendation
@@ -190,7 +190,7 @@ class Tran:
 @simattr
 @datatype
 class SweepAnalysis:
-    """ Sweep over `inner` analyses """
+    """Sweep over `inner` analyses"""
 
     inner: List["Analysis"]  # Inner Analyses
     var: Union[str, Param]  # Sweep variable, or its name
@@ -205,7 +205,7 @@ class SweepAnalysis:
 @simattr
 @datatype
 class MonteCarlo:
-    """ Add monte-carlo variations to one or more `inner` analyses. """
+    """Add monte-carlo variations to one or more `inner` analyses."""
 
     inner: List["Analysis"]  # Inner Analyses
     npts: int  # Number of points
@@ -219,8 +219,8 @@ class MonteCarlo:
 @simattr
 @datatype
 class CustomAnalysis:
-    """ String-defined, non-first-class analysis statement
-    Primarily for simulator-specific specialty analyses. """
+    """String-defined, non-first-class analysis statement
+    Primarily for simulator-specific specialty analyses."""
 
     cmd: str  # Analysis command string
     name: Optional[str] = None  # Optional analysis name
@@ -239,7 +239,7 @@ def is_analysis(val: Any) -> bool:
 
 
 class SaveMode(Enum):
-    """ Enumerated data-saving modes """
+    """Enumerated data-saving modes"""
 
     NONE = "none"
     ALL = "all"
@@ -259,8 +259,8 @@ SaveTarget = Union[
 @simattr
 @datatype
 class Save:
-    """ Save Control-Element 
-    Adds content to the target simulation output """
+    """Save Control-Element
+    Adds content to the target simulation output"""
 
     targ: SaveTarget
 
@@ -268,7 +268,7 @@ class Save:
 @simattr
 @datatype
 class Meas:
-    """ Measurement """
+    """Measurement"""
 
     analysis: Union["Analysis", str]  # Target `Analysis`, or its type-name
     expr: str  # Measured expression. FIXME: just a string to be evaluated, no in-Python semantics
@@ -278,7 +278,7 @@ class Meas:
 @simattr
 @datatype
 class Include:
-    """ Include a File Path """
+    """Include a File Path"""
 
     path: Path  # Path to include
     name: Optional[str] = None  # Name, used in class-based `Sim` definitions
@@ -287,7 +287,7 @@ class Include:
 @simattr
 @datatype
 class Lib:
-    """ Include a Library Section """
+    """Include a Library Section"""
 
     path: Path  # Path to include
     section: str  # Library Section
@@ -297,8 +297,8 @@ class Lib:
 @simattr
 @datatype
 class Literal:
-    """ Simulation-Control Literal, 
-    expressed as netlist-language text for a particular target language. """
+    """Simulation-Control Literal,
+    expressed as netlist-language text for a particular target language."""
 
     txt: str
     name: Optional[str] = None  # Name, used in class-based `Sim` definitions
@@ -315,7 +315,7 @@ def is_control(val: Any) -> bool:
 @simattr
 @datatype
 class Options:
-    """ Simulation Options """
+    """Simulation Options"""
 
     temper: Optional[int] = None  # Temperature
     tnom: Optional[int] = None  # Nominal temperature
@@ -336,12 +336,12 @@ def is_simattr(val: Any) -> bool:
 
 @datatype
 class Sim:
-    """ 
-    # Simulation Input 
+    """
+    # Simulation Input
 
-    Comprises a `Instantiable`, typically `Module`, testbench and set of simulation control input. 
-    Testbenches must adhere to the testbench IO interface: 
-    A single, width-one port, nominally named "VSS", and expected to be connected from "simulator ground" to the DUT's ground. 
+    Comprises a `Instantiable`, typically `Module`, testbench and set of simulation control input.
+    Testbenches must adhere to the testbench IO interface:
+    A single, width-one port, nominally named "VSS", and expected to be connected from "simulator ground" to the DUT's ground.
     """
 
     # Testbench, with its dependencies via `Instance`s
@@ -352,8 +352,8 @@ class Sim:
     name: Optional[str] = None
 
     def add(self, *attrs: List[SimAttr]) -> Union[SimAttr, List[SimAttr]]:
-        """ Add one or more `SimAttr`s to the simulation. 
-        Returns the inserted attributes, either as a list or a single `SimAttr`. """
+        """Add one or more `SimAttr`s to the simulation.
+        Returns the inserted attributes, either as a list or a single `SimAttr`."""
         for attr in attrs:
             if not is_simattr(attr):
                 raise TypeError
@@ -363,7 +363,7 @@ class Sim:
         return list(attrs)
 
     def run(self, opts: Optional[vsp.SimOptions] = None) -> vsp.SimResultUnion:
-        """ Invoke simulation via `vlsirtools.spice`. """
+        """Invoke simulation via `vlsirtools.spice`."""
         from .to_proto import to_proto
 
         return vsp.sim(inp=to_proto(self), opts=opts)
@@ -372,7 +372,7 @@ class Sim:
 def run(
     inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None
 ) -> Union[vsp.SimResultUnion, Sequence[vsp.SimResultUnion]]:
-    """ Invoke one or more `Sim`s via `vlsirtools.spice`. """
+    """Invoke one or more `Sim`s via `vlsirtools.spice`."""
 
     from .to_proto import to_proto
 
@@ -401,15 +401,15 @@ for name, cls in _simattrs.items():
 
 
 def sim(cls: type) -> Sim:
-    """ 
-    # `Sim` Definition Decorator 
+    """
+    # `Sim` Definition Decorator
 
-    Converts a class-body full of simulation attributes (`SimAttr`s) to a `Sim`.  
-    Example Usage: 
+    Converts a class-body full of simulation attributes (`SimAttr`s) to a `Sim`.
+    Example Usage:
 
     ```python
-    import hdl21 as h 
-    from hdl21.sim import * 
+    import hdl21 as h
+    from hdl21.sim import *
 
     @sim
     class MySim:
@@ -432,29 +432,29 @@ def sim(cls: type) -> Sim:
         delay = Meas(analysis=mytran, expr="trig_targ_something")
         opts = Options(reltol=1e-9)
 
-        # Attributes whose names don't really matter can be called anything, 
+        # Attributes whose names don't really matter can be called anything,
         # but must be *assigned* into the class, not just constructed.
         _ = Save(SaveMode.ALL)
-        
-        # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition, 
-        # but can be referred to by the following attributes. 
-        a_path = "/home/models" 
+
+        # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition,
+        # but can be referred to by the following attributes.
+        a_path = "/home/models"
         _ = Include(a_path)
         _ = Lib(path=a_path, section="fast")
     ```
 
-    Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others. 
-    Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend, 
-    such as the `a_path` field in the example aboe. 
+    Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
+    Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
+    such as the `a_path` field in the example aboe.
 
-    Classes decoratated by `sim` have two special field names: 
+    Classes decoratated by `sim` have two special field names:
 
     * (Required) `tb` sets the simulation testbench
     * (Optional) `name` sets the name of the simulation
 
-    Several other names are disallowed in `sim` class-definitions, 
-    generally corresponding to the names of the `Sim` class's fields and methods. 
-    Disallowed names include: `["attrs", "add", "run", "namespace"]`. 
+    Several other names are disallowed in `sim` class-definitions,
+    generally corresponding to the names of the `Sim` class's fields and methods.
+    Disallowed names include: `["attrs", "add", "run", "namespace"]`.
     """
 
     if cls.__bases__ != (object,):

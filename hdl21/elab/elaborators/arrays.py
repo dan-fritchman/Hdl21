@@ -14,13 +14,13 @@ from .base import Elaborator
 
 
 class ArrayFlattener(Elaborator):
-    """ 
-    Elaboration Pass to Flatten `InstArray`s into `Instance`s, broadcast and remake their connections. 
+    """
+    Elaboration Pass to Flatten `InstArray`s into `Instance`s, broadcast and remake their connections.
     """
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Elaborate Module `module`. 
-        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances. """
+        """Elaborate Module `module`.
+        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances."""
 
         # Flatten Instance arrays
         while module.instarrays:

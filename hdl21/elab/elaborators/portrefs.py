@@ -30,25 +30,25 @@ PortType = Union[Signal, BundleInstance]
 
 
 class ResolvePortRefs(Elaborator):
-    """ Resolve all `PortRef`s on all `Instance`s. 
-    
+    """Resolve all `PortRef`s on all `Instance`s.
+
     This pass resolves "Instance to Instance" connections such as:
     ```
     inst1 = Module1()
     inst2 = Module2(port2=inst1.port1)
     ```
 
-    After this pass, all such connections resolve to concrete 
-    connectable objects, all of which are members of the `Source` type-union 
-    defined above. 
+    After this pass, all such connections resolve to concrete
+    connectable objects, all of which are members of the `Source` type-union
+    defined above.
 
-    While not terribly consistent with its name, this pass also resolves 
-    all `NoConn` connections into concrete `Signal`s, or fails if any `NoConn`s 
-    are invalidly connected between one another. 
+    While not terribly consistent with its name, this pass also resolves
+    all `NoConn` connections into concrete `Signal`s, or fails if any `NoConn`s
+    are invalidly connected between one another.
     """
 
     def elaborate_module(self, module: Module) -> Module:
-        """ Resolve and replace all Instance `PortRef`s in `module`. """
+        """Resolve and replace all Instance `PortRef`s in `module`."""
 
         # Collect up every `PortRef` and `NoConn` that's been instantiated
         portconns = self.collect_portconns(module)
@@ -60,7 +60,7 @@ class ResolvePortRefs(Elaborator):
     def collect_portconns(
         self, module: Module
     ) -> Dict[PortRef, Union[PortRef, NoConn]]:
-        """ Collect a dictionary of all Instance-ports connected to `PortRef`s or `NoConn`s. """
+        """Collect a dictionary of all Instance-ports connected to `PortRef`s or `NoConn`s."""
 
         portconns: Dict[PortRef, Union[PortRef, NoConn]] = dict()
 
@@ -79,7 +79,7 @@ class ResolvePortRefs(Elaborator):
     def replace_portconns(
         self, module: Module, portconns: Dict[PortRef, Union[PortRef, NoConn]]
     ) -> Module:
-        """ Replace each port-to-port connection in `portconns` with concrete `Signal`s. """
+        """Replace each port-to-port connection in `portconns` with concrete `Signal`s."""
 
         # Now walk through all port-connections, assigning each set to a net
         groups: List[List[Union[PortRef, NoConn]]] = list()
@@ -105,7 +105,7 @@ class ResolvePortRefs(Elaborator):
         return module
 
     def handle_group(self, module: Module, group: List[Union[PortRef, NoConn]]):
-        """ Handle a `group` worth of connected Ports and NoConns """
+        """Handle a `group` worth of connected Ports and NoConns"""
 
         # First cover `NoConn` connections, checking for any invalid multiple-conns to them.
         if any([isinstance(n, NoConn) for n in group]):
@@ -113,8 +113,8 @@ class ResolvePortRefs(Elaborator):
         return self.handle_portconn(module, group)
 
     def handle_portconn(self, module: Module, group: List[PortRef]):
-        """ Handle re-connecting a list of connected `PortRef`s. 
-        Creates and adds a fresh new `Signal` if one does not already exist. """
+        """Handle re-connecting a list of connected `PortRef`s.
+        Creates and adds a fresh new `Signal` if one does not already exist."""
 
         # Find any existing, declared `Signal` connected to `group`.
         # And if we don't find any, go about naming and creating one.
@@ -126,9 +126,9 @@ class ResolvePortRefs(Elaborator):
             portref.inst.connect(portref.portname, sig)
 
     def source(self, portref: PortRef) -> Optional[Source]:
-        """ 
-        Find the "source signal" for `portref`, if one is connected. 
-        If `portref` is not explicitly connected, or is connected to another `PortRef`, returns None. 
+        """
+        Find the "source signal" for `portref`, if one is connected.
+        If `portref` is not explicitly connected, or is connected to another `PortRef`, returns None.
         """
         if not isinstance(portref.inst, (Instance, InstArray)):
             self.fail(f"Invalid reference to port on non-Instance `{portref}`")
@@ -145,9 +145,9 @@ class ResolvePortRefs(Elaborator):
         self.fail(f"Connection {portconn}")
 
     def find_source(self, group: List[PortRef]) -> Optional[Source]:
-        """ Find any existing, declared `Source` connected to `group`. 
-        And if there more than one, make sure they all connect to the same object. 
-        Returns None is no `Source`s are connected to any element in the group. """
+        """Find any existing, declared `Source` connected to `group`.
+        And if there more than one, make sure they all connect to the same object.
+        Returns None is no `Source`s are connected to any element in the group."""
 
         # Extract which of the `group` are connected to `Source`s
         sources: Sequence[Optional[Source]] = map(self.source, group)
@@ -171,7 +171,7 @@ class ResolvePortRefs(Elaborator):
         self.fail(msg)
 
     def create_source(self, module: Module, group: List[PortRef]) -> PortType:
-        """ Create a new `Signal`, parametrized and named to connect to the `PortRef`s in `group`. """
+        """Create a new `Signal`, parametrized and named to connect to the `PortRef`s in `group`."""
 
         # Find a unique name for the new Signal.
         # The default name template is "_inst1_port1_inst2_port2_inst3_port3_"
@@ -204,7 +204,7 @@ class ResolvePortRefs(Elaborator):
         return sig
 
     def copy_port(self, port: PortType) -> PortType:
-        """ Copy a port into an internal Signal or BundleInstance """
+        """Copy a port into an internal Signal or BundleInstance"""
 
         if isinstance(port, Signal):
             # Make a copy, and update its port-level visibility to internal
@@ -220,7 +220,7 @@ class ResolvePortRefs(Elaborator):
         self.fail(f"Invalid Port Type `{port}`")
 
     def handle_noconn(self, module: Module, group: List[Union[PortRef, NoConn]]):
-        """ Handle a group with a `NoConn`. """
+        """Handle a group with a `NoConn`."""
         # First check for validity of the group, i.e. that the `NoConn` only connects to *one* port.
         if len(group) > 2:
             msg = f"Invalid multiply-connected `NoConn`, including {group} in {module}"
@@ -231,7 +231,7 @@ class ResolvePortRefs(Elaborator):
         return self.replace_noconn(module, portref=group[0], noconn=group[1])
 
     def replace_noconn(self, module: Module, portref: PortRef, noconn: NoConn):
-        """ Replace `noconn` with a newly minted `Signal`. """
+        """Replace `noconn` with a newly minted `Signal`."""
 
         # Get the target Module's port-object corresponding to `portref`
         mod = portref.inst._resolved
@@ -258,10 +258,10 @@ class ResolvePortRefs(Elaborator):
 
 
 class SetList:
-    """ A common combination of a hash-set and ordered list of the same items. 
-    Used for keeping ordered items while maintaining quick membership testing. 
-    
-    FIXME: don't think the elaborator actually needs this any more, seems it could be a set only. """
+    """A common combination of a hash-set and ordered list of the same items.
+    Used for keeping ordered items while maintaining quick membership testing.
+
+    FIXME: don't think the elaborator actually needs this any more, seems it could be a set only."""
 
     def __init__(self):
         self.set = set()

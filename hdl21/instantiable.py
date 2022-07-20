@@ -15,7 +15,7 @@ Instantiable = Union[Module, ExternalModuleCall, GeneratorCall, PrimitiveCall]
 
 
 def is_instantiable(val: Any) -> bool:
-    """ Boolean indication of whether `val` is an `Instantiable` type. """
+    """Boolean indication of whether `val` is an `Instantiable` type."""
     return isinstance(val, get_args(Instantiable))
 
 

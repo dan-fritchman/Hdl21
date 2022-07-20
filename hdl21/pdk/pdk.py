@@ -74,7 +74,7 @@ from ..elab import Elaboratables
 
 
 class _PdkManager:
-    """ The "private" singleton manager of available PDK modules """
+    """The "private" singleton manager of available PDK modules"""
 
     _the_one = None
 
@@ -99,7 +99,7 @@ _mgr = _PdkManager()
 
 
 def register(module: ModuleType) -> None:
-    """ Register the (Python) Module `module` as a PDK """
+    """Register the (Python) Module `module` as a PDK"""
     if module in _mgr.modules:
         return
 
@@ -136,12 +136,12 @@ def register(module: ModuleType) -> None:
 def compile(
     src: Elaboratables, pdk: Optional[Union[str, ModuleType]] = None
 ) -> Elaboratables:
-    """ 
-    Compile to a target PDK. 
+    """
+    Compile to a target PDK.
 
-    Uses the optional `pdk` argument as a target, if provided and valid. 
-    Otherwise uses the default PDK module. 
-    Raises a `RuntimeError` if there is no unambigous default. 
+    Uses the optional `pdk` argument as a target, if provided and valid.
+    Otherwise uses the default PDK module.
+    Raises a `RuntimeError` if there is no unambigous default.
     """
     if pdk is None:
         pdk = default()
@@ -166,7 +166,7 @@ def compile(
 
 
 def set_default(to: Union[ModuleType, str]) -> None:
-    """ Set the default PDK to use when no PDK is specified in a `hdl21.Generator` """
+    """Set the default PDK to use when no PDK is specified in a `hdl21.Generator`"""
 
     if isinstance(to, str):
         to = _mgr.names.get(to, None)
@@ -183,7 +183,7 @@ def set_default(to: Union[ModuleType, str]) -> None:
 
 
 def default() -> Optional[ModuleType]:
-    """ Retrieve the default PDK plug-in, if there is an unambiguous one set up. """
+    """Retrieve the default PDK plug-in, if there is an unambiguous one set up."""
 
     if _mgr.default is not None:
         return _mgr.default

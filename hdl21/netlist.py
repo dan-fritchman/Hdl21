@@ -20,17 +20,17 @@ from .proto.to_proto import to_proto
 def netlist(
     src: Union[Elaboratables, vlsir.circuit.Package],
     dest: IO,
-    *, 
+    *,
     domain: Optional[str] = None,
     **kwargs
 ) -> None:
-    """ 
+    """
     # Hdl21 Netlisting
 
-    Netlist one or more Hdl21 `Elaboratable`s - typically `Module`s - or a VLSIR `Package` to destination `dest`. 
-    All other options are forwarded to the underlying VLSIR netlister. 
+    Netlist one or more Hdl21 `Elaboratable`s - typically `Module`s - or a VLSIR `Package` to destination `dest`.
+    All other options are forwarded to the underlying VLSIR netlister.
 
-    Example usages: 
+    Example usages:
     ```python
     h.netlist(MyModule, dest=open('mynetlist.v', 'w'), fmt='verilog')
     ```

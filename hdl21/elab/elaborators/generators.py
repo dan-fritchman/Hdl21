@@ -14,20 +14,20 @@ from .base import Elaborator
 
 
 class GeneratorElaborator(Elaborator):
-    """ 
+    """
     # Generator Elaborator
-    
-    Walks a hierarchy from `top` calling Generators. 
-    This pass generally needs to run first among elaboration passes, 
-    or else often times, if `top` is a GeneratorCall, 
-    all other passes really don't have anything to do. 
-    
-    This fact is embedded in a few places throughout `GeneratorElaborator` 
-    and how it inherits behavior from the base `Elaborator`. 
-    Most (probably all) other passes require there be no `GeneratorCall`s 
-    remaining as they operate, and instead act on those Call's `result` properties. 
-    For reuse, this fact is embedded into the base-class in a few places, 
-    and `GeneratorElaborator`'s special-ish case is left to over-ride it. 
+
+    Walks a hierarchy from `top` calling Generators.
+    This pass generally needs to run first among elaboration passes,
+    or else often times, if `top` is a GeneratorCall,
+    all other passes really don't have anything to do.
+
+    This fact is embedded in a few places throughout `GeneratorElaborator`
+    and how it inherits behavior from the base `Elaborator`.
+    Most (probably all) other passes require there be no `GeneratorCall`s
+    remaining as they operate, and instead act on those Call's `result` properties.
+    For reuse, this fact is embedded into the base-class in a few places,
+    and `GeneratorElaborator`'s special-ish case is left to over-ride it.
     """
 
     def __init__(self, *args, **kwargs):
@@ -35,7 +35,7 @@ class GeneratorElaborator(Elaborator):
         self.generator_calls = dict()  # GeneratorCalls to their (Module) results
 
     def elaborate_top(self):
-        """ Elaborate our top node """
+        """Elaborate our top node"""
         if isinstance(self.top, Module):
             return self.elaborate_module_base(self.top)
         if isinstance(self.top, GeneratorCall):
@@ -44,7 +44,7 @@ class GeneratorElaborator(Elaborator):
         self.fail(msg)
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
-        """ Elaborate Generator-function-call `call`. Returns the generated Module. """
+        """Elaborate Generator-function-call `call`. Returns the generated Module."""
         self.stack.append(call)
 
         # Support the "no paramclass constructor" invocation.
@@ -110,7 +110,7 @@ class GeneratorElaborator(Elaborator):
         return m
 
     def elaborate_instance(self, inst: Instance) -> Instantiable:
-        """ Elaborate a Module Instance. """
+        """Elaborate a Module Instance."""
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
 
@@ -123,7 +123,7 @@ class GeneratorElaborator(Elaborator):
         return rv
 
     def elaborate_instance_array(self, arr: InstArray) -> Instantiable:
-        """ Elaborate an Instance Array. """
+        """Elaborate an Instance Array."""
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
 
@@ -136,7 +136,7 @@ class GeneratorElaborator(Elaborator):
         return rv
 
     def elaborate_instantiable(self, of: Instantiable) -> Instantiable:
-        """ Elaborate an Instance target. Adds the capacity to call `GeneratorCall`s to the more-common base-case. """
+        """Elaborate an Instance target. Adds the capacity to call `GeneratorCall`s to the more-common base-case."""
         if isinstance(of, GeneratorCall):
             return self.elaborate_generator_call(call=of)
         return super().elaborate_instantiable(of)

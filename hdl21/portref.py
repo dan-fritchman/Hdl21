@@ -11,9 +11,9 @@ from .instance import _Instance
 @connectable
 @datatype
 class PortRef:
-    """ # PortRef
-    Reference to a Port 
-    Created from a combination of a parent `inst` and a port-name. """
+    """# PortRef
+    Reference to a Port
+    Created from a combination of a parent `inst` and a port-name."""
 
     # Core fields: the Instance and port name
     inst: _Instance
@@ -24,10 +24,10 @@ class PortRef:
     connected_ports: Set["PortRef"] = field(default_factory=set, init=False, repr=False)
 
     def __eq__(self, other) -> bool:
-        """ Port-reference equality requires *identity* between instances 
-        (and of course equality of port-name). """
+        """Port-reference equality requires *identity* between instances
+        (and of course equality of port-name)."""
         return self.inst is other.inst and self.portname == other.portname
 
     def __hash__(self):
-        """ Hash references as the tuple of their instance-address and name """
+        """Hash references as the tuple of their instance-address and name"""
         return hash((id(self.inst), self.portname))

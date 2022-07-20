@@ -5,7 +5,7 @@ import pytest
 
 
 def test_sim1():
-    """ Test minimal `Sim` creation """
+    """Test minimal `Sim` creation"""
     s = Sim(tb=tb("empty"), attrs=[])
     assert isinstance(s, Sim)
     assert s.tb.name == "empty"
@@ -14,7 +14,7 @@ def test_sim1():
 
 
 def test_sim2():
-    """ Test creating a more fully-featured sim """
+    """Test creating a more fully-featured sim"""
     Sim(
         tb=tb(name="mytb"),
         attrs=[
@@ -29,7 +29,9 @@ def test_sim2():
                 name="mysweep",
             ),
             MonteCarlo(
-                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+                inner=[
+                    Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+                ],
                 npts=11,
                 name="mymc",
             ),
@@ -43,7 +45,7 @@ def test_sim2():
 
 
 def test_simattrs():
-    """ Test the "sim attrs" feature, which adds methods to `Sim` for each `SimAttr` """
+    """Test the "sim attrs" feature, which adds methods to `Sim` for each `SimAttr`"""
 
     s = Sim(tb=tb("mytb"))
 
@@ -54,7 +56,11 @@ def test_simattrs():
     assert tr.tstop == 11 * h.prefix.p
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
-        inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc"
+        inner=[
+            Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+        ],
+        npts=11,
+        name="mymc",
     )
     s.save(SaveMode.ALL)
     s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
@@ -64,7 +70,7 @@ def test_simattrs():
 
 
 def test_sim_decorator():
-    """ Test creating the same Sim, via the class decorator """
+    """Test creating the same Sim, via the class decorator"""
 
     @h.sim.sim
     class MySim:
@@ -75,9 +81,16 @@ def test_sim_decorator():
         mydc = Dc(var=x, sweep=PointSweep([1]))
         myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
         mytran = Tran(tstop=11 * h.prefix.p)
-        mysweep = SweepAnalysis(inner=[mytran], var=x, sweep=LinearSweep(0, 1, 2),)
+        mysweep = SweepAnalysis(
+            inner=[mytran],
+            var=x,
+            sweep=LinearSweep(0, 1, 2),
+        )
         mymc = MonteCarlo(
-            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11,
+            inner=[
+                Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+            ],
+            npts=11,
         )
         a_delay = Meas(analysis=mytran, expr="trig_targ_something")
         opts = Options(reltol=1e-9)
@@ -109,7 +122,7 @@ def test_tb():
 
 
 def test_proto1():
-    """ Test exporting `Sim` to the VLSIR Protobuf schema """
+    """Test exporting `Sim` to the VLSIR Protobuf schema"""
 
     s = Sim(
         tb=tb(name="mytb"),
@@ -125,7 +138,9 @@ def test_proto1():
                 name="mysweep",
             ),
             MonteCarlo(
-                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+                inner=[
+                    Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+                ],
                 npts=11,
                 name="mymc",
             ),
@@ -147,8 +162,8 @@ def test_proto1():
 
 
 def test_generator_sim():
-    """ Test creating and exporting `Sim` with generator-valued DUTs, 
-    particularly several with different parameter-values. """
+    """Test creating and exporting `Sim` with generator-valued DUTs,
+    particularly several with different parameter-values."""
 
     @h.paramclass
     class P:  # A largely dummy param-class
@@ -216,9 +231,9 @@ def empty_tb() -> h.Module:
 
     @h.module
     class EmptyTb:
-        """ An Empty TestBench, 
-        or as close as we can get to one without some simulators failing. 
-        AKA, a resistor to ground. """
+        """An Empty TestBench,
+        or as close as we can get to one without some simulators failing.
+        AKA, a resistor to ground."""
 
         VSS = h.Port()
         s = h.Signal()
@@ -229,10 +244,11 @@ def empty_tb() -> h.Module:
 
 
 @pytest.mark.skipif(
-    vlsirtools.spice.default() is None, reason="No simulator available",
+    vlsirtools.spice.default() is None,
+    reason="No simulator available",
 )
 def test_empty_sim1():
-    """ Create and run an empty `Sim`, returning a VLSIR_PROTO """
+    """Create and run an empty `Sim`, returning a VLSIR_PROTO"""
 
     from hdl21.sim import Sim, to_proto
     import vlsir.spice_pb2 as vsp
@@ -245,14 +261,15 @@ def test_empty_sim1():
 
 
 @pytest.mark.skipif(
-    vlsirtools.spice.default() is None, reason="No simulator available",
+    vlsirtools.spice.default() is None,
+    reason="No simulator available",
 )
 @pytest.mark.skipif(
     vlsirtools.spice.default() == vlsirtools.spice.SupportedSimulators.XYCE,
     reason="No support for `Xyce` + `SimData` python types",
 )
 def test_empty_sim2():
-    """ Create and run an empty `Sim`, returning SIM_DATA """
+    """Create and run an empty `Sim`, returning SIM_DATA"""
 
     from hdl21.sim import Sim, to_proto
     import vlsir.spice_pb2 as vsp

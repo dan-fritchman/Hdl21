@@ -21,15 +21,15 @@ The methods here primarily serve as a central reminder of and reusable source fo
 
 
 def init(cls: type) -> type:
-    """ 
-    Initialization decorator for "attr magic" types. 
-    
-    Sets an `_initialized` field to `False` as part of a `__new__` method, so that `__init__` need not remember to do so. 
-    Constructors are required to set `_initialized` to `True` when *all* construction has completed. 
-    For inherited types, this generally includes both parent and subclass initialization. 
-    
-    NOTE: this is a very important part of the `setattr` and `getattr` methods, 
-    particularly for their "bootstrapping phase" during object creation. 
+    """
+    Initialization decorator for "attr magic" types.
+
+    Sets an `_initialized` field to `False` as part of a `__new__` method, so that `__init__` need not remember to do so.
+    Constructors are required to set `_initialized` to `True` when *all* construction has completed.
+    For inherited types, this generally includes both parent and subclass initialization.
+
+    NOTE: this is a very important part of the `setattr` and `getattr` methods,
+    particularly for their "bootstrapping phase" during object creation.
     """
 
     if "__new__" in cls.__dict__:

@@ -17,13 +17,13 @@ from ..signal import Signal
 
 
 def to_proto(sim: data.Sim) -> vsp.SimInput:
-    """ Convert a `Sim` to a VLSIR `SimInput` """
+    """Convert a `Sim` to a VLSIR `SimInput`"""
     exporter = ProtoExporter(sim=sim)
     return exporter.export()
 
 
 class ProtoExporter:
-    """ Simulation Protobuf Exporter """
+    """Simulation Protobuf Exporter"""
 
     def __init__(self, sim: data.Sim):
         self.sim = sim  # Store the input `Sim`
@@ -31,8 +31,8 @@ class ProtoExporter:
         self.analysis_count = 0
 
     def export(self) -> vsp.SimInput:
-        """ Primary export method. Converts `sim.tb` and its dependencies to a `Package`, 
-        and all other `SimAttr`s to VLSIR attributes. """
+        """Primary export method. Converts `sim.tb` and its dependencies to a `Package`,
+        and all other `SimAttr`s to VLSIR attributes."""
         from ..proto import to_proto as module_to_proto
         from ..instantiable import qualname
 
@@ -52,7 +52,7 @@ class ProtoExporter:
         return self.inp
 
     def export_attr(self, attr: data.SimAttr) -> None:
-        """ Export a Sim Attribute. Primarily dispatches across internal union-types. """
+        """Export a Sim Attribute. Primarily dispatches across internal union-types."""
         from .data import is_analysis, is_control
 
         if isinstance(attr, data.Options):
@@ -65,7 +65,7 @@ class ProtoExporter:
             raise TypeError(f"Invalid SimAttr: {attr}")
 
     def export_analysis(self, an: data.Analysis) -> vsp.Analysis:
-        """ Export an `Analysis`, largely dispatching across types and re-assembling into a `vsp.Analysis`. """
+        """Export an `Analysis`, largely dispatching across types and re-assembling into a `vsp.Analysis`."""
         if isinstance(an, data.Op):
             return vsp.Analysis(op=self.export_op(an))
         elif isinstance(an, data.Dc):
@@ -84,21 +84,22 @@ class ProtoExporter:
             raise TypeError(f"Invalid Analysis {an}")
 
     def next_analysis_name(self) -> str:
-        """ Create a name for the next user-unnamed Analysis. 
-        Format: `Analysis{num}`, where `num` increases across all analyses. """
+        """Create a name for the next user-unnamed Analysis.
+        Format: `Analysis{num}`, where `num` increases across all analyses."""
         name = f"Analysis{self.analysis_count}"
         self.analysis_count += 1
         return name
 
     def export_op(self, op: data.Op) -> vsp.OpInput:
-        """ Export an operating point analysis """
+        """Export an operating point analysis"""
         analysis_name = op.name or self.next_analysis_name()
         return vsp.OpInput(
-            analysis_name=analysis_name, ctrls=[],  # FIXME: analysis-specific controls
+            analysis_name=analysis_name,
+            ctrls=[],  # FIXME: analysis-specific controls
         )
 
     def export_dc(self, dc: data.Dc) -> vsp.DcInput:
-        """ Export a DC analysis """
+        """Export a DC analysis"""
         analysis_name = dc.name or self.next_analysis_name()
         return vsp.DcInput(
             analysis_name=analysis_name,
@@ -108,7 +109,7 @@ class ProtoExporter:
         )
 
     def export_ac(self, ac: data.Ac) -> vsp.AcInput:
-        """ Export an AC analysis """
+        """Export an AC analysis"""
         analysis_name = ac.name or self.next_analysis_name()
         return vsp.AcInput(
             analysis_name=analysis_name,
@@ -119,7 +120,7 @@ class ProtoExporter:
         )
 
     def export_tran(self, tran: data.Tran) -> vsp.TranInput:
-        """ Export a transient analysis """
+        """Export a transient analysis"""
         analysis_name = tran.name or self.next_analysis_name()
         return vsp.TranInput(
             analysis_name=analysis_name,
@@ -130,7 +131,7 @@ class ProtoExporter:
         )
 
     def export_sweep_analysis(self, swp_an: data.SweepAnalysis) -> vsp.SweepInput:
-        """ Export a swept, nested set of one or more inner analyses as a `SweepInput`. """
+        """Export a swept, nested set of one or more inner analyses as a `SweepInput`."""
         analysis_name = swp_an.name or self.next_analysis_name()
         return vsp.SweepInput(
             analysis_name=analysis_name,
@@ -141,7 +142,7 @@ class ProtoExporter:
         )
 
     def export_monte(self, monte: data.MonteCarlo) -> vsp.MonteInput:
-        """ Export a monte-carlo analysis """
+        """Export a monte-carlo analysis"""
         analysis_name = monte.name or self.next_analysis_name()
         return vsp.MonteInput(
             analysis_name=analysis_name,
@@ -154,7 +155,7 @@ class ProtoExporter:
     def export_custom_analysis(
         self, an: data.CustomAnalysis
     ) -> vsp.CustomAnalysisInput:
-        """ Export a custom analysis """
+        """Export a custom analysis"""
         analysis_name = an.name or self.next_analysis_name()
         return vsp.CustomAnalysisInput(
             analysis_name=analysis_name,
@@ -163,7 +164,7 @@ class ProtoExporter:
         )
 
     def export_sweep_variable(self, var: Union[str, data.Param]) -> str:
-        """ Export a sweep-variable to its name. """
+        """Export a sweep-variable to its name."""
         if isinstance(var, str):
             return var
         elif isinstance(var, data.Param):
@@ -171,7 +172,7 @@ class ProtoExporter:
         raise TypeError(f"Invalid sweep variable {var}")
 
     def export_sweep(self, sweep: data.Sweep) -> vsp.Sweep:
-        """ Export a data sweep. """
+        """Export a data sweep."""
         if isinstance(sweep, data.LinearSweep):
             return vsp.Sweep(
                 linear=vsp.LinearSweep(
@@ -197,7 +198,7 @@ class ProtoExporter:
 
 
 def export_options(options: data.Options) -> vsp.SimOptions:
-    """ Export simulation options """
+    """Export simulation options"""
     return vsp.SimOptions(
         temp=options.temper,
         tnom=options.tnom,
@@ -208,7 +209,7 @@ def export_options(options: data.Options) -> vsp.SimOptions:
 
 
 def export_control(ctrl: data.Control) -> vsp.Control:
-    """ Export a `Control` element """
+    """Export a `Control` element"""
     if isinstance(ctrl, data.Include):
         return vsp.Control(include=export_include(ctrl))
     if isinstance(ctrl, data.Lib):
@@ -255,7 +256,7 @@ def export_save(save: data.Save) -> vsp.Save:
 
 
 def export_meas(meas: data.Meas) -> vsp.Meas:
-    """ Export a measurement """
+    """Export a measurement"""
     return vsp.Meas(
         analysis_type=export_analysis_type(meas.analysis),
         name=meas.name,
@@ -264,7 +265,7 @@ def export_meas(meas: data.Meas) -> vsp.Meas:
 
 
 def export_analysis_type(an: Union[str, data.Analysis]) -> str:
-    """ Export an `AnalysisType`, or string representation thereof. """
+    """Export an `AnalysisType`, or string representation thereof."""
     if isinstance(an, str):
         return an
     if data.is_analysis(an):
@@ -273,19 +274,19 @@ def export_analysis_type(an: Union[str, data.Analysis]) -> str:
 
 
 def export_param(param: data.Param) -> vlsir.Param:
-    """ Export a parameter declaration """
+    """Export a parameter declaration"""
     from ..proto.to_proto import export_param_value
 
     return vlsir.Param(name=param.name, value=export_param_value(param.val))
 
 
 def export_literal(literal: data.Literal) -> str:
-    """ Export a simulation literal, as its text value """
+    """Export a simulation literal, as its text value"""
     return literal.txt
 
 
 def export_float(num: Union[float, int, Decimal, Prefixed]) -> float:
-    """ Export a `Number` union-type to a float, or protobuf float/double. """
+    """Export a `Number` union-type to a float, or protobuf float/double."""
     if num is None:
         # FIXME: this is the protobuf default, but we really wanna make fields that use it optional
         return 0.0
