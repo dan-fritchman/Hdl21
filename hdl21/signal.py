@@ -23,12 +23,13 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 from copy import copy
 from enum import Enum
 from dataclasses import field
-from typing import Callable, Optional, List, Union, Set
-from pydantic.dataclasses import dataclass
+from typing import Callable, Optional, List, Set
 
 # Local imports
-from .connect import connectable
+from .datatype import datatype
+from .connect import connectable, track_connected_ports
 from .slices import slices
+from .concat import concatable
 
 
 class PortDir(Enum):
@@ -47,9 +48,11 @@ class Visibility(Enum):
     PORT = 1  # Exposed as a Port
 
 
+@track_connected_ports
 @slices
+@concatable
 @connectable
-@dataclass
+@datatype
 class Signal:
     """
     # hdl21 Signal
@@ -178,4 +181,3 @@ def _plural(*, fn: Callable, num: int, **kwargs) -> List[Signal]:
     for _ in range(num):
         rv.append(fn(**kwargs))
     return rv
-

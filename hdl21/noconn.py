@@ -15,10 +15,12 @@ from pydantic.dataclasses import dataclass
 # Local imports
 from .datatype import datatype
 from .connect import connectable, track_connected_ports
+from .concat import concatable
 from .portref import PortRef
 
 
 @track_connected_ports
+@concatable
 @connectable
 @datatype
 class NoConn:

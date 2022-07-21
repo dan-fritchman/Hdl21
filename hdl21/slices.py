@@ -1,11 +1,8 @@
 """
 # Slice-Enabling Decorator
 """
-from copy import copy
-from enum import Enum
-from dataclasses import field
-from typing import Callable, Optional, Any, List, Union, Set
-from pydantic.dataclasses import dataclass
+
+from typing import Union
 
 # Local imports
 from .connect import is_connectable
@@ -22,7 +19,7 @@ def slices(cls: type) -> type:
         msg = f"Internal hdl21 Error: invavlid `slices`-decoration of {cls} which is not `connectable`"
         raise RuntimeError(msg)
 
-    def __getitem__(self, key: Any) -> "Slice":
+    def __getitem__(self, key: Union[int, slice]) -> "Slice":
         return _slice_(parent=self, key=key)
 
     # Add the new behavior to the class

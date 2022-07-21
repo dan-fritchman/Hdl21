@@ -15,7 +15,9 @@ from .slices import slices
 from .signal import Signal
 from .concat import Concat, concatable
 
+
 @slices
+@concatable
 @connectable
 @dataclass
 class Slice:

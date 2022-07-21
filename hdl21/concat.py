@@ -29,13 +29,14 @@ def is_concatable(cls: type) -> type:
 
 
 @slices
+@concatable
 @connectable
 class Concat:
     """Signal Concatenation
     Uses *Python-convention* ordering, in which "LSBs", i.e. index 0, are specified first."""
 
     def __init__(self, *parts):
-        invalid_parts = [p for p in parts if not is_connectable(p)]
+        invalid_parts = [p for p in parts if not is_concatable(p)]
         if invalid_parts:
             raise TypeError(f"Invalid `Concat` of {invalid_parts}")
 
