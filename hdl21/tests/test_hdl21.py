@@ -664,6 +664,7 @@ def test_signal_slice2():
     assert sl.width == 2
 
 
+@pytest.mark.xfail(reason="#21 https://github.com/dan-fritchman/Hdl21/issues/21")
 def test_bad_slice1():
     # Test slicing error-cases
     with pytest.raises(TypeError):
@@ -1297,7 +1298,7 @@ def test_generator_call_by_kwargs():
     assert isinstance(m, h.Module)
 
     # Check that type-checking continue
-    with pytest.raises(ValidationError):
+    with pytest.raises(RuntimeError):
         m = M(a=TabError, b=TabError, c=TabError)
 
 

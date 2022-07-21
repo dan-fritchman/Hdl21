@@ -24,8 +24,8 @@ def concatable(cls: type) -> type:
     return cls
 
 
-def is_concatable(cls: type) -> type:
-    return getattr(cls, "__concatable__", False)
+def is_concatable(obj: object) -> type:
+    return getattr(obj, "__concatable__", False)
 
 
 @slices

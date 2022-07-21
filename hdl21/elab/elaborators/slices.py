@@ -3,12 +3,15 @@
 """
 
 # Std-Lib Imports
-from typing import List
+from typing import List, Union 
 
 # Local imports
 from ...module import Module
 from ...signal import Signal
-from ...slice import Slice, Concat, Sliceable
+from ...slice import Slice, Sliceable
+from ...concat import Concat
+from ...portref import PortRef
+from ...bundle import BundleRef
 
 # Import the base class
 from .base import Elaborator
@@ -48,6 +51,8 @@ def _resolve_sliceable(conn: Sliceable) -> Sliceable:
         return _resolve_slice(conn)
     if isinstance(conn, Concat):
         return _resolve_concat(conn)
+    if isinstance(conn, (PortRef, BundleRef)):
+        return _resolve_ref(conn)
     raise TypeError(f"Invalid attempt to resolve slicing on {conn}")
 
 
@@ -162,6 +167,11 @@ def _resolve_concat(conc: Concat) -> Concat:
 
     raise RuntimeError("Unable to resolve concatenation")
 
+def _resolve_ref(ref: Union[PortRef, BundleRef]) -> Sliceable:
+    """Resolve a reference to a Port or Bundle"""
+    if ref.resolved is None:
+        raise RuntimeError(f"Unresolved reference {ref}")
+    return _resolve_sliceable(ref.resolved)
 
 def _flat_concatable(s: Sliceable) -> bool:
     """Boolean indication of whether `s` is suitable for flattened Concatenations.

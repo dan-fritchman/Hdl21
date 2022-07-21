@@ -4,12 +4,10 @@
 
 from typing import Union
 
-# Local imports
-from .connect import is_connectable
-
 
 def slices(cls: type) -> type:
     """Decorator to add the 'square-bracket indexing produces `Slice`s' behavior."""
+    from .connect import is_connectable
 
     if getattr(cls, "__getitem__", None) is not None:
         msg = f"Internal hdl21 Error: invavlid `slices`-decoration of {cls} with existing __getitem__"
@@ -25,8 +23,15 @@ def slices(cls: type) -> type:
     # Add the new behavior to the class
     cls.__getitem__ = __getitem__
     cls.__getitem__.__doc__ = _slice_.__doc__
+    # And a marker attribute
+    cls.__slices__ = True
     # And don't forget to return that class!
     return cls
+
+
+def does_slices(obj: object) -> bool:
+    """Returns True if the class has the `slices` decorator."""
+    return getattr(obj, "__slices__", False)
 
 
 def _slice_(*, parent: "Sliceable", key: Union[int, slice]) -> "Slice":
