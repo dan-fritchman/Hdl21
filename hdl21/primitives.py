@@ -45,7 +45,8 @@ from pydantic.dataclasses import dataclass
 
 # Local imports
 from .default import Default
-from .params import paramclass, Param, isparamclass, NoParams, param_call
+from .call import param_call
+from .params import paramclass, Param, isparamclass, NoParams
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
 from .prefix import Prefixed

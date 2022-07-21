@@ -1,5 +1,5 @@
 from dataclasses import field
-from typing import Set, Dict
+from typing import Set, Union
 
 # Local imports
 from .datatype import datatype
@@ -19,9 +19,9 @@ class PortRef:
     inst: _Instance
     portname: str
 
-    # Internal, ideally private, fields
-    portrefs: Dict[str, "PortRef"] = field(default_factory=dict, init=False, repr=False)
-    connected_ports: Set["PortRef"] = field(default_factory=set, init=False, repr=False)
+    def __post_init_post_parse__(self):
+        self.connected_ports: Set[PortRef] = set()
+        self.resolved: Union[None, "Signal", "BundleInstance"] = None
 
     def __eq__(self, other) -> bool:
         """Port-reference equality requires *identity* between instances

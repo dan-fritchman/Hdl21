@@ -15,6 +15,9 @@ BaseModel.Config.arbitrary_types_allowed = True
 from .params import *
 from .instance import *
 from .signal import *
+from .slice import *
+from .concat import *
+from .noconn import *
 from .module import *
 from .generator import *
 from .generators import *

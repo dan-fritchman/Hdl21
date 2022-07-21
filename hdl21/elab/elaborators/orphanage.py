@@ -78,9 +78,16 @@ class Orphanage(Elaborator):
         """Check a Connectable for orphanage.
         Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements."""
 
-        from ...signal import Signal, Slice, Concat, NoConn
-        from ...bundle import BundleInstance, BundleRef, AnonymousBundle
-        from ...portref import PortRef
+        from ... import (
+            NoConn,
+            Signal,
+            Slice,
+            Concat,
+            BundleInstance,
+            BundleRef,
+            AnonymousBundle,
+            PortRef,
+        )
 
         # Check owned types first: Signals and Bundle Instances
         if isinstance(conn, (Signal, BundleInstance)):

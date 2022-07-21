@@ -7,7 +7,8 @@ from ...module import Module
 from ...instance import Instance
 from ...portref import PortRef
 from ...bundle import BundleInstance
-from ...signal import Signal, Slice, Concat
+from ...signal import Signal
+from ...slice import Slice, Concat
 
 # Import the base class
 from .base import Elaborator

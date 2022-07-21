@@ -329,6 +329,9 @@ class BundleFlattener(Elaborator):
         """Resolve a bundle-reference to a Signal or Flattened Bundle thereof.
         NOTE: currently only the scalar Signal resolution case is supported; nested Bundles are TBC."""
 
+        if bref.resolved is not None:
+            return bref.resolved
+
         if isinstance(bref.parent, BundleInstance):
             # Get the flattened version of the parent
             flat_parent = self.bundle_insts.get(id(bref.parent), None)
@@ -345,7 +348,8 @@ class BundleFlattener(Elaborator):
                 msg = f"Unsupported: BundleRef to non-Signal {flatsig}"
                 raise TypeError(msg)
 
-            # Success! Return the Signal
+            # Success! Store and return the Signal
+            bref.resolved = flatsig
             return flatsig
 
         if isinstance(bref.parent, BundleRef):

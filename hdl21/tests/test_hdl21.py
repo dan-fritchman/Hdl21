@@ -619,7 +619,7 @@ def test_signal_slice1():
 
     sig = h.Signal(width=10)
     sl = sig[0]
-    assert isinstance(sl, h.signal.Slice)
+    assert isinstance(sl, h.Slice)
     assert sl.top == 1
     assert sl.bot == 0
     assert sl.width == 1
@@ -627,7 +627,7 @@ def test_signal_slice1():
     assert sl.signal is sig
 
     sl = sig[0:5]
-    assert isinstance(sl, h.signal.Slice)
+    assert isinstance(sl, h.Slice)
     assert sl.top == 5
     assert sl.bot == 0
     assert sl.width == 5
@@ -635,7 +635,7 @@ def test_signal_slice1():
     assert sl.signal is sig
 
     sl = sig[:]
-    assert isinstance(sl, h.signal.Slice)
+    assert isinstance(sl, h.Slice)
     assert sl.top == 10
     assert sl.bot == 0
     assert sl.width == 10
@@ -685,23 +685,23 @@ def test_signal_concat1():
     # Initial Signal concatenation test
 
     c = h.Concat(h.Signal(width=1), h.Signal(width=2), h.Signal(width=3))
-    assert isinstance(c, h.signal.Concat)
+    assert isinstance(c, h.Concat)
     assert len(c.parts) == 3
     for p in c.parts:
         assert isinstance(p, h.signal.Signal)
     assert c.width == 6
 
     c = h.Concat(h.Signal(width=1)[0], h.Signal(width=2)[0], h.Signal(width=3)[0])
-    assert isinstance(c, h.signal.Concat)
+    assert isinstance(c, h.Concat)
     assert len(c.parts) == 3
     for p in c.parts:
-        assert isinstance(p, h.signal.Slice)
+        assert isinstance(p, h.Slice)
     assert c.width == 3
 
     c = h.Concat(
         h.Concat(h.Signal(), h.Signal()), h.Signal(width=2), h.Signal(width=2)[:]
     )
-    assert isinstance(c, h.signal.Concat)
+    assert isinstance(c, h.Concat)
     assert len(c.parts) == 3
     assert c.width == 6
 

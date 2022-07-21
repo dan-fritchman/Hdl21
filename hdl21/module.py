@@ -15,9 +15,10 @@ from dataclasses import field
 
 # Local imports
 from .default import Default
+from .call import param_call
 from .source_info import source_info, SourceInfo
 from .attrmagic import init
-from .params import HasNoParams, isparamclass, param_call
+from .params import HasNoParams, isparamclass
 from .signal import Signal, Visibility
 from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
 from .bundle import BundleInstance
@@ -429,6 +430,10 @@ class ExternalModuleCall:
         if not isinstance(self.params, self.module.paramtype):
             msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"
             raise TypeError(msg)
+
+    @property
+    def name(self) -> Optional[str]:
+        return self.module.name
 
     @property
     def ports(self) -> dict:

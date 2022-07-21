@@ -13,7 +13,8 @@ from ...module import Module
 from ...portref import PortRef
 from ...instance import Instance, InstArray
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
-from ...signal import PortDir, Signal, Visibility, NoConn
+from ...signal import PortDir, Signal, Visibility
+from ...noconn import NoConn
 
 # Import the base class
 from .base import Elaborator
@@ -120,9 +121,10 @@ class ResolvePortRefs(Elaborator):
         # And if we don't find any, go about naming and creating one.
         sig: Source = self.find_source(group) or self.create_source(module, group)
 
-        # And re-connect it to each Instance
+        # Set it as the `resolved` Signal of each `PortRef`, and re-connect it to each `Instance`
         non_sources = list(filter(lambda p: self.source(p) is None, group))
         for portref in non_sources:
+            portref.resolved = sig
             portref.inst.connect(portref.portname, sig)
 
     def source(self, portref: PortRef) -> Optional[Source]:

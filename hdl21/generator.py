@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 # Local imports
 from .default import Default
-from .params import param_call
+from .call import param_call
 from .module import Module
 from .instance import calls_instantiate
 

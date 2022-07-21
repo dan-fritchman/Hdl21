@@ -18,3 +18,7 @@ class Default:
     """
 
     ...  # Empty contents
+
+    def __new__(cls, *args, **kwargs):
+        # And we're a singleton. Call away, you get the same class-object back.
+        return Default

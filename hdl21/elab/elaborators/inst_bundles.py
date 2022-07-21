@@ -46,8 +46,7 @@ class InstBundleElaborator(Elaborator):
         """# Elaborate an Instance Bundle
         Replace it with "scalar" Instances and reconnect them."""
 
-        from ...bundle import AnonymousBundle, BundleInstance
-        from ...signal import Sliceable
+        from ... import AnonymousBundle, BundleInstance, Sliceable
 
         if len(instbundle.bundle.bundles):
             msg = f"Invalid Instance Bundle {instbundle} with nested Bundles"

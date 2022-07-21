@@ -5,9 +5,10 @@ Structured connection objects, instances thereof, and associated utilities.
 """
 
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args, Dict, Set, List
+from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 
 # Local Imports
+from .datatype import datatype
 from .attrmagic import init
 from .connect import connectable, track_connected_ports
 from .signal import Signal
@@ -338,25 +339,25 @@ class AnonymousBundle:
 
 @track_connected_ports
 @connectable
+@datatype  # FIXME: add nested `BundleRef` via `getattr`
 class BundleRef:
     """Reference into a Bundle Instance"""
 
-    _specialcases = [
+    parent: Union["BundleInstance", "BundleRef"]  # Parent Bundle
+    attrname: str  # Attribute name
+
+    _specialcases: ClassVar[List[str]] = [
         "parent",
+        "attrname",
         "path",
         "root",
         "connected_ports",
+        "resolved",
     ]
 
-    def __init__(
-        self,
-        parent: Union["BundleInstance", "BundleRef"],
-        attrname: str,
-    ):
-        self.parent = parent
-        self.attrname = attrname
-        # Connected port references
+    def __post_init_post_parse__(self):
         self.connected_ports: Set["PortRef"] = set()
+        self.resolved: Union[None, "Signal", "BundleInstance"] = None
         self._elaborated = False
 
     def __eq__(self, other) -> bool:

@@ -10,7 +10,8 @@ from typing import Any, Union, get_args
 from ...connect import is_connectable, Connectable
 from ...module import Module
 from ...instance import InstArray, Instance
-from ...signal import Sliceable, Signal
+from ...signal import Signal
+from ...slice import Sliceable
 from ...bundle import (
     AnonymousBundle,
     BundleInstance,

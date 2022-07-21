@@ -13,7 +13,9 @@ import vlsir.circuit_pb2 as vckt
 from ..prefix import Prefix, Prefixed
 from ..module import Module, ExternalModule
 from ..instance import Instance
-from ..signal import Signal, PortDir, Slice, Concat, Visibility
+from ..signal import Signal, PortDir, Visibility
+from ..slice import Slice
+from ..concat import Concat
 from .. import primitives
 from ..primitives import Primitive
 

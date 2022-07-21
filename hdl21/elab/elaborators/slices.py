@@ -7,7 +7,8 @@ from typing import List
 
 # Local imports
 from ...module import Module
-from ...signal import Signal, Slice, Concat, Sliceable
+from ...signal import Signal
+from ...slice import Slice, Concat, Sliceable
 
 # Import the base class
 from .base import Elaborator
