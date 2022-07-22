@@ -2,6 +2,8 @@
 # Generator Elaborator 
 """
 
+from typing import List, Dict, Union
+
 # Local imports
 from ...module import Module
 from ...instance import InstArray, Instance
@@ -32,27 +34,30 @@ class GeneratorElaborator(Elaborator):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.generator_calls = dict()  # GeneratorCalls to their (Module) results
+        # Cache GeneratorCalls to their (Module) results
+        # (Yes, GeneratorCalls can be hashed.)
+        self.generator_calls: Dict[GeneratorCall, Module] = dict()
 
-    def elaborate_top(self):
-        """Elaborate our top node"""
-        if isinstance(self.top, Module):
-            return self.elaborate_module_base(self.top)
-        if isinstance(self.top, GeneratorCall):
-            return self.elaborate_generator_call(self.top)
-        msg = f"Invalid Elaboration top-level {self.top}, must be a Module or Generator"
+    def elaborate_tops(self) -> List[Module]:
+        """Elaborate our top nodes"""
+        if not isinstance(self.tops, List):
+            self.fail(f"Invalid Top for Elaboration: {self.tops} must be a list")
+        return [self.elaborate_a_top_node(t) for t in self.tops]
+
+    def elaborate_a_top_node(self, t: Union[Module, GeneratorCall]) -> Module:
+        """ Elaborate a top-level node, which may be a Module or a GeneratorCall. """
+        if isinstance(t, Module):
+            return self.elaborate_module_base(t)  # Note `_base` here!
+        
+        if isinstance(t, GeneratorCall):
+            return self.elaborate_generator_call(t)
+        
+        msg = f"Invalid Elaboration top-level {t}, must be a Module or call to Generator"
         self.fail(msg)
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """Elaborate Generator-function-call `call`. Returns the generated Module."""
-        self.stack.append(call)
 
-        # Check that the call has a valid instance of the generator's parameter-class
-        if not isinstance(call.params, call.gen.Params):
-            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.params}"
-            self.fail(msg)
-
-        # At this point the `Call` has a valid `Generator` and `arg`.
         # Check our cache, see if we've already generated its module.
         if call in self.generator_calls:  # Already done!
             # Give the `call` a reference to its result.
@@ -60,6 +65,13 @@ class GeneratorElaborator(Elaborator):
             result = self.generator_calls[call]
             call.result = result
             return result
+
+        self.stack.append(call)
+
+        # Check that the call has a valid instance of the generator's parameter-class
+        if not isinstance(call.params, call.gen.Params):
+            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.params}"
+            self.fail(msg)
 
         # The main event: Run the generator-function
         if call.gen.usecontext:

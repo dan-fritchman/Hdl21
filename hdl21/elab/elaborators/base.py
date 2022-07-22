@@ -43,21 +43,29 @@ class Elaborator:
     """
 
     @classmethod
-    def elaborate(cls, top: Elaboratable, ctx: Context) -> Module:
-        """Elaboration entry-point. Elaborate the top-level object."""
-        return cls(top, ctx).elaborate_top()
+    def elaborate(cls, tops: List[Elaboratable], ctx: Context) -> List[Elaboratable]:
+        """Elaboration entry-point. Elaborate the top-level objects."""
+        return cls(tops, ctx).elaborate_tops()
 
-    def __init__(self, top: Elaboratable, ctx: Context):
-        self.top = top
+    def __init__(self, tops: List[Elaboratable], ctx: Context):
+        self.tops = tops
         self.ctx = ctx
         self.stack: List[ElabStackEntry] = list()
         self.modules: Dict[int, Module] = dict()
 
-    def elaborate_top(self) -> Module:
-        """Elaborate our top node"""
-        if not isinstance(self.top, Module):
-            self.fail(f"Invalid Top for Elaboration: {self.top} must be a Module")
-        return self.elaborate_module_base(self.top)  # Note `_base` here!
+    def elaborate_tops(self) -> List[Elaboratable]:
+        """Elaborate our top nodes"""
+        if not isinstance(self.tops, List):
+            self.fail(f"Invalid Top for Elaboration: {self.tops} must be a list")
+
+        # The base-class Elaborator, and most sub-classes, return the `self.tops` list unmodified, 
+        # while modifiying its elements inline. 
+        # This differs from the `Generator` elaborator, which returns a new list, 
+        # generally converting `GeneratorCall`s into `Module`s. 
+
+        for t in self.tops:
+            self.elaborate_module_base(t)  # Note `_base` here!
+        return self.tops
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """Elaborate a GeneratorCall"""
