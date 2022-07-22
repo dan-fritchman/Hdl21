@@ -45,15 +45,16 @@ class GeneratorElaborator(Elaborator):
         return [self.elaborate_a_top_node(t) for t in self.tops]
 
     def elaborate_a_top_node(self, t: Union[Module, GeneratorCall]) -> Module:
-        """ Elaborate a top-level node, which may be a Module or a GeneratorCall. """
+        """Elaborate a top-level node, which may be a Module or a GeneratorCall."""
         if isinstance(t, Module):
             return self.elaborate_module_base(t)  # Note `_base` here!
-        
+
         if isinstance(t, GeneratorCall):
             return self.elaborate_generator_call(t)
-        
-        msg = f"Invalid Elaboration top-level {t}, must be a Module or call to Generator"
-        self.fail(msg)
+
+        self.fail(
+            f"Invalid Elaboration top-level {t}, must be a Module or call to Generator"
+        )
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """Elaborate Generator-function-call `call`. Returns the generated Module."""
@@ -101,9 +102,6 @@ class GeneratorElaborator(Elaborator):
         # Then add a unique suffix per its parameter-values
         if not isinstance(call.params, HasNoParams):
             m.name += "(" + _unique_name(call.params) + ")"
-
-        # Update the Module's `pymodule`, which generally at this point is `hdl21.generator`
-        m._pymodule = call.gen.pymodule
 
         # And elaborate the module
         m = self.elaborate_module_base(m)  # Note the `_base` here!

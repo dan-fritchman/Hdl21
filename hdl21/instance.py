@@ -40,7 +40,7 @@ class _Instance:
         self.portrefs: Dict[str, "PortRef"] = dict()
         self._parent_module = None  # Instantiating module
         self._elaborated = False
-        self._source_info: Optional[SourceInfo] = source_info([__file__])
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"

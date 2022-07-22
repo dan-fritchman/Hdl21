@@ -7,11 +7,8 @@ This module primarily defines:
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 
-import inspect
-from types import ModuleType
 from typing import Any, Optional, List, Union, get_args, Type, Dict
 from pydantic.dataclasses import dataclass
-from dataclasses import field
 
 # Local imports
 from .default import Default
@@ -67,11 +64,7 @@ class Module:
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._source_info: SourceInfo = source_info([__file__])
-        self._pymodule = (
-            self._source_info.pymodule
-        )  # FIXME: move to operating on `SourceInfo` instead
-
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._importpath = None  # Optional field set by importers
         self._moduledata = None  # Optional[ModuleData]
         self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
@@ -233,24 +226,14 @@ class Module:
         return rv
 
     def _defpath(self) -> str:
-        """Helper for exporting.
-        Returns a string representing "where" this module was defined.
-        This is generally one of a few things:
-        * If "normally" defined via Python code, it's the Python module path
-        * If *imported*, it's the path inferred during import"""
-        if self._importpath:  # Imported. Return the period-separated import path.
-            return ".".join(self._importpath)
-        # Defined the old fashioned way. Use the Python module name.
-        return self._pymodule.__name__
+        return _defpath(self)
 
     def _qualname(self) -> Optional[str]:
-        """Helper for exporting. Returns the path-qualified name including
-        `_defpath` options above, and the `Module.name`."""
-        if self.name is None:
-            return None
-        return self._defpath() + "." + self.name
+        return _qualname(self)
 
     def __eq__(self, other: "Module") -> bool:
+        if not isinstance(other, Module):
+            return NotImplemented
         if self.name is None or other.name is None:
             raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
         return self._qualname() == other._qualname()
@@ -344,8 +327,6 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
-    pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
-    importpath: Optional[List[str]] = field(repr=False, init=False, default=None)
 
     def __post_init__(self):
         # Check for a valid parameter-type
@@ -355,10 +336,8 @@ class ExternalModule:
             raise ValueError(msg)
 
         # Internal tracking data: defining module/import-path
-        self._source_info: SourceInfo = source_info([__file__])
-        # FIXME: move to operating on `SourceInfo` instead
-        self.pymodule = self._source_info.pymodule
-        self.importpath = None
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
+        self._importpath = None
 
     def __post_init_post_parse__(self):
         """After type-checking, do some more checks on values"""
@@ -378,24 +357,14 @@ class ExternalModule:
         return {p.name: p for p in self.port_list}
 
     def _defpath(self) -> str:
-        """Helper for exporting.
-        Returns a string representing "where" this module was defined.
-        This is generally one of a few things:
-        * If "normally" defined via Python code, it's the Python module path
-        * If *imported*, it's the path inferred during import"""
-        if self.importpath:  # Imported. Return the period-separated import path.
-            return ".".join(self.importpath)
-        # Defined the old fashioned way. Use the Python module name.
-        return self.pymodule.__name__
+        return _defpath(self)
 
     def _qualname(self) -> Optional[str]:
-        """Helper for exporting. Returns the path-qualified name including
-        `_defpath` options above, and the `Module.name`."""
-        if self.name is None:
-            return None
-        return self._defpath() + "." + self.name
+        return _qualname(self)
 
     def __eq__(self, other: "ExternalModule") -> bool:
+        if not isinstance(other, ExternalModule):
+            return NotImplemented
         if self.name is None or other.name is None:
             raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
         return self._qualname() == other._qualname()
@@ -413,6 +382,33 @@ class ExternalModule:
     @property
     def Params(self) -> Type:
         return self.paramtype
+
+
+def _qualname(mod: Union[Module, ExternalModule]) -> Optional[str]:
+    """# Qualified Name
+    Helper for exporting. Returns a module or import path-qualified name."""
+
+    if mod.name is None:
+        return None
+    return mod._defpath() + "." + mod.name
+
+
+def _defpath(mod: Union[Module, ExternalModule]) -> str:
+    """# Definition Path
+    Helper for exporting.
+    Returns a string representing "where" this module was defined.
+    This is generally one of a few things:
+    * If "normally" defined via Python code, it's the Python module path
+    * If *imported*, it's the path inferred during import"""
+
+    if mod._importpath is not None:
+        # Imported. Return the period-separated import path.
+        return ".".join(mod._importpath)
+
+    # Defined the old fashioned way. Use the Python module name.
+    if mod._source_info.pymodule is None:
+        raise RuntimeError(f"{mod} is not defined in Python")
+    return mod._source_info.pymodule.__name__
 
 
 @calls_instantiate

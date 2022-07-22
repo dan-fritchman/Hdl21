@@ -86,7 +86,7 @@ class ProtoImporter:
             paramtype=dict,  # FIXME: should these be stored in the serialization schema?
         )
         # Give it a (non-initializer) value for its `importpath`
-        emod.importpath = [pmod.name.domain]
+        emod._importpath = [pmod.name.domain]
         # Cache and return it
         self.ext_modules[key] = emod
         return emod
