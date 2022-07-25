@@ -4,31 +4,30 @@
 
 import inspect
 import pickle
-from dataclasses import field
 from typing import Callable, Any, Optional, Dict
-from types import ModuleType
-from pydantic.dataclasses import dataclass
-from pydantic import ValidationError
 
 # Local imports
 from .default import Default
 from .call import param_call
+from .params import HasNoParams, _unique_name
+from .source_info import SourceInfo, source_info
 from .module import Module
 from .instance import calls_instantiate
 
 
-@dataclass
 class Generator:
-    """# Generator Object
+    """
+    # Generator Object
+
     Typically created by the `@hdl.generator` decorator.
-    Stores a function-object and parameters-type,
-    along with some auxiliary data.
+    Stores a function-object and parameters-type, along with some auxiliary data.
     """
 
-    func: Callable  # The generator function
-    paramtype: type  # Parameter type
-    usecontext: bool  # Boolean indication of `Context` usage
-    pymodule: ModuleType  # Python module where function defined
+    def __init__(self, func: Callable, paramtype: type, usecontext: bool):
+        self.func = func
+        self.paramtype = paramtype
+        self.usecontext = usecontext
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
 
     def __call__(self, arg: Any = Default, **kwargs: Dict) -> "GeneratorCall":
         """Calls to Generators create GeneratorCall-objects
@@ -52,16 +51,17 @@ class Generator:
 
 
 @calls_instantiate
-@dataclass
 class GeneratorCall:
     """Generator 'Bare Calls'
     Stored for expansion during elaboration.
     Only single-argument calls with `Params` are supported.
     Any application of a `Context` is done during elaboration."""
 
-    gen: Generator
-    params: Any
-    result: Optional[Module] = field(init=False, default=None)
+    def __init__(self, gen: Generator, params: Any):
+        self.gen = gen
+        self.params = params
+        self.result: Optional[Module] = None
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
 
     def __eq__(self, other) -> bool:
         """Generator-Call equality requires:
@@ -85,8 +85,12 @@ class GeneratorCall:
         Once elaborated, returns the name of the generated Module.
         If not elaborated, raises a `RuntimeError`."""
         if self.result is None:
-            raise RuntimeError(f"Cannot name un-elaborated GeneratorCall {self}")
-        return self.result.name
+            name = self.gen.name
+            if not isinstance(self.params, HasNoParams):
+                name += "(" + _unique_name(self.params) + ")"
+            return name
+        return self.result.name  # FIXME: do we need this case?
+        # They are probably always the same already, but can be made 110% the same for sure.
 
 
 def generator(f: Callable) -> Generator:
@@ -124,9 +128,5 @@ def generator(f: Callable) -> Generator:
         msg = f"Generator {f.__name__} must return (and must be annotated to return) a Module."
         raise TypeError(msg)
 
-    # Grab a reference to the Python-module defining the function
-    # (For later name-unique-ifying)
-    pymodule = inspect.getmodule(f)
-    return Generator(
-        func=f, paramtype=paramtype, usecontext=usecontext, pymodule=pymodule
-    )
+    # And return the `Generator` object
+    return Generator(func=f, paramtype=paramtype, usecontext=usecontext)

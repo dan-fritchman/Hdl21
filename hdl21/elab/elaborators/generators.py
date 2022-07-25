@@ -67,7 +67,9 @@ class GeneratorElaborator(Elaborator):
             call.result = result
             return result
 
+        # Add both the `Call` and `Generator` to our stack. 
         self.stack.append(call)
+        self.stack.append(call.gen)
 
         # Check that the call has a valid instance of the generator's parameter-class
         if not isinstance(call.params, call.gen.Params):
@@ -75,10 +77,13 @@ class GeneratorElaborator(Elaborator):
             self.fail(msg)
 
         # The main event: Run the generator-function
-        if call.gen.usecontext:
-            m = call.gen.func(call.params, self.ctx)
-        else:
-            m = call.gen.func(call.params)
+        try:
+            if call.gen.usecontext:
+                m = call.gen.func(call.params, self.ctx)
+            else:
+                m = call.gen.func(call.params)
+        except Exception as e:
+            self.fail(f"{call.gen} raised an exception: \n{e}")
 
         # Type-check the result
         # Generators may return other (potentially nested) generator-calls; unwind any of them
@@ -105,7 +110,12 @@ class GeneratorElaborator(Elaborator):
 
         # And elaborate the module
         m = self.elaborate_module_base(m)  # Note the `_base` here!
+        
+        # Pop both the `Call` and `Generator` off the stack
         self.stack.pop()
+        self.stack.pop()
+
+        # And return the generated Module
         return m
 
     def elaborate_instance(self, inst: Instance) -> Instantiable:

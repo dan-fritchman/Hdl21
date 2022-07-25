@@ -41,8 +41,19 @@ def param_call(callee: Callee, arg: Any = Default, **kwargs: Dict) -> "Callee.Pa
         # As indicated by the `Params` property of the callee.
         return callee.Params(**kwargs)
 
-    except ValidationError as e:
+    except (TypeError, ValidationError) as e:
         # Type validation failed; add some of our info to the error message.
+
+        # A very common case is forgetting to apply parameters, and going straight to connections. 
+        # Check for this, and provide a specific error message when it happens.
+        from .connect import is_connectable
+
+        connectables = [key for key, val in kwargs.items() if is_connectable(val)]
+        if connectables:
+            msg = f"Invalid call to {callee} with connectables: ({', '.join(connectables)}). \n"
+            msg += f"Did you forget to pass this its `params` ({callee.Params.__name__}) first?"
+            raise RuntimeError(msg)
+
         # FIXME: add `SourceInfo`
         msg = f"Invalid call to `{callee}` with arguments `{kwargs}`: \n\n{e}"
         raise RuntimeError(msg)
