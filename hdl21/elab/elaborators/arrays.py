@@ -28,12 +28,14 @@ class ArrayFlattener(Elaborator):
             name, array = module.instarrays.popitem()
             self.stack.append(array)
             module.namespace.pop(name)
+            
             # Visit the array's target
-            target = self.elaborate_instance_array(array)
+            target = self.elaborate_instance_base(array)
 
             # And do the real work: flattening it.
             if array.n < 1:
                 self.fail(f"Invalid InstArray {array} with size {array.n}")
+
             # Create the new, flat Instances
             new_insts = []
             for k in range(array.n):
@@ -42,6 +44,7 @@ class ArrayFlattener(Elaborator):
                 )
                 inst = module.add(Instance(of=target, name=name))
                 new_insts.append(inst)
+            
             # And connect them
             for portname, conn in array.conns.items():
                 if isinstance(conn, BundleInstance):

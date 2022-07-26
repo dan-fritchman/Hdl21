@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Union
 
 # Local imports
 from ...module import Module, ExternalModuleCall
-from ...instance import InstArray, Instance, InstanceBundle
+from ...instance import _Instance, Instance, InstArray, InstanceBundle
 from ...primitives import PrimitiveCall
 from ...bundle import BundleInstance
 from ...generator import GeneratorCall
@@ -58,10 +58,10 @@ class Elaborator:
         if not isinstance(self.tops, List):
             self.fail(f"Invalid Top for Elaboration: {self.tops} must be a list")
 
-        # The base-class Elaborator, and most sub-classes, return the `self.tops` list unmodified, 
-        # while modifiying its elements inline. 
-        # This differs from the `Generator` elaborator, which returns a new list, 
-        # generally converting `GeneratorCall`s into `Module`s. 
+        # The base-class Elaborator, and most sub-classes, return the `self.tops` list unmodified,
+        # while modifiying its elements inline.
+        # This differs from the `Generator` elaborator, which returns a new list,
+        # generally converting `GeneratorCall`s into `Module`s.
 
         for t in self.tops:
             self.elaborate_module_base(t)  # Note `_base` here!
@@ -99,9 +99,13 @@ class Elaborator:
 
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
-            self.elaborate_instance(inst)
+            self.elaborate_instance_base(inst)
         for arr in module.instarrays.values():
-            self.elaborate_instance_array(arr)
+            self.elaborate_instance_base(arr)
+        for instbundle in module.instbundles.values():
+            self.elaborate_instance_base(instbundle)
+
+        # Traverse Bundle instances
         for bundle in module.bundles.values():
             self.elaborate_bundle_instance(bundle)
 
@@ -131,20 +135,8 @@ class Elaborator:
         inst._elaborated = True
         return inst
 
-    def elaborate_instance_array(self, array: InstArray) -> Instantiable:
-        """Elaborate an InstArray"""
-        self.stack.append(array)
-        # Turn off `PortRef` magic
-        array._elaborated = True
-        # And visit the Instance's target
-        rv = self.elaborate_instantiable(array._resolved)
-        self.stack.pop()
-        return rv
-
-    def elaborate_instance(self, inst: Instance) -> Instantiable:
-        """Elaborate a Module Instance."""
-        # This version of `elaborate_instantiable` is the "post-generators" version used by *most* passes.
-        # The Generator-elaborator is different, and overrides it.
+    def elaborate_instance_base(self, inst: _Instance) -> Instantiable:
+        """Elaborate a Module Instance, Array or Bundle thereof."""
 
         self.stack.append(inst)
         # Turn off `PortRef` magic

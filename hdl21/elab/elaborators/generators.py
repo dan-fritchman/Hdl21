@@ -118,7 +118,7 @@ class GeneratorElaborator(Elaborator):
         # And return the generated Module
         return m
 
-    def elaborate_instance(self, inst: Instance) -> Instantiable:
+    def elaborate_instance_base(self, inst: Instance) -> Instantiable:
         """Elaborate a Module Instance."""
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
@@ -128,19 +128,6 @@ class GeneratorElaborator(Elaborator):
         inst._elaborated = True
         # And visit the Instance's target
         rv = self.elaborate_instantiable(inst.of)
-        self.stack.pop()
-        return rv
-
-    def elaborate_instance_array(self, arr: InstArray) -> Instantiable:
-        """Elaborate an Instance Array."""
-        # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
-        # instead of the resolved version `inst._resolved`.
-
-        self.stack.append(arr)
-        # Turn off `PortRef` magic
-        arr._elaborated = True
-        # And visit the Instance's target
-        rv = self.elaborate_instantiable(arr.of)
         self.stack.pop()
         return rv
 
