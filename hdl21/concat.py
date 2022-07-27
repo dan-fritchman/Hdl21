@@ -3,15 +3,10 @@
 "Sequences" of Signals and other Connectable objects. 
 """
 
-from copy import copy
-from enum import Enum
-from dataclasses import field
-from typing import Callable, Optional, Any, List, Union, Set
-from pydantic.dataclasses import dataclass
+from typing import Optional, Set
 
 # Local imports
 from .connect import connectable, is_connectable
-from .portref import PortRef
 from .slices import slices
 
 
@@ -40,37 +35,43 @@ class Concat:
         if invalid_parts:
             raise TypeError(f"Invalid `Concat` of {invalid_parts}")
 
+        for part in parts:
+            part._concats.add(self)
+
         # Store the `parts` to a tuple
         self.parts = tuple(parts)
 
-    def __eq__(self, _other) -> bool:
-        # Concat-equality can be implemented, but has plenty of edge cases
-        # not yet worked through. For example slicing and re-concatenation:
-        # ```python
-        # s = h.Signal(width=2)      # Create a 2-bit signal
-        # s == h.Concat(s[0], s[1])  # Slice and re-concatenate it
-        # # Should that be True of False?
-        # ```
-        return NotImplemented
+        # Inner management data
+        self.connected_ports: Set["PortRef"] = set()
+        self._width: Optional[int] = None
+        self._slices: Set["Slice"] = set()
+        self._concats: Set["Concat"] = set()
+
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
 
     def __repr__(self):
         return f"Concat(parts={len(self.parts)})"
 
     @property
     def width(self):
-        # FIXME!
-        return width(self)
+        if self._width is None:
+            self._width = width(self)
+        return self._width
 
 
-def assert_valid(concat: Concat):
-    # FIXME!
-    if self.width < 1:
-        raise ValueError(f"Invalid Zero-Width Concat of {self.parts}")
-
-
+# FIXME: move!
 def width(concat: Concat) -> int:
-    # FIXME!
-    return sum([s.width for s in concat.parts])
+    width = sum([s.width for s in concat.parts])
+    if width < 1:
+        raise ValueError(f"Invalid Width Concat of {concat}")
+    return width
 
 
 __all__ = ["Concat"]
+

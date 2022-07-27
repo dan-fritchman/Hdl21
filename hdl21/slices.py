@@ -17,8 +17,8 @@ def slices(cls: type) -> type:
         msg = f"Internal hdl21 Error: invavlid `slices`-decoration of {cls} which is not `connectable`"
         raise RuntimeError(msg)
 
-    def __getitem__(self, key: Union[int, slice]) -> "Slice":
-        return _slice_(parent=self, key=key)
+    def __getitem__(self, index: Union[int, slice]) -> "Slice":
+        return _slice_(parent=self, index=index)
 
     # Add the new behavior to the class
     cls.__getitem__ = __getitem__
@@ -34,7 +34,7 @@ def does_slices(obj: object) -> bool:
     return getattr(obj, "__slices__", False)
 
 
-def _slice_(*, parent: "Sliceable", key: Union[int, slice]) -> "Slice":
+def _slice_(*, parent: "Sliceable", index: Union[int, slice]) -> "Slice":
     """Square-bracket slicing into Signals, Concatenations, and Slices.
     Assuming valid inputs, returns a signal-`Slice`.
 
@@ -49,58 +49,9 @@ def _slice_(*, parent: "Sliceable", key: Union[int, slice]) -> "Slice":
 
     from .slice import Slice
 
-    if isinstance(key, int):
-        if key >= parent.width:
-            raise ValueError(f"Out-of-bounds index {key} into {parent}")
-        if key < 0:
-            key += parent.width
-        return Slice(
-            signal=parent, top=key + 1, bot=key, start=key, stop=None, step=None
-        )
+    if not isinstance(index, (int, slice)):
+        raise TypeError
 
-    if isinstance(key, slice):
-        # Note these `slice` attributes are descriptor-things, and they get weird, fast.
-        # Extracting their three key fields the most-hardest way via `__getattribute__` seems to work cleanest.
-        start = slice.__getattribute__(key, "start")
-        stop = slice.__getattribute__(key, "stop")
-        step = slice.__getattribute__(key, "step")
-
-        stepsz = 1 if step is None else step
-        if stepsz == 0:
-            raise ValueError(f"slice step cannot be zero")
-        elif stepsz < 0:
-            # Here `top` gets a "+1" since `start` is *inclusive*, while `bot` gets "+1" as `stop` is *exclusive*.
-            top = (
-                parent.width
-                if start is None
-                else start + 1
-                if start >= 0
-                else parent.width + start + 1
-            )
-            bot = (
-                0
-                if stop is None
-                else stop + 1
-                if stop >= 0
-                else parent.width + stop + 1
-            )
-            # Align bot with the step
-            bot += (top - bot) % abs(stepsz)
-        else:
-            # Here `start` and `stop` match `top` and `bot`'s inclsive/ exclusivity.
-            # No need to add any offsets.
-            top = (
-                parent.width
-                if stop is None
-                else stop
-                if stop >= 0
-                else parent.width + stop
-            )
-            bot = 0 if start is None else start if start >= 0 else parent.width + start
-            # Align top with the step
-            top -= (top - bot) % stepsz
-
-        # Create and return our Slice. More checks are done in its constructor.
-        return Slice(signal=parent, top=top, bot=bot, step=step, start=start, stop=stop)
-
-    raise TypeError(f"Invalid slice-type {key} into {parent}")
+    slize = Slice(signal=parent, index=index)
+    parent._slices.add(slize)
+    return slize

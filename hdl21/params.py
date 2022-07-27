@@ -45,12 +45,17 @@ def paramclass(cls: type) -> type:
     * *All* non-Python-internal fields must be of type `Param`
     * Inheritance is not supported
     """
+
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
+    
     protected_names = ["descriptions", "defaults"]
     dunders = dict()
     params = dict()
+
     # Take a lap through the class dictionary, type-check everything and grab Params
+    # FIXME: look for, and alert users about, the error writing type annotations rather than equality. 
+    # (Or, we could move to type annotations...)
     for key, val in cls.__dict__.items():
         if key in protected_names:
             raise RuntimeError(f"Invalid field name {key} in paramclass {cls}")

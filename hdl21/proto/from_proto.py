@@ -156,10 +156,7 @@ class ProtoImporter:
                 target = import_vlsir_primitive(ref.external)
                 params = target.Params(**params)
 
-            elif ref.external.domain in (
-                "hdl21.primitives",
-                "hdl21.ideal",
-            ):
+            elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
                 # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
                 target = import_hdl21_primitive(ref.external)
                 params = target.Params(**params)
@@ -290,9 +287,9 @@ def import_connection_target(
         raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
     # Now chop this up if it's a Slice
     if stype == "slice":
-        start = bot = pconn.slice.bot
-        stop = top = pconn.slice.top + 1  # Move to Python-style exclusive indexing
-        sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
+        start = pconn.slice.bot
+        stop = pconn.slice.top + 1  # Move to Python-style exclusive indexing
+        sig = Slice(signal=sig, index=slice(start, stop))
     return sig
 
 

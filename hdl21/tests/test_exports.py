@@ -289,7 +289,7 @@ def test_proto_roundtrip2():
     assert len(M2.ports) == 3
     assert len(M2.signals) == 2
     assert "s" in M2.signals
-    assert "i1_i_i0_o" in M2.signals
+    assert "i0_o" in M2.signals
 
 
 def test_netlist_fmts():

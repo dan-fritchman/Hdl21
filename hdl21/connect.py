@@ -94,7 +94,6 @@ def call_and_setattr_connects(cls: type) -> type:
         or Hdl21 internal "keywords" (`name`, `ports`, `signals`, etc.).
         Returns `self` to aid in method-chaining use-cases."""
         from .bundle import AnonymousBundle
-        from .portref import PortRef
 
         if isinstance(conn, Dict):
             # Special-case dictionaries of connectables into Anon Bundles
@@ -108,9 +107,6 @@ def call_and_setattr_connects(cls: type) -> type:
             self.replace(portname, conn)
         else:
             self.conns[portname] = conn
-            # If `conn` tracks them, add a reference back to us
-            if does_track_connected_ports(conn):
-                conn.connected_ports.add(PortRef(self, portname))
 
         # And return `self` to aid in method-chaining use-cases
         return self
@@ -119,12 +115,8 @@ def call_and_setattr_connects(cls: type) -> type:
         """Disconnect the port named `portname`.
         Returns the formerly-connected `Connectable`.
         Raises a KeyError if the port is not connected."""
-        from .portref import PortRef
 
-        conn = self.conns.pop(portname)
-        if does_track_connected_ports(conn):
-            conn.connected_ports.remove(PortRef(self, portname))
-        return conn
+        return self.conns.pop(portname)
 
     def replace(self, portname: str, conn: Connectable) -> Connectable:
         """
@@ -135,19 +127,11 @@ def call_and_setattr_connects(cls: type) -> type:
         The `replace` method is functionally identical to serial calls to `disconnect` and `connect`,
         but allows for in-place modification of the `conns` dict, e.g. while iterating over its items.
         """
-        from .portref import PortRef
 
         # Get a reference to the old connection in the `conns` dict, without removing it
         old = self.conns[portname]
-        if does_track_connected_ports(old):
-            old.connected_ports.remove(PortRef(self, portname))
-
         # And replace it in the `conns` dict
         self.conns[portname] = conn
-        # If `conn` tracks them, add a reference back to us
-        if does_track_connected_ports(conn):
-            conn.connected_ports.add(PortRef(self, portname))
-
         return old
 
     # Attach all of these to the class

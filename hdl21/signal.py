@@ -71,7 +71,17 @@ class Signal:
         if self.width < 1:
             raise ValueError(f"Signal {self.name} width must be positive")
         self._parent_module: Optional["Module"] = None
+        self._slices: Set["Slice"] = set()
+        self._concats: Set["Concat"] = set()
         self.connected_ports: Set["PortRef"] = set()
+
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
 
 
 def _copy_to_internal(sig: Signal) -> Signal:

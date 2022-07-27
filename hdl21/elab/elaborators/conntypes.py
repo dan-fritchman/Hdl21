@@ -8,6 +8,7 @@ from typing import Any, Union, get_args
 
 # Local imports
 from ...connect import is_connectable, Connectable
+from ...portref import PortRef, _get_port_object
 from ...module import Module
 from ...instance import InstArray, Instance
 from ...signal import Signal
@@ -193,3 +194,19 @@ class ConnTypes(Elaborator):
             msg = f"Bundle `{bref.parent.of.name}` has no attribute `{bref.attrname}`"
             self.fail(msg)
         return attr
+
+    # def width(self, )
+    def ref_width(self, ref: Union[PortRef, BundleRef]) -> int:
+        if isinstance(ref, BundleRef):
+            referent = self.resolve_bundleref_type(ref)
+        elif isinstance(ref, PortRef):
+            referent = _get_port_object(ref)
+        else:
+            self.fail(f"Unreachable")
+        
+        if isinstance(referent, Signal):
+            return referent.width
+        if isinstance(referent, BundleInstance):
+            self.fail(f"Invalid `width` of Bundle {referent}")
+        self.fail(f"Invalid `width` of {referent}")
+            
