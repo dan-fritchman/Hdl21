@@ -8,9 +8,6 @@ From the most basic to most elaborate:
 * `connectable` - think `Signal`. 
   * Indicates that a type can serve as the *value* in a connections-dict. 
   * No added functionality, just an annotation, checked by other methods here. 
-* `track_connected_ports`
-  * A `connectable` type which also tracks `PortRef`s it connects to. 
-  * Again, think `Signal` 
 * `getattr_port_refs`
   * Adds "generate `PortRef`s via getattr" functionality. 
 * `call_and_setattr_connects` - think `Instance`. 
@@ -34,21 +31,14 @@ def is_connectable(obj: Any) -> bool:
     return getattr(obj, "__connectable__", False)
 
 
-Connectable = Union["Signal", "PortRef", "BundleInstance", "AnonymousBundle"]
+# Union of types using `connectable`
+# For checking, `is_connectable` is preferable, but this serves as a handy shorthand for many type annotations.
+Connectable = Union["Signal", "Slice", "Concat", "NoConn", "PortRef", "BundleInstance", "AnonymousBundle", "BundleRef"]
 
 
-def track_connected_ports(cls: type) -> type:
-    """Add an annotation indicating `cls` will track `connected_ports`,
-    on a `List[PortRef]` valued field by that name."""
-    if not is_connectable(cls):
-        raise RuntimeError(f"Must be `@connectable`")
-    cls.__track_connected_ports__ = True
-    return cls
-
-
-def does_track_connected_ports(obj: Any) -> bool:
-    """Boolean indication of connected-port tracking"""
-    return getattr(obj, "__track_connected_ports__", False)
+# FIXME: 
+# All of this has only proven useful for the `Instance` types. 
+# Move it to them, rather than a standalone decorator.
 
 
 def call_and_setattr_connects(cls: type) -> type:

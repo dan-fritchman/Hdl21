@@ -8,10 +8,10 @@ from typing import Any, Union, get_args
 
 # Local imports
 from ...connect import is_connectable, Connectable
-from ...portref import PortRef, _get_port_object
+from ...portref import PortRef
 from ...module import Module
 from ...instance import InstArray, Instance
-from ...signal import Signal
+from ...noconn import NoConn
 from ...slice import Sliceable
 from ...bundle import (
     AnonymousBundle,
@@ -142,7 +142,7 @@ class ConnTypes(Elaborator):
         if not isinstance(other, get_args(Sliceable)):
             self.fail(f"Invalid connection to non-Signal {other}")
 
-        if sig.width != other.width:
+        if self.get_width(sig) != self.get_width(other):
             signame = getattr(sig, "name", f"Anonymous(width={sig.width})")
             othername = getattr(other, "name", f"Anonymous(width={other.width})")
             msg = f"Signals `{signame}` and `{othername}` width mismatch: {sig.width} != {other.width}"
@@ -158,7 +158,9 @@ class ConnTypes(Elaborator):
 
         if isinstance(conn, BundleRef):
             # Recursively call this function on the ref's resolved value
-            return self.assert_compatible(port, self.resolve_bundleref_type(conn))
+            from .resolve_ref_types import resolve_bundleref_type
+            referent = resolve_bundleref_type(conn, self.fail)
+            return self.assert_compatible(port, referent)
 
         if isinstance(port, get_args(Sliceable)):
             return self.assert_signals_compatible(port, conn)
@@ -168,45 +170,12 @@ class ConnTypes(Elaborator):
 
         self.fail(f"Invalid Port {port}")
 
-    def resolve_bundleref_type(self, bref: BundleRef) -> Union[Signal, BundleInstance]:
-        """
-        Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance.
+    def get_width(self, conn: Connectable) -> int:
+        """ Get the `width` of a conn. Fails for types which this pass is not designed to handle. """
+        from .width import width
 
-        NOTE this returns a *representative* signal or bundle instance,
-        i.e. one with the correct type and width - not *the signal* for a given instance.
-        In other words: this is fine for connection-validity checking,
-        but *not* for copying signals during flattening.
-        Hence the "type" name suffix, although what we return is not really a type.
-        """
+        if isinstance(conn, (NoConn, PortRef)):
+            msg = f"Internal error: {type(conn).__name__} remaining in connection-types check"
+            return self.fail(msg)
 
-        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance.
-            parent = bref.parent
-        elif isinstance(
-            bref.parent, BundleRef
-        ):  # Nested reference. Recursively resolve the parent.
-            parent = self.resolve_bundleref_type(bref.parent)
-        else:
-            self.fail(f"Invalid BundleRef parent for {bref}")
-
-        # Get the attribute from the parent namespace, or fail if not available.
-        attr = parent.of.get(bref.attrname)
-        if attr is None:
-            msg = f"Bundle `{bref.parent.of.name}` has no attribute `{bref.attrname}`"
-            self.fail(msg)
-        return attr
-
-    # def width(self, )
-    def ref_width(self, ref: Union[PortRef, BundleRef]) -> int:
-        if isinstance(ref, BundleRef):
-            referent = self.resolve_bundleref_type(ref)
-        elif isinstance(ref, PortRef):
-            referent = _get_port_object(ref)
-        else:
-            self.fail(f"Unreachable")
-        
-        if isinstance(referent, Signal):
-            return referent.width
-        if isinstance(referent, BundleInstance):
-            self.fail(f"Invalid `width` of Bundle {referent}")
-        self.fail(f"Invalid `width` of {referent}")
-            
+        return width(conn, failer=self.fail)

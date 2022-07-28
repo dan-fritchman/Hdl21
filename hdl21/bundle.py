@@ -10,7 +10,9 @@ from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 # Local Imports
 from .datatype import datatype
 from .attrmagic import init
-from .connect import connectable, track_connected_ports
+from .connect import connectable
+from .slices import slices 
+from .concat import concatable
 from .signal import Signal
 
 
@@ -71,7 +73,7 @@ def has_getattr_bundle_refs(obj: Any) -> bool:
     return getattr(obj, "__getattr_bundle_refs__", False)
 
 
-@track_connected_ports
+
 @getattr_bundle_refs
 @connectable
 @init
@@ -286,7 +288,6 @@ def bundle(cls: type) -> Bundle:
     return bundle
 
 
-@track_connected_ports
 @connectable
 class AnonymousBundle:
     """# Anonymous Connection Bundle
@@ -337,7 +338,8 @@ class AnonymousBundle:
         return None
 
 
-@track_connected_ports
+@concatable
+@slices
 @connectable
 @datatype  # FIXME: add nested `BundleRef` via `getattr`
 class BundleRef:
@@ -359,6 +361,10 @@ class BundleRef:
         self.connected_ports: Set["PortRef"] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None
         self._elaborated = False
+        self._width: Optional[int] = None
+        self._slices: Set["Slice"] = set()
+        self._concats: Set["Concat"] = set()
+
 
     def __eq__(self, other) -> bool:
         """Port-reference equality requires *identity* between parents

@@ -60,17 +60,11 @@ class Concat:
 
     @property
     def width(self):
-        if self._width is None:
-            self._width = width(self)
-        return self._width
+        # FIXME: whether to keep me around as a property
+        # As is the elaboration mechanics do not use this property, but users may.
+        from .elab.elaborators.width import width
 
-
-# FIXME: move!
-def width(concat: Concat) -> int:
-    width = sum([s.width for s in concat.parts])
-    if width < 1:
-        raise ValueError(f"Invalid Width Concat of {concat}")
-    return width
+        return width(self)
 
 
 __all__ = ["Concat"]

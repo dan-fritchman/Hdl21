@@ -12,6 +12,7 @@ from ...slice import Slice, Sliceable
 from ...concat import Concat
 from ...portref import PortRef
 from ...bundle import BundleRef
+from .width import width
 
 # Import the base class
 from .base import Elaborator
@@ -61,7 +62,7 @@ def _list_slice(slize: Slice) -> List[Slice]:
     Returns a list of Slices in which each element has a concrete Signal for its parent."""
 
     # Resolve "full-width" slices to their parent Signals
-    if slize.width == slize.signal.width:
+    if width(slize) == width(slize.signal):
         # Return a single-element list, after resolution
         return [_resolve_sliceable(slize.signal)]
 
@@ -69,7 +70,7 @@ def _list_slice(slize: Slice) -> List[Slice]:
         return [slize]  # Already all good! Just make a one-element list.
 
     # Do some actual work. Recursively peel off a bit at a time.
-    if slize.width == 1:
+    if width(slize) == 1:
         # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
 
         if isinstance(slize.signal, Slice):
@@ -79,9 +80,9 @@ def _list_slice(slize: Slice) -> List[Slice]:
         if isinstance(slize.signal, Concat):
             idx = 0  # Find the `part` including our index
             for part in slize.signal.parts:
-                if part.width + idx > slize.bot:
+                if width(part) + idx > slize.bot:
                     return _list_slice(part[slize.bot - idx])
-                idx += part.width
+                idx += width(part)
             msg = f"Slice {slize} is out of bounds of Concat {slize.signal}"
             raise RuntimeError(msg)
 

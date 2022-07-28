@@ -330,7 +330,7 @@ class BundleFlattener(Elaborator):
         NOTE: currently only the scalar Signal resolution case is supported; nested Bundles are TBC."""
 
         if bref.resolved is not None:
-            return bref.resolved
+            return bref.resolved # Already done!
 
         if isinstance(bref.parent, BundleInstance):
             # Get the flattened version of the parent
@@ -350,6 +350,22 @@ class BundleFlattener(Elaborator):
 
             # Success! Store and return the Signal
             bref.resolved = flatsig
+
+            # FIXME: share this stuff with the analogous `PortRef` logic
+            # Reconnect all connected ports
+            while bref.connected_ports:
+                connected_port = bref.connected_ports.pop()
+                connected_port.inst.replace(connected_port.portname, flatsig)
+                flatsig.connected_ports.add(connected_port)
+
+            # Update all dependent slices and concats
+            for slice_ in bref._slices:
+                slice_.signal = flatsig
+            for concat in bref._concats:
+                parts = list(concat.parts)
+                parts = [flatsig if p is bref else p for p in parts]
+                concat.parts = tuple(parts)
+
             return flatsig
 
         if isinstance(bref.parent, BundleRef):

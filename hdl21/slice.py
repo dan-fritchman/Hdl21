@@ -14,16 +14,6 @@ from .signal import Signal
 from .concat import Concat, concatable
 
 
-@datatype
-class SliceInner:
-    top: int  # Top index (exclusive)
-    bot: int  # Bottom index (inclusive)
-    start: Optional[int]  # Python-convention start index
-    stop: Optional[int]  # Python-convention stop index
-    step: Optional[int]  # Python-convention step size
-    width: int
-
-
 @slices
 @concatable
 @connectable
@@ -31,16 +21,16 @@ class SliceInner:
 class Slice:
     """Signal Slice, comprising a subset of its width"""
 
-    signal: Any  # Parent Signal/ Connectable
-    index: Optional[Union[int, slice]] = None  # Python index, passed to square brackets
+    signal: Any  # Parent Connectable
+    index: Union[int, slice]  # Python index, e.g. that passed to square brackets
 
     def __post_init_post_parse__(self):
         if not does_slices(self.signal):
             raise TypeError(f"{self.signal} is not Sliceable")
         self.connected_ports: Set["PortRef"] = set()
         self._inner: Optional[SliceInner] = None
-        self._slices: WeakSet["Slice"] = set()
-        self._concats: WeakSet["Concat"] = set()
+        self._slices: WeakSet[Slice] = set()
+        self._concats: WeakSet[Concat] = set()
 
     @property
     def top(self) -> int:
@@ -101,6 +91,16 @@ def assert_valid(self: Slice):
 # Slice-compatible type aliases
 # FIXME! got some to add
 Sliceable = Union[Signal, Concat, Slice]
+
+
+@datatype
+class SliceInner:
+    top: int  # Top index (exclusive)
+    bot: int  # Bottom index (inclusive)
+    start: Optional[int]  # Python-convention start index
+    stop: Optional[int]  # Python-convention stop index
+    step: Optional[int]  # Python-convention step size
+    width: int
 
 
 def _slice_inner(slize: Slice) -> SliceInner:

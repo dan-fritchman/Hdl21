@@ -27,7 +27,7 @@ from typing import Callable, Optional, List, Set
 
 # Local imports
 from .datatype import datatype
-from .connect import connectable, track_connected_ports
+from .connect import connectable
 from .slices import slices
 from .concat import concatable
 
@@ -48,7 +48,6 @@ class Visibility(Enum):
     PORT = 1  # Exposed as a Port
 
 
-@track_connected_ports
 @slices
 @concatable
 @connectable

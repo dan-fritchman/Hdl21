@@ -75,6 +75,9 @@ class ResolvePortRefs(Elaborator):
 
             # Right here, all the `connected_ports` are being set
             # Annotate every connection with its Instance Ports
+            # FIXME: as a consequence of handing our a `PortRef` for every connection, and then examining all `PortRef`s 
+            # of every Instance, this pass is now examining *every* connection, including those to concrete Signals. 
+            # We can probably streamline this away by splitting up something like "connection refs" versus "port refs".
             for portname, conn in inst.conns.items():
                 conn.connected_ports.add(inst._port_ref(portname))
 
