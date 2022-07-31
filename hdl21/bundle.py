@@ -20,24 +20,11 @@ def getattr_bundle_refs(cls: type) -> type:
     Adds the `_bundle_ref` method and `__getattr__` access to it."""
 
     # First check and fail if any of the methods to be defined here are already defined elsewhere
-    defined_here = ["_bundle_ref", "__getattr__"]
+    defined_here = ["__getattr__"]
     for key in defined_here:
         if key in cls.__dict__:
             msg = f"Invalid modification of {cls} with `@getattr_bundle_refs`: {key} is already defined."
             raise RuntimeError(msg)
-
-    def _bundle_ref(self, key: str) -> "BundleRef":
-        """Return a reference to name `key`, creating it if necessary."""
-
-        # Check in our existing references
-        bundle_refs = self.__getattribute__("refs_to_me")
-        if key in bundle_refs:
-            return bundle_refs[key]
-
-        # New reference; create, add, and return it
-        bundle_ref = BundleRef(parent=self, attrname=key)
-        bundle_refs[key] = bundle_ref
-        return bundle_ref
 
     def __getattr__(self, key: str) -> Any:
         """BundleRef access by getattr"""
@@ -57,9 +44,8 @@ def getattr_bundle_refs(cls: type) -> type:
 
         # Fell through all those cases. Fancy `BundleRef` generation time!
         # Return a `BundleRef`, creating one if necessary.
-        return self._bundle_ref(key)
+        return _bundle_ref(self, key)
 
-    cls._bundle_ref = _bundle_ref
     cls.__getattr__ = __getattr__
     cls.__getattr_bundle_refs__ = True
 
@@ -360,14 +346,14 @@ class BundleRef:
         self.parent = parent
         self.attrname = attrname
 
-        self._connected_ports: Set["PortRef"] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None
         # References handed out to our children
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
-        self._width: Optional[int] = None # FIXME: remove? 
+        self._width: Optional[int] = None  # FIXME: remove?
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()
-        
+        self._connected_ports: Set["PortRef"] = set()
+
         self._elaborated = False
         self._initialized = True
 
@@ -398,3 +384,17 @@ class BundleRef:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(root={self.root()} path={self.path()})"
+
+
+def _bundle_ref(self: Union[BundleRef, BundleInstance], key: str) -> BundleRef:
+    """Return a reference to name `key`, creating it if necessary."""
+
+    # Check in our existing references
+    bundle_refs = self.__getattribute__("refs_to_me")
+    if key in bundle_refs:
+        return bundle_refs[key]
+
+    # New reference; create, add, and return it
+    bundle_ref = BundleRef(parent=self, attrname=key)
+    bundle_refs[key] = bundle_ref
+    return bundle_ref

@@ -106,10 +106,11 @@ class _Instance:
 
         # The main event: actually stick `conn` in the `conns` dict
         if portname in self.conns:
-            # Replace and disconnect any prior connection
+            # Replace and disconnect any prior connection. Disregards the returned old connection.
             self.replace(portname, conn)
         else:
             self.conns[portname] = conn
+            conn._connected_ports.add(_get_connref(self, portname))
 
         # And return `self` to aid in method-chaining use-cases
         return self
@@ -119,7 +120,9 @@ class _Instance:
         Returns the formerly-connected `Connectable`.
         Raises a KeyError if the port is not connected."""
 
-        return self.conns.pop(portname)
+        conn = self.conns.pop(portname)
+        conn._connected_ports.remove(_get_connref(self, portname))
+        return conn
 
     def replace(self, portname: str, conn: Connectable) -> Connectable:
         """
@@ -131,10 +134,13 @@ class _Instance:
         but allows for in-place modification of the `conns` dict, e.g. while iterating over its items.
         """
 
+        connref = _get_connref(self, portname)
         # Get a reference to the old connection in the `conns` dict, without removing it
         old = self.conns[portname]
+        old._connected_ports.remove(connref)
         # And replace it in the `conns` dict
         self.conns[portname] = conn
+        conn._connected_ports.add(connref)
         return old
 
 
@@ -262,13 +268,14 @@ class Refs:
     """ Tracking of references stored on each Instance. 
     All references are of type `PortRef`, and are organized into two camps: 
     
-    * The `portrefs` dict includes entries of the form: 
+    * The `portrefs` dict includes entries like `i.someport` below: 
     ```
     i = Instance(of=MyModule)
     i2 = Instance(of=AnotherModule)(itsport=i.someport)
     ``` 
     These are ultimately resolved to Signals during elaboration. 
-    * The `conns` dict includes entries of the form:
+
+    * The `conns` dict includes entries like `i.someport` below:
     ```
     s = Signal()
     i = Instance(of=MyModule)(someport=s)
@@ -281,6 +288,9 @@ class Refs:
     Attemptes to retrieve a reference come from `all`, and therefore generate the same 
     objects for successive fetches of the same port name. 
 
+    Entries are never removed from `refs` over the course of an Instance's lifetime. 
+    For most Instances, by the end of their life, the `connrefs` and `all` dicts will contain 
+    an entry for each of its ports. 
     """
 
     all: Dict[str, "PortRef"] = field(default_factory=dict)

@@ -38,6 +38,7 @@ from typing import Union, Callable
 
 # Local imports
 from ...portref import PortRef
+from ...connect import Connectable
 from ...signal import Signal
 from ...bundle import (
     BundleInstance,
@@ -98,3 +99,20 @@ def resolve_portref_type(
 
     return failer(f"Invalid PortRef {pref}")
 
+
+def update_ref_deps(ref: Union[PortRef, BundleRef], resolved: Connectable):
+    """ Update all downstream dependencies on a `Ref` after it has been resolved to `resolved`. """
+
+    # Reconnect all connected ports
+    for connected_port in list(ref._connected_ports):
+        connected_port.inst.replace(connected_port.portname, resolved)
+
+    # Update all dependent slices and concats
+    if hasattr(ref, "_slices"):
+        for slice_ in ref._slices:
+            slice_.signal = resolved
+    if hasattr(ref, "_concats"):
+        for concat in ref._concats:
+            parts = list(concat.parts)
+            parts = [resolved if p is ref else p for p in parts]
+            concat.parts = tuple(parts)

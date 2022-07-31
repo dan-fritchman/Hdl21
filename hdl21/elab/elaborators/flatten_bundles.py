@@ -19,6 +19,7 @@ from ...bundle import (
     BundleRef,
 )
 from ...signal import PortDir, Signal, Visibility
+from .resolve_ref_types import update_ref_deps
 
 # Import the base class
 from .base import Elaborator
@@ -461,8 +462,7 @@ class BundleFlattener(Elaborator):
         return flat
 
     def resolve_bundleref(self, bref: BundleRef) -> Union[Signal, BundleScope]:
-        """Resolve a bundle-reference to a Signal or Flattened Bundle thereof.
-        NOTE: currently only the scalar Signal resolution case is supported; nested Bundles are TBC."""
+        """Resolve a bundle-reference to a Signal or Flattened Bundle thereof."""
 
         if bref.resolved is not None:
             return bref.resolved  # Already done
@@ -480,8 +480,7 @@ class BundleFlattener(Elaborator):
         bref.resolved = resolved = get(flat_root, Path(path))
 
         if isinstance(resolved, BundleScope):
-            while bref._connected_ports:
-                connected_port = bref._connected_ports.pop()
+            for connected_port in list(bref._connected_ports):
                 self.replace_bundle_conn(
                     inst=connected_port.inst,
                     portname=connected_port.portname,
@@ -490,20 +489,7 @@ class BundleFlattener(Elaborator):
             return resolved
 
         if isinstance(resolved, Signal):
-            # FIXME: share this stuff with the analogous `PortRef` logic
-            # Reconnect all connected ports
-            while bref._connected_ports:
-                connected_port = bref._connected_ports.pop()
-                connected_port.inst.replace(connected_port.portname, resolved)
-                resolved._connected_ports.add(connected_port)
-
-            # Update all dependent slices and concats
-            for slice_ in bref._slices:
-                slice_.signal = resolved
-            for concat in bref._concats:
-                parts = list(concat.parts)
-                parts = [resolved if p is bref else p for p in parts]
-                concat.parts = tuple(parts)
+            update_ref_deps(bref, resolved)
             return resolved
 
         raise TypeError(f"BundleRef {bref} resolved to invalid {resolved}")

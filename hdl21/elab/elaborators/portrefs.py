@@ -10,12 +10,13 @@ from typing import Union, List, Optional, Set, get_args
 
 # Local imports
 from ...connect import Connectable
-from ...instance import _get_portref, _get_connref
+from ...instance import _get_connref
 from ...module import Module
 from ...portref import PortRef
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
 from ...signal import PortDir, Signal, Visibility
 from ...noconn import NoConn
+from .resolve_ref_types import update_ref_deps
 
 # Import the base class
 from .base import Elaborator
@@ -73,15 +74,8 @@ class ResolvePortRefs(Elaborator):
             for portref in inst._refs.portrefs.values():
                 module_portrefs.add(portref)
 
-            # Right here, all the `_connected_ports` are being set
-            # Annotate every connection with its Instance Ports
-            # FIXME: as a consequence of handing our a `PortRef` for every connection, and then examining all `PortRef`s
-            # of every Instance, this pass is now examining *every* connection, including those to concrete Signals.
-            # We can probably streamline this away by splitting up something like "connection refs" versus "port refs".
+            # FIXME: add the `NoConn`s here, although it's not clear we *really* need these checks on them
             for portname, conn in inst.conns.items():
-                conn._connected_ports.add(_get_connref(inst, portname))
-
-                # FIXME: add the `NoConn`s here, although it's not clear we *really* need these checks on them
                 if isinstance(conn, NoConn):
                     module_portrefs.add(_get_connref(inst, portname))
 
@@ -339,13 +333,7 @@ class SetList:
 
 
 def resolve_portref(pref: PortRef, to: Connectable) -> None:
-    """
-    Resolve a `PortRef` to its referent `Connectable`. 
-    Since this is designed to happen during elaboration, 
-    after all `_connected_ports` sets have been populated, 
-    it also must manage rearranging the `_connected_ports`, 
-    which later passes depend on. 
-    """
+    """# Resolve a `PortRef` to its referent `Connectable`. """
 
     if pref.resolved is to:
         return  # Already resolved
@@ -356,19 +344,9 @@ def resolve_portref(pref: PortRef, to: Connectable) -> None:
     pref.resolved = to
 
     # Connect the "primary" instance to the referent
+    # Note this differs between `PortRef` and `BundleRef`;
+    # the latter has no "primary instance" to connect to.
     pref.inst.connect(pref.portname, to)
-    to._connected_ports.add(pref)
 
-    # Reconnect all connected ports
-    while pref._connected_ports:
-        connected_port = pref._connected_ports.pop()
-        connected_port.inst.replace(connected_port.portname, to)
-        to._connected_ports.add(connected_port)
-
-    # Update all dependent slices and concats
-    for slice_ in pref._slices:
-        slice_.signal = to
-    for concat in pref._concats:
-        parts = list(concat.parts)
-        parts = [to if p is pref else p for p in parts]
-        concat.parts = tuple(parts)
+    # Update all downstream dependencies, e.g. connected ports, slices
+    update_ref_deps(pref, to)
