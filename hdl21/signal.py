@@ -72,7 +72,7 @@ class Signal:
         self._parent_module: Optional["Module"] = None
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
 
     def __eq__(self, other) -> bool:
         # Identity is equality

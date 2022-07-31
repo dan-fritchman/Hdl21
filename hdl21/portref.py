@@ -26,7 +26,7 @@ class PortRef:
 
     def __post_init_post_parse__(self):
         # Inner management data
-        self.connected_ports: Set[PortRef] = set()
+        self._connected_ports: Set[PortRef] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()

@@ -42,7 +42,7 @@ class Concat:
         self.parts = tuple(parts)
 
         # Inner management data
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
         self._width: Optional[int] = None
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()

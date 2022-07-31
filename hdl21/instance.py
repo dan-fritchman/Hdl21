@@ -5,7 +5,8 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
 # Std-Lib Imports
-from typing import Optional, Any, Dict, Set
+from typing import Optional, Any, Dict
+from dataclasses import dataclass, field
 from textwrap import dedent
 
 # Local imports
@@ -22,7 +23,6 @@ class _Instance:
         self, of: "Instantiable", *, name: Optional[str] = None,
     ):
         from .instantiable import Instantiable, is_instantiable
-        from .portref import PortRef
 
         if not is_instantiable(of):
             raise RuntimeError(f"Invalid Instance of {of}")
@@ -30,10 +30,9 @@ class _Instance:
         self.name: Optional[str] = name
         self.of: "Instantiable" = of
         self.conns: Dict[str, "Connectable"] = dict()
-        # References given out to our ports, generally via `__getattr__`
-        self._portrefs: Dict[str, "PortRef"] = dict()
-        # References to our connections, generally via `connect`
-        self._connrefs: Dict[str, "PortRef"] = dict()
+
+        # References we give out, either for refering to ports or entries in out own `conns`
+        self._refs = Refs()
 
         self._parent_module: Optional["Module"] = None  # Instantiating module
         self._elaborated: bool = False
@@ -247,7 +246,7 @@ def _to_array(inst: Instance, num: int) -> InstanceArray:
     # Several contraints asserted here which may eventually be relaxed.
     # * No port-references (yet)
     # * Not a member of a module (yet)
-    if len(inst._portrefs) > 0:
+    if len(inst._refs.portrefs) > 0:
         msg = f"Cannot convert Instance {inst} with outstanding port-references {inst._portrefs} to Array"
         raise RuntimeError(msg)
     if inst._parent_module is not None:
@@ -258,19 +257,67 @@ def _to_array(inst: Instance, num: int) -> InstanceArray:
     return InstanceArray(of=inst.of, n=num, name=inst.name)(**inst.conns)
 
 
+@dataclass
+class Refs:
+    """ Tracking of references stored on each Instance. 
+    All references are of type `PortRef`, and are organized into two camps: 
+    
+    * The `portrefs` dict includes entries of the form: 
+    ```
+    i = Instance(of=MyModule)
+    i2 = Instance(of=AnotherModule)(itsport=i.someport)
+    ``` 
+    These are ultimately resolved to Signals during elaboration. 
+    * The `conns` dict includes entries of the form:
+    ```
+    s = Signal()
+    i = Instance(of=MyModule)(someport=s)
+    ```
+    Here the Signal `s` is given a port-reference to `i`, to help track and update later connections. 
+    These entries are members of the `connrefs` dict. 
+
+    The combination of the two is stored in the `all` dictionary. 
+    All items in both `portrefs` and `connrefs` are always also located in `all`. 
+    Attemptes to retrieve a reference come from `all`, and therefore generate the same 
+    objects for successive fetches of the same port name. 
+
+    """
+
+    all: Dict[str, "PortRef"] = field(default_factory=dict)
+    portrefs: Dict[str, "PortRef"] = field(default_factory=dict)
+    connrefs: Dict[str, "PortRef"] = field(default_factory=dict)
+
+
 def _get_portref(self: _Instance, key: str) -> "PortRef":
     """Return a port-reference to name `key`, creating it if necessary."""
     from .portref import PortRef
 
-    # Check in our existing port-references
-    portrefs = self.__getattribute__("_portrefs")
-    if key in portrefs:
-        return portrefs[key]
+    # Check in our existing references
+    refs = self.__getattribute__("_refs")
+    if key in refs.all:
+        refs.portrefs[key] = refs.all[key]
+        return refs.all[key]
 
     # New reference; create, add, and return it
-    port_ref = PortRef(inst=self, portname=key)
-    portrefs[key] = port_ref
-    return port_ref
+    ref = PortRef(inst=self, portname=key)
+    refs.portrefs[key] = refs.all[key] = ref
+    return ref
+
+
+def _get_connref(self: _Instance, key: str) -> "PortRef":
+    """Return a connection-reference to name `key`, creating it if necessary."""
+    from .portref import PortRef
+
+    # Check in our existing references
+    refs = self.__getattribute__("_refs")
+    if key in refs.all:
+        refs.connrefs[key] = refs.all[key]
+        return refs.all[key]
+
+    # New reference; create, add, and return it
+    ref = PortRef(inst=self, portname=key)
+    refs.connrefs[key] = refs.all[key] = ref
+    return ref
 
 
 """ 

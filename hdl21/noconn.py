@@ -8,9 +8,7 @@ An optional `name` field allows guidance for external netlisting,
 for cases in which consistent naming is desirable (e.g. for waveform probing).
 """
 
-from dataclasses import field
-from typing import Callable, Optional, List, Union, Set
-from pydantic.dataclasses import dataclass
+from typing import Optional, Set
 
 # Local imports
 from .datatype import datatype
@@ -35,9 +33,10 @@ class NoConn:
 
     name: Optional[str] = None
 
-    # Internal, ideally private fields
-    # Connected port references
-    connected_ports: Set[PortRef] = field(init=False, repr=False, default_factory=set)
+    def __post_init_post_parse__(self) -> None:
+        # Internal management data
+        # Connected port references
+        self._connected_ports: Set[PortRef] = set()
 
     def __eq__(self, other: "NoConn") -> bool:
         """`NoConn`s are "equal" only if identical objects."""

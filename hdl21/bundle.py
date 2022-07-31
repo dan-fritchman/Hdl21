@@ -8,7 +8,6 @@ from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 
 # Local Imports
-from .datatype import datatype
 from .attrmagic import init
 from .connect import connectable
 from .slices import slices
@@ -89,7 +88,6 @@ class BundleInstance:
         "dest",
         "desc",
         "refs_to_me",
-        "connected_ports",
     ]
 
     def __init__(
@@ -113,7 +111,7 @@ class BundleInstance:
         # References handed out to our children
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
         self._parent_module: Optional["Module"] = None
         self._elaborated = False
         self._initialized = True
@@ -306,7 +304,7 @@ class AnonymousBundle:
         self.refs_to_others: Dict[str, "BundleRef"] = dict()
 
         # Connected port references
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
 
         # And add each keyword-arg
         for key, val in kwargs.items():
@@ -350,7 +348,6 @@ class BundleRef:
         "attrname",
         "path",
         "root",
-        "connected_ports",
         "refs_to_me",
         "resolved",
     ]
@@ -363,14 +360,15 @@ class BundleRef:
         self.parent = parent
         self.attrname = attrname
 
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None
-        self._elaborated = False
         # References handed out to our children
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
-        self._width: Optional[int] = None
+        self._width: Optional[int] = None # FIXME: remove? 
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()
+        
+        self._elaborated = False
         self._initialized = True
 
     def __eq__(self, other) -> bool:

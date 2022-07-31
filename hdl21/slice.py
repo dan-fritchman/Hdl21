@@ -27,7 +27,7 @@ class Slice:
     def __post_init_post_parse__(self):
         if not does_slices(self.signal):
             raise TypeError(f"{self.signal} is not Sliceable")
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
         self._inner: Optional[SliceInner] = None
         self._slices: WeakSet[Slice] = set()
         self._concats: WeakSet[Concat] = set()

@@ -10,7 +10,7 @@ from typing import Union, List, Optional, Set, get_args
 
 # Local imports
 from ...connect import Connectable
-from ...instance import _get_portref
+from ...instance import _get_portref, _get_connref
 from ...module import Module
 from ...portref import PortRef
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
@@ -53,8 +53,8 @@ class ResolvePortRefs(Elaborator):
         """
         Resolve and replace all Instance `PortRef`s in `module`.
 
-        In the process, all `Connectable`s are annotated with a set of `connected_ports`. 
-        These `connected_ports` are relied upon by later elaboration stages, 
+        In the process, all `Connectable`s are annotated with a set of `_connected_ports`. 
+        These `_connected_ports` are relied upon by later elaboration stages, 
         and must be maintained hereafter, e.g. when making connection updates. 
         """
 
@@ -70,20 +70,20 @@ class ResolvePortRefs(Elaborator):
         for inst in instancelike:
 
             # Populate the module-level set of PortRefs
-            for portref in inst._portrefs.values():
+            for portref in inst._refs.portrefs.values():
                 module_portrefs.add(portref)
 
-            # Right here, all the `connected_ports` are being set
+            # Right here, all the `_connected_ports` are being set
             # Annotate every connection with its Instance Ports
             # FIXME: as a consequence of handing our a `PortRef` for every connection, and then examining all `PortRef`s
             # of every Instance, this pass is now examining *every* connection, including those to concrete Signals.
             # We can probably streamline this away by splitting up something like "connection refs" versus "port refs".
             for portname, conn in inst.conns.items():
-                conn.connected_ports.add(_get_portref(inst, portname))
+                conn._connected_ports.add(_get_connref(inst, portname))
 
                 # FIXME: add the `NoConn`s here, although it's not clear we *really* need these checks on them
                 if isinstance(conn, NoConn):
-                    module_portrefs.add(_get_portref(inst, portname))
+                    module_portrefs.add(_get_connref(inst, portname))
 
         def follow(pref: PortRef, group: SetList) -> None:
             """ Closure to recursively follow `pref`, adding its outward and inward connections to `group`. 
@@ -105,7 +105,7 @@ class ResolvePortRefs(Elaborator):
                 group.add(conn)
 
             # And recursively follow its connected ports
-            for connected_port in pref.connected_ports:
+            for connected_port in pref._connected_ports:
                 follow(connected_port, group)
 
         # Collect groups of connected `PortRef`s
@@ -342,8 +342,8 @@ def resolve_portref(pref: PortRef, to: Connectable) -> None:
     """
     Resolve a `PortRef` to its referent `Connectable`. 
     Since this is designed to happen during elaboration, 
-    after all `connected_ports` sets have been populated, 
-    it also must manage rearranging the `connected_ports`, 
+    after all `_connected_ports` sets have been populated, 
+    it also must manage rearranging the `_connected_ports`, 
     which later passes depend on. 
     """
 
@@ -357,13 +357,13 @@ def resolve_portref(pref: PortRef, to: Connectable) -> None:
 
     # Connect the "primary" instance to the referent
     pref.inst.connect(pref.portname, to)
-    to.connected_ports.add(pref)
+    to._connected_ports.add(pref)
 
     # Reconnect all connected ports
-    while pref.connected_ports:
-        connected_port = pref.connected_ports.pop()
+    while pref._connected_ports:
+        connected_port = pref._connected_ports.pop()
         connected_port.inst.replace(connected_port.portname, to)
-        to.connected_ports.add(connected_port)
+        to._connected_ports.add(connected_port)
 
     # Update all dependent slices and concats
     for slice_ in pref._slices:

@@ -215,7 +215,7 @@ class BundleFlattener(Elaborator):
             module.add(sig)
 
         # Replace connections to any connected instances
-        for portref in list(bundle_inst.connected_ports):
+        for portref in list(bundle_inst._connected_ports):
             self.replace_bundle_conn(
                 inst=portref.inst, portname=portref.portname, flat=flat
             )
@@ -480,8 +480,8 @@ class BundleFlattener(Elaborator):
         bref.resolved = resolved = get(flat_root, Path(path))
 
         if isinstance(resolved, BundleScope):
-            while bref.connected_ports:
-                connected_port = bref.connected_ports.pop()
+            while bref._connected_ports:
+                connected_port = bref._connected_ports.pop()
                 self.replace_bundle_conn(
                     inst=connected_port.inst,
                     portname=connected_port.portname,
@@ -492,10 +492,10 @@ class BundleFlattener(Elaborator):
         if isinstance(resolved, Signal):
             # FIXME: share this stuff with the analogous `PortRef` logic
             # Reconnect all connected ports
-            while bref.connected_ports:
-                connected_port = bref.connected_ports.pop()
+            while bref._connected_ports:
+                connected_port = bref._connected_ports.pop()
                 connected_port.inst.replace(connected_port.portname, resolved)
-                resolved.connected_ports.add(connected_port)
+                resolved._connected_ports.add(connected_port)
 
             # Update all dependent slices and concats
             for slice_ in bref._slices:
