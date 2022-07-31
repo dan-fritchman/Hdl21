@@ -387,7 +387,6 @@ def test_bundle_destructure():
     assert Parent.c.conns["w3"] is Parent.signals["b_w3"]
 
 
-@pytest.mark.xfail(reason="#19 https://github.com/dan-fritchman/Hdl21/issues/19")
 def test_sub_bundle_conn():
     """Test connecting via BundleRef to a sub-Bundle"""
 
@@ -409,6 +408,37 @@ def test_sub_bundle_conn():
         hasb1 = HasB1(b1=b2.b1)
 
     h.elaborate(HasB2)
+
+
+def test_nested_bundle_conn():
+    """ Test connecting to a nested bundle ref """
+
+    @h.bundle
+    class B1:
+        s = h.Signal()
+
+    @h.bundle
+    class B2:
+        b1 = B1()
+
+    @h.bundle
+    class B3:
+        b2 = B2()
+
+    @h.bundle
+    class B4:
+        b3 = B3()
+
+    @h.module
+    class HasB1:
+        b1 = B1(port=True)
+
+    @h.module
+    class HasB4:
+        b4 = B4()
+        hasb1 = HasB1(b1=b4.b3.b2.b1)
+
+    h.elaborate(HasB4)
 
 
 def test_anon_bundle_port_conn():

@@ -11,7 +11,7 @@ from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 from .datatype import datatype
 from .attrmagic import init
 from .connect import connectable
-from .slices import slices 
+from .slices import slices
 from .concat import concatable
 from .signal import Signal
 
@@ -71,7 +71,6 @@ def getattr_bundle_refs(cls: type) -> type:
 def has_getattr_bundle_refs(obj: Any) -> bool:
     """Boolean indication of "getattr bundle refs" functionality"""
     return getattr(obj, "__getattr_bundle_refs__", False)
-
 
 
 @getattr_bundle_refs
@@ -303,7 +302,7 @@ class AnonymousBundle:
         # self.anons: Dict[str, "AnonymousBundle"] = dict()
 
         # Bundle references to others, stored as members,
-        # e.g. AnonBundle(sig=OtherBundle.sig)
+        # e.g. AnonBundle(sig=other_bundle.sig)
         self.refs_to_others: Dict[str, "BundleRef"] = dict()
 
         # Connected port references
@@ -338,15 +337,13 @@ class AnonymousBundle:
         return None
 
 
+@getattr_bundle_refs
 @concatable
 @slices
 @connectable
-@datatype  # FIXME: add nested `BundleRef` via `getattr`
+@init
 class BundleRef:
     """Reference into a Bundle Instance"""
-
-    parent: Union["BundleInstance", "BundleRef"]  # Parent Bundle
-    attrname: str  # Attribute name
 
     _specialcases: ClassVar[List[str]] = [
         "parent",
@@ -354,17 +351,27 @@ class BundleRef:
         "path",
         "root",
         "connected_ports",
+        "refs_to_me",
         "resolved",
     ]
 
-    def __post_init_post_parse__(self):
+    def __init__(
+        self,
+        parent: Union["BundleInstance", "BundleRef"],  # Parent Bundle
+        attrname: str,  # Attribute name
+    ):
+        self.parent = parent
+        self.attrname = attrname
+
         self.connected_ports: Set["PortRef"] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None
         self._elaborated = False
+        # References handed out to our children
+        self.refs_to_me: Dict[str, "BundleRef"] = dict()
         self._width: Optional[int] = None
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()
-
+        self._initialized = True
 
     def __eq__(self, other) -> bool:
         """Port-reference equality requires *identity* between parents
