@@ -3,9 +3,8 @@
 # Unit Tests 
 """
 
-import copy, pytest
-from dataclasses import field
-from enum import Enum, EnumMeta, auto
+import pytest
+from dataclasses import field, FrozenInstanceError
 
 from pydantic import ValidationError
 from pydantic.dataclasses import dataclass
@@ -101,25 +100,19 @@ def test_params4():
 def test_bad_params1():
     # Test a handful of errors Params and paramclasses should raise.
 
-    from hdl21 import (
-        paramclass,
-        Param,
-        FrozenInstanceError,
-    )
-
     with pytest.raises(RuntimeError):
-        # Test that creating a paramclass with parent-class(es) fails
+        # Test that creating a h.paramclass with parent-class(es) fails
 
-        @paramclass
+        @h.paramclass
         class C(TabError):  # Of course this is a sub-class of the best built-in class
             ...
 
-    @paramclass
+    @h.paramclass
     class C:
-        a = Param(dtype=int, desc="Gonna Fail!")
+        a = h.Param(dtype=int, desc="Gonna Fail!")
 
     with pytest.raises(RuntimeError):
-        # Test that sub-classing a paramclass fails
+        # Test that sub-classing a h.paramclass fails
 
         class D(C):
             ...
@@ -134,7 +127,7 @@ def test_bad_params1():
         c = C(a=TabError)
 
     with pytest.raises(FrozenInstanceError):
-        # Test that attempts at mutating paramclasses fail
+        # Test that attempts at mutating h.paramclasses fail
         c = C(a=3)
         c.a = 4
 

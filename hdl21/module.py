@@ -7,18 +7,17 @@ This module primarily defines:
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 
-import inspect
-from types import ModuleType
 from typing import Any, Optional, List, Union, get_args, Type, Dict
 from pydantic.dataclasses import dataclass
-from dataclasses import field
 
 # Local imports
+from .default import Default
+from .call import param_call
 from .source_info import source_info, SourceInfo
 from .attrmagic import init
-from .params import NoParams, HasNoParams, isparamclass
+from .params import HasNoParams, isparamclass
 from .signal import Signal, Visibility
-from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
+from .instance import calls_instantiate, _Instance, Instance, InstanceArray, InstanceBundle
 from .bundle import BundleInstance
 
 
@@ -65,11 +64,7 @@ class Module:
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._source_info = source_info([__file__])
-        self._pymodule = (
-            self._source_info.pymodule
-        )  # FIXME: move to operating on `SourceInfo` instead
-
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._importpath = None  # Optional field set by importers
         self._moduledata = None  # Optional[ModuleData]
         self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
@@ -159,7 +154,7 @@ class Module:
         elif isinstance(val, Instance):
             self.instances[val.name] = val
             self.namespace[val.name] = val
-        elif isinstance(val, InstArray):
+        elif isinstance(val, InstanceArray):
             self.instarrays[val.name] = val
             self.namespace[val.name] = val
         elif isinstance(val, InstanceBundle):
@@ -231,24 +226,14 @@ class Module:
         return rv
 
     def _defpath(self) -> str:
-        """Helper for exporting.
-        Returns a string representing "where" this module was defined.
-        This is generally one of a few things:
-        * If "normally" defined via Python code, it's the Python module path
-        * If *imported*, it's the path inferred during import"""
-        if self._importpath:  # Imported. Return the period-separated import path.
-            return ".".join(self._importpath)
-        # Defined the old fashioned way. Use the Python module name.
-        return self._pymodule.__name__
+        return _defpath(self)
 
     def _qualname(self) -> Optional[str]:
-        """Helper for exporting. Returns the path-qualified name including
-        `_defpath` options above, and the `Module.name`."""
-        if self.name is None:
-            return None
-        return self._defpath() + "." + self.name
+        return _qualname(self)
 
     def __eq__(self, other: "Module") -> bool:
+        if not isinstance(other, Module):
+            return NotImplemented
         if self.name is None or other.name is None:
             raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
         return self._qualname() == other._qualname()
@@ -342,20 +327,17 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
-    pymodule: Optional[ModuleType] = field(repr=False, init=False, default=None)
-    importpath: Optional[List[str]] = field(repr=False, init=False, default=None)
 
     def __post_init__(self):
         # Check for a valid parameter-type
         if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
-            msg = (
-                f"Invalid `ExternalModule` parameter type {self.paramtype} for {self}. "
-            )
+            msg = f"Invalid parameter type {self.paramtype} for {self}. "
             msg += "Param types must be either `@paramclass`es or `dict`."
             raise ValueError(msg)
+
         # Internal tracking data: defining module/import-path
-        self.pymodule = _caller_pymodule()
-        self.importpath = None
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
+        self._importpath = None
 
     def __post_init_post_parse__(self):
         """After type-checking, do some more checks on values"""
@@ -366,7 +348,8 @@ class ExternalModule:
                 msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
                 raise ValueError(msg)
 
-    def __call__(self, params: Any = NoParams) -> "ExternalModuleCall":
+    def __call__(self, arg: Any = Default, **kwargs) -> "ExternalModuleCall":
+        params = param_call(callee=self, arg=arg, **kwargs)
         return ExternalModuleCall(module=self, params=params)
 
     @property
@@ -374,24 +357,14 @@ class ExternalModule:
         return {p.name: p for p in self.port_list}
 
     def _defpath(self) -> str:
-        """Helper for exporting.
-        Returns a string representing "where" this module was defined.
-        This is generally one of a few things:
-        * If "normally" defined via Python code, it's the Python module path
-        * If *imported*, it's the path inferred during import"""
-        if self.importpath:  # Imported. Return the period-separated import path.
-            return ".".join(self.importpath)
-        # Defined the old fashioned way. Use the Python module name.
-        return self.pymodule.__name__
+        return _defpath(self)
 
     def _qualname(self) -> Optional[str]:
-        """Helper for exporting. Returns the path-qualified name including
-        `_defpath` options above, and the `Module.name`."""
-        if self.name is None:
-            return None
-        return self._defpath() + "." + self.name
+        return _qualname(self)
 
     def __eq__(self, other: "ExternalModule") -> bool:
+        if not isinstance(other, ExternalModule):
+            return NotImplemented
         if self.name is None or other.name is None:
             raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
         return self._qualname() == other._qualname()
@@ -406,13 +379,44 @@ class ExternalModule:
             raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
         return self._qualname()
 
+    @property
+    def Params(self) -> Type:
+        return self.paramtype
+
+
+def _qualname(mod: Union[Module, ExternalModule]) -> Optional[str]:
+    """# Qualified Name
+    Helper for exporting. Returns a module or import path-qualified name."""
+
+    if mod.name is None:
+        return None
+    return mod._defpath() + "." + mod.name
+
+
+def _defpath(mod: Union[Module, ExternalModule]) -> str:
+    """# Definition Path
+    Helper for exporting.
+    Returns a string representing "where" this module was defined.
+    This is generally one of a few things:
+    * If "normally" defined via Python code, it's the Python module path
+    * If *imported*, it's the path inferred during import"""
+
+    if mod._importpath is not None:
+        # Imported. Return the period-separated import path.
+        return ".".join(mod._importpath)
+
+    # Defined the old fashioned way. Use the Python module name.
+    if mod._source_info.pymodule is None:
+        raise RuntimeError(f"{mod} is not defined in Python")
+    return mod._source_info.pymodule.__name__
+
 
 @calls_instantiate
 @dataclass
 class ExternalModuleCall:
-    """External Module Call
+    """# External Module Call
     A combination of an `ExternalModule` and its Parameter-values,
-    typically generated by calling the Module."""
+    typically generated by calling the `ExternalModule`."""
 
     module: ExternalModule
     params: Any
@@ -422,6 +426,10 @@ class ExternalModuleCall:
         if not isinstance(self.params, self.module.paramtype):
             msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"
             raise TypeError(msg)
+
+    @property
+    def name(self) -> Optional[str]:
+        return self.module.name
 
     @property
     def ports(self) -> dict:
@@ -465,25 +473,4 @@ def _attr_type_error(m: Module, val: Any) -> None:
     raise TypeError(msg)
 
 
-def _caller_pymodule() -> Optional[ModuleType]:
-    """# Caller Py-Module
-    Find the (python) module of the first python-stack-frame not from *this* file.
-
-    Sometimes this will be `hdl21.generator`. That's OK, `Generator`s know how to figure it out.
-
-    Returns `None` if *no* python modules are in the call-stack.
-    This can happen, for example when running `python -c "import hdl21 as h; h.Module()"`,
-    or (probably) through other interactive interpreter setups.
-
-    These "(python) module-less Modules" will generally fail in later steps
-    such as exporting to ProtoBuf and netlists, but can be created in-memory.
-    """
-    for fr in inspect.stack():
-        # Note frames produce an `Optional[ModuleType]`.
-        # (It seems extension modules may not have one.)
-        # So be sure to check for `None`!
-        pymod = inspect.getmodule(fr[0])
-        if pymod is not None and pymod.__file__ != __file__:
-            return pymod
-    # No caller module found, anywhere in the call-stack.
-    return None
+__all__ = ["module", "Module", "ExternalModule", "ExternalModuleCall"]

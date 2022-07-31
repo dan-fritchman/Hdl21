@@ -2,42 +2,15 @@
 Hdl21 Parameters and Param-Classes 
 """
 
-from typing import Optional, Any
+from typing import Optional, Union, Any, Dict
 import dataclasses
 import json
 import pickle
 import hashlib
 import pydantic
 
-
-# Import a few likely common Exception-types,
-# Not used directly here, but likely by users and tests
-from pydantic import ValidationError
-from dataclasses import FrozenInstanceError
-
-
-class _Default:
-    """The cardinal value for unspecified parameter-declaration defaults.
-    Normally the class-object itself would work for this, but `pydantic.dataclasses`
-    seems to have some problems accepting class-objects.
-    https://github.com/samuelcolvin/pydantic/issues/1537
-    So we create this singleton instance `_default`, AKA `_Default._the_one`.
-
-    FIXME: this pydantic issue was updated and closed at some point,
-    potentially enabling removint this singleton stuff.
-    Check out the pydantic updates along with https://github.com/dan-fritchman/Hdl21/issues/15
-    """
-
-    _the_one = None
-
-    def __new__(cls, *_, **__):
-        if cls._the_one is None:
-            cls._the_one = super().__new__(cls)
-        return cls._the_one
-
-
-# Create that singleton
-_default = _Default()
+# Local Imports
+from .default import Default
 
 
 def paramclass(cls: type) -> type:
@@ -72,12 +45,17 @@ def paramclass(cls: type) -> type:
     * *All* non-Python-internal fields must be of type `Param`
     * Inheritance is not supported
     """
+
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
+    
     protected_names = ["descriptions", "defaults"]
     dunders = dict()
     params = dict()
+
     # Take a lap through the class dictionary, type-check everything and grab Params
+    # FIXME: look for, and alert users about, the error writing type annotations rather than equality. 
+    # (Or, we could move to type annotations...)
     for key, val in cls.__dict__.items():
         if key in protected_names:
             raise RuntimeError(f"Invalid field name {key} in paramclass {cls}")
@@ -93,9 +71,9 @@ def paramclass(cls: type) -> type:
     fields = list()
     for name, par in params.items():
         field = [name, par.dtype]
-        if par.default is not _default:
+        if par.default is not Default:
             field.append(dataclasses.field(default=par.default))
-        elif par.default_factory is not _default:
+        elif par.default_factory is not Default:
             raise NotImplementedError(f"Param.default_factory for {cls}")
             field.append(dataclasses.field(default_factory=par.default_factory))
         fields.append(tuple(field))
@@ -110,7 +88,7 @@ def paramclass(cls: type) -> type:
             lambda cls: {
                 k: v.default
                 for k, v in cls.__params__.items()
-                if v.default is not _default
+                if v.default is not Default
             }
         ),
     )
@@ -139,8 +117,8 @@ class Param:
 
     dtype: Any  # Datatype. Required
     desc: str  # Description. Required
-    default: Optional[Any] = _default  # Default Value. Optional
-    default_factory: Optional[Any] = _default  # Default Call-Factory. Optional
+    default: Optional[Any] = Default  # Default Value. Optional
+    default_factory: Optional[Any] = Default  # Default Call-Factory. Optional
 
 
 def _unique_name(params: Any) -> str:
@@ -232,8 +210,15 @@ def hdl21_naming_encoder(obj: Any) -> Any:
 
 # Shortcut for parameter-less generators.
 # Defines the empty-value `@paramclass`.
-HasNoParams = paramclass(
-    dataclasses.make_dataclass("NoParams", fields=[], namespace={}, frozen=True)
-)
+@paramclass
+class HasNoParams:
+    """# HasNoParams
+    A built-in `hdl21.paramclass` for generators that require no parameters."""
+
+    ...  # Empty Contents
+
+
 # And an instance of it
 NoParams = HasNoParams()
+
+__all__ = ["paramclass", "Param", "HasNoParams", "NoParams"]

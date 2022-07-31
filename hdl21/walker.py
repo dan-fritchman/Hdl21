@@ -38,7 +38,7 @@ class HierarchyWalker:
 
     def visit_generator_call(self, call: GeneratorCall) -> None:
         """Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`."""
-        return self.visit_module(call.gen._resolved)
+        return self.visit_module(call.gen._resolved) # FIXME! think we broke this one. 
 
     def visit_module(self, module: Module) -> None:
         """Visit a `Module`.

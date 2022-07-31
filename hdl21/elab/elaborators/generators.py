@@ -2,10 +2,12 @@
 # Generator Elaborator 
 """
 
+from typing import List, Dict, Union
+
 # Local imports
 from ...module import Module
-from ...instance import InstArray, Instance
-from ...generator import GeneratorCall, Default as GenDefault
+from ...instance import Instance
+from ...generator import GeneratorCall
 from ...params import HasNoParams, _unique_name
 from ...instantiable import Instantiable
 
@@ -32,38 +34,31 @@ class GeneratorElaborator(Elaborator):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.generator_calls = dict()  # GeneratorCalls to their (Module) results
+        # Cache GeneratorCalls to their (Module) results
+        # (Yes, GeneratorCalls can be hashed.)
+        self.generator_calls: Dict[GeneratorCall, Module] = dict()
 
-    def elaborate_top(self):
-        """Elaborate our top node"""
-        if isinstance(self.top, Module):
-            return self.elaborate_module_base(self.top)
-        if isinstance(self.top, GeneratorCall):
-            return self.elaborate_generator_call(self.top)
-        msg = f"Invalid Elaboration top-level {self.top}, must be a Module or Generator"
-        self.fail(msg)
+    def elaborate_tops(self) -> List[Module]:
+        """Elaborate our top nodes"""
+        if not isinstance(self.tops, List):
+            self.fail(f"Invalid Top for Elaboration: {self.tops} must be a list")
+        return [self.elaborate_a_top_node(t) for t in self.tops]
+
+    def elaborate_a_top_node(self, t: Union[Module, GeneratorCall]) -> Module:
+        """Elaborate a top-level node, which may be a Module or a GeneratorCall."""
+        if isinstance(t, Module):
+            return self.elaborate_module_base(t)  # Note `_base` here!
+
+        if isinstance(t, GeneratorCall):
+            return self.elaborate_generator_call(t)
+
+        self.fail(
+            f"Invalid Elaboration top-level {t}, must be a Module or call to Generator"
+        )
 
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """Elaborate Generator-function-call `call`. Returns the generated Module."""
-        self.stack.append(call)
 
-        # Support the "no paramclass constructor" invocation.
-        # Create an instance of the generator's parameter-class if keyword args were provided instead.
-        # If both were provided, fail.
-        if call.kwargs and call.arg is not GenDefault:
-            msg = f"Invalid Generator Call {call}: either provide a single {call.gen.Params} instance or keyword arguments, not both."
-            self.fail(msg)
-        elif call.arg is GenDefault:
-            # Create an instance of the generator's parameter-class, and wipe out the keyword-args dict.
-            call.arg = call.gen.Params(**call.kwargs)
-            call.kwargs = dict()
-
-        # After all that, check that the call has a valid instance of the generator's parameter-class
-        if not isinstance(call.arg, call.gen.Params):
-            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.arg}"
-            self.fail(msg)
-
-        # At this point the `Call` has a valid `Generator` and `arg`.
         # Check our cache, see if we've already generated its module.
         if call in self.generator_calls:  # Already done!
             # Give the `call` a reference to its result.
@@ -72,11 +67,23 @@ class GeneratorElaborator(Elaborator):
             call.result = result
             return result
 
+        # Add both the `Call` and `Generator` to our stack. 
+        self.stack.append(call)
+        self.stack.append(call.gen)
+
+        # Check that the call has a valid instance of the generator's parameter-class
+        if not isinstance(call.params, call.gen.Params):
+            msg = f"Invalid Generator Call {call}: {call.gen.Params} instance required, got {call.params}"
+            self.fail(msg)
+
         # The main event: Run the generator-function
-        if call.gen.usecontext:
-            m = call.gen.func(call.arg, self.ctx)
-        else:
-            m = call.gen.func(call.arg)
+        try:
+            if call.gen.usecontext:
+                m = call.gen.func(call.params, self.ctx)
+            else:
+                m = call.gen.func(call.params)
+        except Exception as e:
+            self.fail(f"{call.gen} raised an exception: \n{e}")
 
         # Type-check the result
         # Generators may return other (potentially nested) generator-calls; unwind any of them
@@ -98,18 +105,20 @@ class GeneratorElaborator(Elaborator):
             m.name = call.gen.func.__name__
 
         # Then add a unique suffix per its parameter-values
-        if not isinstance(call.arg, HasNoParams):
-            m.name += "(" + _unique_name(call.arg) + ")"
-
-        # Update the Module's `pymodule`, which generally at this point is `hdl21.generator`
-        m._pymodule = call.gen.pymodule
+        if not isinstance(call.params, HasNoParams):
+            m.name += "(" + _unique_name(call.params) + ")"
 
         # And elaborate the module
         m = self.elaborate_module_base(m)  # Note the `_base` here!
+        
+        # Pop both the `Call` and `Generator` off the stack
         self.stack.pop()
+        self.stack.pop()
+
+        # And return the generated Module
         return m
 
-    def elaborate_instance(self, inst: Instance) -> Instantiable:
+    def elaborate_instance_base(self, inst: Instance) -> Instantiable:
         """Elaborate a Module Instance."""
         # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
         # instead of the resolved version `inst._resolved`.
@@ -119,19 +128,6 @@ class GeneratorElaborator(Elaborator):
         inst._elaborated = True
         # And visit the Instance's target
         rv = self.elaborate_instantiable(inst.of)
-        self.stack.pop()
-        return rv
-
-    def elaborate_instance_array(self, arr: InstArray) -> Instantiable:
-        """Elaborate an Instance Array."""
-        # This version differs from `Elaborator` in operating on the *unresolved* attribute `inst.of`,
-        # instead of the resolved version `inst._resolved`.
-
-        self.stack.append(arr)
-        # Turn off `PortRef` magic
-        arr._elaborated = True
-        # And visit the Instance's target
-        rv = self.elaborate_instantiable(arr.of)
         self.stack.pop()
         return rv
 

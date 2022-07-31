@@ -16,6 +16,7 @@ FIXME: this is amid `Diff`/`Pair` specific code and more general `InstanceBundle
 from typing import get_args
 
 # Local imports
+from ...bundle import _bundle_ref
 from ...portref import PortRef
 from ...module import Module
 from ...instance import Instance, InstanceBundle
@@ -46,8 +47,7 @@ class InstBundleElaborator(Elaborator):
         """# Elaborate an Instance Bundle
         Replace it with "scalar" Instances and reconnect them."""
 
-        from ...bundle import AnonymousBundle, BundleInstance
-        from ...signal import Sliceable
+        from ... import AnonymousBundle, BundleInstance, Sliceable
 
         if len(instbundle.bundle.bundles):
             msg = f"Invalid Instance Bundle {instbundle} with nested Bundles"
@@ -77,7 +77,7 @@ class InstBundleElaborator(Elaborator):
                     self.fail(msg)
 
                 for signame, new_inst in signal_names_to_instances.items():
-                    new_inst.connect(portname, conn._bundle_ref(signame))
+                    new_inst.connect(portname, _bundle_ref(conn, signame))
 
             elif isinstance(conn, AnonymousBundle):
                 for signame, new_inst in signal_names_to_instances.items():

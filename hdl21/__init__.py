@@ -11,10 +11,17 @@ from pydantic import BaseModel
 
 BaseModel.Config.arbitrary_types_allowed = True
 
+# Internal (python) module aliases, overridden by names such as the `module` decorator function. 
+from . import module as _module_module
+from . import instance as _instance_module
+from . import generator as _generator_module
 
 from .params import *
 from .instance import *
 from .signal import *
+from .slice import *
+from .concat import *
+from .noconn import *
 from .module import *
 from .generator import *
 from .generators import *

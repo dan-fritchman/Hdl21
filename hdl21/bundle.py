@@ -5,11 +5,13 @@ Structured connection objects, instances thereof, and associated utilities.
 """
 
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args, Dict, Set, List
+from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 
 # Local Imports
 from .attrmagic import init
-from .connect import connectable, track_connected_ports
+from .connect import connectable
+from .slices import slices
+from .concat import concatable
 from .signal import Signal
 
 
@@ -18,24 +20,11 @@ def getattr_bundle_refs(cls: type) -> type:
     Adds the `_bundle_ref` method and `__getattr__` access to it."""
 
     # First check and fail if any of the methods to be defined here are already defined elsewhere
-    defined_here = ["_bundle_ref", "__getattr__"]
+    defined_here = ["__getattr__"]
     for key in defined_here:
         if key in cls.__dict__:
             msg = f"Invalid modification of {cls} with `@getattr_bundle_refs`: {key} is already defined."
             raise RuntimeError(msg)
-
-    def _bundle_ref(self, key: str) -> "BundleRef":
-        """Return a reference to name `key`, creating it if necessary."""
-
-        # Check in our existing references
-        bundle_refs = self.__getattribute__("refs_to_me")
-        if key in bundle_refs:
-            return bundle_refs[key]
-
-        # New reference; create, add, and return it
-        bundle_ref = BundleRef(parent=self, attrname=key)
-        bundle_refs[key] = bundle_ref
-        return bundle_ref
 
     def __getattr__(self, key: str) -> Any:
         """BundleRef access by getattr"""
@@ -55,9 +44,8 @@ def getattr_bundle_refs(cls: type) -> type:
 
         # Fell through all those cases. Fancy `BundleRef` generation time!
         # Return a `BundleRef`, creating one if necessary.
-        return self._bundle_ref(key)
+        return _bundle_ref(self, key)
 
-    cls._bundle_ref = _bundle_ref
     cls.__getattr__ = __getattr__
     cls.__getattr_bundle_refs__ = True
 
@@ -70,7 +58,6 @@ def has_getattr_bundle_refs(obj: Any) -> bool:
     return getattr(obj, "__getattr_bundle_refs__", False)
 
 
-@track_connected_ports
 @getattr_bundle_refs
 @connectable
 @init
@@ -87,7 +74,6 @@ class BundleInstance:
         "dest",
         "desc",
         "refs_to_me",
-        "connected_ports",
     ]
 
     def __init__(
@@ -111,7 +97,7 @@ class BundleInstance:
         # References handed out to our children
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: Set["BundleRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
         self._parent_module: Optional["Module"] = None
         self._elaborated = False
         self._initialized = True
@@ -285,7 +271,6 @@ def bundle(cls: type) -> Bundle:
     return bundle
 
 
-@track_connected_ports
 @connectable
 class AnonymousBundle:
     """# Anonymous Connection Bundle
@@ -301,11 +286,11 @@ class AnonymousBundle:
         # self.anons: Dict[str, "AnonymousBundle"] = dict()
 
         # Bundle references to others, stored as members,
-        # e.g. AnonBundle(sig=OtherBundle.sig)
+        # e.g. AnonBundle(sig=other_bundle.sig)
         self.refs_to_others: Dict[str, "BundleRef"] = dict()
 
         # Connected port references
-        self.connected_ports: Set["PortRef"] = set()
+        self._connected_ports: Set["PortRef"] = set()
 
         # And add each keyword-arg
         for key, val in kwargs.items():
@@ -336,28 +321,41 @@ class AnonymousBundle:
         return None
 
 
-@track_connected_ports
+@getattr_bundle_refs
+@concatable
+@slices
 @connectable
+@init
 class BundleRef:
     """Reference into a Bundle Instance"""
 
-    _specialcases = [
+    _specialcases: ClassVar[List[str]] = [
         "parent",
+        "attrname",
         "path",
         "root",
-        "connected_ports",
+        "refs_to_me",
+        "resolved",
     ]
 
     def __init__(
         self,
-        parent: Union["BundleInstance", "BundleRef"],
-        attrname: str,
+        parent: Union["BundleInstance", "BundleRef"],  # Parent Bundle
+        attrname: str,  # Attribute name
     ):
         self.parent = parent
         self.attrname = attrname
-        # Connected port references
-        self.connected_ports: Set["PortRef"] = set()
+
+        self.resolved: Union[None, "Signal", "BundleInstance"] = None
+        # References handed out to our children
+        self.refs_to_me: Dict[str, "BundleRef"] = dict()
+        self._width: Optional[int] = None  # FIXME: remove?
+        self._slices: Set["Slice"] = set()
+        self._concats: Set["Concat"] = set()
+        self._connected_ports: Set["PortRef"] = set()
+
         self._elaborated = False
+        self._initialized = True
 
     def __eq__(self, other) -> bool:
         """Port-reference equality requires *identity* between parents
@@ -386,3 +384,17 @@ class BundleRef:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(root={self.root()} path={self.path()})"
+
+
+def _bundle_ref(self: Union[BundleRef, BundleInstance], key: str) -> BundleRef:
+    """Return a reference to name `key`, creating it if necessary."""
+
+    # Check in our existing references
+    bundle_refs = self.__getattribute__("refs_to_me")
+    if key in bundle_refs:
+        return bundle_refs[key]
+
+    # New reference; create, add, and return it
+    bundle_ref = BundleRef(parent=self, attrname=key)
+    bundle_refs[key] = bundle_ref
+    return bundle_ref
