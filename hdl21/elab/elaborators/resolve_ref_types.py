@@ -34,24 +34,14 @@ The important thing is: don't take the results of `resolve_*_type` as the actual
 """
 
 # Std-Lib Imports
-import copy
 from typing import Union, Callable
 
 # Local imports
-from ...connect import is_connectable, Connectable
 from ...portref import PortRef
-from ...module import Module
-from ...instance import InstArray, Instance
 from ...signal import Signal
-from ...slice import Slice
-from ...concat import Concat
-from ...noconn import NoConn
-from ...slice import Sliceable
 from ...bundle import (
-    AnonymousBundle,
     BundleInstance,
     BundleRef,
-    Bundle,
 )
 
 

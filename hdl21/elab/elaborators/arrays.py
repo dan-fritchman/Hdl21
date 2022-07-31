@@ -16,7 +16,7 @@ from .base import Elaborator
 
 class ArrayFlattener(Elaborator):
     """
-    Elaboration Pass to Flatten `InstArray`s into `Instance`s, broadcast and remake their connections.
+    Elaboration Pass to Flatten `InstanceArray`s into `Instance`s, broadcast and remake their connections.
     """
 
     def elaborate_module(self, module: Module) -> Module:
@@ -34,7 +34,7 @@ class ArrayFlattener(Elaborator):
 
             # And do the real work: flattening it.
             if array.n < 1:
-                self.fail(f"Invalid InstArray {array} with size {array.n}")
+                self.fail(f"Invalid InstanceArray {array} with size {array.n}")
 
             # Create the new, flat Instances
             new_insts = []
@@ -55,10 +55,10 @@ class ArrayFlattener(Elaborator):
                     # Get the target-module port, particularly for its width
                     port = target.ports.get(portname, None)
                     if port is None:
-                        msg = f"Connection to invalid Port `{portname}` on InstArray `{array}` in Module `{module.name}`"
+                        msg = f"Connection to invalid Port `{portname}` on InstanceArray `{array}` in Module `{module.name}`"
                         self.fail(msg)
                     if not isinstance(port, Signal):
-                        msg = f"Invalid Port `{portname}` ({port}) on InstArray `{array}` in Module `{module.name}`"
+                        msg = f"Invalid Port `{portname}` ({port}) on InstanceArray `{array}` in Module `{module.name}`"
                         self.fail(msg)
 
                     if port.width == conn.width:
@@ -82,7 +82,7 @@ class ArrayFlattener(Elaborator):
                     msg += f"Connection {conn} has not been resolved to a `Signal`. "
                     raise RuntimeError
                 else:
-                    msg = f"Invalid connection to {conn} in InstArray {array}"
+                    msg = f"Invalid connection to {conn} in InstanceArray {array}"
                     self.fail(msg)
             self.stack.pop()
 

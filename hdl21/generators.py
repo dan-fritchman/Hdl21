@@ -149,7 +149,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
         for iser in range(1, params.nser):
             prev_inst = inst
             inst = unit(**par_conns)
-            inst.connect(ser0.name, prev_inst._port_ref(ser1.name))
+            inst.connect(ser0.name, getattr(prev_inst, ser1.name))
             inst = m.add(name=f"unit_{ipar}_{iser}", val=inst)
         # Finally connect the last series-port to the last instance
         inst.connect(ser1.name, ser1)

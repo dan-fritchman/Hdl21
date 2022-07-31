@@ -113,7 +113,7 @@ class BundleInstance:
         # References handed out to our children
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
         # Connected port references
-        self.connected_ports: Set["BundleRef"] = set()
+        self.connected_ports: Set["PortRef"] = set()
         self._parent_module: Optional["Module"] = None
         self._elaborated = False
         self._initialized = True

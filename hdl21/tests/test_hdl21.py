@@ -156,7 +156,7 @@ def test_array1():
     m = h.Module(name="HasArray")
     m.s1 = h.Signal(width=8)
     m.s2 = h.Signal(width=1)
-    m.arr = h.InstArray(InArray, 8)
+    m.arr = h.InstanceArray(InArray, 8)
     m.arr.inp = m.s1
     m.arr.out = m.s2
 
@@ -173,7 +173,7 @@ def test_array2():
     class HasArray2:
         s1 = h.Signal(width=8)
         s2 = h.Signal(width=1)
-        arr = h.InstArray(a, 8)(inp=s1, out=s2)
+        arr = h.InstanceArray(a, 8)(inp=s1, out=s2)
 
     assert len(HasArray2.instances) == 0
     assert len(HasArray2.instarrays) == 1
@@ -441,7 +441,7 @@ def test_instance_mult():
     Parent.child = Child() * 5  # Lotta kids here
 
     # Check that the array is created correctly
-    assert isinstance(Parent.child, h.InstArray)
+    assert isinstance(Parent.child, h.InstanceArray)
     assert Parent.child.n == 5
     assert Parent.child.of is Child
 
@@ -459,7 +459,7 @@ def test_instance_mult():
     Parent.child = 11 * Child()  # Getting even more kids
 
     # Check that the array is created correctly
-    assert isinstance(Parent.child, h.InstArray)
+    assert isinstance(Parent.child, h.InstanceArray)
     assert Parent.child.n == 11
     assert Parent.child.of is Child
 
@@ -474,7 +474,7 @@ def test_instance_mult():
 
 
 def test_instance_mult2():
-    """Test connecting to multiplication-generated InstArrays"""
+    """Test connecting to multiplication-generated InstanceArrays"""
 
     @h.module
     class Child:
@@ -748,7 +748,7 @@ def test_bad_noconn():
 
 
 def test_array_concat_conn():
-    """Test connecting a `Concat` to an `InstArray`"""
+    """Test connecting a `Concat` to an `InstanceArray`"""
 
     Child = h.Module(name="Child")
     Child.p3 = h.Input(width=3)
@@ -893,7 +893,7 @@ def test_instance_array_portrefs():
     m = h.Module(name="TestArrayPortRef")
     m.a, m.b = h.Signals(2, width=4)
 
-    # Create an InstArray
+    # Create an InstanceArray
     m.inva = 4 * Inv()(i=m.a)
     # And another which connects to it via PortRef
     m.invb = 4 * Inv()(i=m.inva.z, z=m.b)

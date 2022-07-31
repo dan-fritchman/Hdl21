@@ -6,8 +6,8 @@ from typing import List, Dict, Union
 
 # Local imports
 from ...module import Module
-from ...instance import InstArray, Instance
-from ...generator import GeneratorCall, Default as GenDefault
+from ...instance import Instance
+from ...generator import GeneratorCall
 from ...params import HasNoParams, _unique_name
 from ...instantiable import Instantiable
 

@@ -17,7 +17,7 @@ from .source_info import source_info, SourceInfo
 from .attrmagic import init
 from .params import HasNoParams, isparamclass
 from .signal import Signal, Visibility
-from .instance import calls_instantiate, _Instance, Instance, InstArray, InstanceBundle
+from .instance import calls_instantiate, _Instance, Instance, InstanceArray, InstanceBundle
 from .bundle import BundleInstance
 
 
@@ -154,7 +154,7 @@ class Module:
         elif isinstance(val, Instance):
             self.instances[val.name] = val
             self.namespace[val.name] = val
-        elif isinstance(val, InstArray):
+        elif isinstance(val, InstanceArray):
             self.instarrays[val.name] = val
             self.namespace[val.name] = val
         elif isinstance(val, InstanceBundle):

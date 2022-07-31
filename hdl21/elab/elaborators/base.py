@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Union
 
 # Local imports
 from ...module import Module, ExternalModuleCall
-from ...instance import _Instance, Instance, InstArray, InstanceBundle
+from ...instance import _Instance, Instance, InstanceArray, InstanceBundle
 from ...primitives import PrimitiveCall
 from ...bundle import BundleInstance
 from ...generator import GeneratorCall
@@ -21,7 +21,7 @@ from ..context import Context
 
 
 # Union of entry-types in the elaboration stack
-ElabStackEntry = Union[GeneratorCall, Module, Instance, InstArray, InstanceBundle]
+ElabStackEntry = Union[GeneratorCall, Module, Instance, InstanceArray, InstanceBundle]
 
 
 class Elaborator:

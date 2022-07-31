@@ -6,11 +6,11 @@ Creates concrete `Signal`s and `BundleInstance`s to replace `PortRef`s.
 
 # Std-Lib Imports
 import copy
-from dataclasses import dataclass, field
-from typing import Union, Dict, List, Optional, Set, get_args
+from typing import Union, List, Optional, Set, get_args
 
 # Local imports
 from ...connect import Connectable
+from ...instance import _get_portref
 from ...module import Module
 from ...portref import PortRef
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
@@ -68,22 +68,22 @@ class ResolvePortRefs(Elaborator):
         # FIXME: move from SetList to a regular Set. Thus far breaks one test, somehow.
         module_portrefs = SetList()
         for inst in instancelike:
-            
+
             # Populate the module-level set of PortRefs
-            for portref in inst.portrefs.values():
+            for portref in inst._portrefs.values():
                 module_portrefs.add(portref)
 
             # Right here, all the `connected_ports` are being set
             # Annotate every connection with its Instance Ports
-            # FIXME: as a consequence of handing our a `PortRef` for every connection, and then examining all `PortRef`s 
-            # of every Instance, this pass is now examining *every* connection, including those to concrete Signals. 
+            # FIXME: as a consequence of handing our a `PortRef` for every connection, and then examining all `PortRef`s
+            # of every Instance, this pass is now examining *every* connection, including those to concrete Signals.
             # We can probably streamline this away by splitting up something like "connection refs" versus "port refs".
             for portname, conn in inst.conns.items():
-                conn.connected_ports.add(inst._port_ref(portname))
+                conn.connected_ports.add(_get_portref(inst, portname))
 
                 # FIXME: add the `NoConn`s here, although it's not clear we *really* need these checks on them
                 if isinstance(conn, NoConn):
-                    module_portrefs.add(inst._port_ref(portname))
+                    module_portrefs.add(_get_portref(inst, portname))
 
         def follow(pref: PortRef, group: SetList) -> None:
             """ Closure to recursively follow `pref`, adding its outward and inward connections to `group`. 

@@ -10,7 +10,7 @@ from typing import Any, Union, get_args
 from ...connect import is_connectable, Connectable
 from ...portref import PortRef
 from ...module import Module
-from ...instance import InstArray, Instance
+from ...instance import InstanceArray, Instance
 from ...noconn import NoConn
 from ...slice import Sliceable
 from ...bundle import (
@@ -52,7 +52,7 @@ class ConnTypes(Elaborator):
         # No errors means it checked out, return the Module unchanged
         return module
 
-    def check_instance(self, module: Module, inst: Union[Instance, InstArray]) -> None:
+    def check_instance(self, module: Module, inst: Union[Instance, InstanceArray]) -> None:
         """Check the connections of `inst` in parent `module`"""
         self.stack.append(inst)
 

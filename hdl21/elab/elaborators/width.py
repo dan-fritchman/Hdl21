@@ -5,24 +5,19 @@ Function to determine the `width` of connectable types.
 """
 
 # Std-Lib Imports
-import copy
 from typing import Union, Callable
 
 # Local imports
-from ...connect import is_connectable, Connectable
+from ...connect import Connectable
 from ...portref import PortRef
-from ...module import Module
-from ...instance import InstArray, Instance
 from ...signal import Signal
 from ...slice import Slice
 from ...concat import Concat
 from ...noconn import NoConn
-from ...slice import Sliceable
 from ...bundle import (
     AnonymousBundle,
     BundleInstance,
     BundleRef,
-    Bundle,
 )
 from .resolve_ref_types import resolve_bundleref_type, resolve_portref_type
 
