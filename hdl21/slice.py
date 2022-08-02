@@ -1,5 +1,6 @@
 """
 # Hdl21 Slices
+
 By-index references into Connectable types. 
 """
 
@@ -85,24 +86,12 @@ class SliceInner:
 
     top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
-    # FIXME: can we make this a consistent `int`?
-    # Only possible exception would seem to be any subtleties of differences between `None` and `1`.
-    step: Optional[int]  # Python-convention step size
+    step: int  # Python-convention step size
     width: int
 
 
 def _slice_inner(slize: Slice) -> SliceInner:
-    """Square-bracket slicing into Signals, Concatenations, and Slices.
-    Assuming valid inputs, returns a signal-`Slice`.
-
-    Signal slices are indexed "Python style", in the senses that:
-    * Negative indices are supported, and count from the "end" of the Signal.
-    * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index.
-    * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
-    Popular HDLs commonly use different signal-indexing conventions.
-    Hdl21's own primary exchange format (in ProtoBuf) does as well,
-    eschewing adopting inclusive-endpoints and negative-indexing.
-    """
+    """Calculate the inner resolved fields for `slize`"""
 
     parent = slize.parent
     index = slize.index
@@ -112,7 +101,7 @@ def _slice_inner(slize: Slice) -> SliceInner:
             raise ValueError(f"Out-of-bounds index {index} into {parent}")
         if index < 0:
             index += parent.width
-        return SliceInner(top=index + 1, bot=index, step=None, width=1)
+        return SliceInner(top=index + 1, bot=index, step=1, width=1)
 
     if isinstance(index, slice):
         # Note these `slice` attributes are descriptor-things, and they get weird, fast.
@@ -121,10 +110,10 @@ def _slice_inner(slize: Slice) -> SliceInner:
         stop = slice.__getattribute__(index, "stop")
         step = slice.__getattribute__(index, "step")
 
-        stepsz = 1 if step is None else step
-        if stepsz == 0:
+        step = 1 if step is None else step
+        if step == 0:
             raise ValueError(f"slice step cannot be zero")
-        elif stepsz < 0:
+        elif step < 0:
             # Here `top` gets a "+1" since `start` is *inclusive*, while `bot` gets "+1" as `stop` is *exclusive*.
             top = (
                 parent.width
@@ -141,7 +130,7 @@ def _slice_inner(slize: Slice) -> SliceInner:
                 else parent.width + stop + 1
             )
             # Align bot with the step
-            bot += (top - bot) % abs(stepsz)
+            bot += (top - bot) % abs(step)
         else:
             # Here `start` and `stop` match `top` and `bot`'s inclsive/ exclusivity.
             # No need to add any offsets.
@@ -154,14 +143,15 @@ def _slice_inner(slize: Slice) -> SliceInner:
             )
             bot = 0 if start is None else start if start >= 0 else parent.width + start
             # Align top with the step
-            top -= (top - bot) % stepsz
+            top -= (top - bot) % step
 
-        width = (top - bot) // stepsz
+        width = (top - bot) // step
 
         # Create and return our Slice. More checks are done in its constructor.
         return SliceInner(top=top, bot=bot, step=step, width=width)
 
-    raise RuntimeError("Internal Error: Slice index should be an int or (python) slice")
+    # Shouldn't be reachable, but blow up if we (somehow) get here.
+    raise TypeError("Internal Error: Slice index should be an int or (python) slice")
 
 
 def _get_inner(self: Slice) -> SliceInner:

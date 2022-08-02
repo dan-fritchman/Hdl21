@@ -278,7 +278,7 @@ def export_slice(slize: Slice) -> vckt.Slice:
     if not isinstance(slize.parent, Signal):
         msg = f"Export error: {slize} has a parent {slize.parent} which is not a concrete Signal"
         raise RuntimeError(msg)
-    if slize.step is not None and slize.step != 1:
+    if slize.step != 1:
         msg = f"Export error: {slize} has non-unit step"
         raise RuntimeError(msg)
 

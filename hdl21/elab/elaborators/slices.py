@@ -89,16 +89,15 @@ def _list_slice(slize: Slice) -> List[Slice]:
         raise TypeError(f"Invalid attempt to resolve slicing on {slize}")
 
     # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
-
-    if slize.step is not None and slize.step < 0:  # Negative step, begin from `top`
+    step = slize.step
+    if step < 0:  # Negative step, begin from `top`
         first = _list_slice(slize.parent[slize.top])
-        rest = slize.parent[slize.top + slize.step : slize.bot : slize.step]
+        rest = slize.parent[slize.top + step : slize.bot : step]
         rest = _list_slice(rest)
 
     else:  # Positive step, begin from `bot`
-        step = slize.step if slize.step is not None else 1
         first = _list_slice(slize.parent[slize.bot])
-        rest = _list_slice(slize.parent[slize.bot + step : slize.top : slize.step])
+        rest = _list_slice(slize.parent[slize.bot + step : slize.top : step])
 
     return first + rest
 

@@ -313,7 +313,7 @@ def test_signal_slice1():
     assert sl.top == 1
     assert sl.bot == 0
     assert sl.width == 1
-    assert sl.step is None
+    assert sl.step == 1
     assert sl.parent is sig
 
     sl = sig[0:5]
@@ -321,7 +321,7 @@ def test_signal_slice1():
     assert sl.top == 5
     assert sl.bot == 0
     assert sl.width == 5
-    assert sl.step is None
+    assert sl.step == 1
     assert sl.parent is sig
 
     sl = sig[:]
@@ -329,7 +329,7 @@ def test_signal_slice1():
     assert sl.top == 10
     assert sl.bot == 0
     assert sl.width == 10
-    assert sl.step is None
+    assert sl.step == 1
     assert sl.parent is sig
 
 
@@ -338,19 +338,19 @@ def test_signal_slice2():
     sl = h.Signal(width=11)[-1]
     assert sl.top == 11
     assert sl.bot == 10
-    assert sl.step is None
+    assert sl.step == 1
     assert sl.width == 1
 
     sl = h.Signal(width=11)[:-1]
     assert sl.top == 10
     assert sl.bot == 0
-    assert sl.step is None
+    assert sl.step == 1
     assert sl.width == 10
 
     sl = h.Signal(width=11)[-2:]
     assert sl.top == 11
     assert sl.bot == 9
-    assert sl.step is None
+    assert sl.step == 1
     assert sl.width == 2
 
 
