@@ -116,9 +116,8 @@ class Orphanage(Elaborator):
             return self.assert_parentage(module, conn.root())
 
         if isinstance(conn, AnonymousBundle):
-            for sig in conn.signals.values():
+            for sig in conn._namespace.values():
                 self.check_connectable(module, sig)
-            # FIXME: add sub-bundles when available
             return
 
         raise TypeError(f"Orphanage: Unhandled Connectable `{conn}`")

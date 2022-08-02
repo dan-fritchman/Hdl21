@@ -118,3 +118,184 @@ def test_bundleref_slice():
 
     h.elaborate(Outer)
 
+
+def test_anon_with_signal():
+    """ Test an AnonymousBundle with a Signal"""
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        s = h.Signal()
+        i = Inner(b=h.AnonymousBundle(s=s))
+
+    h.elaborate(Outer)
+
+
+def test_anon_with_concat():
+    """ Test an AnonymousBundle with a concatenation"""
+
+    @h.bundle
+    class B:
+        s = h.Signal(width=2)
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        s = h.Signal(width=1)
+        i = Inner(b=h.AnonymousBundle(s=h.Concat(s, s)))
+
+    h.elaborate(Outer)
+
+
+def test_anon_with_slice():
+    """ Test an AnonymousBundle with a slice"""
+
+    @h.bundle
+    class B:
+        s = h.Signal(width=2)
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        s = h.Signal(width=4)
+        i = Inner(b=h.AnonymousBundle(s=s[0:2]))
+
+    h.elaborate(Outer)
+
+
+def test_anon_with_bundle_inst():
+    """ Test an AnonymousBundle referring to a BundleInstance"""
+
+    @h.bundle
+    class BI:
+        x = h.Signal()
+
+    @h.bundle
+    class B:
+        y = h.Signal()
+        bi = BI()
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        z = h.Signal()
+        bi = BI()
+        i = Inner(b=h.AnonymousBundle(y=z, bi=bi))
+
+    h.elaborate(Outer)
+
+
+def test_anon_with_bundleref_signal():
+    """ Test an AnonymousBundle referring to a sub-bundle reference"""
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        b = B()
+        i = Inner(b=h.AnonymousBundle(s=b.s))
+
+    h.elaborate(Outer)
+
+    assert len(Outer.signals) == 1
+    assert len(Outer.ports) == 0
+    assert len(Outer.bundles) == 0
+    assert len(Inner.signals) == 0
+    assert len(Inner.ports) == 1
+    assert len(Inner.bundles) == 0
+    assert Inner.ports["b_s"]
+    assert Outer.i.conns["b_s"] is Outer.signals["b_s"]
+
+
+def test_anon_with_subbundle_ref():
+    """ Test an AnonymousBundle referring to a sub-bundle reference"""
+
+    @h.bundle
+    class BI:
+        x = h.Signal()
+
+    @h.bundle
+    class B:
+        y = h.Signal()
+        bi = BI()
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        z = h.Signal()
+        b = B()
+        i = Inner(b=h.AnonymousBundle(y=z, bi=b.bi))
+
+    h.elaborate(Outer)
+
+
+def test_anon_with_portref():
+    """ Test an AnonymousBundle referring to a PortRef"""
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    @h.module
+    class HasBPort:
+        b = B(port=True)
+
+    @h.module
+    class HasSignalPort:
+        s = h.Port()
+
+    @h.module
+    class Outer:
+        hass = HasSignalPort()
+        hasb = HasBPort(b=h.AnonymousBundle(s=hass.s))
+
+    h.elaborate(Outer)
+
+
+def test_anon_with_anon():
+    """ Test an AnonymousBundle with a nested AnonymousBundle"""
+
+    @h.bundle
+    class BI:
+        x = h.Signal()
+
+    @h.bundle
+    class B:
+        y = h.Signal()
+        bi = BI()
+
+    @h.module
+    class Inner:
+        b = B(port=True)
+
+    @h.module
+    class Outer:
+        a, b = h.Signals(2)
+        i = Inner(b=h.AnonymousBundle(y=a, bi=h.AnonymousBundle(x=b)))
+
+    h.elaborate(Outer)

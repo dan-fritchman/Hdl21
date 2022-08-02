@@ -4,7 +4,7 @@
 
 # Std-Lib Imports
 import copy
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 
 # PyPi
 from pydantic.dataclasses import dataclass
@@ -12,6 +12,7 @@ from pydantic.dataclasses import dataclass
 # Local imports
 from ...module import Module
 from ...instance import Instance
+from ... import Slice, Concat, NoConn, PortRef
 from ...bundle import (
     AnonymousBundle,
     Bundle,
@@ -83,6 +84,21 @@ class BundleScope:
     # All Signals inside sub-scopes are references to elements in `signals`.
     scopes: Dict[PathStr, "BundleScope"]
 
+    @classmethod
+    def root(
+        cls, signals: Optional[dict] = None, scopes: Optional[dict] = None
+    ) -> "BundleScope":
+        """ Create a new root scope """
+        signals = signals or {}
+        scopes = scopes or {}
+        return cls(path=Path([]), pathstr=PathStr(""), signals=signals, scopes=scopes,)
+
+    def add_subscope(self, name: str, scope: "BundleScope"):
+        """ Add a sub `BundleScope`. Also add its signals to our parent dict. """
+        self.scopes[PathStr(name)] = scope
+        for k, v in scope.signals.items():
+            self.signals[PathStr.concat(name, k)] = v
+
 
 BundleScope.__pydantic_model__.update_forward_refs()
 
@@ -106,16 +122,24 @@ class FlatBundleInst:
 
     # Source/ Original Bundle
     src: BundleInstance
-    # Flattened signals-dict, keyed by Path
-    signals: Dict[PathStr, Signal]
-    # Hierarchical scopes of flattened internal Bundles
-    scopes: Dict[PathStr, BundleScope]
+    # Root `BundleScope`
+    root_scope: BundleScope
+
+    @property
+    def signals(self):
+        return self.root_scope.signals
 
 
 def get(
     flat: Union[FlatBundleDef, FlatBundleInst], path: Path
 ) -> Union[Signal, BundleScope]:
-    ns = flat
+    if isinstance(flat, FlatBundleDef):
+        ns = flat
+    elif isinstance(flat, FlatBundleInst):
+        ns = flat.root_scope
+    else:
+        raise TypeError
+
     for seg in path.segs:
         seg = PathStr(seg)
         if seg in ns.signals:
@@ -144,8 +168,8 @@ class BundleFlattener(Elaborator):
         # Keyed by Module and attribute-name.
         # (id(Module), attrname) => FlatBundleInst
         self.flat_bundle_ports: Dict[Tuple[int, str], FlatBundleInst] = dict()
-        # AnonymousBundle replacements, id(AnonBundle) => Tbd
-        self.anon_bundles: Dict[int, "Tbd"] = dict()
+        # AnonymousBundle replacements, id(AnonBundle) => BundleScope
+        self.anon_bundles: Dict[int, BundleScope] = dict()
 
     def elaborate_module(self, module: Module) -> Module:
         """Flatten Module `module`s Bundles, replacing them with newly-created Signals.
@@ -177,16 +201,13 @@ class BundleFlattener(Elaborator):
         """Replace a `BundleInstance`, flattening its Signals into `module`'s namespace,
         and replacing all of its Instance connections with their flattened replacements."""
 
-        # Check we haven't (somehow) already flattened it
+        # Check we haven't (somehow) already replaced it
         if id(bundle_inst) in self.bundle_insts:
             msg = f"Bundle Instance {bundle_inst} in Module {module} flattened more than once. Was it actually part of another Module?"
             self.fail(msg)
 
-        # Flatten it and store the result in our caches
+        # Flatten it
         flat = self.flatten_bundle_inst(bundle_inst)
-        self.bundle_insts[id(bundle_inst)] = flat
-        if bundle_inst.port:
-            self.flat_bundle_ports[(id(module), bundle_inst.name)] = flat
 
         # Add each flattened Signal. Note flattened Signals are modified in-place.
         for pathstr, sig in flat.signals.items():
@@ -215,6 +236,11 @@ class BundleFlattener(Elaborator):
             # And add it to the Module namespace
             module.add(sig)
 
+        # Store the result in our caches
+        self.bundle_insts[id(bundle_inst)] = flat
+        if bundle_inst.port:
+            self.flat_bundle_ports[(id(module), bundle_inst.name)] = flat
+
         # Replace connections to any connected instances
         for portref in list(bundle_inst._connected_ports):
             self.replace_bundle_conn(
@@ -226,57 +252,14 @@ class BundleFlattener(Elaborator):
         self.resolve_bundlerefs(bundle_inst)
 
     def resolve_bundlerefs(self, hasrefs: Union[BundleInstance, BundleRef]) -> None:
-        """
-        Resolve any BundleRefs that `hasrefs` has given out, as in the form:
-        i = SomeBundle()         # Theoretical Bundle 
-        x = SomeModule(s=i.s)    # Connects `BundleRef` `i.s`
-        y = SomeModule(p=i.q.s2)  # Connects `BundleRef` `i.q.s2`
-        """
+        """Resolve all BundleRefs that `hasrefs` has given out."""
         for bref in hasrefs.refs_to_me.values():
             # Recursively get references it has handed out
             self.resolve_bundlerefs(bref)
             # And resolve `bref` itself
             self.resolve_bundleref(bref)
 
-    def replace_anon_bundle_conn(
-        self, inst: Instance, portname: str, anon: AnonymousBundle
-    ):
-        """Replace an `AnonymousBundle` connection with its (already) flattened referents."""
-
-        flat_bundle_port = self.flat_bundle_ports.get(
-            (id(inst._resolved), portname), None
-        )
-        if flat_bundle_port is None:
-            msg = f"Invalid Port Connection to {portname} on Instance {inst}"
-            self.fail(msg)
-
-        # Replace the connection to each flattened Signal
-        for pathstr, flat_port in flat_bundle_port.signals.items():
-            # Note `flat_port.name` will be `inst`'s name, i.e. `_mybus_clk_`
-            # Whereas its `path` will line up to `flat`'s namespace, i.e. `['bus']`
-            attr = anon.get(pathstr.val)
-            if attr is None:
-                msg = f"Connection {pathstr.val} missing from AnonymousBundle connected to Port {portname} on Instance {inst}"
-                self.fail(msg)
-
-            if isinstance(attr, BundleRef):  # Resolve any references
-                attr = self.resolve_bundleref(attr)
-            elif isinstance(attr, Signal):
-                ...  # Nothing to do, carry along with the Module-owned `Signal` attribute
-            else:
-                raise TypeError(f"Invalid AnonymousBundle attribute {attr}")
-
-            if isinstance(attr, BundleScope):
-                raise NotImplementedError(f"Ref to Bundle in Anon Bundle")
-
-            inst.connect(flat_port.name, attr)
-
-        # And now we can remove the `AnonymousBundle` connection
-        inst.disconnect(portname)
-
-    def replace_bundle_conn(
-        self, inst: Instance, portname: str, flat: Union[FlatBundleInst, BundleScope]
-    ):
+    def replace_bundle_conn(self, inst: Instance, portname: str, flat: BundleScope):
         """
         Replace a connection to a `BundleInstance` with a connections to the Signals of a `FlatBundleInst`. 
         At this point, if we started with a circuit like: 
@@ -386,7 +369,7 @@ class BundleFlattener(Elaborator):
                 # And add them all to the root `signals` dict, with a prepended path
                 root_pathstr = PathStr.concat(i.name, path_suffix)
                 if root_pathstr in flat.signals:
-                    msg = f"Error Flattening {bundle}: colliding flattened Signal names for {sig} and {flat.signals[pathstr]}"
+                    msg = f"Error Flattening {bundle}: colliding flattened Signal names for {sig} and {flat.signals[root_pathstr]}"
                     self.fail(msg)
                 flat.signals[root_pathstr] = sig
 
@@ -394,12 +377,12 @@ class BundleFlattener(Elaborator):
         self.bundle_defs[id(bundle)] = flat
         return flat
 
-    def flatten_bundle_inst(self, bundle: BundleInstance) -> FlatBundleInst:
+    def flatten_bundle_inst(self, bundle_inst: BundleInstance) -> FlatBundleInst:
         """Convert nested Bundle `bundle` into a flattened `FlatBundleInst` of scalar Signals.
         Signals are copied in the creation of each `BundleInstance`, so no further copying is required at the Module-level."""
 
         # Get the (flattened) Bundle-definition
-        flatdef = self.flatten_bundle_def(bundle.of)
+        flatdef = self.flatten_bundle_def(bundle_inst.of)
 
         # Copy and rename its signals
         signals: Dict[str, Signal] = dict()
@@ -416,7 +399,8 @@ class BundleFlattener(Elaborator):
         }
 
         # And return a new `FlatBundleInst`
-        return FlatBundleInst(src=bundle, signals=signals, scopes=scopes)
+        scope = BundleScope.root(signals=signals, scopes=scopes)
+        return FlatBundleInst(src=bundle_inst, root_scope=scope)
 
     def copy_bundle_scope(
         self, scope: BundleScope, signal_replacements: Dict[int, Signal]
@@ -433,33 +417,58 @@ class BundleFlattener(Elaborator):
             path=scope.path, pathstr=scope.pathstr, signals=signals, scopes=scopes
         )
 
-    def flatten_anonymous_bundle(self, anon: AnonymousBundle) -> FlatBundleInst:
+    def replace_anon_bundle_conn(
+        self, inst: Instance, portname: str, anon: AnonymousBundle
+    ):
+        """Replace an `AnonymousBundle` connection with its (already) flattened referents."""
+
+        anon_scope: BundleScope = self.flatten_anonymous_bundle(anon)
+        self.replace_bundle_conn(inst, portname, anon_scope)
+
+    def flatten_anonymous_bundle(self, anon: AnonymousBundle) -> BundleScope:
         """Flatten an `AnonymousBundle`.
         Differs from bundle-class instances in that each attribute of anonymous-bundles
         are generally "references", owned by something else, commonly a Module."""
 
-        raise NotImplementedError
-
         if id(anon) in self.anon_bundles:
             return self.anon_bundles[id(anon)]
 
-        # All scalar Signals are owned by the Module, and can be used in the flat bundle as-is.
-        # Note this copies the `signals` *dictionary* without copying the Signals themselves.
-        signals = copy.copy(anon.signals)
+        scope = BundleScope.root()
 
-        for name, bundleref in anon.refs_to_others.items():
-            msg = f"Unsupported: Bundle-valued Ref to {bundleref} in {anon}"
-            self.fail(msg)
-            resolved = self.resolve_bundleref(bundleref)
-            if isinstance(resolved, Signal):
-                signals[name] = resolved
-            elif isinstance(resolved, BundleInstance):
-                raise NotImplementedError  # Yeah thats the hard part
+        for name, attr in anon._namespace.items():
+            # First resolve any references
+            # Note at this point in elaboration, these Anon-Bundles are the sole remaining place `PortRef`s can hide.
+            # They are also the last place where `BundleRef`s will be resolved,
+            # although the others just have been, earlier in this elaborator pass.
+            if isinstance(attr, (BundleRef, PortRef)):
+                attr = self.resolve_bundleref(attr)
 
-        # Cache and return ther new `FlatBundleInst`
-        flat = FlatBundleInst(src=anon, signals=signals)
-        self.anon_bundles[id(anon)] = flat
-        return flat
+            if isinstance(attr, NoConn):  # Invalid
+                self.fail(f"Invalid AnonymousBundle NoConn attribute {attr} in {anon}")
+
+            elif isinstance(attr, (Signal, Slice, Concat)):
+                # "Scalar" signals get added to the result scope
+                scope.signals[PathStr(name)] = attr
+
+            # Finally handle nested, Bundle-like types, which produce sub-scopes
+            elif isinstance(attr, BundleInstance):
+                # BundleInstances have all been visited by now, and hence better be in the cache
+                flat_inst = self.bundle_insts.get(id(attr), None)
+                if flat_inst is None:
+                    self.fail(f"Invalid AnonymousBundle attribute {attr}")
+                scope.add_subscope(name, flat_inst.root_scope)
+
+            elif isinstance(attr, AnonymousBundle):
+                subscope = self.flatten_anonymous_bundle(attr)
+                scope.add_subscope(name, subscope)
+
+            elif isinstance(attr, BundleScope):
+                scope.add_subscope(name, attr)
+            else:
+                raise TypeError  # Shouldn't be reachable
+
+        self.anon_bundles[id(anon)] = scope
+        return scope
 
     def resolve_bundleref(self, bref: BundleRef) -> Union[Signal, BundleScope]:
         """Resolve a bundle-reference to a Signal or Flattened Bundle thereof."""

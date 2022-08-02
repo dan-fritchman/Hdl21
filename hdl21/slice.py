@@ -97,6 +97,7 @@ Sliceable = Union[Signal, Concat, Slice]
 class SliceInner:
     top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
+    # FIXME: probably drop (start, stop)
     start: Optional[int]  # Python-convention start index
     stop: Optional[int]  # Python-convention stop index
     step: Optional[int]  # Python-convention step size

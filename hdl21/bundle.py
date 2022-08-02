@@ -9,7 +9,7 @@ from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 
 # Local Imports
 from .attrmagic import init
-from .connect import connectable
+from .connect import connectable, is_connectable
 from .slices import slices
 from .concat import concatable
 from .signal import Signal
@@ -279,16 +279,8 @@ class AnonymousBundle:
 
     def __init__(self, **kwargs: Dict[str, "Connectable"]):
         # Create our internal structures
-        self.signals: Dict[str, "Signal"] = dict()
-
-        # NotImplemented:
-        # self.bundles: Dict[str, "BundleInstance"] = dict()
-        # self.anons: Dict[str, "AnonymousBundle"] = dict()
-
-        # Bundle references to others, stored as members,
-        # e.g. AnonBundle(sig=other_bundle.sig)
-        self.refs_to_others: Dict[str, "BundleRef"] = dict()
-
+        # The core namespace of Signals, other Bundles, and any other Connectables
+        self._namespace: Dict[str, "Signal"] = dict()
         # Connected port references
         self._connected_ports: Set["PortRef"] = set()
 
@@ -297,28 +289,20 @@ class AnonymousBundle:
             self.add(key, val)
 
     def add(self, name: str, val: BundleAttr) -> BundleAttr:
-        """Add attribute `val`."""
+        """Add attribute `val` to our namespace."""
 
-        if isinstance(val, Signal):
-            self.signals[name] = val
-        elif isinstance(val, BundleRef):
-            self.refs_to_others[name] = val
-        elif isinstance(val, (BundleInstance, AnonymousBundle)):
-            raise NotImplementedError(f"Nested Anonymous Bundle")
-        else:
-            msg = f"Invalid Bundle attribute for `{self}`: `{val}`"
-            raise TypeError(msg)
+        if name in self._namespace:
+            raise RuntimeError(f"Duplicate attribute {name} in {self}")
+        if not is_connectable(val):
+            raise TypeError(f"Invalid Bundle attribute {val} for {self}")
+        self._namespace[name] = val
         return val
 
-    def get(self, name: str) -> Optional[Union[Signal, "BundleRef"]]:
+    def get(self, name: str) -> Optional["Connectable"]:
         """Get attribute `name`. Returns `None` if not present.
         Note unlike Python built-ins such as `getattr`, `get` returns solely
         from the HDL namespace-worth of attributes."""
-        if name in self.signals:
-            return self.signals[name]
-        if name in self.refs_to_others:
-            return self.refs_to_others[name]
-        return None
+        return self._namespace.get(name, None)
 
 
 @getattr_bundle_refs
