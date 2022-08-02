@@ -3,16 +3,16 @@
 """
 
 # Std-Lib Imports
-from typing import List, Union 
+from typing import List, Union
 
 # Local imports
 from ...module import Module
 from ...signal import Signal
-from ...slice import Slice, Sliceable
+from ...slice import Slice
 from ...concat import Concat
 from ...portref import PortRef
 from ...bundle import BundleRef
-from .width import width
+from .width import width, Sliceable
 
 # Import the base class
 from .base import Elaborator
@@ -62,28 +62,28 @@ def _list_slice(slize: Slice) -> List[Slice]:
     Returns a list of Slices in which each element has a concrete Signal for its parent."""
 
     # Resolve "full-width" slices to their parent Signals
-    if width(slize) == width(slize.signal):
+    if width(slize) == width(slize.parent):
         # Return a single-element list, after resolution
-        return [_resolve_sliceable(slize.signal)]
+        return [_resolve_sliceable(slize.parent)]
 
-    if isinstance(slize.signal, Signal):
+    if isinstance(slize.parent, Signal):
         return [slize]  # Already all good! Just make a one-element list.
 
     # Do some actual work. Recursively peel off a bit at a time.
     if width(slize) == 1:
         # Base case: slice is one-bit wide. Reach into the parent signal and grab that bit.
 
-        if isinstance(slize.signal, Slice):
-            parent = slize.signal  # Note this is also a Slice
-            return _list_slice(parent.signal[parent.bot + slize.bot])
+        if isinstance(slize.parent, Slice):
+            parent = slize.parent  # Note this is also a Slice
+            return _list_slice(parent.parent[parent.bot + slize.bot])
 
-        if isinstance(slize.signal, Concat):
+        if isinstance(slize.parent, Concat):
             idx = 0  # Find the `part` including our index
-            for part in slize.signal.parts:
+            for part in slize.parent.parts:
                 if width(part) + idx > slize.bot:
                     return _list_slice(part[slize.bot - idx])
                 idx += width(part)
-            msg = f"Slice {slize} is out of bounds of Concat {slize.signal}"
+            msg = f"Slice {slize} is out of bounds of Concat {slize.parent}"
             raise RuntimeError(msg)
 
         raise TypeError(f"Invalid attempt to resolve slicing on {slize}")
@@ -91,14 +91,14 @@ def _list_slice(slize: Slice) -> List[Slice]:
     # Otherwise recurse in something like a "cons" pattern, splitting between the first bit and the rest.
 
     if slize.step is not None and slize.step < 0:  # Negative step, begin from `top`
-        first = _list_slice(slize.signal[slize.top])
-        rest = slize.signal[slize.top + slize.step : slize.bot : slize.step]
+        first = _list_slice(slize.parent[slize.top])
+        rest = slize.parent[slize.top + slize.step : slize.bot : slize.step]
         rest = _list_slice(rest)
 
     else:  # Positive step, begin from `bot`
         step = slize.step if slize.step is not None else 1
-        first = _list_slice(slize.signal[slize.bot])
-        rest = _list_slice(slize.signal[slize.bot + step : slize.top : slize.step])
+        first = _list_slice(slize.parent[slize.bot])
+        rest = _list_slice(slize.parent[slize.bot + step : slize.top : slize.step])
 
     return first + rest
 
@@ -168,11 +168,13 @@ def _resolve_concat(conc: Concat) -> Concat:
 
     raise RuntimeError("Unable to resolve concatenation")
 
+
 def _resolve_ref(ref: Union[PortRef, BundleRef]) -> Sliceable:
     """Resolve a reference to a Port or Bundle"""
     if ref.resolved is None:
         raise RuntimeError(f"Unresolved reference {ref}")
     return _resolve_sliceable(ref.resolved)
+
 
 def _flat_concatable(s: Sliceable) -> bool:
     """Boolean indication of whether `s` is suitable for flattened Concatenations.
@@ -181,5 +183,5 @@ def _flat_concatable(s: Sliceable) -> bool:
     * (b) A Slice into a Signal
     Notable exceptions include Concats and nested Slices of Concats and other Slices."""
     return isinstance(s, Signal) or (
-        isinstance(s, Slice) and isinstance(s.signal, Signal)
+        isinstance(s, Slice) and isinstance(s.parent, Signal)
     )

@@ -314,7 +314,7 @@ def test_signal_slice1():
     assert sl.bot == 0
     assert sl.width == 1
     assert sl.step is None
-    assert sl.signal is sig
+    assert sl.parent is sig
 
     sl = sig[0:5]
     assert isinstance(sl, h.Slice)
@@ -322,7 +322,7 @@ def test_signal_slice1():
     assert sl.bot == 0
     assert sl.width == 5
     assert sl.step is None
-    assert sl.signal is sig
+    assert sl.parent is sig
 
     sl = sig[:]
     assert isinstance(sl, h.Slice)
@@ -330,7 +330,7 @@ def test_signal_slice1():
     assert sl.bot == 0
     assert sl.width == 10
     assert sl.step is None
-    assert sl.signal is sig
+    assert sl.parent is sig
 
 
 def test_signal_slice2():
@@ -379,7 +379,7 @@ def test_signal_concat1():
     assert isinstance(c, h.Concat)
     assert len(c.parts) == 3
     for p in c.parts:
-        assert isinstance(p, h.signal.Signal)
+        assert isinstance(p, h.Signal)
     assert c.width == 6
 
     c = h.Concat(h.Signal(width=1)[0], h.Signal(width=2)[0], h.Signal(width=3)[0])

@@ -95,7 +95,7 @@ class Orphanage(Elaborator):
 
         if isinstance(conn, Slice):
             # Recursively check the parent-signals of slices
-            return self.check_connectable(module, conn.signal)
+            return self.check_connectable(module, conn.parent)
 
         if isinstance(conn, Concat):
             # Check each of the concatenated signals, also recursively across inner types

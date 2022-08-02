@@ -110,7 +110,7 @@ def update_ref_deps(ref: Union[PortRef, BundleRef], resolved: Connectable):
     # Update all dependent slices and concats
     if hasattr(ref, "_slices"):
         for slice_ in ref._slices:
-            slice_.signal = resolved
+            slice_.parent = resolved
     if hasattr(ref, "_concats"):
         for concat in ref._concats:
             parts = list(concat.parts)

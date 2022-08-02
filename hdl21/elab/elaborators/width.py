@@ -21,6 +21,13 @@ from ...bundle import (
 )
 from .resolve_ref_types import resolve_bundleref_type, resolve_portref_type
 
+# HasWidth & Sliceable Type Uhions
+# Everything that has, or at least sometimes has, an integer Signal-style `width`. 
+# AND everything that can be `Slice`d. 
+# These happen to be the same set of types, but can be broken up 
+# if the two should ever differ. 
+Sliceable = HasWidth = Union[Signal, Slice, Concat, BundleRef, PortRef]
+
 
 def fail(msg: str) -> None:
     # The default failure handler

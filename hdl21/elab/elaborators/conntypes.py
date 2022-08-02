@@ -12,13 +12,13 @@ from ...portref import PortRef
 from ...module import Module
 from ...instance import InstanceArray, Instance
 from ...noconn import NoConn
-from ...slice import Sliceable
 from ...bundle import (
     AnonymousBundle,
     BundleInstance,
     BundleRef,
     Bundle,
 )
+from .width import HasWidth
 
 # Import the base class
 from .base import Elaborator
@@ -52,7 +52,9 @@ class ConnTypes(Elaborator):
         # No errors means it checked out, return the Module unchanged
         return module
 
-    def check_instance(self, module: Module, inst: Union[Instance, InstanceArray]) -> None:
+    def check_instance(
+        self, module: Module, inst: Union[Instance, InstanceArray]
+    ) -> None:
         """Check the connections of `inst` in parent `module`"""
         self.stack.append(inst)
 
@@ -136,10 +138,10 @@ class ConnTypes(Elaborator):
         msg = f"Invalid connection-compatibility check between {bundle} and {other}"
         self.fail(msg)
 
-    def assert_signals_compatible(self, sig: Sliceable, other: Any) -> None:
-        """Assert that `Sliceable`s (generally `Signal`s) a and b are compatible for connection."""
+    def assert_signals_compatible(self, sig: HasWidth, other: Any) -> None:
+        """Assert that `HasWidth`s (generally `Signal`s) a and b are compatible for connection."""
 
-        if not isinstance(other, get_args(Sliceable)):
+        if not isinstance(other, get_args(HasWidth)):
             self.fail(f"Invalid connection to non-Signal {other}")
 
         if self.get_width(sig) != self.get_width(other):
@@ -159,10 +161,11 @@ class ConnTypes(Elaborator):
         if isinstance(conn, BundleRef):
             # Recursively call this function on the ref's resolved value
             from .resolve_ref_types import resolve_bundleref_type
+
             referent = resolve_bundleref_type(conn, self.fail)
             return self.assert_compatible(port, referent)
 
-        if isinstance(port, get_args(Sliceable)):
+        if isinstance(port, get_args(HasWidth)):
             return self.assert_signals_compatible(port, conn)
 
         if isinstance(port, BundleInstance):

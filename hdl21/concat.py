@@ -6,24 +6,12 @@
 from typing import Optional, Set
 
 # Local imports
-from .connect import connectable, is_connectable
-from .slices import slices
+from .connect import connectable
+from .sliceable import sliceable
+from .concatable import concatable, is_concatable
 
 
-def concatable(cls: type) -> type:
-    """Decorator for `Concat`-compatible types."""
-    if not is_connectable(cls):
-        raise TypeError(f"{cls} is not connectable")
-    # Just adds a "marker trait" to the class
-    cls.__concatable__ = True
-    return cls
-
-
-def is_concatable(obj: object) -> type:
-    return getattr(obj, "__concatable__", False)
-
-
-@slices
+@sliceable
 @concatable
 @connectable
 class Concat:

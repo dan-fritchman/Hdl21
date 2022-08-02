@@ -40,9 +40,7 @@ from ..primitives import (
 
 
 def to_proto(
-    top: Elaboratables,
-    domain: Optional[str] = None,
-    **kwargs,
+    top: Elaboratables, domain: Optional[str] = None, **kwargs,
 ) -> vckt.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`."""
     # Elaborate all the top-level Modules
@@ -277,15 +275,15 @@ def export_slice(slize: Slice) -> vckt.Slice:
     """Export a signal-`Slice`.
     Fails if the parent is not a concrete `Signal`, i.e. it is a `Concat` or another `Slice`.
     Fails for non-unit step-sizes, which should be converted to `Concat`s upstream."""
-    if not isinstance(slize.signal, Signal):
-        msg = f"Export error: {slize} has a parent {slize.signal} which is not a concrete Signal"
+    if not isinstance(slize.parent, Signal):
+        msg = f"Export error: {slize} has a parent {slize.parent} which is not a concrete Signal"
         raise RuntimeError(msg)
     if slize.step is not None and slize.step != 1:
         msg = f"Export error: {slize} has non-unit step"
         raise RuntimeError(msg)
 
     # Move to HDL-style indexing, with inclusive `top` index.
-    return vckt.Slice(signal=slize.signal.name, top=slize.top - 1, bot=slize.bot)
+    return vckt.Slice(signal=slize.parent.name, top=slize.top - 1, bot=slize.bot)
 
 
 def export_concat(concat: Concat) -> vckt.Concat:

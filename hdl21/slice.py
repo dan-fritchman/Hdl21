@@ -9,64 +9,65 @@ from weakref import WeakSet
 # Local imports
 from .datatype import datatype
 from .connect import connectable
-from .slices import slices, does_slices
-from .signal import Signal
-from .concat import Concat, concatable
+from .sliceable import sliceable, is_sliceable
+from .concat import concatable
 
 
-@slices
+@sliceable
 @concatable
 @connectable
 @datatype
 class Slice:
-    """Signal Slice, comprising a subset of its width"""
+    """
+    # Slice
 
-    signal: Any  # Parent Connectable
-    index: Union[int, slice]  # Python index, e.g. that passed to square brackets
+    Subset of the indices of a parent `Connectable`, 
+    commonly Signals, Concatenations, and other Slices. 
+    Typically produced via square-bracket indexing into said `Connectable`s.
+    
+    Hdl21 slices are indexed "Python style", in the senses that:
+    * Negative indices are supported, and count from the "end" of the Signal.
+    * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index.
+    * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
+    
+    Popular HDLs commonly use different signal-indexing conventions.
+    Hdl21's own primary exchange format (in ProtoBuf) does as well,
+    eschewing adopting inclusive-endpoints and negative-indexing.
+    """
+
+    # Parent Connectable.
+    # Really of union-type `Sliceable`, which is more painful to type-check statically,
+    # although the constructor does it procedurally.
+    parent: Any
+    # Python index, i.e. that passed to square brackets
+    index: Union[int, slice]
 
     def __post_init_post_parse__(self):
-        if not does_slices(self.signal):
-            raise TypeError(f"{self.signal} is not Sliceable")
+        if not is_sliceable(self.parent):
+            raise TypeError(f"{self.parent} is not Sliceable")
         self._connected_ports: Set["PortRef"] = set()
         self._inner: Optional[SliceInner] = None
         self._slices: WeakSet[Slice] = set()
-        self._concats: WeakSet[Concat] = set()
+        self._concats: WeakSet["Concat"] = set()
 
     @property
     def top(self) -> int:
-        if self._inner is None:
-            self._inner = _slice_inner(self)
-        return self._inner.top
+        return _get_inner(self).top
 
     @property
     def bot(self) -> int:
-        if self._inner is None:
-            self._inner = _slice_inner(self)
-        return self._inner.bot
-
-    @property
-    def start(self) -> int:
-        if self._inner is None:
-            self._inner = _slice_inner(self)
-        return self._inner.start
-
-    @property
-    def stop(self) -> int:
-        if self._inner is None:
-            self._inner = _slice_inner(self)
-        return self._inner.stop
+        return _get_inner(self).bot
 
     @property
     def step(self) -> int:
-        if self._inner is None:
-            self._inner = _slice_inner(self)
-        return self._inner.step
+        return _get_inner(self).step
 
     @property
     def width(self) -> int:
-        if self._inner is None:
-            self._inner = _slice_inner(self)
-        return self._inner.width
+        return _get_inner(self).width
+
+    def __repr__(self):
+        return f"Slice(parent={self.parent}, index={self.index})"
 
     def __eq__(self, other) -> bool:
         # Identity is equality
@@ -77,29 +78,15 @@ class Slice:
         return hash(id(self))
 
 
-def assert_valid(self: Slice):
-    # FIXME!
-    if self.step is not None and self.step == 0:
-        raise ValueError(f"Invalid Slice into {self.signal}: step==0")
-    if self.width < 1:
-        raise ValueError(f"Invalid Slice into {self.signal}: width={self.width}")
-    if self.top <= self.bot:
-        msg = f"Invalid Slice into {self.signal}: top={self.top} <= bot={self.bot}"
-        raise ValueError(msg)
-
-
-# Slice-compatible type aliases
-# FIXME! got some to add
-Sliceable = Union[Signal, Concat, Slice]
-
-
 @datatype
 class SliceInner:
+    """ Inner, private, resolved attributes of a `Slice`. 
+    Designed solely to be created by `_slice_inner` and stored as the `Slice._inner` field."""
+
     top: int  # Top index (exclusive)
     bot: int  # Bottom index (inclusive)
-    # FIXME: probably drop (start, stop)
-    start: Optional[int]  # Python-convention start index
-    stop: Optional[int]  # Python-convention stop index
+    # FIXME: can we make this a consistent `int`?
+    # Only possible exception would seem to be any subtleties of differences between `None` and `1`.
     step: Optional[int]  # Python-convention step size
     width: int
 
@@ -117,7 +104,7 @@ def _slice_inner(slize: Slice) -> SliceInner:
     eschewing adopting inclusive-endpoints and negative-indexing.
     """
 
-    parent = slize.signal
+    parent = slize.parent
     index = slize.index
 
     if isinstance(index, int):
@@ -125,9 +112,7 @@ def _slice_inner(slize: Slice) -> SliceInner:
             raise ValueError(f"Out-of-bounds index {index} into {parent}")
         if index < 0:
             index += parent.width
-        return SliceInner(
-            top=index + 1, bot=index, start=index, stop=None, step=None, width=1
-        )
+        return SliceInner(top=index + 1, bot=index, step=None, width=1)
 
     if isinstance(index, slice):
         # Note these `slice` attributes are descriptor-things, and they get weird, fast.
@@ -174,8 +159,13 @@ def _slice_inner(slize: Slice) -> SliceInner:
         width = (top - bot) // stepsz
 
         # Create and return our Slice. More checks are done in its constructor.
-        return SliceInner(
-            top=top, bot=bot, step=step, start=start, stop=stop, width=width
-        )
+        return SliceInner(top=top, bot=bot, step=step, width=width)
 
     raise RuntimeError("Internal Error: Slice index should be an int or (python) slice")
+
+
+def _get_inner(self: Slice) -> SliceInner:
+    """ Get a slice's `SliceInner`, calculating it inline if necessary"""
+    if self._inner is None:
+        self._inner = _slice_inner(self)
+    return self._inner

@@ -289,7 +289,7 @@ def import_connection_target(
     if stype == "slice":
         start = pconn.slice.bot
         stop = pconn.slice.top + 1  # Move to Python-style exclusive indexing
-        sig = Slice(signal=sig, index=slice(start, stop))
+        sig = Slice(parent=sig, index=slice(start, stop))
     return sig
 
 

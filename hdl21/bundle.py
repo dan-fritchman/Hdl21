@@ -10,7 +10,7 @@ from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
 # Local Imports
 from .attrmagic import init
 from .connect import connectable, is_connectable
-from .slices import slices
+from .sliceable import sliceable
 from .concat import concatable
 from .signal import Signal
 
@@ -307,7 +307,7 @@ class AnonymousBundle:
 
 @getattr_bundle_refs
 @concatable
-@slices
+@sliceable
 @connectable
 @init
 class BundleRef:
