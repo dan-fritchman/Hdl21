@@ -202,18 +202,18 @@ def test_proto3():
     assert "s" in M2.signals
     assert "i" in M2.instances
     inst = M2.i
-    assert isinstance(inst.conns["p1"], h.signal.Slice)
-    assert inst.conns["p1"].signal is M2.s
+    assert isinstance(inst.conns["p1"], h.Slice)
+    assert inst.conns["p1"].parent is M2.s
     assert inst.conns["p1"].top == 1
     assert inst.conns["p1"].bot == 0
     assert inst.conns["p1"].width == 1
-    assert isinstance(inst.conns["p8"], h.signal.Concat)
+    assert isinstance(inst.conns["p8"], h.Concat)
     assert len(inst.conns["p8"].parts) == 4
     assert inst.conns["p8"].parts[0] is M2.s
-    assert isinstance(inst.conns["p8"].parts[0], h.signal.Signal)
-    assert isinstance(inst.conns["p8"].parts[1], h.signal.Slice)
-    assert isinstance(inst.conns["p8"].parts[2], h.signal.Slice)
-    assert isinstance(inst.conns["p8"].parts[3], h.signal.Slice)
+    assert isinstance(inst.conns["p8"].parts[0], h.Signal)
+    assert isinstance(inst.conns["p8"].parts[1], h.Slice)
+    assert isinstance(inst.conns["p8"].parts[2], h.Slice)
+    assert isinstance(inst.conns["p8"].parts[3], h.Slice)
 
 
 def test_proto_roundtrip():
@@ -289,7 +289,7 @@ def test_proto_roundtrip2():
     assert len(M2.ports) == 3
     assert len(M2.signals) == 2
     assert "s" in M2.signals
-    assert "i1_i_i0_o" in M2.signals
+    assert "i0_o" in M2.signals
 
 
 def test_netlist_fmts():

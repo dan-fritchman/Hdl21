@@ -78,9 +78,16 @@ class Orphanage(Elaborator):
         """Check a Connectable for orphanage.
         Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements."""
 
-        from ...signal import Signal, Slice, Concat, NoConn
-        from ...bundle import BundleInstance, BundleRef, AnonymousBundle
-        from ...portref import PortRef
+        from ... import (
+            NoConn,
+            Signal,
+            Slice,
+            Concat,
+            BundleInstance,
+            BundleRef,
+            AnonymousBundle,
+            PortRef,
+        )
 
         # Check owned types first: Signals and Bundle Instances
         if isinstance(conn, (Signal, BundleInstance)):
@@ -88,7 +95,7 @@ class Orphanage(Elaborator):
 
         if isinstance(conn, Slice):
             # Recursively check the parent-signals of slices
-            return self.check_connectable(module, conn.signal)
+            return self.check_connectable(module, conn.parent)
 
         if isinstance(conn, Concat):
             # Check each of the concatenated signals, also recursively across inner types
@@ -109,9 +116,8 @@ class Orphanage(Elaborator):
             return self.assert_parentage(module, conn.root())
 
         if isinstance(conn, AnonymousBundle):
-            for sig in conn.signals.values():
+            for sig in conn._namespace.values():
                 self.check_connectable(module, sig)
-            # FIXME: add sub-bundles when available
             return
 
         raise TypeError(f"Orphanage: Unhandled Connectable `{conn}`")

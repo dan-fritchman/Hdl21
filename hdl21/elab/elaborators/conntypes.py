@@ -8,15 +8,17 @@ from typing import Any, Union, get_args
 
 # Local imports
 from ...connect import is_connectable, Connectable
+from ...portref import PortRef
 from ...module import Module
-from ...instance import InstArray, Instance
-from ...signal import Sliceable, Signal
+from ...instance import InstanceArray, Instance
+from ...noconn import NoConn
 from ...bundle import (
     AnonymousBundle,
     BundleInstance,
     BundleRef,
     Bundle,
 )
+from .width import HasWidth
 
 # Import the base class
 from .base import Elaborator
@@ -50,7 +52,9 @@ class ConnTypes(Elaborator):
         # No errors means it checked out, return the Module unchanged
         return module
 
-    def check_instance(self, module: Module, inst: Union[Instance, InstArray]) -> None:
+    def check_instance(
+        self, module: Module, inst: Union[Instance, InstanceArray]
+    ) -> None:
         """Check the connections of `inst` in parent `module`"""
         self.stack.append(inst)
 
@@ -134,13 +138,13 @@ class ConnTypes(Elaborator):
         msg = f"Invalid connection-compatibility check between {bundle} and {other}"
         self.fail(msg)
 
-    def assert_signals_compatible(self, sig: Sliceable, other: Any) -> None:
-        """Assert that `Sliceable`s (generally `Signal`s) a and b are compatible for connection."""
+    def assert_signals_compatible(self, sig: HasWidth, other: Any) -> None:
+        """Assert that `HasWidth`s (generally `Signal`s) a and b are compatible for connection."""
 
-        if not isinstance(other, get_args(Sliceable)):
+        if not isinstance(other, get_args(HasWidth)):
             self.fail(f"Invalid connection to non-Signal {other}")
 
-        if sig.width != other.width:
+        if self.get_width(sig) != self.get_width(other):
             signame = getattr(sig, "name", f"Anonymous(width={sig.width})")
             othername = getattr(other, "name", f"Anonymous(width={other.width})")
             msg = f"Signals `{signame}` and `{othername}` width mismatch: {sig.width} != {other.width}"
@@ -156,9 +160,12 @@ class ConnTypes(Elaborator):
 
         if isinstance(conn, BundleRef):
             # Recursively call this function on the ref's resolved value
-            return self.assert_compatible(port, self.resolve_bundleref_type(conn))
+            from .resolve_ref_types import resolve_bundleref_type
 
-        if isinstance(port, get_args(Sliceable)):
+            referent = resolve_bundleref_type(conn, self.fail)
+            return self.assert_compatible(port, referent)
+
+        if isinstance(port, get_args(HasWidth)):
             return self.assert_signals_compatible(port, conn)
 
         if isinstance(port, BundleInstance):
@@ -166,29 +173,12 @@ class ConnTypes(Elaborator):
 
         self.fail(f"Invalid Port {port}")
 
-    def resolve_bundleref_type(self, bref: BundleRef) -> Union[Signal, BundleInstance]:
-        """
-        Resolve a bundle-reference to either a `Signal` or sub-`Bundle` Instance.
+    def get_width(self, conn: Connectable) -> int:
+        """ Get the `width` of a conn. Fails for types which this pass is not designed to handle. """
+        from .width import width
 
-        NOTE this returns a *representative* signal or bundle instance,
-        i.e. one with the correct type and width - not *the signal* for a given instance.
-        In other words: this is fine for connection-validity checking,
-        but *not* for copying signals during flattening.
-        Hence the "type" name suffix, although what we return is not really a type.
-        """
+        if isinstance(conn, (NoConn, PortRef)):
+            msg = f"Internal error: {type(conn).__name__} remaining in connection-types check"
+            return self.fail(msg)
 
-        if isinstance(bref.parent, BundleInstance):  # Parent is a BundleInstance.
-            parent = bref.parent
-        elif isinstance(
-            bref.parent, BundleRef
-        ):  # Nested reference. Recursively resolve the parent.
-            parent = self.resolve_bundleref_type(bref.parent)
-        else:
-            self.fail(f"Invalid BundleRef parent for {bref}")
-
-        # Get the attribute from the parent namespace, or fail if not available.
-        attr = parent.of.get(bref.attrname)
-        if attr is None:
-            msg = f"Bundle `{bref.parent.of.name}` has no attribute `{bref.attrname}`"
-            self.fail(msg)
-        return attr
+        return width(conn, failer=self.fail)

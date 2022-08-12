@@ -13,7 +13,9 @@ import vlsir.circuit_pb2 as vckt
 from ..prefix import Prefix, Prefixed
 from ..module import Module, ExternalModule
 from ..instance import Instance
-from ..signal import Signal, PortDir, Slice, Concat, Visibility
+from ..signal import Signal, PortDir, Visibility
+from ..slice import Slice
+from ..concat import Concat
 from .. import primitives
 from ..primitives import Primitive
 
@@ -84,7 +86,7 @@ class ProtoImporter:
             paramtype=dict,  # FIXME: should these be stored in the serialization schema?
         )
         # Give it a (non-initializer) value for its `importpath`
-        emod.importpath = [pmod.name.domain]
+        emod._importpath = [pmod.name.domain]
         # Cache and return it
         self.ext_modules[key] = emod
         return emod
@@ -154,10 +156,7 @@ class ProtoImporter:
                 target = import_vlsir_primitive(ref.external)
                 params = target.Params(**params)
 
-            elif ref.external.domain in (
-                "hdl21.primitives",
-                "hdl21.ideal",
-            ):
+            elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
                 # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
                 target = import_hdl21_primitive(ref.external)
                 params = target.Params(**params)
@@ -288,9 +287,9 @@ def import_connection_target(
         raise RuntimeError(f"Invalid Signal {sname} in Module {module.name}")
     # Now chop this up if it's a Slice
     if stype == "slice":
-        start = bot = pconn.slice.bot
-        stop = top = pconn.slice.top + 1  # Move to Python-style exclusive indexing
-        sig = Slice(signal=sig, top=top, bot=bot, start=start, stop=stop, step=None)
+        start = pconn.slice.bot
+        stop = pconn.slice.top + 1  # Move to Python-style exclusive indexing
+        sig = Slice(parent=sig, index=slice(start, stop))
     return sig
 
 

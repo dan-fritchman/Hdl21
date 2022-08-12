@@ -28,7 +28,9 @@ from ..prefix import Prefix, Prefixed
 from ..elab import Elaboratables, elaborate
 from ..module import Module, ExternalModule, ExternalModuleCall
 from ..instance import Instance
-from .. import signal
+from ..signal import Signal, Port, PortDir
+from ..slice import Slice
+from ..concat import Concat
 from ..primitives import (
     PrimitiveCall,
     PrimitiveType,
@@ -38,9 +40,7 @@ from ..primitives import (
 
 
 def to_proto(
-    top: Elaboratables,
-    domain: Optional[str] = None,
-    **kwargs,
+    top: Elaboratables, domain: Optional[str] = None, **kwargs,
 ) -> vckt.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`."""
     # Elaborate all the top-level Modules
@@ -230,7 +230,7 @@ class ProtoExporter:
         return pinst
 
 
-def export_port(port: signal.Port) -> vckt.Port:
+def export_port(port: Port) -> vckt.Port:
     """Export a `Port`"""
     pport = vckt.Port()
     pport.direction = export_port_dir(port)
@@ -238,31 +238,31 @@ def export_port(port: signal.Port) -> vckt.Port:
     return pport
 
 
-def export_port_dir(port: signal.Port) -> vckt.Port.Direction:
+def export_port_dir(port: Port) -> vckt.Port.Direction:
     """Convert between Port-Direction Enumerations"""
-    if port.direction == signal.PortDir.INPUT:
+    if port.direction == PortDir.INPUT:
         return vckt.Port.Direction.INPUT
-    if port.direction == signal.PortDir.OUTPUT:
+    if port.direction == PortDir.OUTPUT:
         return vckt.Port.Direction.OUTPUT
-    if port.direction == signal.PortDir.INOUT:
+    if port.direction == PortDir.INOUT:
         return vckt.Port.Direction.INOUT
-    if port.direction == signal.PortDir.NONE:
+    if port.direction == PortDir.NONE:
         return vckt.Port.Direction.NONE
     raise ValueError(f"Invalid PortDir {port.direction}")
 
 
 def export_connection_target(
-    sig: Union[signal.Signal, signal.Slice, signal.Concat]
+    sig: Union[Signal, Slice, Concat]
 ) -> vckt.ConnectionTarget:
     """Export a proto `ConnectionTarget`"""
 
     pconn = vckt.ConnectionTarget()  # Create a proto-Connection
-    if isinstance(sig, signal.Signal):
+    if isinstance(sig, Signal):
         pconn.sig = sig.name
-    elif isinstance(sig, signal.Slice):
+    elif isinstance(sig, Slice):
         pslice = export_slice(sig)
         pconn.slice.CopyFrom(pslice)
-    elif isinstance(sig, signal.Concat):
+    elif isinstance(sig, Concat):
         pconc = export_concat(sig)
         pconn.concat.CopyFrom(pconc)
     else:
@@ -271,22 +271,22 @@ def export_connection_target(
     return pconn
 
 
-def export_slice(slize: signal.Slice) -> vckt.Slice:
+def export_slice(slize: Slice) -> vckt.Slice:
     """Export a signal-`Slice`.
     Fails if the parent is not a concrete `Signal`, i.e. it is a `Concat` or another `Slice`.
     Fails for non-unit step-sizes, which should be converted to `Concat`s upstream."""
-    if not isinstance(slize.signal, signal.Signal):
-        msg = f"Export error: {slize} has a parent {slize.signal} which is not a concrete Signal"
+    if not isinstance(slize.parent, Signal):
+        msg = f"Export error: {slize} has a parent {slize.parent} which is not a concrete Signal"
         raise RuntimeError(msg)
-    if slize.step is not None and slize.step != 1:
+    if slize.step != 1:
         msg = f"Export error: {slize} has non-unit step"
         raise RuntimeError(msg)
 
     # Move to HDL-style indexing, with inclusive `top` index.
-    return vckt.Slice(signal=slize.signal.name, top=slize.top - 1, bot=slize.bot)
+    return vckt.Slice(signal=slize.parent.name, top=slize.top - 1, bot=slize.bot)
 
 
-def export_concat(concat: signal.Concat) -> vckt.Concat:
+def export_concat(concat: Concat) -> vckt.Concat:
     """Export (potentially recursive) Signal Concatenations"""
     pconc = vckt.Concat()
     for part in concat.parts:

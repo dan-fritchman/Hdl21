@@ -37,18 +37,13 @@ def elaborate(
     passes = passes or ElabPass.default()
 
     # Check whether we are elaborating a single object or a list thereof
-    tops = top if isinstance(top, List) else [top]
+    tops: List[Elaboratable] = top if isinstance(top, List) else [top]
 
-    def run_passes(t: Elaboratable):
-        # Pass `t` through each of our passes, in order
-        for elabpass in passes:
-            t = elabpass.elaborate(top=t, ctx=ctx)
-        return t
-
-    # Pass each of our top-level objects through the passes
-    rv = list(map(run_passes, tops))
+    # Pass `tops` through each of our passes, in order
+    for elabpass in passes:
+        tops = elabpass.elaborate(tops=tops, ctx=ctx)
 
     # Extract the single-element case
     if not isinstance(top, List):
-        return rv[0]
-    return rv
+        return tops[0]
+    return tops

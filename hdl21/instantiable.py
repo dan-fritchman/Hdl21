@@ -20,6 +20,8 @@ def is_instantiable(val: Any) -> bool:
 
 
 def qualname(i: Instantiable) -> str:
+    """Path-qualified name of `i`"""
+
     if isinstance(i, Module):
         return i._qualname()
     if isinstance(i, GeneratorCall):
