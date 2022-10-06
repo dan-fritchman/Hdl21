@@ -7,7 +7,8 @@ This module primarily defines:
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 
-from typing import Any, Optional, List, Union, get_args, Type, Dict
+# from typing import Any, Optional, List, Union, get_args, Type, Dict
+from typing import Any, Optional, List, Union, Type, Dict
 from pydantic.dataclasses import dataclass
 
 # Local imports
@@ -445,7 +446,7 @@ Could be methods, but are generally kept here to prevent expanding the `Module` 
 
 def _is_module_attr(val: Any) -> bool:
     """Boolean indication of whether `val` is a valid `hdl21.Module` attribute."""
-    return isinstance(val, get_args(ModuleAttr))
+    return isinstance(val, ModuleAttr.__args__)
 
 
 def _assert_module_attr(m: Module, val: Any) -> None:
@@ -469,7 +470,7 @@ def _attr_type_error(m: Module, val: Any) -> None:
     elif isinstance(val, (GeneratorCall, PrimitiveCall, ExternalModuleCall)):
         msg = f"Cannot add `{type(val).__name__}` `{val}` to `Module` `{m.name}`. Did you mean to make an `Instance` by *calling* to connect it first?"
     else:
-        msg = f"Invalid Module attribute {val} of type {type(val)} for {m}. Valid `Module` attributes are of types: {list(get_args(ModuleAttr))}"
+        msg = f"Invalid Module attribute {val} of type {type(val)} for {m}. Valid `Module` attributes are of types: {list(ModuleAttr.__args__)}"
     raise TypeError(msg)
 
 

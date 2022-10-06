@@ -4,7 +4,7 @@
 
 # Std-Lib Imports
 import copy
-from typing import Any, Union, get_args
+from typing import Any, Union
 
 # Local imports
 from ...connect import is_connectable, Connectable
@@ -141,7 +141,7 @@ class ConnTypes(Elaborator):
     def assert_signals_compatible(self, sig: HasWidth, other: Any) -> None:
         """Assert that `HasWidth`s (generally `Signal`s) a and b are compatible for connection."""
 
-        if not isinstance(other, get_args(HasWidth)):
+        if not isinstance(other, HasWidth.__args__):
             self.fail(f"Invalid connection to non-Signal {other}")
 
         if self.get_width(sig) != self.get_width(other):
@@ -165,7 +165,7 @@ class ConnTypes(Elaborator):
             referent = resolve_bundleref_type(conn, self.fail)
             return self.assert_compatible(port, referent)
 
-        if isinstance(port, get_args(HasWidth)):
+        if isinstance(port, HasWidth.__args__):
             return self.assert_signals_compatible(port, conn)
 
         if isinstance(port, BundleInstance):

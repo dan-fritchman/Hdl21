@@ -6,7 +6,7 @@ Creates concrete `Signal`s and `BundleInstance`s to replace `PortRef`s.
 
 # Std-Lib Imports
 import copy
-from typing import Union, List, Optional, Set, get_args
+from typing import Union, List, Optional, Set
 
 # Local imports
 from ...connect import Connectable
@@ -150,7 +150,7 @@ class ResolvePortRefs(Elaborator):
         Returns None is no `Source`s are connected to any element in the group."""
 
         # Extract which of the `group` are connected to `Source`s
-        sources: List[Source] = [s for s in group if isinstance(s, get_args(Source))]
+        sources: List[Source] = [s for s in group if isinstance(s, Source.__args__)]
 
         # Three relevant cases then emerge:
         # * (a) Zero sources. No problem, create one.
