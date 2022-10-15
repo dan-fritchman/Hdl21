@@ -34,7 +34,6 @@ from ..concat import Concat
 from ..primitives import (
     PrimitiveCall,
     PrimitiveType,
-    ScalarOption,
     PulseVoltageSourceParams,
 )
 
@@ -294,9 +293,9 @@ def export_concat(concat: Concat) -> vckt.Concat:
     return pconc
 
 
-def export_primitive_params(params: Any) -> Dict[str, ScalarOption]:
+def export_primitive_params(params: Any) -> Dict[str, Optional[Prefixed]]:
     """Convert the parameters of an `IDEAL` primitive into their VLSIR form.
-    Returns the result as a dictionary of {name: ScalarOption}s."""
+    Returns the result as a dictionary of {name: value}s."""
 
     if isinstance(params, PulseVoltageSourceParams):
         return dict(
@@ -313,7 +312,7 @@ def export_primitive_params(params: Any) -> Dict[str, ScalarOption]:
     return dictify_params(params)
 
 
-def dictify_params(params: Any) -> Dict[str, ScalarOption]:
+def dictify_params(params: Any) -> Dict[str, Optional[Prefixed]]:
     """Turn a `paramclass` of parameters into a dictionary of exportable values.
     This is essentially a one-layer replacement for the standard library's
     `dataclasses.as_dict`, which we replace for sake of our "near-scalar" types
@@ -344,6 +343,10 @@ def export_param_value(
     elif isinstance(val, str):
         return vlsir.ParamValue(string=val)
     elif isinstance(val, Prefixed):
+        # FIXME: the UNIT prefix is newly added, not yet part of VLSIR, and hacked around here.
+        # Use the `Decimal` handling, converting to string.
+        if val.prefix == Prefix.UNIT:
+            return vlsir.ParamValue(string=str(val.number))
         return vlsir.ParamValue(prefixed=export_prefixed(val))
     elif isinstance(val, Enum):
         # Enum-valued parameters are always strings
