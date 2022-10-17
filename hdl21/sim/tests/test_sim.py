@@ -195,7 +195,7 @@ def test_generator_sim():
 def test_delay1():
     from hdl21.sim import delay
     from hdl21.sim.delay import DelaySimParams, LogicState, Transition
-    from hdl21.prefix import p, n, f
+    from hdl21.prefix import p, n, f, m
 
     @h.module
     class M:
@@ -208,9 +208,9 @@ def test_delay1():
         primary_input=M.i0,
         other_inputs=dict(i1=LogicState.HIGH),
         input_trans=Transition.RISING,
-        vlo=0,
-        vhi=1,
-        supplies=dict(vdd=1),
+        vlo=0 * m,
+        vhi=1000 * m,
+        supplies=dict(vdd=1000 * m),
         grounds=[M.vss],
         load_caps=dict(o0=2 * f),
         default_load_cap=1 * f,

@@ -121,7 +121,13 @@ def create_sim(p: DelaySimParams) -> Sim:
     # Create its pulse-source
     (v1, v2) = (p.vlo, p.vhi) if p.input_trans == Transition.RISING else (p.vhi, p.vlo)
     vpulse_params = Vpu.Params(
-        v1=v1, v2=v2, delay=0, period=2, rise=p.trf, fall=p.trf, width=1
+        v1=v1,
+        v2=v2,
+        delay=0 * Prefix.UNIT,
+        period=2 * Prefix.UNIT,
+        rise=p.trf,
+        fall=p.trf,
+        width=1 * Prefix.UNIT,
     )
     vpulse = Vpu(vpulse_params)(p=sig, n=tb.vss)
     tb.add(vpulse, name=f"v{p.primary_input.name}")

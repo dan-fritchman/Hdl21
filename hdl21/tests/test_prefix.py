@@ -74,6 +74,7 @@ def test_prefix_from_exp():
     assert h.Prefix.from_exp(-3) == h.Prefix.MILLI
     assert h.Prefix.from_exp(-2) == h.Prefix.CENTI
     assert h.Prefix.from_exp(-1) == h.Prefix.DECI
+    assert h.Prefix.from_exp(0) == h.Prefix.UNIT
     assert h.Prefix.from_exp(1) == h.Prefix.DECA
     assert h.Prefix.from_exp(2) == h.Prefix.HECTO
     assert h.Prefix.from_exp(3) == h.Prefix.KILO
@@ -86,7 +87,6 @@ def test_prefix_from_exp():
     assert h.Prefix.from_exp(24) == h.Prefix.YOTTA
 
     # Check a few unsupported values
-    assert h.Prefix.from_exp(0) is None
     assert h.Prefix.from_exp(-100) is None
     assert h.Prefix.from_exp(+100) is None
 
@@ -152,3 +152,10 @@ def test_prefix_conversion():
     h.Prefixed(number="11.11", prefix=h.Prefix.YOCTO)
     h.Prefixed(number=11.11, prefix=h.Prefix.YOCTO)
     h.Prefixed(number=11, prefix=h.Prefix.YOCTO)
+
+
+def test_unit_prefix():
+    """Test the UNIT prefix"""
+    assert h.Prefixed(11) == h.Prefixed(11, h.Prefix.UNIT)
+    assert h.Prefixed("11") == h.Prefixed(11)
+    assert h.Prefixed("11") == h.Prefixed(11.0)

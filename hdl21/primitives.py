@@ -40,7 +40,7 @@ for these physically-specified cells is commonly suggestive or optional.
 import copy
 from dataclasses import replace
 from enum import Enum
-from typing import Optional, Any, List, Type, Union, Dict
+from typing import Optional, Any, List, Type, Dict
 from pydantic.dataclasses import dataclass
 
 # Local imports
@@ -50,10 +50,6 @@ from .params import paramclass, Param, isparamclass, NoParams
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
 from .prefix import Prefixed
-
-# Type alias for many scalar parameters
-ScalarParam = Union[Prefixed, int, float, str]
-ScalarOption = Optional[ScalarParam]
 
 
 class PrimitiveType(Enum):
@@ -341,8 +337,8 @@ Sources
 class DcVoltageSourceParams:
     """`DcVoltageSource` Parameters"""
 
-    dc = Param(dtype=ScalarOption, default=0, desc="DC Value (V)")
-    ac = Param(dtype=ScalarOption, default=None, desc="AC Amplitude (V)")
+    dc = Param(dtype=Optional[Prefixed], default=0, desc="DC Value (V)")
+    ac = Param(dtype=Optional[Prefixed], default=None, desc="AC Amplitude (V)")
 
 
 DcVoltageSource = Primitive(
@@ -361,13 +357,13 @@ V = Vdc = Vsrc = DcVoltageSource
 class PulseVoltageSourceParams:
     """`PulseVoltageSource` Parameters"""
 
-    delay = Param(dtype=ScalarOption, default=None, desc="Time Delay (s)")
-    v1 = Param(dtype=ScalarOption, default=None, desc="One Value (V)")
-    v2 = Param(dtype=ScalarOption, default=None, desc="Zero Value (V)")
-    period = Param(dtype=ScalarOption, default=None, desc="Period (s)")
-    rise = Param(dtype=ScalarOption, default=None, desc="Rise time (s)")
-    fall = Param(dtype=ScalarOption, default=None, desc="Fall time (s)")
-    width = Param(dtype=ScalarOption, default=None, desc="Pulse width (s)")
+    delay = Param(dtype=Optional[Prefixed], default=None, desc="Time Delay (s)")
+    v1 = Param(dtype=Optional[Prefixed], default=None, desc="One Value (V)")
+    v2 = Param(dtype=Optional[Prefixed], default=None, desc="Zero Value (V)")
+    period = Param(dtype=Optional[Prefixed], default=None, desc="Period (s)")
+    rise = Param(dtype=Optional[Prefixed], default=None, desc="Rise time (s)")
+    fall = Param(dtype=Optional[Prefixed], default=None, desc="Fall time (s)")
+    width = Param(dtype=Optional[Prefixed], default=None, desc="Pulse width (s)")
 
 
 PulseVoltageSource = Primitive(
@@ -384,7 +380,7 @@ Vpu = Vpulse = PulseVoltageSource
 
 @paramclass
 class CurrentSourceParams:
-    dc = Param(dtype=ScalarOption, default=0, desc="DC Value (A)")
+    dc = Param(dtype=Optional[Prefixed], default=0, desc="DC Value (A)")
 
 
 CurrentSource = Primitive(

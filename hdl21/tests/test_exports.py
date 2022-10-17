@@ -476,3 +476,8 @@ def test_rountrip_external_module():
     exported = h.to_proto(HasE)
     imported = h.from_proto(exported)
     h.to_proto(imported.hdl21.tests.test_exports.HasE)
+
+
+def test_module_with_no_python_module():
+    # Issue #48 https://github.com/dan-fritchman/Hdl21/issues/48
+    exec("import hdl21 as h; h.to_proto(h.Module(name='not_in_a_pymodule'))")

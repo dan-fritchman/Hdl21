@@ -34,6 +34,7 @@ class Prefix(Enum):
     MILLI = -3
     CENTI = -2
     DECI = -1
+    UNIT = 0  # No prefix
     DECA = 1
     HECTO = 2
     KILO = 3
@@ -126,7 +127,7 @@ class Prefixed:
     """
 
     number: Decimal  # Numeric Portion. See the long note above.
-    prefix: Prefix  # Enumerated SI Prefix
+    prefix: Prefix = Prefix.UNIT  # Enumerated SI Prefix. Defaults to unity.
 
     def __float__(self) -> float:
         """Convert to float"""
@@ -209,6 +210,9 @@ M = MEGA = Prefix.MEGA
 G = GIGA = Prefix.GIGA
 T = TERA = Prefix.TERA
 P = PETA = Prefix.PETA
+# The Unit prefix doesn't get a single-character name, since it's kinda confusing with `µ`,
+# but is exposed at module scope.
+UNIT = Prefix.UNIT
 
 
 def e(exp: int) -> Optional[Prefix]:
