@@ -29,7 +29,7 @@ class ArrayFlattener(Elaborator):
             name, array = module.instarrays.popitem()
             self.stack.append(array)
             module.namespace.pop(name)
-            
+
             # Visit the array's target
             target = self.elaborate_instance_base(array)
 
@@ -45,7 +45,7 @@ class ArrayFlattener(Elaborator):
                 )
                 inst = module.add(Instance(of=target, name=name))
                 new_insts.append(inst)
-            
+
             # And connect them
             for portname, conn in array.conns.items():
                 if isinstance(conn, BundleInstance):

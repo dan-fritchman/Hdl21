@@ -84,7 +84,7 @@ def resolve_bundleref_type(
 def resolve_portref_type(
     pref: PortRef, failer: Callable = fail
 ) -> Union[Signal, BundleInstance]:
-    """ Get the `Port` object referred to by `pref`."""
+    """Get the `Port` object referred to by `pref`."""
 
     instantiable = pref.inst._resolved
 
@@ -101,7 +101,7 @@ def resolve_portref_type(
 
 
 def update_ref_deps(ref: Union[PortRef, BundleRef], resolved: Connectable):
-    """ Update all downstream dependencies on a `Ref` after it has been resolved to `resolved`. """
+    """Update all downstream dependencies on a `Ref` after it has been resolved to `resolved`."""
 
     # Reconnect all connected ports
     for connected_port in list(ref._connected_ports):

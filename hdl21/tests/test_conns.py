@@ -2,7 +2,7 @@ import hdl21 as h
 
 
 def test_resolve_portref_type():
-    """ Test resolution of PortRef "types" to their Module-level referents """
+    """Test resolution of PortRef "types" to their Module-level referents"""
     from hdl21.elab.elaborators.resolve_ref_types import resolve_portref_type
 
     @h.module
@@ -23,7 +23,7 @@ def test_resolve_portref_type():
 
 
 def test_portref_concat():
-    """ Test concatenating Port References """
+    """Test concatenating Port References"""
 
     @h.module
     class A:
@@ -42,7 +42,7 @@ def test_portref_concat():
 
 
 def test_portref_slice():
-    """ Test slicing Port References """
+    """Test slicing Port References"""
 
     @h.module
     class A:
@@ -61,7 +61,7 @@ def test_portref_slice():
 
 
 def test_resolve_bundleref_type():
-    """ Test resolution of BundleRef "types" to their Bundle-level referents """
+    """Test resolution of BundleRef "types" to their Bundle-level referents"""
     from hdl21.elab.elaborators.resolve_ref_types import resolve_bundleref_type
 
     @h.bundle
@@ -82,7 +82,7 @@ def test_resolve_bundleref_type():
 
 
 def test_bundleref_concat():
-    """ Test concatenating Bundle References """
+    """Test concatenating Bundle References"""
 
     @h.module
     class Inner:
@@ -101,7 +101,7 @@ def test_bundleref_concat():
 
 
 def test_bundleref_slice():
-    """ Test slicing Bundle References """
+    """Test slicing Bundle References"""
 
     @h.module
     class Inner:
@@ -120,7 +120,7 @@ def test_bundleref_slice():
 
 
 def test_anon_with_signal():
-    """ Test an AnonymousBundle with a Signal"""
+    """Test an AnonymousBundle with a Signal"""
 
     @h.bundle
     class B:
@@ -139,7 +139,7 @@ def test_anon_with_signal():
 
 
 def test_anon_with_concat():
-    """ Test an AnonymousBundle with a concatenation"""
+    """Test an AnonymousBundle with a concatenation"""
 
     @h.bundle
     class B:
@@ -158,7 +158,7 @@ def test_anon_with_concat():
 
 
 def test_anon_with_slice():
-    """ Test an AnonymousBundle with a slice"""
+    """Test an AnonymousBundle with a slice"""
 
     @h.bundle
     class B:
@@ -177,7 +177,7 @@ def test_anon_with_slice():
 
 
 def test_anon_with_bundle_inst():
-    """ Test an AnonymousBundle referring to a BundleInstance"""
+    """Test an AnonymousBundle referring to a BundleInstance"""
 
     @h.bundle
     class BI:
@@ -202,7 +202,7 @@ def test_anon_with_bundle_inst():
 
 
 def test_anon_with_bundleref_signal():
-    """ Test an AnonymousBundle referring to a sub-bundle reference"""
+    """Test an AnonymousBundle referring to a sub-bundle reference"""
 
     @h.bundle
     class B:
@@ -230,7 +230,7 @@ def test_anon_with_bundleref_signal():
 
 
 def test_anon_with_subbundle_ref():
-    """ Test an AnonymousBundle referring to a sub-bundle reference"""
+    """Test an AnonymousBundle referring to a sub-bundle reference"""
 
     @h.bundle
     class BI:
@@ -255,7 +255,7 @@ def test_anon_with_subbundle_ref():
 
 
 def test_anon_with_portref():
-    """ Test an AnonymousBundle referring to a PortRef"""
+    """Test an AnonymousBundle referring to a PortRef"""
 
     @h.bundle
     class B:
@@ -278,7 +278,7 @@ def test_anon_with_portref():
 
 
 def test_anon_with_anon():
-    """ Test an AnonymousBundle with a nested AnonymousBundle"""
+    """Test an AnonymousBundle with a nested AnonymousBundle"""
 
     @h.bundle
     class BI:

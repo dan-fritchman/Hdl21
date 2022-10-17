@@ -44,7 +44,7 @@ def _slice(*, parent: "Sliceable", index: Union[int, slice]) -> "Slice":
     * Negative indices are supported, and count from the "end" of the Signal.
     * Slice-ranges such as `sig[0:2]` are supported, and *inclusive* of the start, while *exclusive* of the end index.
     * Negative-range slices such as `sig[2:0:-1]`, again *inclusive* of the start, *exclusive* of the end index, and *reversed*.
-    
+
     Popular HDLs commonly use different signal-indexing conventions.
     Hdl21's own primary exchange format (in ProtoBuf) does as well,
     eschewing adopting inclusive-endpoints and negative-indexing.

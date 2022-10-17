@@ -5,7 +5,7 @@ Structured connection objects, instances thereof, and associated utilities.
 """
 
 from enum import Enum, EnumMeta
-from typing import Optional, Union, Any, get_args, Dict, Set, List, ClassVar
+from typing import Optional, Union, Any, Dict, Set, List, ClassVar
 
 # Local Imports
 from .attrmagic import init
@@ -116,7 +116,7 @@ BundleAttr = Union[Signal, BundleInstance]
 
 def is_bundle_attr(val: Any) -> bool:
     """Boolean indication of whether `val` is a valid `hdl21.Bundle` attribute."""
-    return isinstance(val, get_args(BundleAttr))
+    return isinstance(val, BundleAttr.__args__)
 
 
 @init

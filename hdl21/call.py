@@ -44,7 +44,7 @@ def param_call(callee: Callee, arg: Any = Default, **kwargs: Dict) -> "Callee.Pa
     except (TypeError, ValidationError) as e:
         # Type validation failed; add some of our info to the error message.
 
-        # A very common case is forgetting to apply parameters, and going straight to connections. 
+        # A very common case is forgetting to apply parameters, and going straight to connections.
         # Check for this, and provide a specific error message when it happens.
         from .connect import is_connectable
 

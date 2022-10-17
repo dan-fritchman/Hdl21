@@ -2,7 +2,7 @@
 # Elaborate-able Types 
 """
 
-from typing import Any, List, Union, get_args
+from typing import Any, List, Union
 
 # Local imports
 from ..module import Module
@@ -17,4 +17,4 @@ Elaboratables = Union[Elaboratable, List[Elaboratable]]
 
 def is_elaboratable(obj: Any) -> bool:
     # Function to test this, since `isinstance` doesn't work for `Union`.
-    return isinstance(obj, get_args(Elaboratable))
+    return isinstance(obj, Elaboratable.__args__)

@@ -4,7 +4,7 @@ Spice-Class Simulation Interface
 
 from decimal import Decimal
 from enum import Enum
-from typing import Union, Any, Optional, List, Sequence, get_args
+from typing import Union, Any, Optional, List, Sequence
 from pathlib import Path
 from dataclasses import field
 
@@ -118,7 +118,7 @@ Sweep = Union[LinearSweep, LogSweep, PointSweep]
 
 
 def is_sweep(val: Any) -> bool:
-    return isinstance(val, get_args(Sweep))
+    return isinstance(val, Sweep.__args__)
 
 
 class AnalysisType(Enum):
@@ -235,7 +235,7 @@ Analysis = Union[Op, Dc, Ac, Tran, SweepAnalysis, MonteCarlo, CustomAnalysis]
 
 
 def is_analysis(val: Any) -> bool:
-    return isinstance(val, get_args(Analysis))
+    return isinstance(val, Analysis.__args__)
 
 
 class SaveMode(Enum):
@@ -309,7 +309,7 @@ Control = Union[Include, Lib, Save, Meas, Param, Literal]
 
 
 def is_control(val: Any) -> bool:
-    return isinstance(val, get_args(Control))
+    return isinstance(val, Control.__args__)
 
 
 @simattr
@@ -331,7 +331,7 @@ SimAttr = Union[Analysis, Control, Options]
 
 
 def is_simattr(val: Any) -> bool:
-    return isinstance(val, get_args(SimAttr))
+    return isinstance(val, SimAttr.__args__)
 
 
 @datatype
