@@ -887,7 +887,11 @@ def test_instance_array_portrefs():
     """Test Instance Arrays connected by port-references"""
 
     Inv = h.ExternalModule(
-        name="Inv", port_list=[h.Input(name="i"), h.Output(name="z"),],
+        name="Inv",
+        port_list=[
+            h.Input(name="i"),
+            h.Output(name="z"),
+        ],
     )
 
     m = h.Module(name="TestArrayPortRef")

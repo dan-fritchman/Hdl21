@@ -22,10 +22,10 @@ from ...bundle import (
 from .resolve_ref_types import resolve_bundleref_type, resolve_portref_type
 
 # HasWidth & Sliceable Type Uhions
-# Everything that has, or at least sometimes has, an integer Signal-style `width`. 
-# AND everything that can be `Slice`d. 
-# These happen to be the same set of types, but can be broken up 
-# if the two should ever differ. 
+# Everything that has, or at least sometimes has, an integer Signal-style `width`.
+# AND everything that can be `Slice`d.
+# These happen to be the same set of types, but can be broken up
+# if the two should ever differ.
 Sliceable = HasWidth = Union[Signal, Slice, Concat, BundleRef, PortRef]
 
 
@@ -35,8 +35,8 @@ def fail(msg: str) -> None:
 
 
 def width(conn: Connectable, failer: Callable = fail) -> int:
-    """ Get the `width` of a conn. Largely dispatches across conn types. 
-    Optional function-valued argument `failer` is passed all errors. 
+    """Get the `width` of a conn. Largely dispatches across conn types.
+    Optional function-valued argument `failer` is passed all errors.
     This is commonly used to pass failure information and control back to `Elaborator`s."""
 
     # A reminder, as of this writing:
@@ -63,11 +63,11 @@ def width(conn: Connectable, failer: Callable = fail) -> int:
 
 
 def ref_width(ref: Union[PortRef, BundleRef], failer: Callable = fail) -> int:
-    """ Get a reference's width from its referent.
+    """Get a reference's width from its referent.
     Fail if this resolves to a Bundle Instance.
     And cache the result on the Ref for future use.
-    
-    Optional function-valued argument `failer` is passed all errors. 
+
+    Optional function-valued argument `failer` is passed all errors.
     This is commonly used to pass failure information and control back to `Elaborator`s."""
 
     if ref._width is not None:

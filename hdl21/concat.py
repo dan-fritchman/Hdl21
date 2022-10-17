@@ -56,4 +56,3 @@ class Concat:
 
 
 __all__ = ["Concat"]
-

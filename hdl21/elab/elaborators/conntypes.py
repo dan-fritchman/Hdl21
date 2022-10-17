@@ -174,7 +174,7 @@ class ConnTypes(Elaborator):
         self.fail(f"Invalid Port {port}")
 
     def get_width(self, conn: Connectable) -> int:
-        """ Get the `width` of a conn. Fails for types which this pass is not designed to handle. """
+        """Get the `width` of a conn. Fails for types which this pass is not designed to handle."""
         from .width import width
 
         if isinstance(conn, (NoConn, PortRef)):

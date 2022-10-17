@@ -156,7 +156,10 @@ class ProtoImporter:
                 target = import_vlsir_primitive(ref.external)
                 params = target.Params(**params)
 
-            elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
+            elif ref.external.domain in (
+                "hdl21.primitives",
+                "hdl21.ideal",
+            ):
                 # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
                 target = import_hdl21_primitive(ref.external)
                 params = target.Params(**params)

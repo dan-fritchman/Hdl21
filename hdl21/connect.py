@@ -31,4 +31,3 @@ Connectable = Union[
     "AnonymousBundle",
     "BundleRef",
 ]
-

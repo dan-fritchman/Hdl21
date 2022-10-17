@@ -18,7 +18,13 @@ from .source_info import source_info, SourceInfo
 from .attrmagic import init
 from .params import HasNoParams, isparamclass
 from .signal import Signal, Visibility
-from .instance import calls_instantiate, _Instance, Instance, InstanceArray, InstanceBundle
+from .instance import (
+    calls_instantiate,
+    _Instance,
+    Instance,
+    InstanceArray,
+    InstanceBundle,
+)
 from .bundle import BundleInstance
 
 
