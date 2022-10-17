@@ -6,7 +6,7 @@ Creates concrete `Signal`s and `BundleInstance`s to replace `PortRef`s.
 
 # Std-Lib Imports
 import copy
-from typing import Union, List, Optional, Set, get_args
+from typing import Union, List, Optional, Set
 
 # Local imports
 from ...connect import Connectable
@@ -54,9 +54,9 @@ class ResolvePortRefs(Elaborator):
         """
         Resolve and replace all Instance `PortRef`s in `module`.
 
-        In the process, all `Connectable`s are annotated with a set of `_connected_ports`. 
-        These `_connected_ports` are relied upon by later elaboration stages, 
-        and must be maintained hereafter, e.g. when making connection updates. 
+        In the process, all `Connectable`s are annotated with a set of `_connected_ports`.
+        These `_connected_ports` are relied upon by later elaboration stages,
+        and must be maintained hereafter, e.g. when making connection updates.
         """
 
         instancelike = (
@@ -80,7 +80,7 @@ class ResolvePortRefs(Elaborator):
                     module_portrefs.add(_get_connref(inst, portname))
 
         def follow(pref: PortRef, group: SetList) -> None:
-            """ Closure to recursively follow `pref`, adding its outward and inward connections to `group`. 
+            """Closure to recursively follow `pref`, adding its outward and inward connections to `group`.
             Removes encountered entries from `module_portrefs` along the way."""
 
             if pref in group:
@@ -150,7 +150,7 @@ class ResolvePortRefs(Elaborator):
         Returns None is no `Source`s are connected to any element in the group."""
 
         # Extract which of the `group` are connected to `Source`s
-        sources: List[Source] = [s for s in group if isinstance(s, get_args(Source))]
+        sources: List[Source] = [s for s in group if isinstance(s, Source.__args__)]
 
         # Three relevant cases then emerge:
         # * (a) Zero sources. No problem, create one.
@@ -170,17 +170,17 @@ class ResolvePortRefs(Elaborator):
         self.fail(msg)
 
     def which_portref_to_name(self, group: List[PortRef]) -> PortRef:
-        """ Figure out which PortRef in `group` to use for its new signal name. 
-        This generally follows "the port the other ones refer to", i.e. for: 
+        """Figure out which PortRef in `group` to use for its new signal name.
+        This generally follows "the port the other ones refer to", i.e. for:
         ```
         i1.p = i0.p
         i2.p = i0.p
         i3.p = i1.p
         i4.p = i3.p
         ```
-        The Instance `i0` has the sole None-connected Port `p`, and gets "naming rights". 
-        
-        In other cases there is no such instance, such as: 
+        The Instance `i0` has the sole None-connected Port `p`, and gets "naming rights".
+
+        In other cases there is no such instance, such as:
         ```
         i0.p = i1.p
         i1.p = i0.p # Connected back!
@@ -292,8 +292,8 @@ class SetList:
     """A common combination of a hash-set and ordered list of the same items.
     Used for keeping ordered items while maintaining quick membership testing.
 
-    FIXME: this is really using a LIST for now, slowing down membership tests, 
-    but should be set-based when some connectable types, particularly `Signal`, are ready for it. 
+    FIXME: this is really using a LIST for now, slowing down membership tests,
+    but should be set-based when some connectable types, particularly `Signal`, are ready for it.
     """
 
     def __init__(self):
@@ -333,7 +333,7 @@ class SetList:
 
 
 def resolve_portref(pref: PortRef, to: Connectable) -> None:
-    """# Resolve a `PortRef` to its referent `Connectable`. """
+    """# Resolve a `PortRef` to its referent `Connectable`."""
 
     if pref.resolved is to:
         return  # Already resolved

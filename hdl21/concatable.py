@@ -19,4 +19,3 @@ def concatable(cls: type) -> type:
 
 def is_concatable(obj: object) -> type:
     return getattr(obj, "__concatable__", False)
-

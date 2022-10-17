@@ -67,7 +67,7 @@ class GeneratorElaborator(Elaborator):
             call.result = result
             return result
 
-        # Add both the `Call` and `Generator` to our stack. 
+        # Add both the `Call` and `Generator` to our stack.
         self.stack.append(call)
         self.stack.append(call.gen)
 
@@ -110,7 +110,7 @@ class GeneratorElaborator(Elaborator):
 
         # And elaborate the module
         m = self.elaborate_module_base(m)  # Note the `_base` here!
-        
+
         # Pop both the `Call` and `Generator` off the stack
         self.stack.pop()
         self.stack.pop()

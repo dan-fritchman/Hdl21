@@ -88,13 +88,18 @@ class BundleScope:
     def root(
         cls, signals: Optional[dict] = None, scopes: Optional[dict] = None
     ) -> "BundleScope":
-        """ Create a new root scope """
+        """Create a new root scope"""
         signals = signals or {}
         scopes = scopes or {}
-        return cls(path=Path([]), pathstr=PathStr(""), signals=signals, scopes=scopes,)
+        return cls(
+            path=Path([]),
+            pathstr=PathStr(""),
+            signals=signals,
+            scopes=scopes,
+        )
 
     def add_subscope(self, name: str, scope: "BundleScope"):
-        """ Add a sub `BundleScope`. Also add its signals to our parent dict. """
+        """Add a sub `BundleScope`. Also add its signals to our parent dict."""
         self.scopes[PathStr(name)] = scope
         for k, v in scope.signals.items():
             self.signals[PathStr.concat(name, k)] = v
@@ -214,7 +219,8 @@ class BundleFlattener(Elaborator):
             # Rename the signal, prepending the bundle-instance's name
             # path = Path.concat(bundle_inst.name, pathstr.to_path())
             sig.name = self.flatname(
-                segments=[bundle_inst.name, pathstr.to_name()], avoid=module.namespace,
+                segments=[bundle_inst.name, pathstr.to_name()],
+                avoid=module.namespace,
             )
             # Sort out the new Signal's visibility and direction
             if bundle_inst.port:
@@ -261,24 +267,24 @@ class BundleFlattener(Elaborator):
 
     def replace_bundle_conn(self, inst: Instance, portname: str, flat: BundleScope):
         """
-        Replace a connection to a `BundleInstance` with a connections to the Signals of a `FlatBundleInst`. 
-        At this point, if we started with a circuit like: 
+        Replace a connection to a `BundleInstance` with a connections to the Signals of a `FlatBundleInst`.
+        At this point, if we started with a circuit like:
 
-        ```python 
-        @h.bundle 
+        ```python
+        @h.bundle
         class B:
             x, y, z = h.Signals(3)
 
         @h.module
-        class Inner: 
+        class Inner:
             inner_b = B(port=True)
-        
-        @h.module 
+
+        @h.module
         class Outer:
             outer_b = B()
             inner = Inner(b=outer_b)
         ```
-        At the point of getting here to reconnect the port `inner.b`, 
+        At the point of getting here to reconnect the port `inner.b`,
         the `Inner` module has been flattened, and looks more like
 
         ```
@@ -287,20 +293,20 @@ class BundleFlattener(Elaborator):
             inner_b_x, inner_b_y, inner_b_z = h.Ports(3)
         ```
 
-        The bundle instances in `Outer` have also been flattened. 
-        It now has signals named `outer_b_z`, `outer_b_y`, and `outer_b_z`, 
+        The bundle instances in `Outer` have also been flattened.
+        It now has signals named `outer_b_z`, `outer_b_y`, and `outer_b_z`,
         which are stored in a `FlatBundleInst` keyed by `x`, `y`, and `z`.
-        After this function it will (or should) look like: 
+        After this function it will (or should) look like:
 
         ```
-        @h.module 
+        @h.module
         class Outer:
             outer_b_z, outer_b_y, outer_b_z  = h.Signals(3)
             inner = Inner(inner_b_x=outer_b_x, inner_b_y=outer_b_y, inner_b_z=outer_b_z)
         ```
 
-        The primary mental gymnastics here are in naming, 
-        particularly between the Instance and instantiating module. 
+        The primary mental gymnastics here are in naming,
+        particularly between the Instance and instantiating module.
         """
 
         flat_bundle_port = self.flat_bundle_ports.get(
@@ -350,7 +356,10 @@ class BundleFlattener(Elaborator):
             scope_path = Path([instname])
             scope_pathstr = PathStr.from_path(scope_path)
             scope = flat.scopes[instname] = BundleScope(
-                path=scope_path, pathstr=scope_pathstr, signals={}, scopes={},
+                path=scope_path,
+                pathstr=scope_pathstr,
+                signals={},
+                scopes={},
             )
 
             # Recursively flatten the bundle-instance's definition
@@ -405,7 +414,7 @@ class BundleFlattener(Elaborator):
     def copy_bundle_scope(
         self, scope: BundleScope, signal_replacements: Dict[int, Signal]
     ) -> BundleScope:
-        """ Recursively copy a `BundleScope`, replacing its `signals` with those in `signal_replacements`."""
+        """Recursively copy a `BundleScope`, replacing its `signals` with those in `signal_replacements`."""
         signals = {
             name: signal_replacements[id(sig)] for name, sig in scope.signals.items()
         }

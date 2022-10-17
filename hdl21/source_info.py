@@ -86,7 +86,8 @@ def source_info(
 
 # Set of files to skip
 # Calculated once, after import-time, so those modules can import this one.
-files_to_skip: Optional[Set[str]] = None
+# files_to_skip: Optional[Set[str]] = None
+files_to_skip = None
 
 
 def get_files_to_skip():

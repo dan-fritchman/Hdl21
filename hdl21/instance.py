@@ -20,7 +20,10 @@ class _Instance:
     """Shared base class for Instance-like types (Instance, InstanceArray)"""
 
     def __init__(
-        self, of: "Instantiable", *, name: Optional[str] = None,
+        self,
+        of: "Instantiable",
+        *,
+        name: Optional[str] = None,
     ):
         from .instantiable import Instantiable, is_instantiable
 
@@ -42,7 +45,9 @@ class _Instance:
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
 
     @property
-    def _resolved(self,) -> Optional["Instantiable"]:
+    def _resolved(
+        self,
+    ) -> Optional["Instantiable"]:
         """Property to retrieve the Instance's resolved Module, if complete.
         Returns `None` if unresolved."""
         from .generator import GeneratorCall
@@ -228,7 +233,10 @@ class InstanceArray(_Instance):
     ]
 
     def __init__(
-        self, of: "Instantiable", n: int, name: Optional[str] = None,
+        self,
+        of: "Instantiable",
+        n: int,
+        name: Optional[str] = None,
     ):
         super().__init__(of=of, name=name)
         self.n = n
@@ -265,32 +273,32 @@ def _to_array(inst: Instance, num: int) -> InstanceArray:
 
 @dataclass
 class Refs:
-    """ Tracking of references stored on each Instance. 
-    All references are of type `PortRef`, and are organized into two camps: 
-    
-    * The `portrefs` dict includes entries like `i.someport` below: 
+    """Tracking of references stored on each Instance.
+    All references are of type `PortRef`, and are organized into two camps:
+
+    * The `portrefs` dict includes entries like `i.someport` below:
     ```
     i = Instance(of=MyModule)
     i2 = Instance(of=AnotherModule)(itsport=i.someport)
-    ``` 
-    These are ultimately resolved to Signals during elaboration. 
+    ```
+    These are ultimately resolved to Signals during elaboration.
 
     * The `conns` dict includes entries like `i.someport` below:
     ```
     s = Signal()
     i = Instance(of=MyModule)(someport=s)
     ```
-    Here the Signal `s` is given a port-reference to `i`, to help track and update later connections. 
-    These entries are members of the `connrefs` dict. 
+    Here the Signal `s` is given a port-reference to `i`, to help track and update later connections.
+    These entries are members of the `connrefs` dict.
 
-    The combination of the two is stored in the `all` dictionary. 
-    All items in both `portrefs` and `connrefs` are always also located in `all`. 
-    Attemptes to retrieve a reference come from `all`, and therefore generate the same 
-    objects for successive fetches of the same port name. 
+    The combination of the two is stored in the `all` dictionary.
+    All items in both `portrefs` and `connrefs` are always also located in `all`.
+    Attemptes to retrieve a reference come from `all`, and therefore generate the same
+    objects for successive fetches of the same port name.
 
-    Entries are never removed from `refs` over the course of an Instance's lifetime. 
-    For most Instances, by the end of their life, the `connrefs` and `all` dicts will contain 
-    an entry for each of its ports. 
+    Entries are never removed from `refs` over the course of an Instance's lifetime.
+    For most Instances, by the end of their life, the `connrefs` and `all` dicts will contain
+    an entry for each of its ports.
     """
 
     all: Dict[str, "PortRef"] = field(default_factory=dict)

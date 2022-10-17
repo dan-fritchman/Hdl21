@@ -40,7 +40,9 @@ from ..primitives import (
 
 
 def to_proto(
-    top: Elaboratables, domain: Optional[str] = None, **kwargs,
+    top: Elaboratables,
+    domain: Optional[str] = None,
+    **kwargs,
 ) -> vckt.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`."""
     # Elaborate all the top-level Modules

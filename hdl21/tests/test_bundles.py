@@ -411,7 +411,7 @@ def test_sub_bundle_conn():
 
 
 def test_nested_bundle_conn():
-    """ Test connecting to a nested bundle ref """
+    """Test connecting to a nested bundle ref"""
 
     @h.bundle
     class B1:

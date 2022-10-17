@@ -42,4 +42,3 @@ class PortRef:
     def __hash__(self):
         """Hash references as the tuple of their instance-address and name"""
         return hash((id(self.inst), self.portname))
-

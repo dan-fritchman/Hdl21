@@ -48,13 +48,13 @@ def paramclass(cls: type) -> type:
 
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
-    
+
     protected_names = ["descriptions", "defaults"]
     dunders = dict()
     params = dict()
 
     # Take a lap through the class dictionary, type-check everything and grab Params
-    # FIXME: look for, and alert users about, the error writing type annotations rather than equality. 
+    # FIXME: look for, and alert users about, the error writing type annotations rather than equality.
     # (Or, we could move to type annotations...)
     for key, val in cls.__dict__.items():
         if key in protected_names:
