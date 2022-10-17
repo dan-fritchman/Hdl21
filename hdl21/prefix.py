@@ -131,7 +131,7 @@ class Prefixed:
 
     def __float__(self) -> float:
         """Convert to float"""
-        return float(self.number) * 10 ** self.prefix.value
+        return float(self.number) * 10**self.prefix.value
 
     def __mul__(self, other) -> "Prefixed":
         if not isinstance(other, (int, float, Decimal)):
@@ -210,8 +210,8 @@ M = MEGA = Prefix.MEGA
 G = GIGA = Prefix.GIGA
 T = TERA = Prefix.TERA
 P = PETA = Prefix.PETA
-# The Unit prefix doesn't get a single-character name, since it's kinda confusing with `µ`, 
-# but is exposed at module scope. 
+# The Unit prefix doesn't get a single-character name, since it's kinda confusing with `µ`,
+# but is exposed at module scope.
 UNIT = Prefix.UNIT
 
 

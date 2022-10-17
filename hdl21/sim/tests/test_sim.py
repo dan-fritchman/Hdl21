@@ -29,7 +29,9 @@ def test_sim2():
                 name="mysweep",
             ),
             MonteCarlo(
-                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+                inner=[
+                    Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+                ],
                 npts=11,
                 name="mymc",
             ),
@@ -54,7 +56,11 @@ def test_simattrs():
     assert tr.tstop == 11 * h.prefix.p
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
-        inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc",
+        inner=[
+            Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+        ],
+        npts=11,
+        name="mymc",
     )
     s.save(SaveMode.ALL)
     s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
@@ -75,9 +81,16 @@ def test_sim_decorator():
         mydc = Dc(var=x, sweep=PointSweep([1]))
         myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
         mytran = Tran(tstop=11 * h.prefix.p)
-        mysweep = SweepAnalysis(inner=[mytran], var=x, sweep=LinearSweep(0, 1, 2),)
+        mysweep = SweepAnalysis(
+            inner=[mytran],
+            var=x,
+            sweep=LinearSweep(0, 1, 2),
+        )
         mymc = MonteCarlo(
-            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11,
+            inner=[
+                Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+            ],
+            npts=11,
         )
         a_delay = Meas(analysis=mytran, expr="trig_targ_something")
         opts = Options(reltol=1e-9)
@@ -125,7 +138,9 @@ def test_proto1():
                 name="mysweep",
             ),
             MonteCarlo(
-                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),],
+                inner=[
+                    Dc(var="y", sweep=PointSweep([1]), name="swpdc"),
+                ],
                 npts=11,
                 name="mymc",
             ),
@@ -229,7 +244,8 @@ def empty_tb() -> h.Module:
 
 
 @pytest.mark.skipif(
-    vlsirtools.spice.default() is None, reason="No simulator available",
+    vlsirtools.spice.default() is None,
+    reason="No simulator available",
 )
 def test_empty_sim1():
     """Create and run an empty `Sim`, returning a VLSIR_PROTO"""
@@ -245,7 +261,8 @@ def test_empty_sim1():
 
 
 @pytest.mark.skipif(
-    vlsirtools.spice.default() is None, reason="No simulator available",
+    vlsirtools.spice.default() is None,
+    reason="No simulator available",
 )
 @pytest.mark.skipif(
     vlsirtools.spice.default() == vlsirtools.spice.SupportedSimulators.XYCE,

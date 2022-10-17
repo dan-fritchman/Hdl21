@@ -349,7 +349,6 @@ def test_netlist_fmts():
     assert "xb \n+ s_2 s_1 s_0 p \n+ Bot" in nl
 
 
-@pytest.mark.xfail(reason="#44 https://github.com/dan-fritchman/Hdl21/issues/44")
 def test_spice_netlister():
     @h.module
     class DUT:

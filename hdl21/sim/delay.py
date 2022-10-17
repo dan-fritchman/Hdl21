@@ -127,7 +127,7 @@ def create_sim(p: DelaySimParams) -> Sim:
         period=2 * Prefix.UNIT,
         rise=p.trf,
         fall=p.trf,
-        width=1* Prefix.UNIT,
+        width=1 * Prefix.UNIT,
     )
     vpulse = Vpu(vpulse_params)(p=sig, n=tb.vss)
     tb.add(vpulse, name=f"v{p.primary_input.name}")
