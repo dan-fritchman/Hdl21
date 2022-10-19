@@ -42,12 +42,12 @@ class ExternalModule:
 
     @property
     def ports(self) -> dict:
-        """ Port dictionary, from name to `Signal`."""
+        """Port dictionary, from name to `Signal`."""
         return {p.name: p for p in self.port_list}
 
     @property
     def Params(self) -> Type:
-        """ Type-style alias for the parameter-type. """
+        """Type-style alias for the parameter-type."""
         return self.paramtype
 
     def __post_init__(self):
@@ -71,8 +71,8 @@ class ExternalModule:
                 raise ValueError(msg)
 
     def __call__(self, arg: Any = Default, **kwargs) -> "ExternalModuleCall":
-        """ Call to set an `ExternalModule`'s parameters. 
-        Returns an `ExternalModuleCall` combining the `ExternalModule` and parameter values. """
+        """Call to set an `ExternalModule`'s parameters.
+        Returns an `ExternalModuleCall` combining the `ExternalModule` and parameter values."""
         params = param_call(callee=self, arg=arg, **kwargs)
         return ExternalModuleCall(module=self, params=params)
 

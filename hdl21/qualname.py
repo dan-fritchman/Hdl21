@@ -34,8 +34,8 @@ def qualname(mod: Union["Module", "ExternalModule"]) -> Optional[str]:
 
 
 def qualname_magic_methods(cls) -> type:
-    """ Decorator to add the 'use qualname for equality, hashing, and pickling' 
-    magic methods to a class. """
+    """Decorator to add the 'use qualname for equality, hashing, and pickling'
+    magic methods to a class."""
 
     def __eq__(self, other: "Self") -> bool:
         if not isinstance(other, type(self)):
@@ -58,4 +58,3 @@ def qualname_magic_methods(cls) -> type:
     cls.__hash__ = __hash__
     cls.__getstate__ = __getstate__
     return cls
-

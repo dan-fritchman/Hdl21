@@ -41,7 +41,7 @@ def qualname(i: Instantiable) -> str:
 
 def io(i: Instantiable) -> Dict[str, "Connectable"]:
     """Get a complete dictionary of IO ports for `i`, including all types: Signals and Bundles.
-    Copies the Instantiable's top-level dictionary so that it is not modified by consumers. """
+    Copies the Instantiable's top-level dictionary so that it is not modified by consumers."""
 
     if isinstance(i, GeneratorCall):
         # Take the result of the generator call

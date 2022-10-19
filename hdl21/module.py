@@ -182,8 +182,8 @@ class Module:
         return object.__getattribute__(self, key)
 
     def __delattr__(self, __name: str) -> None:
-        """ Disable attribute deletion. 
-        This may be enabled some day, but until unwinding any dependencies is not allowed. """
+        """Disable attribute deletion.
+        This may be enabled some day, but until unwinding any dependencies is not allowed."""
         msg = f"Cannot delete Module attribute {__name} of {self}"
         raise RuntimeError(msg)
 
