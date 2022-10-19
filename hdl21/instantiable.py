@@ -3,7 +3,8 @@ Type-alias for `Instantiable` hdl21 types. Each is valid as the `of` field of `h
 and thus supports its "connect by call" and "connect by assigment" semantics. 
 """
 
-from typing import Any, Union
+import copy
+from typing import Any, Union, Dict
 
 from .module import Module, ExternalModuleCall
 from .generator import GeneratorCall
@@ -20,15 +21,31 @@ def is_instantiable(val: Any) -> bool:
 
 
 def qualname(i: Instantiable) -> str:
-    """Path-qualified name of `i`"""
+    """Path-qualified name of Instantiable `i`"""
+    from .module import _qualname as module_qualname
 
     if isinstance(i, Module):
-        return i._qualname()
+        return module_qualname(i)
     if isinstance(i, GeneratorCall):
-        return i.result._qualname()
+        return module_qualname(i.result)
     if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
+        # These have no "qualification" paths, just a singular name.
         return i.name
     raise TypeError
 
 
-__all__ = ["Instantiable", "is_instantiable"]
+def io(i: Instantiable) -> Dict[str, "Connectable"]:
+    """Get a complete dictionary of IO ports for `i`, including all types: Signals and Bundles.
+    Copies the Instantiable's top-level dictionary so that it is not modified by consumers. """
+
+    if isinstance(i, GeneratorCall):
+        # Take the result of the generator call
+        i = i.result
+
+    rv = copy.copy(i.ports)
+    if hasattr(i, "bundle_ports"):
+        rv.update(copy.copy(i.bundle_ports))
+    return rv
+
+
+__all__ = ["Instantiable", "is_instantiable", "qualname", "io"]

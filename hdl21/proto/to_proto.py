@@ -26,7 +26,12 @@ import vlsir.circuit_pb2 as vckt
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
 from ..elab import Elaboratables, elaborate
-from ..module import Module, ExternalModule, ExternalModuleCall
+from ..module import (
+    Module,
+    ExternalModule,
+    ExternalModuleCall,
+    _qualname as module_qualname,
+)
 from ..instance import Instance
 from ..signal import Signal, Port, PortDir
 from ..slice import Slice
@@ -39,9 +44,7 @@ from ..primitives import (
 
 
 def to_proto(
-    top: Elaboratables,
-    domain: Optional[str] = None,
-    **kwargs,
+    top: Elaboratables, domain: Optional[str] = None, **kwargs,
 ) -> vckt.Package:
     """Convert Elaborate-able Module or Generator `top` and its dependencies to a Proto-format `Package`."""
     # Elaborate all the top-level Modules
@@ -84,7 +87,7 @@ class ProtoExporter:
         """Create and return a unique `QualifiedName` for Module `module`.
         Raises a `RuntimeError` if unique name is taken."""
 
-        mname = module._qualname()
+        mname = module_qualname(module)
         if mname in self.module_names:
             conflict = self.module_names[mname]
             raise RuntimeError(

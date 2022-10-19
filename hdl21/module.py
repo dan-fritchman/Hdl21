@@ -3,11 +3,11 @@
 The `Module` module (get it?)
 
 This module primarily defines: 
-* The core circuit-reuse element `hdl21.Module`. 
+* The core circuit-reuse element `hdl21.Module` 
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
+* `ExternalModule`, the abstract interface to blocks defined outside Hdl21 
 """
 
-# from typing import Any, Optional, List, Union, get_args, Type, Dict
 from typing import Any, Optional, List, Union, Type, Dict
 from pydantic.dataclasses import dataclass
 
@@ -77,39 +77,19 @@ class Module:
         self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
         self._initialized = True
 
-    def __setattr__(self, key: str, val: Any) -> None:
-        """Set-attribute over-ride, organizing into type-based containers"""
+    """
+    The public `Module` API. Just `add` and `get`. (FIXME: eventually.)
+    
+    `Module`s are generally used and thought of as arbitrary HDL objects. For example: 
+    ```python
+    m = Module(name="MyModule")
+    m.i = h.Input()
+    m.q = AnotherModule(i=m.i)
+    ```
 
-        if key.startswith("_") or not getattr(self, "_initialized", False):
-            # Bootstrapping phase. Pass along to "regular" setattr.
-            return super().__setattr__(key, val)
-
-        # Protected attrs - the internal dict-names
-        banned = [
-            "ports",
-            "signals",
-            "instances",
-            "instarrays",
-            "instbundles",
-            "bundles",
-            "namespace",
-            "add",
-            "get",
-        ]
-        if key in banned:
-            msg = f"Error attempting to over-write protected attribute {key} of Module {self}"
-            raise RuntimeError(msg)
-        # Special case(s)
-        if key == "name":
-            return super().__setattr__(key, val)
-
-        # Check it's a valid attribute-type
-        _assert_module_attr(self, val)
-
-        # Checks out! Name `val` and add it to our type-based containers.
-        val.name = key
-        self._add(val)
-        return None
+    To keep the space of valid names for post-fix dot access as large as possible, 
+    the `Module` class namespace is kept *as small* as possible. 
+    """
 
     def add(self, val: ModuleAttr, *, name: Optional[str] = None) -> ModuleAttr:
         """Add a Module attribute.
@@ -146,53 +126,7 @@ class Module:
 
         # Now `val.name` is set appropriately.
         # Add it to our type-based containers, and return it.
-        return self._add(val)
-
-    def _add(self, val: ModuleAttr) -> ModuleAttr:
-        """Internal `add` and `setattr` implementation. Primarily sort `val` into one of our type-based containers.
-        Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
-
-        if isinstance(val, Signal):
-            self.namespace[val.name] = val
-            if val.vis == Visibility.PORT:
-                self.ports[val.name] = val
-            else:
-                self.signals[val.name] = val
-        elif isinstance(val, Instance):
-            self.instances[val.name] = val
-            self.namespace[val.name] = val
-        elif isinstance(val, InstanceArray):
-            self.instarrays[val.name] = val
-            self.namespace[val.name] = val
-        elif isinstance(val, InstanceBundle):
-            self.instbundles[val.name] = val
-            self.namespace[val.name] = val
-        elif isinstance(val, BundleInstance):
-            self.bundles[val.name] = val
-            self.namespace[val.name] = val
-        else:
-            # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
-            # Nonetheless gotta raise an error if we get here, somehow.
-            self._attr_type_error(val)
-
-        # Give it a reference to us.
-        #
-        # ## Note:
-        # Parent-testing *can* be done here instead of at elaboration time.
-        # It's not clear that this would be a good idea though.
-        # Attributes which are *copied* (for example) keep the `_parent_module` member, which is often helpful to just over-write.
-        # Nonetheless if "setattr-time" failure is desired, this is where it will go:
-        #
-        # _parent = getattr(val, "_parent_module", None) # Note many attributes will not have this member, until this assignment.
-        # if _parent is not None and _parent is not self:
-        #     msg = f"{val.name} being added to {self} already has a parent-module {val._parent_module}"
-        #     raise RuntimeError(msg)
-        #
-        # Ok, now actually give it a reference to us:
-        val._parent_module = self
-
-        # And return our newly-added attribute
-        return val
+        return _add(module=self, val=val)
 
     def get(self, name: str) -> Optional[ModuleAttr]:
         """Get module-attribute `name`. Returns `None` if not present.
@@ -200,6 +134,50 @@ class Module:
         from the HDL namespace-worth of `ModuleAttr`s."""
         ns = self.__getattribute__("namespace")
         return ns.get(name, None)
+
+    @property
+    def bundle_ports(self) -> dict:
+        """Port-Exposed Bundle Instances"""
+        # FIXME: this shall be kicked out of the `Module` class and namespace
+        return {name: bundle for name, bundle in self.bundles.items() if bundle.port}
+
+    """
+    Special Methods
+    """
+
+    def __setattr__(self, key: str, val: Any) -> None:
+        """Set-attribute over-ride, organizing into type-based containers"""
+
+        if key.startswith("_") or not getattr(self, "_initialized", False):
+            # Bootstrapping phase. Pass along to "regular" setattr.
+            return super().__setattr__(key, val)
+
+        # Protected attrs - the internal dict-names
+        banned = [
+            "ports",
+            "signals",
+            "instances",
+            "instarrays",
+            "instbundles",
+            "bundles",
+            "namespace",
+            "add",
+            "get",
+        ]
+        if key in banned:
+            msg = f"Error attempting to over-write protected attribute {key} of Module {self}"
+            raise RuntimeError(msg)
+        # Special case(s)
+        if key == "name":
+            return super().__setattr__(key, val)
+
+        # Check it's a valid attribute-type
+        _assert_module_attr(self, val)
+
+        # Checks out! Name `val` and add it to our type-based containers.
+        val.name = key
+        _add(module=self, val=val)
+        return None
 
     def __getattr__(self, key: str) -> Any:
         """Include our namespace-worth of HDL objects in dot-access retrievals"""
@@ -209,6 +187,12 @@ class Module:
         if key in ns:
             return ns[key]
         return object.__getattribute__(self, key)
+
+    def __delattr__(self, __name: str) -> None:
+        """ Disable attribute deletion. 
+        This may be enabled some day, but until unwinding any dependencies is not allowed. """
+        msg = f"Cannot delete Module attribute {__name} of {self}"
+        raise RuntimeError(msg)
 
     def __init_subclass__(cls, *_, **__):
         """Sub-Classing Disable-ization"""
@@ -220,37 +204,22 @@ class Module:
             return f"Module(name={self.name})"
         return f"Module(_anon_)"
 
-    @property
-    def bundle_ports(self) -> dict:
-        """Port-Exposed Bundle Instances"""
-        return {name: bundle for name, bundle in self.bundles.items() if bundle.port}
-
-    @property
-    def io(self) -> dict:
-        """Combined Dictionary of `Signal`-valued and `Bundle`-valued ports"""
-        rv = self.bundle_ports
-        rv.update(self.ports)
-        return rv
-
-    def _qualname(self) -> Optional[str]:
-        return _qualname(self)
-
     def __eq__(self, other: "Module") -> bool:
         if not isinstance(other, Module):
             return NotImplemented
         if self.name is None or other.name is None:
             raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
-        return self._qualname() == other._qualname()
+        return _qualname(self) == _qualname(other)
 
     def __hash__(self):
         if self.name is None:
             raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
-        return hash(self._qualname())
+        return hash(_qualname(self))
 
     def __getstate__(self):
         if self.name is None:
             raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
-        return self._qualname()
+        return _qualname(self)
 
 
 def module(cls: type) -> Module:
@@ -332,6 +301,14 @@ class ExternalModule:
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
 
+    @property
+    def ports(self) -> dict:
+        return {p.name: p for p in self.port_list}
+
+    @property
+    def Params(self) -> Type:
+        return self.paramtype
+
     def __post_init__(self):
         # Check for a valid parameter-type
         if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
@@ -356,33 +333,22 @@ class ExternalModule:
         params = param_call(callee=self, arg=arg, **kwargs)
         return ExternalModuleCall(module=self, params=params)
 
-    @property
-    def ports(self) -> dict:
-        return {p.name: p for p in self.port_list}
-
-    def _qualname(self) -> Optional[str]:
-        return _qualname(self)
-
     def __eq__(self, other: "ExternalModule") -> bool:
         if not isinstance(other, ExternalModule):
             return NotImplemented
         if self.name is None or other.name is None:
             raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
-        return self._qualname() == other._qualname()
+        return _qualname(self) == _qualname(other)
 
     def __hash__(self):
         if self.name is None:
             raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
-        return hash(self._qualname())
+        return hash(_qualname(self))
 
     def __getstate__(self):
         if self.name is None:
             raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
-        return self._qualname()
-
-    @property
-    def Params(self) -> Type:
-        return self.paramtype
+        return _qualname(self)
 
 
 @calls_instantiate
@@ -414,6 +380,53 @@ class ExternalModuleCall:
 
 Many of which could be methods, but are generally kept here to prevent expanding the `Module` namespace.
 """
+
+
+def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
+    """Internal `Module.add` and `Module.__setattr__` implementation. Primarily sort `val` into one of our type-based containers.
+    Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
+
+    if isinstance(val, Signal):
+        module.namespace[val.name] = val
+        if val.vis == Visibility.PORT:
+            module.ports[val.name] = val
+        else:
+            module.signals[val.name] = val
+    elif isinstance(val, Instance):
+        module.instances[val.name] = val
+        module.namespace[val.name] = val
+    elif isinstance(val, InstanceArray):
+        module.instarrays[val.name] = val
+        module.namespace[val.name] = val
+    elif isinstance(val, InstanceBundle):
+        module.instbundles[val.name] = val
+        module.namespace[val.name] = val
+    elif isinstance(val, BundleInstance):
+        module.bundles[val.name] = val
+        module.namespace[val.name] = val
+    else:
+        # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
+        # Nonetheless gotta raise an error if we get here, somehow.
+        _attr_type_error(val)
+
+    # Give it a reference to us.
+    #
+    # ## Note:
+    # Parent-testing *can* be done here instead of at elaboration time.
+    # It's not clear that this would be a good idea though.
+    # Attributes which are *copied* (for example) keep the `_parent_module` member, which is often helpful to just over-write.
+    # Nonetheless if "setattr-time" failure is desired, this is where it will go:
+    #
+    # _parent = getattr(val, "_parent_module", None) # Note many attributes will not have this member, until this assignment.
+    # if _parent is not None and _parent is not module:
+    #     msg = f"{val.name} being added to {module} already has a parent-module {val._parent_module}"
+    #     raise RuntimeError(msg)
+    #
+    # Ok, now actually give it a reference to us:
+    val._parent_module = module
+
+    # And return our newly-added attribute
+    return val
 
 
 def _qualname(mod: Union[Module, ExternalModule]) -> Optional[str]:
