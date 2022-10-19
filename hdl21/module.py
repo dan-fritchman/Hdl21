@@ -5,33 +5,28 @@ The `Module` module (get it?)
 This module primarily defines: 
 * The core circuit-reuse element `hdl21.Module` 
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
-* `ExternalModule`, the abstract interface to blocks defined outside Hdl21 
 """
 
-from typing import Any, Optional, List, Union, Type, Dict
-from pydantic.dataclasses import dataclass
+from typing import Any, Optional, Union
 
 # Local imports
-from .default import Default
-from .call import param_call
 from .source_info import source_info, SourceInfo
 from .attrmagic import init
-from .params import HasNoParams, isparamclass
 from .signal import Signal, Visibility
 from .instance import (
     calls_instantiate,
-    _Instance,
     Instance,
     InstanceArray,
     InstanceBundle,
 )
 from .bundle import BundleInstance
-
+from .qualname import qualname_magic_methods
 
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, _Instance, BundleInstance]
+ModuleAttr = Union[Signal, Instance, InstanceArray, InstanceBundle, BundleInstance]
 
 
+@qualname_magic_methods
 @calls_instantiate
 @init
 class Module:
@@ -73,8 +68,6 @@ class Module:
 
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._importpath = None  # Optional field set by importers
-        self._moduledata = None  # Optional[ModuleData]
-        self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
         self._initialized = True
 
     """
@@ -204,23 +197,6 @@ class Module:
             return f"Module(name={self.name})"
         return f"Module(_anon_)"
 
-    def __eq__(self, other: "Module") -> bool:
-        if not isinstance(other, Module):
-            return NotImplemented
-        if self.name is None or other.name is None:
-            raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
-        return _qualname(self) == _qualname(other)
-
-    def __hash__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
-        return hash(_qualname(self))
-
-    def __getstate__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
-        return _qualname(self)
-
 
 def module(cls: type) -> Module:
     """
@@ -279,102 +255,6 @@ def module(cls: type) -> Module:
     return module
 
 
-@dataclass
-class ExternalModule:
-    """
-    # External Module
-
-    Wrapper for circuits defined outside Hdl21, such as:
-    * Inclusion of existing SPICE or Verilog netlists
-    * Foundry or technology-specific primitives
-
-    Unlike `Modules`, `ExternalModules` include parameters to support legacy HDLs.
-    Said parameters may only take on a limited number of datatypes, and may not be nested.
-    Each `ExternalModule` stores a parameter-type field `paramtype`.
-    Parameter types may be either `hdl21.paramclass`es or the built-in `dict`.
-    Parameter-values are checked to be instances of `paramtype` at creation time.
-    """
-
-    name: str  # Module name. Used *directly* when exporting.
-    port_list: List[Signal]  # Ordered Ports
-    paramtype: Type = HasNoParams  # Parameter-type `paramclass`
-    desc: Optional[str] = None  # Description
-    domain: Optional[str] = None  # Domain name, for references upon export
-
-    @property
-    def ports(self) -> dict:
-        return {p.name: p for p in self.port_list}
-
-    @property
-    def Params(self) -> Type:
-        return self.paramtype
-
-    def __post_init__(self):
-        # Check for a valid parameter-type
-        if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
-            msg = f"Invalid parameter type {self.paramtype} for {self}. "
-            msg += "Param types must be either `@paramclass`es or `dict`."
-            raise ValueError(msg)
-
-        # Internal tracking data: defining module/import-path
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
-        self._importpath = None
-
-    def __post_init_post_parse__(self):
-        """After type-checking, do some more checks on values"""
-        for p in self.port_list:
-            if not p.name:
-                raise ValueError(f"Unnamed Primitive Port {p} for {self.name}")
-            if p.vis != Visibility.PORT:
-                msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
-                raise ValueError(msg)
-
-    def __call__(self, arg: Any = Default, **kwargs) -> "ExternalModuleCall":
-        params = param_call(callee=self, arg=arg, **kwargs)
-        return ExternalModuleCall(module=self, params=params)
-
-    def __eq__(self, other: "ExternalModule") -> bool:
-        if not isinstance(other, ExternalModule):
-            return NotImplemented
-        if self.name is None or other.name is None:
-            raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
-        return _qualname(self) == _qualname(other)
-
-    def __hash__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
-        return hash(_qualname(self))
-
-    def __getstate__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
-        return _qualname(self)
-
-
-@calls_instantiate
-@dataclass
-class ExternalModuleCall:
-    """# External Module Call
-    A combination of an `ExternalModule` and its Parameter-values, typically generated by calling the `ExternalModule`."""
-
-    module: ExternalModule
-    params: Any
-
-    def __post_init_post_parse__(self):
-        # Type-validate our parameters
-        if not isinstance(self.params, self.module.paramtype):
-            msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"
-            raise TypeError(msg)
-
-    @property
-    def name(self) -> Optional[str]:
-        return self.module.name
-
-    @property
-    def ports(self) -> dict:
-        return self.module.ports
-
-
 """ 
 (Python) Module-Level Functions
 
@@ -429,29 +309,6 @@ def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
     return val
 
 
-def _qualname(mod: Union[Module, ExternalModule]) -> Optional[str]:
-    """# Qualified Name
-    Helper for exporting. Returns a module's path-qualified name.
-    This is generally one of a few things:
-    * If "normally" defined via Python code, it's the Python module path plus the module name.
-    * If *imported*, it's the path inferred during import."""
-
-    if mod._importpath is not None:
-        # Imported. Return the period-separated import path.
-        return ".".join(mod._importpath)
-
-    if mod.name is None:
-        # Unnamed. Return None.
-        return None
-
-    if mod._source_info.pymodule is None:
-        # Defined in a non-Python context. Return the Module's name, without any path qualifiers.
-        return mod.name
-
-    # Defined the old fashioned way. Use the Python module name.
-    return mod._source_info.pymodule.__name__ + "." + mod.name
-
-
 def _is_module_attr(val: Any) -> bool:
     """Boolean indication of whether `val` is a valid `hdl21.Module` attribute."""
     return isinstance(val, ModuleAttr.__args__)
@@ -468,6 +325,7 @@ def _attr_type_error(m: Module, val: Any) -> None:
 
     # Give more specific error-messages for our common types.
     # Especially those that are easily confused, e.g. all the `Call` types, `Module`s, and `Instance`s thereof.
+    from .external_module import ExternalModule, ExternalModuleCall
     from .generator import Generator, GeneratorCall
     from .primitives import Primitive, PrimitiveCall
 
@@ -482,4 +340,4 @@ def _attr_type_error(m: Module, val: Any) -> None:
     raise TypeError(msg)
 
 
-__all__ = ["module", "Module", "ExternalModule", "ExternalModuleCall"]
+__all__ = ["module", "Module"]

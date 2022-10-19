@@ -6,7 +6,8 @@ and thus supports its "connect by call" and "connect by assigment" semantics.
 import copy
 from typing import Any, Union, Dict
 
-from .module import Module, ExternalModuleCall
+from .module import Module
+from .external_module import ExternalModuleCall
 from .generator import GeneratorCall
 from .primitives import PrimitiveCall
 
@@ -22,15 +23,19 @@ def is_instantiable(val: Any) -> bool:
 
 def qualname(i: Instantiable) -> str:
     """Path-qualified name of Instantiable `i`"""
-    from .module import _qualname as module_qualname
+    from .qualname import qualname as module_qualname
 
-    if isinstance(i, Module):
-        return module_qualname(i)
-    if isinstance(i, GeneratorCall):
-        return module_qualname(i.result)
-    if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
+    if isinstance(i, PrimitiveCall):
         # These have no "qualification" paths, just a singular name.
         return i.name
+
+    # The other variants can have a path-qualifier
+    if isinstance(i, Module):
+        return module_qualname(i)
+    if isinstance(i, ExternalModuleCall):
+        return module_qualname(i.module)
+    if isinstance(i, GeneratorCall):
+        return module_qualname(i.result)
     raise TypeError
 
 
@@ -48,4 +53,4 @@ def io(i: Instantiable) -> Dict[str, "Connectable"]:
     return rv
 
 
-__all__ = ["Instantiable", "is_instantiable", "qualname", "io"]
+__all__ = ["Instantiable", "is_instantiable"]

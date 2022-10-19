@@ -11,7 +11,8 @@ import vlsir.circuit_pb2 as vckt
 
 # HDL
 from ..prefix import Prefix, Prefixed
-from ..module import Module, ExternalModule
+from ..module import Module
+from ..external_module import ExternalModule
 from ..instance import Instance
 from ..signal import Signal, PortDir, Visibility
 from ..slice import Slice
@@ -156,10 +157,7 @@ class ProtoImporter:
                 target = import_vlsir_primitive(ref.external)
                 params = target.Params(**params)
 
-            elif ref.external.domain in (
-                "hdl21.primitives",
-                "hdl21.ideal",
-            ):
+            elif ref.external.domain in ("hdl21.primitives", "hdl21.ideal",):
                 # Retrieve the Primitive from `hdl21.primitives`, and convert its parameters
                 target = import_hdl21_primitive(ref.external)
                 params = target.Params(**params)

@@ -181,7 +181,9 @@ def hdl21_naming_encoder(obj: Any) -> Any:
     see `hdl21.to_proto` for this. This JSON-ization is just good enough
     to enable unique naming of Hdl-object-value parameters."""
 
-    from .module import Module, ExternalModule, ExternalModuleCall, _qualname as module_qualname
+    from .module import Module
+    from .qualname import qualname as module_qualname
+    from .external_module import ExternalModule, ExternalModuleCall
     from .instance import Instance
     from .generator import Generator, GeneratorCall
 

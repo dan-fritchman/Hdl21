@@ -419,16 +419,20 @@ def test_module_as_param():
     @h.paramclass
     class HasModuleParam:
         m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")
+        e = h.Param(
+            dtype=h.ExternalModule, desc="An `ExternalModule` provided as a parameter"
+        )
 
     @h.generator
     def UsesModuleParam(params: HasModuleParam) -> h.Module:
         return params.m  # Returns the Module unmodified
 
-    Empty = h.Module(name="Empty")
-    p = HasModuleParam(m=Empty)
+    Mod = h.Module(name="Mod")
+    Emod = h.ExternalModule(name="Emod", port_list=[])
+    p = HasModuleParam(m=Mod, e=Emod)
     m = UsesModuleParam(p)
     m = h.elaborate(m)
-    assert m == Empty
+    assert m == Mod
 
 
 def test_instance_mult():
@@ -887,11 +891,7 @@ def test_instance_array_portrefs():
     """Test Instance Arrays connected by port-references"""
 
     Inv = h.ExternalModule(
-        name="Inv",
-        port_list=[
-            h.Input(name="i"),
-            h.Output(name="z"),
-        ],
+        name="Inv", port_list=[h.Input(name="i"), h.Output(name="z"),],
     )
 
     m = h.Module(name="TestArrayPortRef")

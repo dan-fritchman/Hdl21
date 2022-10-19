@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 # Local imports
-from ...module import Module, ExternalModuleCall
+from ...module import Module
+from ...external_module import ExternalModuleCall
 from ...instance import _Instance, Instance, InstanceArray, InstanceBundle
 from ...primitives import PrimitiveCall
 from ...bundle import BundleInstance

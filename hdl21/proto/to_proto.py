@@ -26,12 +26,9 @@ import vlsir.circuit_pb2 as vckt
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
 from ..elab import Elaboratables, elaborate
-from ..module import (
-    Module,
-    ExternalModule,
-    ExternalModuleCall,
-    _qualname as module_qualname,
-)
+from ..module import Module
+from ..qualname import qualname as module_qualname
+from ..external_module import ExternalModule, ExternalModuleCall
 from ..instance import Instance
 from ..signal import Signal, Port, PortDir
 from ..slice import Slice
