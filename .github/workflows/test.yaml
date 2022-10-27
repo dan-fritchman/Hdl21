@@ -9,48 +9,47 @@ on:
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
 
-    # Notes on this matrix, particularly the dependencies part: 
-    # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub. 
-    # This is particularly relevant for VLSIR, which is often co-developed. 
-    # Not every version of Hdl21 is designed to work with both. 
-    # Eventually this should know which *should* work. 
-    # For now it asserts that the dev-mode passes, and allows failer (`continue-on-error`) for the PyPi version. 
+    # Notes on this matrix, particularly the dependencies part:
+    # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub.
+    # This is particularly relevant for VLSIR, which is often co-developed.
+    # Not every version of Hdl21 is designed to work with both.
+    # Eventually this should know which *should* work.
+    # For now it asserts that the dev-mode passes, and allows failer (`continue-on-error`) for the PyPi version.
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10'] 
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
         dep-installer: ["dev", "pypi"]
-    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.10' }}
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install dependencies
-      run: bash .github/install-${{ matrix.dep-installer }}.sh
+      - uses: actions/checkout@v2
 
-    - name: Test with pytest
-      run: |
-        pytest -sv --cov=./ --cov-report=xml
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Black Formatting Check 
-      uses: psf/black@stable
-      with:
-        version: "22.6"
+      - name: Install dependencies
+        run: bash scripts/install-${{ matrix.dep-installer }}.sh
 
-    - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
-      uses: codecov/codecov-action@v1
-      with:
-        files: ./coverage.xml 
-        env_vars: OS,PYTHON
-        name: codecov-umbrella
-        fail_ci_if_error: true
-        path_to_write_report: ./coverage/codecov_report.txt
-        verbose: true
+      - name: Test with pytest
+        run: |
+          pytest -sv --cov=./ --cov-report=xml
+
+      - name: Black Formatting Check
+        uses: psf/black@stable
+        with:
+          version: "22.6"
+
+      - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
+        uses: codecov/codecov-action@v1
+        with:
+          files: ./coverage.xml
+          env_vars: OS,PYTHON
+          name: codecov-umbrella
+          fail_ci_if_error: true
+          path_to_write_report: ./coverage/codecov_report.txt
+          verbose: true

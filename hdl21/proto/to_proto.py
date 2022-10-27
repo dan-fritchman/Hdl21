@@ -26,7 +26,9 @@ import vlsir.circuit_pb2 as vckt
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
 from ..elab import Elaboratables, elaborate
-from ..module import Module, ExternalModule, ExternalModuleCall
+from ..module import Module
+from ..qualname import qualname as module_qualname
+from ..external_module import ExternalModule, ExternalModuleCall
 from ..instance import Instance
 from ..signal import Signal, Port, PortDir
 from ..slice import Slice
@@ -84,7 +86,7 @@ class ProtoExporter:
         """Create and return a unique `QualifiedName` for Module `module`.
         Raises a `RuntimeError` if unique name is taken."""
 
-        mname = module._qualname()
+        mname = module_qualname(module)
         if mname in self.module_names:
             conflict = self.module_names[mname]
             raise RuntimeError(
@@ -175,7 +177,7 @@ class ProtoExporter:
             if isinstance(inst._resolved, PrimitiveCall):
                 # Create a reference to one of the `primitive` namespaces
                 if call.prim.primtype == PrimitiveType.PHYSICAL:
-                    # FIXME: also expose the `hdl21.primitives` as a VLSIR package
+                    # FIXME: #54 also expose the `hdl21.primitives` as a VLSIR package
                     pinst.module.external.domain = "hdl21.primitives"
                     pinst.module.external.name = call.prim.name
                     params = dictify_params(call.params)

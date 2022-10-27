@@ -11,7 +11,8 @@ import vlsir.circuit_pb2 as vckt
 
 # HDL
 from ..prefix import Prefix, Prefixed
-from ..module import Module, ExternalModule
+from ..module import Module
+from ..external_module import ExternalModule
 from ..instance import Instance
 from ..signal import Signal, PortDir, Visibility
 from ..slice import Slice

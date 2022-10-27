@@ -3,35 +3,31 @@
 The `Module` module (get it?)
 
 This module primarily defines: 
-* The core circuit-reuse element `hdl21.Module`. 
+* The core circuit-reuse element `hdl21.Module` 
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 
-# from typing import Any, Optional, List, Union, get_args, Type, Dict
-from typing import Any, Optional, List, Union, Type, Dict
-from pydantic.dataclasses import dataclass
+from inspect import isclass
+from typing import Any, Optional, Union, List
 
 # Local imports
-from .default import Default
-from .call import param_call
 from .source_info import source_info, SourceInfo
 from .attrmagic import init
-from .params import HasNoParams, isparamclass
 from .signal import Signal, Visibility
 from .instance import (
     calls_instantiate,
-    _Instance,
     Instance,
     InstanceArray,
     InstanceBundle,
 )
 from .bundle import BundleInstance
-
+from .qualname import qualname_magic_methods
 
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, _Instance, BundleInstance]
+ModuleAttr = Union[Signal, Instance, InstanceArray, InstanceBundle, BundleInstance]
 
 
+@qualname_magic_methods
 @calls_instantiate
 @init
 class Module:
@@ -62,7 +58,16 @@ class Module:
     """
 
     def __init__(self, *, name: Optional[str] = None):
+        if name is not None and not isinstance(name, str):
+            # Something wrong with this `name`.
+            # Most common case: confusion with the `module` decorator.
+            if isclass(name):
+                msg = f"Module name {name} is a class. Did you mean to use the `module` decorator?"
+            else:
+                msg = f"Invalid Module name {name}, must be a string"
+            raise TypeError(msg)
         self.name = name
+
         self.ports = dict()
         self.signals = dict()
         self.instances = dict()
@@ -73,43 +78,21 @@ class Module:
 
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._importpath = None  # Optional field set by importers
-        self._moduledata = None  # Optional[ModuleData]
-        self._updated = True  # Flag indicating whether we've been updated since creating `_moduledata`
         self._initialized = True
 
-    def __setattr__(self, key: str, val: Any) -> None:
-        """Set-attribute over-ride, organizing into type-based containers"""
+    """
+    The public `Module` API. Just `add` and `get`. (FIXME: eventually.)
+    
+    `Module`s are generally used and thought of as arbitrary HDL objects. For example: 
+    ```python
+    m = Module(name="MyModule")
+    m.i = h.Input()
+    m.q = AnotherModule(i=m.i)
+    ```
 
-        if key.startswith("_") or not getattr(self, "_initialized", False):
-            # Bootstrapping phase. Pass along to "regular" setattr.
-            return super().__setattr__(key, val)
-
-        # Protected attrs - the internal dict-names
-        banned = [
-            "ports",
-            "signals",
-            "instances",
-            "instarrays",
-            "instbundles",
-            "bundles",
-            "namespace",
-            "add",
-            "get",
-        ]
-        if key in banned:
-            msg = f"Error attempting to over-write protected attribute {key} of Module {self}"
-            raise RuntimeError(msg)
-        # Special case(s)
-        if key == "name":
-            return super().__setattr__(key, val)
-
-        # Check it's a valid attribute-type
-        _assert_module_attr(self, val)
-
-        # Checks out! Name `val` and add it to our type-based containers.
-        val.name = key
-        self._add(val)
-        return None
+    To keep the space of valid names for post-fix dot access as large as possible, 
+    the `Module` class namespace is kept *as small* as possible. 
+    """
 
     def add(self, val: ModuleAttr, *, name: Optional[str] = None) -> ModuleAttr:
         """Add a Module attribute.
@@ -146,53 +129,7 @@ class Module:
 
         # Now `val.name` is set appropriately.
         # Add it to our type-based containers, and return it.
-        return self._add(val)
-
-    def _add(self, val: ModuleAttr) -> ModuleAttr:
-        """Internal `add` and `setattr` implementation. Primarily sort `val` into one of our type-based containers.
-        Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
-
-        if isinstance(val, Signal):
-            self.namespace[val.name] = val
-            if val.vis == Visibility.PORT:
-                self.ports[val.name] = val
-            else:
-                self.signals[val.name] = val
-        elif isinstance(val, Instance):
-            self.instances[val.name] = val
-            self.namespace[val.name] = val
-        elif isinstance(val, InstanceArray):
-            self.instarrays[val.name] = val
-            self.namespace[val.name] = val
-        elif isinstance(val, InstanceBundle):
-            self.instbundles[val.name] = val
-            self.namespace[val.name] = val
-        elif isinstance(val, BundleInstance):
-            self.bundles[val.name] = val
-            self.namespace[val.name] = val
-        else:
-            # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
-            # Nonetheless gotta raise an error if we get here, somehow.
-            self._attr_type_error(val)
-
-        # Give it a reference to us.
-        #
-        # ## Note:
-        # Parent-testing *can* be done here instead of at elaboration time.
-        # It's not clear that this would be a good idea though.
-        # Attributes which are *copied* (for example) keep the `_parent_module` member, which is often helpful to just over-write.
-        # Nonetheless if "setattr-time" failure is desired, this is where it will go:
-        #
-        # _parent = getattr(val, "_parent_module", None) # Note many attributes will not have this member, until this assignment.
-        # if _parent is not None and _parent is not self:
-        #     msg = f"{val.name} being added to {self} already has a parent-module {val._parent_module}"
-        #     raise RuntimeError(msg)
-        #
-        # Ok, now actually give it a reference to us:
-        val._parent_module = self
-
-        # And return our newly-added attribute
-        return val
+        return _add(module=self, val=val)
 
     def get(self, name: str) -> Optional[ModuleAttr]:
         """Get module-attribute `name`. Returns `None` if not present.
@@ -200,6 +137,38 @@ class Module:
         from the HDL namespace-worth of `ModuleAttr`s."""
         ns = self.__getattribute__("namespace")
         return ns.get(name, None)
+
+    @property
+    def bundle_ports(self) -> dict:
+        """Port-Exposed Bundle Instances"""
+        # FIXME: this shall be kicked out of the `Module` class and namespace
+        return {name: bundle for name, bundle in self.bundles.items() if bundle.port}
+
+    """
+    Special Methods
+    """
+
+    def __setattr__(self, key: str, val: Any) -> None:
+        """Set-attribute over-ride, organizing into type-based containers"""
+
+        if key.startswith("_") or not getattr(self, "_initialized", False):
+            # Bootstrapping phase. Pass along to "regular" setattr.
+            return super().__setattr__(key, val)
+
+        if key in _banned:
+            msg = f"Error attempting to over-write protected attribute {key} of Module {self}"
+            raise RuntimeError(msg)
+        # Special case(s)
+        if key == "name":
+            return super().__setattr__(key, val)
+
+        # Check it's a valid attribute-type
+        _assert_module_attr(self, val)
+
+        # Checks out! Name `val` and add it to our type-based containers.
+        val.name = key
+        _add(module=self, val=val)
+        return None
 
     def __getattr__(self, key: str) -> Any:
         """Include our namespace-worth of HDL objects in dot-access retrievals"""
@@ -210,6 +179,12 @@ class Module:
             return ns[key]
         return object.__getattribute__(self, key)
 
+    def __delattr__(self, __name: str) -> None:
+        """Disable attribute deletion.
+        This may be enabled some day, but until unwinding any dependencies is not allowed."""
+        msg = f"Cannot delete Module attribute {__name} of {self}"
+        raise RuntimeError(msg)
+
     def __init_subclass__(cls, *_, **__):
         """Sub-Classing Disable-ization"""
         msg = f"Error attempting to create {cls.__name__}. Sub-Typing {cls} is not supported."
@@ -219,38 +194,6 @@ class Module:
         if self.name:
             return f"Module(name={self.name})"
         return f"Module(_anon_)"
-
-    @property
-    def bundle_ports(self) -> dict:
-        """Port-Exposed Bundle Instances"""
-        return {name: bundle for name, bundle in self.bundles.items() if bundle.port}
-
-    @property
-    def io(self) -> dict:
-        """Combined Dictionary of `Signal`-valued and `Bundle`-valued ports"""
-        rv = self.bundle_ports
-        rv.update(self.ports)
-        return rv
-
-    def _qualname(self) -> Optional[str]:
-        return _qualname(self)
-
-    def __eq__(self, other: "Module") -> bool:
-        if not isinstance(other, Module):
-            return NotImplemented
-        if self.name is None or other.name is None:
-            raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
-        return self._qualname() == other._qualname()
-
-    def __hash__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
-        return hash(self._qualname())
-
-    def __getstate__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
-        return self._qualname()
 
 
 def module(cls: type) -> Module:
@@ -289,124 +232,31 @@ def module(cls: type) -> Module:
     These temporary variables are *not* propagated along as members of the `Module`.
     """
 
+    if not isclass(cls):
+        msg = f"Error attempting to create {cls.__name__}. @module can only decorate classes."
+        raise RuntimeError(msg)
+
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.module inheriting from {cls.__bases__}")
 
     # Create the Module object
     module = Module(name=cls.__name__)
 
-    dunders = dict()
-    unders = dict()
+    # Any class-body content that isn't a `ModuleAttr` will be "forgotten" from the `Module` definition.
+    # This can nonetheless be handy for defining intermediate values upon which the ultimate Module attributes depend.
+    forgetme: List[Any] = list()
 
     # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the bundle
     for key, val in cls.__dict__.items():
-        if key.startswith("__"):
-            dunders[key] = val
-        elif key.startswith("_"):
-            unders[key] = val
-        else:
+        if key in _banned:
+            raise RuntimeError(f"Invalid field name {key} in Module {module.name}")
+        elif _is_module_attr(val):
             setattr(module, key, val)
+        else:  # Add to the forget-list
+            forgetme.append(val)
+
     # And return the Module
     return module
-
-
-@dataclass
-class ExternalModule:
-    """
-    # External Module
-
-    Wrapper for circuits defined outside Hdl21, such as:
-    * Inclusion of existing SPICE or Verilog netlists
-    * Foundry or technology-specific primitives
-
-    Unlike `Modules`, `ExternalModules` include parameters to support legacy HDLs.
-    Said parameters may only take on a limited number of datatypes, and may not be nested.
-    Each `ExternalModule` stores a parameter-type field `paramtype`.
-    Parameter types may be either `hdl21.paramclass`es or the built-in `dict`.
-    Parameter-values are checked to be instances of `paramtype` at creation time.
-    """
-
-    name: str  # Module name. Used *directly* when exporting.
-    port_list: List[Signal]  # Ordered Ports
-    paramtype: Type = HasNoParams  # Parameter-type `paramclass`
-    desc: Optional[str] = None  # Description
-    domain: Optional[str] = None  # Domain name, for references upon export
-
-    def __post_init__(self):
-        # Check for a valid parameter-type
-        if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
-            msg = f"Invalid parameter type {self.paramtype} for {self}. "
-            msg += "Param types must be either `@paramclass`es or `dict`."
-            raise ValueError(msg)
-
-        # Internal tracking data: defining module/import-path
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
-        self._importpath = None
-
-    def __post_init_post_parse__(self):
-        """After type-checking, do some more checks on values"""
-        for p in self.port_list:
-            if not p.name:
-                raise ValueError(f"Unnamed Primitive Port {p} for {self.name}")
-            if p.vis != Visibility.PORT:
-                msg = f"Invalid Primitive Port {p.name} on {self.name}; must have PORT visibility"
-                raise ValueError(msg)
-
-    def __call__(self, arg: Any = Default, **kwargs) -> "ExternalModuleCall":
-        params = param_call(callee=self, arg=arg, **kwargs)
-        return ExternalModuleCall(module=self, params=params)
-
-    @property
-    def ports(self) -> dict:
-        return {p.name: p for p in self.port_list}
-
-    def _qualname(self) -> Optional[str]:
-        return _qualname(self)
-
-    def __eq__(self, other: "ExternalModule") -> bool:
-        if not isinstance(other, ExternalModule):
-            return NotImplemented
-        if self.name is None or other.name is None:
-            raise RuntimeError(f"Cannot invoke equality on unnamed Module {self}")
-        return self._qualname() == other._qualname()
-
-    def __hash__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke hashing on unnamed Module {self}")
-        return hash(self._qualname())
-
-    def __getstate__(self):
-        if self.name is None:
-            raise RuntimeError(f"Cannot invoke pickling on unnamed Module {self}")
-        return self._qualname()
-
-    @property
-    def Params(self) -> Type:
-        return self.paramtype
-
-
-@calls_instantiate
-@dataclass
-class ExternalModuleCall:
-    """# External Module Call
-    A combination of an `ExternalModule` and its Parameter-values, typically generated by calling the `ExternalModule`."""
-
-    module: ExternalModule
-    params: Any
-
-    def __post_init_post_parse__(self):
-        # Type-validate our parameters
-        if not isinstance(self.params, self.module.paramtype):
-            msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"
-            raise TypeError(msg)
-
-    @property
-    def name(self) -> Optional[str]:
-        return self.module.name
-
-    @property
-    def ports(self) -> dict:
-        return self.module.ports
 
 
 """ 
@@ -416,27 +266,66 @@ Many of which could be methods, but are generally kept here to prevent expanding
 """
 
 
-def _qualname(mod: Union[Module, ExternalModule]) -> Optional[str]:
-    """# Qualified Name
-    Helper for exporting. Returns a module's path-qualified name.
-    This is generally one of a few things:
-    * If "normally" defined via Python code, it's the Python module path plus the module name.
-    * If *imported*, it's the path inferred during import."""
+# Protected Module attribute names
+_banned = [
+    "ports",
+    "signals",
+    "instances",
+    "instarrays",
+    "instbundles",
+    "bundles",
+    "namespace",
+    "add",
+    "get",
+]
 
-    if mod._importpath is not None:
-        # Imported. Return the period-separated import path.
-        return ".".join(mod._importpath)
 
-    if mod.name is None:
-        # Unnamed. Return None.
-        return None
+def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
+    """Internal `Module.add` and `Module.__setattr__` implementation.
+    Primarily sort `val` into one of our type-based containers.
+    Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
 
-    if mod._source_info.pymodule is None:
-        # Defined in a non-Python context. Return the Module's name, without any path qualifiers.
-        return mod.name
+    if isinstance(val, Signal):
+        module.namespace[val.name] = val
+        if val.vis == Visibility.PORT:
+            module.ports[val.name] = val
+        else:
+            module.signals[val.name] = val
+    elif isinstance(val, Instance):
+        module.instances[val.name] = val
+        module.namespace[val.name] = val
+    elif isinstance(val, InstanceArray):
+        module.instarrays[val.name] = val
+        module.namespace[val.name] = val
+    elif isinstance(val, InstanceBundle):
+        module.instbundles[val.name] = val
+        module.namespace[val.name] = val
+    elif isinstance(val, BundleInstance):
+        module.bundles[val.name] = val
+        module.namespace[val.name] = val
+    else:
+        # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
+        # Nonetheless gotta raise an error if we get here, somehow.
+        _attr_type_error(val)
 
-    # Defined the old fashioned way. Use the Python module name.
-    return mod._source_info.pymodule.__name__ + "." + mod.name
+    # Give it a reference to us.
+    #
+    # ## Note:
+    # Parent-testing *can* be done here instead of at elaboration time.
+    # It's not clear that this would be a good idea though.
+    # Attributes which are *copied* (for example) keep the `_parent_module` member, which is often helpful to just over-write.
+    # Nonetheless if "setattr-time" failure is desired, this is where it will go:
+    #
+    # _parent = getattr(val, "_parent_module", None) # Note many attributes will not have this member, until this assignment.
+    # if _parent is not None and _parent is not module:
+    #     msg = f"{val.name} being added to {module} already has a parent-module {val._parent_module}"
+    #     raise RuntimeError(msg)
+    #
+    # Ok, now actually give it a reference to us:
+    val._parent_module = module
+
+    # And return our newly-added attribute
+    return val
 
 
 def _is_module_attr(val: Any) -> bool:
@@ -455,6 +344,7 @@ def _attr_type_error(m: Module, val: Any) -> None:
 
     # Give more specific error-messages for our common types.
     # Especially those that are easily confused, e.g. all the `Call` types, `Module`s, and `Instance`s thereof.
+    from .external_module import ExternalModule, ExternalModuleCall
     from .generator import Generator, GeneratorCall
     from .primitives import Primitive, PrimitiveCall
 
@@ -469,4 +359,4 @@ def _attr_type_error(m: Module, val: Any) -> None:
     raise TypeError(msg)
 
 
-__all__ = ["module", "Module", "ExternalModule", "ExternalModuleCall"]
+__all__ = ["module", "Module"]

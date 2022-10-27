@@ -419,16 +419,20 @@ def test_module_as_param():
     @h.paramclass
     class HasModuleParam:
         m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")
+        e = h.Param(
+            dtype=h.ExternalModule, desc="An `ExternalModule` provided as a parameter"
+        )
 
     @h.generator
     def UsesModuleParam(params: HasModuleParam) -> h.Module:
         return params.m  # Returns the Module unmodified
 
-    Empty = h.Module(name="Empty")
-    p = HasModuleParam(m=Empty)
+    Mod = h.Module(name="Mod")
+    Emod = h.ExternalModule(name="Emod", port_list=[])
+    p = HasModuleParam(m=Mod, e=Emod)
     m = UsesModuleParam(p)
     m = h.elaborate(m)
-    assert m == Empty
+    assert m == Mod
 
 
 def test_instance_mult():
@@ -581,11 +585,11 @@ def test_illegal_module_attrs():
     with pytest.raises(TypeError):
         m.a = list()
 
-    with pytest.raises(TypeError):
-
-        @h.module
-        class M:
-            a = list()
+    @h.module
+    class M:
+        # This version works as of v2.0, since it makes `a`
+        # easier to refer to, e.g. as part of an instance parameter.
+        a = list()
 
     @h.module
     class C:
@@ -607,12 +611,14 @@ def test_illegal_module_attrs():
         m.p = (h.Input(), h.Output())
     with pytest.raises(TypeError):
         m.func = lambda _: None
-    with pytest.raises(TypeError):
 
-        @h.module
-        class HasMethod:
-            def fail(self):
-                ...
+    # As of v2.0 this is allowed, although `fail` does not show up on the resultant `Module`.
+    @h.module
+    class HasMethod:
+        def fail(self):
+            ...
+
+    assert not hasattr(HasMethod, "fail")
 
 
 def test_copy_signal():
@@ -696,15 +702,22 @@ def test_orphanage4():
         h.elaborate(m2)
 
 
-@pytest.mark.xfail(reason="#6 https://github.com/dan-fritchman/Hdl21/issues/6")
 def test_wrong_decorator():
-    """Mistake `Module` for `module`"""
+    """Mistake `Module` for `module` and vice versa"""
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
 
         @h.Module  # Bad!
         class M:
             ...
+
+    with pytest.raises(TypeError):
+
+        h.Module(2)  # Bad!
+
+    with pytest.raises(TypeError):
+        ok = h.Module("ok")  # OK
+        h.Module(ok)  # Bad!
 
 
 def test_elab_noconn():

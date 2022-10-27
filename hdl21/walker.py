@@ -7,7 +7,8 @@ from typing import List
 
 # Local imports
 from .elab import Elaboratables
-from .module import Module, ExternalModuleCall
+from .module import Module
+from .external_module import ExternalModuleCall
 from .instance import Instance
 from .primitives import PrimitiveCall
 from .bundle import BundleInstance

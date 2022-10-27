@@ -204,24 +204,16 @@ class ResolvePortRefs(Elaborator):
 
     def create_source(self, module: Module, group: List[PortRef]) -> PortType:
         """Create a new `Signal`, parametrized and named to connect to the `PortRef`s in `group`."""
+        from ...instantiable import io
 
         # Sort out which PortRef to use for the new signal name.
         portref = self.which_portref_to_name(group)
-        signame = self.flatname(
-            segments=[f"{portref.inst.name}_{portref.portname}"],
-            avoid=module.namespace,
-        )
 
         # Get its Module for its IO
         # Note if the other entries in `group` have incompatible IO, this will be flagged by a later pass.
-        portrefs_module = portref.inst._resolved
+        ios = io(portref.inst._resolved)
 
-        # FIXME: make this `io` method Module-like-wide
-        io = copy.copy(portrefs_module.ports)
-        if hasattr(portrefs_module, "bundle_ports"):
-            io.update(copy.copy(portrefs_module.bundle_ports))
-
-        port = io.get(portref.portname, None)
+        port = ios.get(portref.portname, None)
         if port is None:  # Clone it, and remove any Port-attributes
             msg = f"Invalid port `{portref.portname}` on Instance `{portref.inst.name}` in Module `{module.name}`"
             self.fail(msg)
@@ -230,6 +222,10 @@ class ResolvePortRefs(Elaborator):
         sig = self.copy_port(port)
 
         # Rename it and add it to the Module namespace
+        signame = self.flatname(
+            segments=[f"{portref.inst.name}_{portref.portname}"],
+            avoid=module.namespace,
+        )
         sig.name = signame
         module.add(sig)
         return sig

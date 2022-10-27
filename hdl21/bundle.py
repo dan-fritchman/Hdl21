@@ -243,6 +243,9 @@ def bundle(cls: type) -> Bundle:
         rx = h.Signal(src=Roles.DEVICE, dest=Roles.HOST)
     ```
 
+    Bundle roles may be set by defining either a (lower case) `roles` or an
+    (upper case) `Roles` attribute within the class body.
+    In the resultant `Bundle` they will be accessible as either.
     """
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.bundle inheriting from {cls.__bases__}")
@@ -251,22 +254,22 @@ def bundle(cls: type) -> Bundle:
     bundle = Bundle(name=cls.__name__)
 
     protected_names = ["signals", "bundles"]
-    dunders = dict()
-    unders = dict()
+    # Any class-body content that isn't a `ModuleAttr` will be "forgotten" from the `Module` definition.
+    # This can nonetheless be handy for defining intermediate values upon which the ultimate Module attributes depend.
+    forgetme: List[Any] = list()
 
     # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the bundle
     for key, val in cls.__dict__.items():
         if key in protected_names:
             raise RuntimeError(f"Invalid field name {key} in bundle {cls}")
-        elif key.startswith("__"):
-            dunders[key] = val
-        elif key.startswith("_"):
-            unders[key] = val
-        elif key == "Roles":
+        elif key == "roles" or key == "Roles":
             # Special-case the upper-cased `Roles`, as it'll often be a class-def
             setattr(bundle, "roles", val)
-        else:
+        elif is_bundle_attr(val):
             setattr(bundle, key, val)
+        else:  # Add to the forget-list
+            forgetme.append(val)
+
     # And return the bundle
     return bundle
 
@@ -303,6 +306,12 @@ class AnonymousBundle:
         Note unlike Python built-ins such as `getattr`, `get` returns solely
         from the HDL namespace-worth of attributes."""
         return self._namespace.get(name, None)
+
+
+def bundlize(**kwargs) -> AnonymousBundle:
+    """# Bundle-ize
+    "Collect" a group of Signals and Bundle instances into an anonymous Bundle."""
+    return AnonymousBundle(**kwargs)
 
 
 @getattr_bundle_refs

@@ -34,6 +34,13 @@ setup(
         "pydantic==1.9.1",
     ],
     extras_require={
-        "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==22.6", "twine"]
+        "dev": [
+            "pytest==7.1",
+            "coverage",
+            "pytest-cov",
+            "pre-commit==2.20",
+            "black==22.6",
+            "twine",
+        ]
     },
 )

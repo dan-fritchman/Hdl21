@@ -16,7 +16,7 @@ Past methods, and associated lessons include:
 * `inspect.stack()` and `inspect.getmodule()` are REALLY slow. 
   * Versions of Hdl21 overusing these methods have observed them taking as much as 90% of elaboration time. 
   * `stack()` in particular does not abide the Python3 "everything is a generator" rule, and computes all stack-frames into a list upfront
-  * We still used `getmodule()` as a basis for (Hdl21) Module naming. But beware to limit its calls, and get rid of it if we can. 
+  * We still use `getmodule()` as a basis for (Hdl21) Module naming. But beware to limit its calls, and get rid of it if we can. 
 * Storing the `frame` object returned by `inspect.currentframe()` at creation time and referring back to it later, just doesn't work. 
   * The `frame` objects are mutated directly by the interpreter; the stack is lost essentially immediately. 
 
@@ -39,9 +39,7 @@ class SourceInfo:
     pymodule: Optional[ModuleType] = None
 
 
-def source_info(
-    get_pymodule: bool = False,
-) -> Optional[SourceInfo]:
+def source_info(get_pymodule: bool = False) -> Optional[SourceInfo]:
     """
     # Get Source Info
 
@@ -94,12 +92,18 @@ def get_files_to_skip():
     """Create the list of files to skip.
     Should only be run once, shortly after import-time."""
 
-    from . import _module_module, _generator_module, _instance_module
+    from . import (
+        _module_module,
+        _external_module_module,
+        _generator_module,
+        _instance_module,
+    )
 
     return set(
         [
-            __file__,
+            __file__,  # *This* file
             _module_module.__file__,
+            _external_module_module.__file__,
             _generator_module.__file__,
             _instance_module.__file__,
         ]
