@@ -7,7 +7,8 @@ This module primarily defines:
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 
-from typing import Any, Optional, Union
+from inspect import isclass
+from typing import Any, Optional, Union, List
 
 # Local imports
 from .source_info import source_info, SourceInfo
@@ -57,7 +58,16 @@ class Module:
     """
 
     def __init__(self, *, name: Optional[str] = None):
+        if name is not None and not isinstance(name, str):
+            # Something wrong with this `name`.
+            # Most common case: confusion with the `module` decorator.
+            if isclass(name):
+                msg = f"Module name {name} is a class. Did you mean to use the `module` decorator?"
+            else:
+                msg = f"Invalid Module name {name}, must be a string"
+            raise TypeError(msg)
         self.name = name
+
         self.ports = dict()
         self.signals = dict()
         self.instances = dict()
@@ -145,19 +155,7 @@ class Module:
             # Bootstrapping phase. Pass along to "regular" setattr.
             return super().__setattr__(key, val)
 
-        # Protected attrs - the internal dict-names
-        banned = [
-            "ports",
-            "signals",
-            "instances",
-            "instarrays",
-            "instbundles",
-            "bundles",
-            "namespace",
-            "add",
-            "get",
-        ]
-        if key in banned:
+        if key in _banned:
             msg = f"Error attempting to over-write protected attribute {key} of Module {self}"
             raise RuntimeError(msg)
         # Special case(s)
@@ -234,23 +232,29 @@ def module(cls: type) -> Module:
     These temporary variables are *not* propagated along as members of the `Module`.
     """
 
+    if not isclass(cls):
+        msg = f"Error attempting to create {cls.__name__}. @module can only decorate classes."
+        raise RuntimeError(msg)
+
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.module inheriting from {cls.__bases__}")
 
     # Create the Module object
     module = Module(name=cls.__name__)
 
-    dunders = dict()
-    unders = dict()
+    # Any class-body content that isn't a `ModuleAttr` will be "forgotten" from the `Module` definition.
+    # This can nonetheless be handy for defining intermediate values upon which the ultimate Module attributes depend.
+    forgetme: List[Any] = list()
 
     # Take a lap through the class dictionary, type-check everything and assign relevant attributes to the bundle
     for key, val in cls.__dict__.items():
-        if key.startswith("__"):
-            dunders[key] = val
-        elif key.startswith("_"):
-            unders[key] = val
-        else:
+        if key in _banned:
+            raise RuntimeError(f"Invalid field name {key} in Module {module.name}")
+        elif _is_module_attr(val):
             setattr(module, key, val)
+        else:  # Add to the forget-list
+            forgetme.append(val)
+
     # And return the Module
     return module
 
@@ -262,8 +266,23 @@ Many of which could be methods, but are generally kept here to prevent expanding
 """
 
 
+# Protected Module attribute names
+_banned = [
+    "ports",
+    "signals",
+    "instances",
+    "instarrays",
+    "instbundles",
+    "bundles",
+    "namespace",
+    "add",
+    "get",
+]
+
+
 def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
-    """Internal `Module.add` and `Module.__setattr__` implementation. Primarily sort `val` into one of our type-based containers.
+    """Internal `Module.add` and `Module.__setattr__` implementation.
+    Primarily sort `val` into one of our type-based containers.
     Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
 
     if isinstance(val, Signal):

@@ -458,6 +458,54 @@ h.netlist(Rlc, sys.stdout, fmt="spice")
 
 Hdl21 includes FIXME!
 
+Example Usage:
+
+```python
+import hdl21 as h
+from hdl21.sim import *
+
+@sim
+class MySim:
+    tb = tb(name="mytb")
+
+    x = Param(5)
+    y = Param(6)
+    mydc = Dc(var=x, sweep=PointSweep([1]))
+    myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
+    mytran = Tran(tstop=11 * h.prefix.PICO)
+    mysweep = SweepAnalysis(
+        inner=[mytran],
+        var=x,
+        sweep=LinearSweep(0, 1, 2),
+    )
+    mymc = MonteCarlo(
+        inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
+        npts=11,
+    )
+    delay = Meas(analysis=mytran, expr="trig_targ_something")
+    opts = Options(reltol=1e-9)
+
+    # Attributes whose names don't really matter can be called anything,
+    # but must be *assigned* into the class, not just constructed.
+    save_all = Save(SaveMode.ALL)
+
+    # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition,
+    # but can be referred to by the following attributes.
+    a_path = "/home/models"
+    include_that_path = Include(a_path)
+    fast_lib = Lib(path=a_path, section="fast")
+```
+
+Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
+Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
+such as the `a_path` field in the example aboe.
+
+Classes decoratated by `sim` a single special required field:
+a `tb` attribute which sets the simulation testbench.
+
+Several other names are disallowed in `sim` class-definitions,
+generally corresponding to the names of the `Sim` class's fields and methods.
+
 ---
 
 ## Why Use Python?

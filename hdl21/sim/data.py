@@ -434,23 +434,21 @@ def sim(cls: type) -> Sim:
 
         # Attributes whose names don't really matter can be called anything,
         # but must be *assigned* into the class, not just constructed.
-        _ = Save(SaveMode.ALL)
+        save_all = Save(SaveMode.ALL)
 
         # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition,
         # but can be referred to by the following attributes.
         a_path = "/home/models"
-        _ = Include(a_path)
-        _ = Lib(path=a_path, section="fast")
+        include_that_path = Include(a_path)
+        fast_lib = Lib(path=a_path, section="fast")
     ```
 
     Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
     Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
     such as the `a_path` field in the example aboe.
 
-    Classes decoratated by `sim` have two special field names:
-
-    * (Required) `tb` sets the simulation testbench
-    * (Optional) `name` sets the name of the simulation
+    Classes decoratated by `sim` a single special required field:
+    a `tb` attribute which sets the simulation testbench.
 
     Several other names are disallowed in `sim` class-definitions,
     generally corresponding to the names of the `Sim` class's fields and methods.
@@ -488,7 +486,7 @@ def sim(cls: type) -> Sim:
             if key != "_":
                 val.name = key
             attrs.append(val)
-        else:
+        else:  # Add to the forget-list
             forgetme.append(val)
 
     if tb is None:
