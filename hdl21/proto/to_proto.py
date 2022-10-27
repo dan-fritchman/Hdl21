@@ -177,7 +177,7 @@ class ProtoExporter:
             if isinstance(inst._resolved, PrimitiveCall):
                 # Create a reference to one of the `primitive` namespaces
                 if call.prim.primtype == PrimitiveType.PHYSICAL:
-                    # FIXME: also expose the `hdl21.primitives` as a VLSIR package
+                    # FIXME: #54 also expose the `hdl21.primitives` as a VLSIR package
                     pinst.module.external.domain = "hdl21.primitives"
                     pinst.module.external.name = call.prim.name
                     params = dictify_params(call.params)
