@@ -64,7 +64,7 @@ import hdl21 as h
 class MyModule:
     a, b = h.Inputs(2)
     c, d, e = h.Outputs(3, width=16)
-    f, g, h, i = h.Signals(4)
+    z, y, x, w = h.Signals(4)
 ```
 
 ## Signals
@@ -111,9 +111,9 @@ m.a, m.b, m.c = h.Signals(3)
 # Create an Instance
 m.i1 = AnotherModule()
 # And wire them up
-m.i1.a = a
-m.i1.b = b
-m.i1.c = c
+m.i1.a = m.a
+m.i1.b = m.b
+m.i1.c = m.c
 ```
 
 This also works without the parent-module `Signals`:
@@ -377,20 +377,22 @@ Alternately Hdl21 includes an `ExternalModule` type which defines the interface 
 
 ```python
 import hdl21 as h
+from hdl21.prefix import µ
+from hdl21.primitives import Diode
 
 @h.paramclass
 class BandGapParams:
     self_destruct = h.Param(
         dtype=bool,
         desc="Whether to include the self-destruction feature",
-        default=True
+        default=True,
     )
 
 BandGap = h.ExternalModule(
     name="BandGap",
     desc="Example ExternalModule, defined outside Hdl21",
-    port_list=[h.Port("vref"), h.Port("enable")],
-    paramtype=BandGapParams
+    port_list=[h.Port(name="vref"), h.Port(name="enable")],
+    paramtype=BandGapParams,
 )
 ```
 
@@ -399,22 +401,21 @@ Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few o
 `Primitives` and `ExternalModules` can be instantiated and connected in all the same styles as `Modules`:
 
 ```python
-import hdl21 as h
-from hdl21.primitives import Diode
-
+# Continuing from the snippet above:
 params = BandGapParams(self_destruct=False)  # Watch out there!
 
 @h.module
 class BandGapPlus:
     vref, enable = h.Signals(2)
-    bg = BandGap(params)          # Instantiate the `ExternalModule` defined above
-    bg(vref=vref, enable=enable)  # And call to connect it
-    # ... Everything else ...
+    # Instantiate the `ExternalModule` defined above
+    bg = BandGap(params)(vref=vref, enable=enable)
+    # ...Anything else...
 
 @h.module
 class DiodePlus:
     p, n = h.Signals(2)
-    d = Diode(w=1*µ, l=1*µ)(p=p, n=n)  # Parameterize, instantiate, and connect a `Diode`
+    # Parameterize, instantiate, and connect a `primitives.Diode`
+    d = Diode(w=1 * µ, l=1 * µ)(p=p, n=n)
     # ... Everything else ...
 ```
 

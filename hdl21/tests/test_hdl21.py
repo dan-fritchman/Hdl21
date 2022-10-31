@@ -624,6 +624,7 @@ def test_illegal_module_attrs():
 def test_copy_signal():
     """Copying a Signal"""
     copy.copy(h.Signal())
+    copy.deepcopy(h.Signal())
 
 
 def test_orphanage():

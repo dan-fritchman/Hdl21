@@ -2,11 +2,12 @@
 # Hdl21 Built-In Generators Library 
 """
 
-from copy import copy
+from copy import deepcopy
 from dataclasses import asdict, replace
 from typing import Optional, Tuple, Union
 
 from . import primitives
+from .prefix import Prefixed
 from .primitives import MosType, MosVth
 from .generator import generator
 from .module import Module
@@ -19,8 +20,8 @@ from .instantiable import Instantiable
 class MosParams:
     """Mos Series-Stack Generator Parameters"""
 
-    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
     nser = Param(dtype=int, desc="Number of series fingers", default=1)
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
@@ -61,7 +62,7 @@ def Mos(params: MosParams) -> Module:
     m = Module()
     # Copy the unit-cell ports
     for p in primitives.Mos.port_list:
-        m.add(copy(p))
+        m.add(deepcopy(p))
 
     # Add instances, starting at the source-side
     inst = m.add(name="unit0", val=unit_xtor(s=m.s, g=m.g, b=m.b))
@@ -118,7 +119,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
     m = Module()
     # Copy the unit-cell ports
     for p in unit.ports.values():
-        m.add(copy(p))
+        m.add(deepcopy(p))
 
     # Check for validity of the series-ports
     if isinstance(params.series_conns[0], str):
@@ -140,7 +141,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
     par_ports = [
         port for port in unit.ports.values() if port.name not in params.series_conns
     ]
-    par_conns = {port.name: m.add(copy(port)) for port in par_ports}
+    par_conns = {port.name: m.add(deepcopy(port)) for port in par_ports}
 
     for ipar in range(params.npar):
         # Add instances, starting at the `series_conns[0]`-side
@@ -177,7 +178,7 @@ def Wrapper(m: Module) -> Module:
 
     # Copy the unit-cell ports
     for p in m.io.values():
-        wrapper.add(copy(p))
+        wrapper.add(deepcopy(p))
 
     # Create a connections-dict mirroring them
     conns = {port.name: port for port in wrapper.io.values()}
