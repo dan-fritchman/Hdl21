@@ -4,7 +4,7 @@ Spice-Class Simulation Interface
 
 from decimal import Decimal
 from enum import Enum
-from typing import Union, Any, Optional, List, Sequence
+from typing import Union, Any, Optional, List, Sequence, Tuple
 from pathlib import Path
 from dataclasses import field
 
@@ -18,6 +18,7 @@ from vlsir.spice_pb2 import SimResult as SimResultProto
 # Local Imports
 from ..datatype import datatype
 from ..prefix import Prefixed
+from ..instance import Instance
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
 
@@ -49,9 +50,13 @@ def is_tb(i: Instantiable) -> bool:
 
     if len(m.ports) != 1:
         return False
+
     # There's exactly one port. Retrieve it from the `ports` dict,
     # first requiring getting its name from the `keys`.
     port = m.ports[list(m.ports.keys())[0]]
+
+    # While that port is *conventionally* called "VSS", it *can* be called anything.
+    # The testbench interface is met so long as we have a single, scalar port.
     return port.width == 1
 
 
@@ -129,6 +134,7 @@ class AnalysisType(Enum):
     DC = "dc"
     AC = "ac"
     TRAN = "tran"
+    NOISE = "noise"
     MONTE = "monte"
     SWEEP = "sweep"
     CUSTOM = "custom"
@@ -165,7 +171,7 @@ class Dc:
 class Ac:
     """AC Small-Signal Analysis"""
 
-    sweep: LogSweep  # Sweep values. Always log-valued.
+    sweep: LogSweep  # Frequency sweep values. Always log-valued.
     name: Optional[str] = None  # Optional analysis name
 
     @property
@@ -185,6 +191,27 @@ class Tran:
     @property
     def tp(self) -> AnalysisType:
         return AnalysisType.TRAN
+
+
+@simattr
+@datatype
+class Noise:
+    """Noise Analysis"""
+
+    # Output, either as a signal or pair thereof
+    # NOTE: the type of `output` is really `Union[Connectable, Tuple[Connectable, Connectable]]`
+    # we can't quite check this statically, but do check when serializing.
+    output: Any
+
+    # Input voltage or current source
+    input_source: Union[Instance, str]
+
+    sweep: LogSweep  # Frequency sweep values. Always log-valued.
+    name: Optional[str] = None  # Optional analysis name
+
+    @property
+    def tp(self) -> AnalysisType:
+        return AnalysisType.NOISE
 
 
 @simattr
@@ -231,7 +258,7 @@ class CustomAnalysis:
 
 
 # Analysis type-union
-Analysis = Union[Op, Dc, Ac, Tran, SweepAnalysis, MonteCarlo, CustomAnalysis]
+Analysis = Union[Op, Dc, Ac, Tran, Noise, SweepAnalysis, MonteCarlo, CustomAnalysis]
 
 
 def is_analysis(val: Any) -> bool:

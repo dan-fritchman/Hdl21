@@ -1,5 +1,7 @@
 import hdl21 as h
 from hdl21.sim import *
+from hdl21.primitives import Vdc
+from hdl21.prefix import m
 import vlsirtools
 import pytest
 
@@ -13,15 +15,30 @@ def test_sim1():
     assert s.attrs == []
 
 
+@h.module
+class MyTb:
+    # Create a sample testbench, particularly with enough stuff in it for `Noise` analysis.
+    # I.e. a source instance and a non-ground Signal.
+    VSS = h.Port()
+    p = h.Signal()
+    v = Vdc(dc=0 * m, ac=1000 * m)(p=p, n=VSS)
+
+
 def test_sim2():
     """Test creating a more fully-featured sim"""
-    Sim(
-        tb=tb(name="mytb"),
+    s = Sim(
+        tb=MyTb,
         attrs=[
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
             Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
             Tran(tstop=11 * h.prefix.p, name="mytran"),
+            Noise(
+                output=MyTb.p,
+                input_source=MyTb.v,
+                sweep=LogSweep(1e1, 1e10, 10),
+                name="mynoise",
+            ),
             SweepAnalysis(
                 inner=[Tran(tstop=1, name="swptran")],
                 var="x",
@@ -42,17 +59,24 @@ def test_sim2():
             Options(reltol=1e-9),
         ],
     )
+    to_proto(s)
 
 
 def test_simattrs():
     """Test the "sim attrs" feature, which adds methods to `Sim` for each `SimAttr`"""
 
-    s = Sim(tb=tb("mytb"))
+    s = Sim(tb=MyTb)
 
     p = s.param(name="x", val=5)
     dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
     ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
     tr = s.tran(tstop=11 * h.prefix.p, name="mytran")
+    noise = s.noise(
+        output=MyTb.p,
+        input_source=MyTb.v,
+        sweep=LogSweep(1e1, 1e10, 10),
+        name="mynoise",
+    )
     assert tr.tstop == 11 * h.prefix.p
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
@@ -68,19 +92,26 @@ def test_simattrs():
     s.lib(path="/home/models", section="fast")
     s.options(reltol=1e-9)
 
+    to_proto(s)
+
 
 def test_sim_decorator():
     """Test creating the same Sim, via the class decorator"""
 
     @h.sim.sim
     class MySim:
-        tb = tb(name="mytb")
+        tb = MyTb
 
         x = Param(5)
         y = Param(6)
         mydc = Dc(var=x, sweep=PointSweep([1]))
         myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
         mytran = Tran(tstop=11 * h.prefix.p)
+        mynoise = Noise(
+            output=MyTb.p,
+            input_source=MyTb.v,
+            sweep=LogSweep(1e1, 1e10, 10),
+        )
         mysweep = SweepAnalysis(
             inner=[mytran],
             var=x,
@@ -108,24 +139,28 @@ def test_sim_decorator():
     assert isinstance(MySim, Sim)
     assert MySim.name == "MySim"
     assert isinstance(MySim.tb, h.Module)
-    assert MySim.tb.name == "mytb"
+    assert MySim.tb.name == "MyTb"
     assert isinstance(MySim.attrs, list)
     for attr in MySim.attrs:
         assert is_simattr(attr)
     assert not hasattr(MySim, "a_path")
 
+    to_proto(MySim)
+
 
 def test_tb():
+    """Test the `tb` function"""
     mytb = tb("mytb")
     assert isinstance(mytb, h.Module)
     assert is_tb(mytb)
+    assert len(mytb.ports) == 1
 
 
 def test_proto1():
     """Test exporting `Sim` to the VLSIR Protobuf schema"""
 
     s = Sim(
-        tb=tb(name="mytb"),
+        tb=MyTb,
         attrs=[
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
@@ -158,7 +193,7 @@ def test_proto1():
     import vlsir.spice_pb2 as vsp
 
     assert isinstance(p.pkg, vckt.Package)
-    assert p.top == "hdl21.sim.data.mytb"
+    assert p.top == "test_sim.MyTb"
 
 
 def test_generator_sim():

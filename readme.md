@@ -457,9 +457,59 @@ h.netlist(Rlc, sys.stdout, fmt="spice")
 
 ## Spice-Class Simulation
 
-Hdl21 includes FIXME!
+Hdl21 includes drivers for popular spice-class simulation engines commonly used to evaluate analog circuits.
+The `hdl21.sim` package includes a wide variety of spice-class simulation constructs, including:
 
-Example Usage:
+- DC, AC, Transient, Operating-Point, Noise, Monte-Carlo, Parameter-Sweep and Custom (per netlist language) Analyses
+- Control elements for saving signals (`Save`), simulation options (`Options`), including external files and contents (`Include`, `Lib`), measurements (`Meas`), simulation parameters (`Param`), and literal netlist commands (`Literal`)
+
+The entrypoint to Hdl21-driven simulation is the simulation-input type `hdl21.sim.Sim`. Each `Sim` includes:
+
+- A testbench Module `tb`, and
+- A list of unordered simulation attributes (`attrs`), including any and all of the analyses, controls, and related elements listed above.
+
+Example:
+
+```python
+    import hdl21 as h
+    from hdl21.sim import *
+
+    @h.module
+    class MyModulesTestbench:
+        # ... Testbench content ...
+
+    # Create simulation input
+    s = Sim(
+        tb=MyModulesTestbench,
+        attrs=[
+            Param(name="x", val=5),
+            Dc(var="x", sweep=PointSweep([1]), name="mydc"),
+            Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
+            Tran(tstop=11 * h.prefix.p, name="mytran"),
+            SweepAnalysis(
+                inner=[Tran(tstop=1, name="swptran")],
+                var="x",
+                sweep=LinearSweep(0, 1, 2),
+                name="mysweep",
+            ),
+            MonteCarlo(
+                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
+                npts=11,
+                name="mymc",
+            ),
+            Save(SaveMode.ALL),
+            Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
+            Include("/home/models"),
+            Lib(path="/home/models", section="fast"),
+            Options(reltol=1e-9),
+        ],
+    )
+
+    # And run it!
+    sim.run()
+```
+
+`Sim` also includes a class-based syntax similar to `Module` and `Bundle`, in which simulation attributes are named based on their class attribute name:
 
 ```python
 import hdl21 as h
@@ -467,7 +517,7 @@ from hdl21.sim import *
 
 @sim
 class MySim:
-    tb = tb(name="mytb")
+    tb = MyModulesTestbench
 
     x = Param(5)
     y = Param(6)
@@ -479,33 +529,52 @@ class MySim:
         var=x,
         sweep=LinearSweep(0, 1, 2),
     )
-    mymc = MonteCarlo(
-        inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
-        npts=11,
-    )
+    mymc = MonteCarlo(inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")], npts=11)
     delay = Meas(analysis=mytran, expr="trig_targ_something")
     opts = Options(reltol=1e-9)
 
-    # Attributes whose names don't really matter can be called anything,
-    # but must be *assigned* into the class, not just constructed.
-    save_all = Save(SaveMode.ALL)
 
-    # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition,
-    # but can be referred to by the following attributes.
+    save_all = Save(SaveMode.ALL)
     a_path = "/home/models"
     include_that_path = Include(a_path)
     fast_lib = Lib(path=a_path, section="fast")
 ```
 
-Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
-Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
-such as the `a_path` field in the example aboe.
+Note that in these class-based definitions, attributes whose names don't really matter such as `save_all` above can be _named_ anything, but must be _assigned_ into the class, not just constructed.
+
+Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others. Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend, such as the `a_path` field in the example above.
 
 Classes decoratated by `sim` a single special required field:
 a `tb` attribute which sets the simulation testbench.
 
 Several other names are disallowed in `sim` class-definitions,
 generally corresponding to the names of the `Sim` class's fields and methods.
+
+Each `sim` also includes a set of methods to add simulation attributes from their keyword constructor arguments. These methods use the same names as the simulation attributes (`Dc`, `Meas`, etc.) but incorporating the python language convention that functions and methods be lowercase (`dc`, `meas`, etc.). Example:
+
+```python
+s = Sim(tb=MyTb)
+
+p = s.param(name="x", val=5)
+dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
+ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
+tr = s.tran(tstop=11 * h.prefix.p, name="mytran")
+noise = s.noise(
+    output=MyTb.p,
+    input_source=MyTb.v,
+    sweep=LogSweep(1e1, 1e10, 10),
+    name="mynoise",
+)
+sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
+mc = s.montecarlo(
+    inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc",
+)
+s.save(SaveMode.ALL)
+s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
+s.include("/home/models")
+s.lib(path="/home/models", section="fast")
+s.options(reltol=1e-9)
+```
 
 ---
 
