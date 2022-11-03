@@ -127,7 +127,8 @@ class ProtoExporter:
         analysis_name = tran.name or self.next_analysis_name()
         return vsp.TranInput(
             analysis_name=analysis_name,
-            tstop=export_float(tran.tstop),  # FIXME: move schema to Param / Prefixed
+            # FIXME: VLSIR #26 move schema to Param / Prefixed
+            tstop=export_float(tran.tstop),
             tstep=export_float(tran.tstep),
             ic={},  # FIXME: initial conditions
             ctrls=[],  # FIXME: analysis-specific controls
@@ -240,6 +241,7 @@ class ProtoExporter:
         elif isinstance(sweep, data.LogSweep):
             return vsp.Sweep(
                 log=vsp.LogSweep(
+                    # FIXME: VLSIR #26 move schema to Param / Prefixed
                     start=export_float(sweep.start),
                     stop=export_float(sweep.stop),
                     npts=export_float(sweep.npts),  # FIXME: move to int
@@ -348,6 +350,6 @@ def export_float(num: Union[float, int, Decimal, Prefixed]) -> float:
         return 0.0
     if isinstance(num, float):
         return num
-    if isinstance(num, (int, Decimal, Prefixed)):
+    if isinstance(num, (int, str, Decimal, Prefixed)):
         return float(num)
     raise TypeError(f"Invalid value for proto float: {num}")

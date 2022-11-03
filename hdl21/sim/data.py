@@ -27,7 +27,7 @@ from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCa
 # The `str` variant is the escape hatch for:
 # * References to other parameter(s) by name
 # * Compound expressions among parameters, e.g. `5µ * a + b`
-ParamVal = Union[Prefixed, Decimal, str]
+ParamVal = Union[Prefixed, str]
 
 
 def tb(name: str) -> Module:
