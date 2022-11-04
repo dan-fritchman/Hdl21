@@ -31,7 +31,7 @@ Summary of the content of the primitive library:
 | ------------------------------ | --------------------------------- | -------- | ------------------------------------- | ------------ |
 | Mos                            | Mos Transistor                    | PHYSICAL | MOS                                   | d, g, s, b   |
 | IdealResistor                  | Ideal Resistor                    | IDEAL    | R, Res, Resistor, IdealR, IdealRes    | p, n         |
-| PhysicalResistor               | Physical Resistor                 | PHYSICAL | PhyR, PhyRes, ResPhy, PhyResistor     | p, n, b      |
+| PhysicalResistor               | Physical Resistor                 | PHYSICAL | PhyR, PhyRes, ResPhy, PhyResistor     | p, n         |
 | ThreeTerminalResistor          | Three Terminal Resistor           | PHYSICAL | Res3, PhyRes3, ResPhy3, PhyResistor3  | p, n, b      |
 | IdealCapacitor                 | Ideal Capacitor                   | IDEAL    | C, Cap, Capacitor, IdealC, IdealCap   | p, n         |
 | PhysicalCapacitor              | Physical Capacitor                | PHYSICAL | PhyC, PhyCap, CapPhy, PhyCapacitor    | p, n         |
@@ -288,7 +288,7 @@ _add(
     prim=Primitive(
         name="PhysicalResistor",
         desc="Physical Resistor",
-        port_list=copy.deepcopy(ThreeTerminalPorts),
+        port_list=copy.deepcopy(PassivePorts),
         paramtype=PhysicalResistorParams,
         primtype=PrimitiveType.PHYSICAL,
     ),

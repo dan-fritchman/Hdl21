@@ -15,7 +15,7 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
 
-_VLSIR_VERSION = "2.0.dev0"
+_VLSIR_VERSION = "3.0.dev0"
 
 setup(
     name="sky130-hdl21",

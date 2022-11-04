@@ -372,42 +372,42 @@ The entrypoint to Hdl21-driven simulation is the simulation-input type `hdl21.si
 Example:
 
 ```python
-    import hdl21 as h
-    from hdl21.sim import *
+import hdl21 as h
+from hdl21.sim import *
 
-    @h.module
-    class MyModulesTestbench:
-        # ... Testbench content ...
+@h.module
+class MyModulesTestbench:
+    # ... Testbench content ...
 
-    # Create simulation input
-    s = Sim(
-        tb=MyModulesTestbench,
-        attrs=[
-            Param(name="x", val=5),
-            Dc(var="x", sweep=PointSweep([1]), name="mydc"),
-            Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
-            Tran(tstop=11 * h.prefix.p, name="mytran"),
-            SweepAnalysis(
-                inner=[Tran(tstop=1, name="swptran")],
-                var="x",
-                sweep=LinearSweep(0, 1, 2),
-                name="mysweep",
-            ),
-            MonteCarlo(
-                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
-                npts=11,
-                name="mymc",
-            ),
-            Save(SaveMode.ALL),
-            Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
-            Include("/home/models"),
-            Lib(path="/home/models", section="fast"),
-            Options(reltol=1e-9),
-        ],
-    )
+# Create simulation input
+s = Sim(
+    tb=MyModulesTestbench,
+    attrs=[
+        Param(name="x", val=5),
+        Dc(var="x", sweep=PointSweep([1]), name="mydc"),
+        Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
+        Tran(tstop=11 * h.prefix.p, name="mytran"),
+        SweepAnalysis(
+            inner=[Tran(tstop=1, name="swptran")],
+            var="x",
+            sweep=LinearSweep(0, 1, 2),
+            name="mysweep",
+        ),
+        MonteCarlo(
+            inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
+            npts=11,
+            name="mymc",
+        ),
+        Save(SaveMode.ALL),
+        Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
+        Include("/home/models"),
+        Lib(path="/home/models", section="fast"),
+        Options(reltol=1e-9),
+    ],
+)
 
-    # And run it!
-    sim.run()
+# And run it!
+sim.run()
 ```
 
 `Sim` also includes a class-based syntax similar to `Module` and `Bundle`, in which simulation attributes are named based on their class attribute name:
@@ -434,28 +434,27 @@ class MySim:
     delay = Meas(analysis=mytran, expr="trig_targ_something")
     opts = Options(reltol=1e-9)
 
-
     save_all = Save(SaveMode.ALL)
     a_path = "/home/models"
     include_that_path = Include(a_path)
     fast_lib = Lib(path=a_path, section="fast")
+
+MySim.run()
 ```
 
 Note that in these class-based definitions, attributes whose names don't really matter such as `save_all` above can be _named_ anything, but must be _assigned_ into the class, not just constructed.
 
 Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others. Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend, such as the `a_path` field in the example above.
 
-Classes decoratated by `sim` a single special required field:
-a `tb` attribute which sets the simulation testbench.
-
-Several other names are disallowed in `sim` class-definitions,
-generally corresponding to the names of the `Sim` class's fields and methods.
+Classes decoratated by `sim` a single special required field: a `tb` attribute which sets the simulation testbench. A handful of names are disallowed in `sim` class-definitions, generally corresponding to the names of the `Sim` class's fields and methods such as `attrs` and `run`.
 
 Each `sim` also includes a set of methods to add simulation attributes from their keyword constructor arguments. These methods use the same names as the simulation attributes (`Dc`, `Meas`, etc.) but incorporating the python language convention that functions and methods be lowercase (`dc`, `meas`, etc.). Example:
 
 ```python
+# Create a `Sim`
 s = Sim(tb=MyTb)
 
+# Add all the same attributes as above
 p = s.param(name="x", val=5)
 dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
 ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
@@ -475,6 +474,9 @@ s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
 s.include("/home/models")
 s.lib(path="/home/models", section="fast")
 s.options(reltol=1e-9)
+
+# And run it!
+s.run()
 ```
 
 ## Primitives and External Modules
@@ -496,7 +498,7 @@ The `Primitive` type and all its valid values are defined by the `hdl21.primitiv
 | ------------------------------ | --------------------------------- | -------- | ------------------------------------- | ------------ |
 | Mos                            | Mos Transistor                    | PHYSICAL | MOS                                   | d, g, s, b   |
 | IdealResistor                  | Ideal Resistor                    | IDEAL    | R, Res, Resistor, IdealR, IdealRes    | p, n         |
-| PhysicalResistor               | Physical Resistor                 | PHYSICAL | PhyR, PhyRes, ResPhy, PhyResistor     | p, n, b      |
+| PhysicalResistor               | Physical Resistor                 | PHYSICAL | PhyR, PhyRes, ResPhy, PhyResistor     | p, n         |
 | ThreeTerminalResistor          | Three Terminal Resistor           | PHYSICAL | Res3, PhyRes3, ResPhy3, PhyResistor3  | p, n, b      |
 | IdealCapacitor                 | Ideal Capacitor                   | IDEAL    | C, Cap, Capacitor, IdealC, IdealCap   | p, n         |
 | PhysicalCapacitor              | Physical Capacitor                | PHYSICAL | PhyC, PhyCap, CapPhy, PhyCapacitor    | p, n         |
@@ -515,7 +517,14 @@ The `Primitive` type and all its valid values are defined by the `hdl21.primitiv
 | Bipolar                        | Bipolar Transistor                | PHYSICAL | Bjt, BJT                              | c, b, e      |
 | Diode                          | Diode                             | PHYSICAL | D                                     | p, n         |
 
-Each primitive is available in the `hdl21.primitives` namespace, either through its full name or any of its aliases. Most primitives have fairly verbose names (e.g. `VoltageControlledCurrentSource`, `IdealResistor`), but also expose short-form aliases (e.g. `Vcvs`, `R`). Each of the aliases in Table 1 above refer to _the same_ Python object; choose whichever name works for you. In other words
+Each primitive is available in the `hdl21.primitives` namespace, either through its full name or any of its aliases. Most primitives have fairly verbose names (e.g. `VoltageControlledCurrentSource`, `IdealResistor`), but also expose short-form aliases (e.g. `Vcvs`, `R`). Each of the aliases in Table 1 above refer to _the same_ Python object, i.e. 
+
+```python 
+from hdl21.primitives import R, Res, IdealResistor 
+
+R is Res            # evaluates to True
+R is IdealResistor  # also evaluates to True
+```
 
 ### `ExternalModules`
 
@@ -569,7 +578,7 @@ class DiodePlus:
 
 Designing for a specific implementation technology (or "process development kit", or PDK) with Hdl21 can use either of (or a combination of) two routes:
 
-- Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its tech-specific transistor and passive modules, and potentially larger cells, for example from a cell library.
+- Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its process-specific transistor and passive modules, and potentially larger cells, for example from a cell library. Such external modules are frequently defined as part of a PDK (python) package, but can also be defined anywhere else, including inline among Hdl21 generator code. 
 - Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21.pdk` converter.
 
 Hdl21 PDKs are Python packages which generally include two primary elements:
@@ -648,7 +657,7 @@ Quantities which can be varied are often keyed by a `CornerType`. In similar pse
 CornerType = MOS | CMOS | RES | CAP | ...
 ```
 
-A particularly common such use case pairs NMOS and PMOS transistors into a `CmosCornerPair`, and to evauate circuits at its four extremes, plus their typical case:
+A particularly common such use case pairs NMOS and PMOS transistors into a `CmosCornerPair`. CMOS circuits are then commonly evauated at its four extremes, plus their typical case. These five conditions are enumerated in the `CmosCorner` type:
 
 ```python
 @dataclass
@@ -665,8 +674,6 @@ Hdl21 exposes each of these corner-types as Python enumerations and combinations
 
 
 ### PDK Installations and Sites
-
-# PDK Installations 
 
 Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `_nfet` and `_pfet` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type. 
 
@@ -754,19 +761,25 @@ class SimMyPdk:
 SimMyPdk.run()
 ```
 
-Note that `sim_my_pdk.py` need not necessarily import or directly depend upon `sitepdks` itself. So long as `sitepdks` is imported and configures the PDK installation anywhere in the Python program, further code will be able to refer to the PDK's `install`.
+Note that `sim_my_pdk.py` need not necessarily import or directly depend upon `sitepdks` itself. So long as `sitepdks` is imported and configures the PDK installation anywhere in the Python program, further code will be able to refer to the PDK's `install` fields.
 
 ---
 
 ## Why Use Python?
 
-Custom IC design is a complicated field. Its practitioners have to know a | lot | of | stuff, independent of any programming background. Many have little or no programming experience at all. Python is reknowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like.
+Custom IC design is a complicated field. Its practitioners have to know 
+[a](https://people.eecs.berkeley.edu/~boser/courses/240B/lectures/M07%20OTA%20II.pdf) | 
+[lot](http://rfic.eecs.berkeley.edu/~niknejad/ee142_fa05lects/pdf/lect24.pdf) | 
+[of](https://www.delroy.com/PLL_dir/ISSCC2004/PLLTutorialISSCC2004.pdf) | 
+[stuff](https://inst.eecs.berkeley.edu/~ee247/fa10/files07/lectures/L25_2_f10.pdf), 
+independent of any programming background. Many have little or no programming experience at all. Python is reknowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like.
 
 Hdl21 exposes the ideas they're used to - `Modules`, `Ports`, `Signals` - via as simple of a Python interface as it can. `Generators` are just functions. For many, this fact alone is enough to create powerfully reusable hardware.
 
 ## Why _Not_ Use {X}?
 
-We know you have plenty of choice when you fly, and appreciate you choosing Hdl21. A few alternatives and how they compare:
+We know you have plenty of choice when you fly, and appreciate you choosing Hdl21.  
+A few alternatives and how they compare:
 
 ### Schematics
 
