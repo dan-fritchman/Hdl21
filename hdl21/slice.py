@@ -1,7 +1,7 @@
 """
 # Hdl21 Slices
 
-By-index references into Connectable types. 
+References by numeric index into Signals and other Connectable types. 
 """
 
 from typing import Optional, Union, Any, Set
@@ -154,8 +154,8 @@ def _slice_inner(slize: Slice) -> SliceInner:
     raise TypeError("Internal Error: Slice index should be an int or (python) slice")
 
 
-def _get_inner(self: Slice) -> SliceInner:
+def _get_inner(slice: Slice) -> SliceInner:
     """Get a slice's `SliceInner`, calculating it inline if necessary"""
-    if self._inner is None:
-        self._inner = _slice_inner(self)
-    return self._inner
+    if slice._inner is None:
+        slice._inner = _slice_inner(slice)
+    return slice._inner

@@ -201,10 +201,10 @@ class MosVth(Enum):
 class MosParams:
     """MOS Transistor Parameters"""
 
-    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
-    tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
+    tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     # FIXME: whether to include `model`
@@ -279,8 +279,8 @@ _add(
 
 @paramclass
 class PhysicalResistorParams:
-    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
@@ -403,8 +403,8 @@ _add(
 @paramclass
 class PhysicalShortParams:
     layer = Param(dtype=Optional[Union[int, str]], desc="Metal layer", default=None)
-    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
 
 
 _add(
@@ -565,8 +565,8 @@ class BipolarType(Enum):
 class BipolarParams:
     """Bipolar Transistor Parameters"""
 
-    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
     tp = Param(
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
@@ -610,8 +610,8 @@ Diodes
 
 @paramclass
 class DiodeParams:
-    w = Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[int], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     # FIXME: whether to include `model`
 

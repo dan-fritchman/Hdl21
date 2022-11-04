@@ -361,35 +361,19 @@ def test_spice_netlister():
     ppkg = h.to_proto(DUT)
     nl = StringIO()
     h.netlist(ppkg, nl, fmt="spice")
-    good = dedent(
-        """\
-        .SUBCKT DUT 
-        + a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0 
-        + * No parameters
 
-        rres 
-        + a_0 b_0 
-        + 10000.0 
-        + * No parameters
-
-
-        ccap 
-        + a_1 b_1 
-        + 1e-11 
-        + * No parameters
-
-
-        lind 
-        + a_2 b_2 
-        + 1e-08 
-        + * No parameters
-
-
-        .ENDS
-    """
-    )
     nl = nl.getvalue()
-    assert good in nl
+    assert ".SUBCKT DUT" in nl
+    assert "+ a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0" in nl
+    assert "rres" in nl
+    assert "+ a_0 b_0" in nl
+    assert "+ 10000.0" in nl
+    assert "ccap" in nl
+    assert "+ a_1 b_1" in nl
+    assert "+ 1e-11" in nl
+    assert "lind" in nl
+    assert "+ a_2 b_2" in nl
+    assert "+ 1e-08" in nl
 
 
 def test_bad_proto_naming():

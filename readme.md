@@ -1,6 +1,6 @@
 # HDL21
 
-## Hardware Description Library
+## Analog Hardware Description Library in Python
 
 [![test](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml/badge.svg)](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml)
 [![codecov](https://codecov.io/gh/dan-fritchman/Hdl21/branch/main/graph/badge.svg?token=f8LKUqEPdq)](https://codecov.io/gh/dan-fritchman/Hdl21)
@@ -14,10 +14,10 @@ Hdl21 generates hardware databases in the [VLSIR](https://github.com/Vlsir/Vlsir
 - [Modules](#modules)
 - [Signals](#signals), [Ports](#signals), and [Connections](#connections)
 - [Generators](#generators) and [Parameters](#parameters)
+- [Spice-Class Simulation](#spice-class-simulation)
 - [Primitive Elements](#primitives-and-external-modules)
 - [Process Technology (PDK) Packages](#process-technologies)
-- Spice-Class Simulation
-- High-Class Connections with Bundles
+- Coming Soon: Structured Connections with `Bundle`s
 - Coming Soon: Schematics
 
 ## Modules
@@ -64,7 +64,7 @@ import hdl21 as h
 class MyModule:
     a, b = h.Inputs(2)
     c, d, e = h.Outputs(3, width=16)
-    f, g, h, i = h.Signals(4)
+    z, y, x, w = h.Signals(4)
 ```
 
 ## Signals
@@ -111,9 +111,9 @@ m.a, m.b, m.c = h.Signals(3)
 # Create an Instance
 m.i1 = AnotherModule()
 # And wire them up
-m.i1.a = a
-m.i1.b = b
-m.i1.c = c
+m.i1.a = m.a
+m.i1.b = m.b
+m.i1.c = m.c
 ```
 
 This also works without the parent-module `Signals`:
@@ -331,6 +331,152 @@ from hdl21.prefix import e, µ
 These `e()` values are also most common in multiplication expressions,
 to create `Prefixed` values in "floating point" style such as `11 * e(-9)`.
 
+
+## Exporting and Importing
+
+Hdl21's primary import/ export format is [VLSIR](https://github.com/Vlsir/Vlsir). VLSIR is a binary ProtoBuf-based format with support for a variety of industry-standard formats and tools. The `hdl21.to_proto()` function converts an Hdl21 `Module` or group of `Modules` into VLSIR `Package`. The `hdl21.from_proto()` function similarly imports a VLSIR `Package` into a namespace of Hdl21 `Modules`.
+
+Exporting to industry-standard netlist formats is a particularly common operation for Hdl21 users. The `hdl21.netlist()` function uses VLSIR to export any of its supported netlist formats.
+
+```python
+import sys
+import hdl21 as h
+
+@h.module
+class Rlc:
+    p, n = h.Ports(2)
+
+    res = h.Res(r=1e3)(p=p, n=n)
+    cap = h.Cap(c=1e3)(p=p, n=n)
+    ind = h.Ind(l=1e-9)(p=p, n=n)
+
+# Write a spice-format netlist to stdout
+h.netlist(Rlc, sys.stdout, fmt="spice")
+```
+
+`hdl21.netlist` takes a second destination argument `dest`, which is commonly either an open file-handle or `sys.stdout`. All its remaining arguments are passed to `vlsirtools.netlist`.
+
+## Spice-Class Simulation
+
+Hdl21 includes drivers for popular spice-class simulation engines commonly used to evaluate analog circuits.
+The `hdl21.sim` package includes a wide variety of spice-class simulation constructs, including:
+
+- DC, AC, Transient, Operating-Point, Noise, Monte-Carlo, Parameter-Sweep and Custom (per netlist language) Analyses
+- Control elements for saving signals (`Save`), simulation options (`Options`), including external files and contents (`Include`, `Lib`), measurements (`Meas`), simulation parameters (`Param`), and literal netlist commands (`Literal`)
+
+The entrypoint to Hdl21-driven simulation is the simulation-input type `hdl21.sim.Sim`. Each `Sim` includes:
+
+- A testbench Module `tb`, and
+- A list of unordered simulation attributes (`attrs`), including any and all of the analyses, controls, and related elements listed above.
+
+Example:
+
+```python
+    import hdl21 as h
+    from hdl21.sim import *
+
+    @h.module
+    class MyModulesTestbench:
+        # ... Testbench content ...
+
+    # Create simulation input
+    s = Sim(
+        tb=MyModulesTestbench,
+        attrs=[
+            Param(name="x", val=5),
+            Dc(var="x", sweep=PointSweep([1]), name="mydc"),
+            Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
+            Tran(tstop=11 * h.prefix.p, name="mytran"),
+            SweepAnalysis(
+                inner=[Tran(tstop=1, name="swptran")],
+                var="x",
+                sweep=LinearSweep(0, 1, 2),
+                name="mysweep",
+            ),
+            MonteCarlo(
+                inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
+                npts=11,
+                name="mymc",
+            ),
+            Save(SaveMode.ALL),
+            Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
+            Include("/home/models"),
+            Lib(path="/home/models", section="fast"),
+            Options(reltol=1e-9),
+        ],
+    )
+
+    # And run it!
+    sim.run()
+```
+
+`Sim` also includes a class-based syntax similar to `Module` and `Bundle`, in which simulation attributes are named based on their class attribute name:
+
+```python
+import hdl21 as h
+from hdl21.sim import *
+
+@sim
+class MySim:
+    tb = MyModulesTestbench
+
+    x = Param(5)
+    y = Param(6)
+    mydc = Dc(var=x, sweep=PointSweep([1]))
+    myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
+    mytran = Tran(tstop=11 * h.prefix.PICO)
+    mysweep = SweepAnalysis(
+        inner=[mytran],
+        var=x,
+        sweep=LinearSweep(0, 1, 2),
+    )
+    mymc = MonteCarlo(inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")], npts=11)
+    delay = Meas(analysis=mytran, expr="trig_targ_something")
+    opts = Options(reltol=1e-9)
+
+
+    save_all = Save(SaveMode.ALL)
+    a_path = "/home/models"
+    include_that_path = Include(a_path)
+    fast_lib = Lib(path=a_path, section="fast")
+```
+
+Note that in these class-based definitions, attributes whose names don't really matter such as `save_all` above can be _named_ anything, but must be _assigned_ into the class, not just constructed.
+
+Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others. Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend, such as the `a_path` field in the example above.
+
+Classes decoratated by `sim` a single special required field:
+a `tb` attribute which sets the simulation testbench.
+
+Several other names are disallowed in `sim` class-definitions,
+generally corresponding to the names of the `Sim` class's fields and methods.
+
+Each `sim` also includes a set of methods to add simulation attributes from their keyword constructor arguments. These methods use the same names as the simulation attributes (`Dc`, `Meas`, etc.) but incorporating the python language convention that functions and methods be lowercase (`dc`, `meas`, etc.). Example:
+
+```python
+s = Sim(tb=MyTb)
+
+p = s.param(name="x", val=5)
+dc = s.dc(var=p, sweep=PointSweep([1]), name="mydc")
+ac = s.ac(sweep=LogSweep(1e1, 1e10, 10), name="myac")
+tr = s.tran(tstop=11 * h.prefix.p, name="mytran")
+noise = s.noise(
+    output=MyTb.p,
+    input_source=MyTb.v,
+    sweep=LogSweep(1e1, 1e10, 10),
+    name="mynoise",
+)
+sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
+mc = s.montecarlo(
+    inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc"),], npts=11, name="mymc",
+)
+s.save(SaveMode.ALL)
+s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
+s.include("/home/models")
+s.lib(path="/home/models", section="fast")
+s.options(reltol=1e-9)
+```
+
 ## Primitives and External Modules
 
 The leaf-nodes of each hierarchical Hdl21 circuit are generally defined in one of two places:
@@ -377,20 +523,22 @@ Alternately Hdl21 includes an `ExternalModule` type which defines the interface 
 
 ```python
 import hdl21 as h
+from hdl21.prefix import µ
+from hdl21.primitives import Diode
 
 @h.paramclass
 class BandGapParams:
     self_destruct = h.Param(
         dtype=bool,
         desc="Whether to include the self-destruction feature",
-        default=True
+        default=True,
     )
 
 BandGap = h.ExternalModule(
     name="BandGap",
     desc="Example ExternalModule, defined outside Hdl21",
-    port_list=[h.Port("vref"), h.Port("enable")],
-    paramtype=BandGapParams
+    port_list=[h.Port(name="vref"), h.Port(name="enable")],
+    paramtype=BandGapParams,
 )
 ```
 
@@ -399,22 +547,21 @@ Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few o
 `Primitives` and `ExternalModules` can be instantiated and connected in all the same styles as `Modules`:
 
 ```python
-import hdl21 as h
-from hdl21.primitives import Diode
-
+# Continuing from the snippet above:
 params = BandGapParams(self_destruct=False)  # Watch out there!
 
 @h.module
 class BandGapPlus:
     vref, enable = h.Signals(2)
-    bg = BandGap(params)          # Instantiate the `ExternalModule` defined above
-    bg(vref=vref, enable=enable)  # And call to connect it
-    # ... Everything else ...
+    # Instantiate the `ExternalModule` defined above
+    bg = BandGap(params)(vref=vref, enable=enable)
+    # ...Anything else...
 
 @h.module
 class DiodePlus:
     p, n = h.Signals(2)
-    d = Diode(w=1*µ, l=1*µ)(p=p, n=n)  # Parameterize, instantiate, and connect a `Diode`
+    # Parameterize, instantiate, and connect a `primitives.Diode`
+    d = Diode(w=1 * µ, l=1 * µ)(p=p, n=n)
     # ... Everything else ...
 ```
 
@@ -430,81 +577,184 @@ Hdl21 PDKs are Python packages which generally include two primary elements:
 - (a) A library `ExternalModules` describing the technology's cells, and
 - (b) A `compile` conversion-method which transforms a hierarchical Hdl21 tree, mapping generic `hdl21.Primitives` into the tech-specific `ExternalModules`.
 
-## Exporting
-
-Hdl21's primary interchange format is [VLSIR](https://github.com/Vlsir/Vlsir). VLSIR is a binary ProtoBuf-based format with support for a variety of industry-standard formats and tools. The `hdl21.to_proto()` function converts an Hdl21 `Module` or group of `Modules` into VLSIR `Package`. The `hdl21.from_proto()` function similarly imports a VLSIR `Package` into a namespace of Hdl21 `Modules`.
-
-Exporting to industry-standard netlist formats is a particularly common operation for Hdl21 users. The `hdl21.netlist()` function uses VLSIR to export any of its supported netlist formats.
+Since PDKs are python packages, using them is as simple as importing them. Hdl21 includes two built-in PDKs: the academic predicitive [ASAP7](https://pypi.org/project/asap7-hdl21/) technology, and the open-source [SkyWater 130nm](https://pypi.org/project/sky130-hdl21/) technology.
 
 ```python
-import sys
 import hdl21 as h
+import sky130
 
 @h.module
-class Rlc:
-    p, n = h.Ports(2)
+class SkyInv:
+    """ An inverter, demonstrating using PDK modules """
 
-    res = h.Res(r=1e3)(p=p, n=n)
-    cap = h.Cap(c=1e3)(p=p, n=n)
-    ind = h.Ind(l=1e-9)(p=p, n=n)
+    # Create some IO
+    i, o, VDD, VSS = h.Ports(4)
 
-# Write a spice-format netlist to stdout
-h.netlist(Rlc, sys.stdout, fmt="spice")
+    # And create some transistors!
+    ps = sky130.modules.sky130_fd_pr__pfet_01v8(w=1, l=1)(d=o, g=i, s=VDD, b=VDD)
+    ns = sky130.modules.sky130_fd_pr__nfet_01v8(w=1, l=1)(d=o, g=i, s=VSS, b=VSS)
 ```
 
-`hdl21.netlist` takes a second destination argument `dest`, which is commonly either an open file-handle or `sys.stdout`. All its remaining arguments are passed to `vlsirtools.netlist`.
-
-## Spice-Class Simulation
-
-Hdl21 includes FIXME!
-
-Example Usage:
+Process-portable modules instead use Hdl21 `Primitives`, which can be compiled to a target technology:
 
 ```python
 import hdl21 as h
-from hdl21.sim import *
+from hdl21.prefix import µ
+from hdl21.primitives import Nmos, Pmos, MosVth
 
-@sim
-class MySim:
-    tb = tb(name="mytb")
+@h.module
+class Inv:
+    """ An inverter, demonstrating instantiating PDK modules """
 
-    x = Param(5)
-    y = Param(6)
-    mydc = Dc(var=x, sweep=PointSweep([1]))
-    myac = Ac(sweep=LogSweep(1e1, 1e10, 10))
-    mytran = Tran(tstop=11 * h.prefix.PICO)
-    mysweep = SweepAnalysis(
-        inner=[mytran],
-        var=x,
-        sweep=LinearSweep(0, 1, 2),
-    )
-    mymc = MonteCarlo(
-        inner=[Dc(var="y", sweep=PointSweep([1]), name="swpdc")],
-        npts=11,
-    )
-    delay = Meas(analysis=mytran, expr="trig_targ_something")
-    opts = Options(reltol=1e-9)
+    # Create some IO
+    i, o, VDD, VSS = h.Ports(4)
 
-    # Attributes whose names don't really matter can be called anything,
-    # but must be *assigned* into the class, not just constructed.
-    save_all = Save(SaveMode.ALL)
-
-    # Non-`SimAttr`s such as `a_path` below will be dropped from the `Sim` definition,
-    # but can be referred to by the following attributes.
-    a_path = "/home/models"
-    include_that_path = Include(a_path)
-    fast_lib = Lib(path=a_path, section="fast")
+    # And now create some generic transistors!
+    ps = Pmos(w=1*µ, l=1*µ, vth=MosVth.STD)(d=o, g=i, s=VDD, b=VDD)
+    ns = Nmos(w=1*µ, l=1*µ, vth=MosVth.STD)(d=o, g=i, s=VSS, b=VSS)
 ```
 
-Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
-Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
-such as the `a_path` field in the example aboe.
+Compiling the generic devices to a target PDK then just requires a pass through the PDK's `compile()` method:
 
-Classes decoratated by `sim` a single special required field:
-a `tb` attribute which sets the simulation testbench.
+```python
+import hdl21 as h
+import sky130
 
-Several other names are disallowed in `sim` class-definitions,
-generally corresponding to the names of the `Sim` class's fields and methods.
+sky130.compile(Inv) # Produces the same content as `SkyInv` above
+```
+
+Hdl21 includes an `hdl21.pdk` subpackage which tracks the available in-memory PDKs. If there is a single PDK available, it need not be explicitly imported: `hdl21.pdk.compile()` will use it by default.
+
+```python
+import hdl21 as h
+import sky130  # Note this import can be elsewhere in the program, i.e. in a configuration layer.
+
+h.pdk.compile(Inv)  # With `sky130` in memory, this does the same thing as above.
+```
+
+### PDK Corners
+
+The `hdl21.pdk` package inclues a three-valued `Corner` enumerated type and related classes for describing common process-corner variations. In pseudo [type-union](https://peps.python.org/pep-0604/) code:
+
+```
+Corner = TYP | SLOW | FAST
+```
+
+Typical technologies includes several quantities which undergo such variations. Values of the `Corner` enum can mean either the variations in a particular quantity, e.g. the "slow" versus "fast" variations of a poly resistor, or can just as oftern refer to a set of such variations within a given technology. In the latter case `Corner` values are often expanded by PDK-level code to include each constituent device variation. For example `my.pdk.corner(Corner.FAST)` may expand to definitions of "fast" Cmos transistors, resistors, and capacitors.
+
+Quantities which can be varied are often keyed by a `CornerType`. In similar pseudo-code:
+
+```
+CornerType = MOS | CMOS | RES | CAP | ...
+```
+
+A particularly common such use case pairs NMOS and PMOS transistors into a `CmosCornerPair`, and to evauate circuits at its four extremes, plus their typical case:
+
+```python
+@dataclass
+class CmosCornerPair:
+    nmos: Corner
+    pmos: Corner
+```
+
+```
+CmosCorner = TT | FF | SS | SF | FS
+```
+
+Hdl21 exposes each of these corner-types as Python enumerations and combinations thereof. Each PDK package then defines its mapping from these `Corner` types to the content they include, typically in the form of external files.
+
+
+### PDK Installations and Sites
+
+# PDK Installations 
+
+Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `_nfet` and `_pfet` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type. 
+
+Each `PdkInstallation` is a runtime type-checked Python `dataclass` which extends the base `hdl21.pdk.PdkInstallation` type. Installations are free to define arbitrary fields and methods, which will be type-validated for each `Install` instance. Example: 
+
+```python
+""" A sample PDK package with an `Install` type """
+
+from pydantic.dataclasses import dataclass
+from hdl21.pdk import PdkInstallation
+
+@dataclass
+class Install(PdkInstallation):
+    """Sample Pdk Installation Data"""
+
+    model_lib: Path  # Filesystem `Path` to transistor models
+```
+
+The name of each PDK's installation-type is by convention `Install` with a capital I. PDK packages which include an installation-type also conventionally include an `Install` instance named `install`, with a lower-case i. Code using the PDK package can then refer to the PDK's `install` attribute. Extending the example above: 
+
+```python
+""" A sample PDK package with an `Install` type """
+
+@dataclass
+class Install(PdkInstallation):
+    """Sample Pdk Installation Data"""
+
+    model_lib: Path  # Filesystem `Path` to transistor models
+
+install: Optional[Install] = None  # The active installation, if any
+```
+
+The content of this installation data varies from site to site. To enable "site-portable" code to use the PDK installation, Hdl21 PDK users conventionally define a "site-specific" module or package which:  
+
+* Imports the target PDK module 
+* Creates an instance of its `PdkInstallation` subtype
+* Affixes that instance to the PDK package's `install` attribute 
+
+For example: 
+
+```python
+# In "sitepdks.py" or similar
+import mypdk 
+
+mypdk.install = mypdk.Install(
+    models = "/path/to/models",
+    path2 = "/path/2",
+    # etc.
+)
+```
+
+These "site packages" are named `sitepdks` by convention. They can often be shared among several PDKs on a given filesystem. Hdl21 includes one built-in example such site-package, [SampleSitePdks](./SampleSitePdks/), which demonstrates setting up both built-in PDKs, Sky130 and ASAP7: 
+
+```python
+# The built-in sample `sitepdks` package
+from pathlib import Path
+
+import sky130
+sky130.install = sky130.Install(model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice")
+
+import asap7
+asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "TT.pm")
+```
+
+"Site-portable" code requiring external PDK content can then refer to the PDK package's `install`, without being directly aware of its contents. 
+An example simulation using `mypdk`'s models with the `sitepdk`s defined above:
+
+```python 
+# sim_my_pdk.py
+import hdl21 as h 
+from hdl21.sim import Lib
+import sitepdks as _ # <= This sets up `mypdk.install`
+import mypdk
+
+@h.sim
+class SimMyPdk:
+    # A set of simulation input using `mypdk`'s installation 
+    tb = MyTestBench()
+    models = Lib(
+        path=mypdk.install.models, # <- Here
+        section="ss"
+    )
+
+# And run it!
+SimMyPdk.run()
+```
+
+Note that `sim_my_pdk.py` need not necessarily import or directly depend upon `sitepdks` itself. So long as `sitepdks` is imported and configures the PDK installation anywhere in the Python program, further code will be able to refer to the PDK's `install`.
 
 ---
 

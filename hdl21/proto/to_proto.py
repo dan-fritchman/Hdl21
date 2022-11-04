@@ -333,33 +333,40 @@ def dictify_params(params: Any) -> Dict[str, Optional[Prefixed]]:
     return {field.name: getattr(params, field.name) for field in fields(params)}
 
 
-def export_param_value(
-    val: Union[int, float, str, Decimal, Prefixed, Enum]
-) -> Optional[vlsir.ParamValue]:
+# Alias for the union of (python) types which can be converted to Vlsir's `ParamValue`.
+# These can generally be summarized as "numbers, strings, and things easily convertible into them".
+# Hdl21 parameters can of course be a much larger set of types.
+# Anything outside this list produces a `TypeError` when exported.
+ToVlsirParam = Union[type(None), int, float, str, Decimal, Prefixed, Enum]
+
+
+def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
     """Export a `ParamValue`."""
 
     if isinstance(val, type(None)):
-        return None
-    elif isinstance(val, int):
-        return vlsir.ParamValue(integer=val)
-    elif isinstance(val, float):
-        return vlsir.ParamValue(double=val)
-    elif isinstance(val, str):
+        return None  # `None` serves as the null identifier for "no value".
+
+    if isinstance(val, str):
+        # FIXME: the debate between `string` and `literal`. For now, we use `string`.
         return vlsir.ParamValue(string=val)
-    elif isinstance(val, Prefixed):
-        # FIXME: the UNIT prefix is newly added, not yet part of VLSIR, and hacked around here.
-        # Use the `Decimal` handling, converting to string.
-        if val.prefix == Prefix.UNIT:
-            return vlsir.ParamValue(string=str(val.number))
-        return vlsir.ParamValue(prefixed=export_prefixed(val))
-    elif isinstance(val, Enum):
-        # Enum-valued parameters are always strings
+    # Enum-valued parameters must also be strings, or fail
+    if isinstance(val, Enum):
+        if not isinstance(val.value, str):
+            raise TypeError(f"Enum-valued parameters must be strings, not {val.value}")
         return vlsir.ParamValue(string=val.value)
-    elif isinstance(val, Decimal):
+
+    # Numbers
+    if isinstance(val, Prefixed):
+        return vlsir.ParamValue(prefixed=export_prefixed(val))
+    if isinstance(val, Decimal):
         return vlsir.ParamValue(string=str(val))
-    else:
-        msg = f"Unsupported parameter for proto-export: `{val}`"
-        raise TypeError(msg)
+    if isinstance(val, int):
+        return vlsir.ParamValue(integer=val)
+    if isinstance(val, float):
+        return vlsir.ParamValue(double=val)
+
+    msg = f"Unsupported parameter for proto-export: `{val}`"
+    raise TypeError(msg)
 
 
 def export_prefix(pre: Prefix) -> vlsir.SIPrefix:
@@ -375,6 +382,7 @@ def export_prefix(pre: Prefix) -> vlsir.SIPrefix:
         -3: vlsir.SIPrefix.MILLI,
         -2: vlsir.SIPrefix.CENTI,
         -1: vlsir.SIPrefix.DECI,
+        0: vlsir.SIPrefix.UNIT,
         1: vlsir.SIPrefix.DECA,
         2: vlsir.SIPrefix.HECTO,
         3: vlsir.SIPrefix.KILO,
@@ -397,22 +405,13 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
     # Export the metric prefix
     prefix = export_prefix(pref.prefix)
 
-    # And export the numeric part, dispatched across its type.
-    # FIXME: `hdl21.Prefixed` numbers are *all* `Decimal` now, this could probably be retired.
-    if isinstance(pref.number, int):
-        return vlsir.Prefixed(prefix=prefix, integer=pref.number)
-    elif isinstance(pref.number, float):
-        return vlsir.Prefixed(prefix=prefix, double=pref.number)
-    elif isinstance(pref.number, str):
-        return vlsir.Prefixed(prefix=prefix, string=pref.number)
-    elif isinstance(pref.number, Decimal):
-        # Decimal values are serialized as strings
-        return vlsir.Prefixed(prefix=prefix, string=str(pref.number))
-
-    raise TypeError(f"Invalid Prefixed numeric-value {pref}")
+    # And export the numeric part. Use Vlsir's `integer` variant for Decimal values which equal integers, and strings otherwise.
+    if pref.number == int(pref.number):
+        return vlsir.Prefixed(integer=int(pref.number), prefix=prefix)
+    return vlsir.Prefixed(string=str(pref.number), prefix=prefix)
 
 
-# FIXME: also expose the `hdl21.primitives` as a VLSIR package
+# FIXME: #54 also expose the `hdl21.primitives` as a VLSIR package
 # @classmethod
 # def export_hdl21_primitive(cls, prim: Primitive) -> vckt.ExternalModule:
 #     """ Export a `Primitive` as a `vckt.ExternalModule`.

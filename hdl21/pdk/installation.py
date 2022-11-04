@@ -24,7 +24,7 @@ in a "site-specific" module or package,
 
 E.g. 
 ```python
-# "mysite.py", or similar
+# "sitepdks.py", or similar
 
 import mypdk 
 

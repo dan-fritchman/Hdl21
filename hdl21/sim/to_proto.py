@@ -14,6 +14,7 @@ import vlsir.spice_pb2 as vsp
 from . import data
 from ..prefix import Prefixed
 from ..signal import Signal
+from ..connect import is_connectable
 
 
 def to_proto(sim: data.Sim) -> vsp.SimInput:
@@ -74,6 +75,8 @@ class ProtoExporter:
             return vsp.Analysis(ac=self.export_ac(an))
         elif isinstance(an, data.Tran):
             return vsp.Analysis(tran=self.export_tran(an))
+        elif isinstance(an, data.Noise):
+            return vsp.Analysis(noise=self.export_noise(an))
         elif isinstance(an, data.SweepAnalysis):
             return vsp.Analysis(sweep=self.export_sweep_analysis(an))
         elif isinstance(an, data.MonteCarlo):
@@ -124,9 +127,63 @@ class ProtoExporter:
         analysis_name = tran.name or self.next_analysis_name()
         return vsp.TranInput(
             analysis_name=analysis_name,
-            tstop=export_float(tran.tstop),  # FIXME: move schema to Param / Prefixed
+            # FIXME: VLSIR #26 move schema to Param / Prefixed
+            tstop=export_float(tran.tstop),
             tstep=export_float(tran.tstep),
             ic={},  # FIXME: initial conditions
+            ctrls=[],  # FIXME: analysis-specific controls
+        )
+
+    def export_noise(self, noise: data.Noise) -> vsp.NoiseInput:
+        """Export a Noise analysis"""
+        from ..instance import Instance
+        from ..bundle import BundleInstance
+        from ..diff_pair import Diff
+
+        analysis_name = noise.name or self.next_analysis_name()
+
+        # Sort out the output
+        output = noise.output
+        if isinstance(output, tuple):
+            if len(output) != 2:
+                raise ValueError(f"Invalid Noise Output: {output}")
+            if any(not is_connectable for x in output):
+                raise ValueError(f"Invalid Noise Output: {output}")
+            output_p, output_n = output[0].name, output[1].name
+
+        elif isinstance(output, BundleInstance):
+            # Allow for `Diff` bundles
+            if output.bundle is not Diff:
+                raise ValueError(f"Invalid Noise Output: {output}")
+            output_p, output_n = output.p.name, output.n.name
+
+        elif is_connectable(output):
+            # Single-ended Signal output
+            output_p, output_n = output.name, ""
+
+        elif isinstance(output, str):
+            # Single-ended Signal output
+            output_p, output_n = output, ""
+
+        else:
+            raise TypeError(f"Invalid Noise Output: {output}")
+
+        # Sort out the input source
+        if isinstance(noise.input_source, Instance):
+            input_source = noise.input_source.name
+        elif isinstance(noise.input_source, str):
+            input_source = noise.input_source
+        else:
+            raise TypeError(f"Invalid Noise Input Source: {noise.input_source}")
+
+        return vsp.NoiseInput(
+            analysis_name=analysis_name,
+            output_p=output_p,
+            output_n=output_n,
+            input_source=input_source,
+            fstart=export_float(noise.sweep.start),
+            fstop=export_float(noise.sweep.stop),
+            npts=noise.sweep.npts,
             ctrls=[],  # FIXME: analysis-specific controls
         )
 
@@ -184,6 +241,7 @@ class ProtoExporter:
         elif isinstance(sweep, data.LogSweep):
             return vsp.Sweep(
                 log=vsp.LogSweep(
+                    # FIXME: VLSIR #26 move schema to Param / Prefixed
                     start=export_float(sweep.start),
                     stop=export_float(sweep.stop),
                     npts=export_float(sweep.npts),  # FIXME: move to int
@@ -292,6 +350,6 @@ def export_float(num: Union[float, int, Decimal, Prefixed]) -> float:
         return 0.0
     if isinstance(num, float):
         return num
-    if isinstance(num, (int, Decimal, Prefixed)):
+    if isinstance(num, (int, str, Decimal, Prefixed)):
         return float(num)
     raise TypeError(f"Invalid value for proto float: {num}")
