@@ -1,6 +1,6 @@
 # HDL21
 
-## Hardware Description Library
+## Analog Hardware Description Library in Python
 
 [![test](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml/badge.svg)](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml)
 [![codecov](https://codecov.io/gh/dan-fritchman/Hdl21/branch/main/graph/badge.svg?token=f8LKUqEPdq)](https://codecov.io/gh/dan-fritchman/Hdl21)
@@ -14,10 +14,10 @@ Hdl21 generates hardware databases in the [VLSIR](https://github.com/Vlsir/Vlsir
 - [Modules](#modules)
 - [Signals](#signals), [Ports](#signals), and [Connections](#connections)
 - [Generators](#generators) and [Parameters](#parameters)
+- [Spice-Class Simulation](#spice-class-simulation)
 - [Primitive Elements](#primitives-and-external-modules)
 - [Process Technology (PDK) Packages](#process-technologies)
-- Spice-Class Simulation
-- High-Class Connections with Bundles
+- Coming Soon: Structured Connections with `Bundle`s
 - Coming Soon: Schematics
 
 ## Modules
@@ -331,109 +331,10 @@ from hdl21.prefix import e, µ
 These `e()` values are also most common in multiplication expressions,
 to create `Prefixed` values in "floating point" style such as `11 * e(-9)`.
 
-## Primitives and External Modules
 
-The leaf-nodes of each hierarchical Hdl21 circuit are generally defined in one of two places:
+## Exporting and Importing
 
-- `Primitive` elements, defined in the `hdl21.primitives` package. These include transistors, resistors, capacitors, and other irreducible components. Simulation-level behavior of these elements is typically defined _inside of_ simulation tools and other EDA software.
-- `ExternalModules`, defined outside Hdl21. Such "module wrappers", which might alternately be called "black boxes", are common for including circuits from other HDLs.
-
-### `Primitives`
-
-Hdl21 `Primitives` come in _ideal_ and _physical_ flavors. The difference is most frequently relevant for passive elements, which can for example represent either (a) technology-specific passives, e.g. a MIM or MOS capacitor, or (b) an _ideal_ capacitor. Some element-types have solely physical implementations, some are solely ideal, and others include both.
-
-### The `hdl21.primitives` Library
-
-The `Primitive` type and all its valid values are defined by the `hdl21.primitives` package. A summary of the `hdl21.primitives` library content:
-
-| Name                           | Description                       | Type     | Aliases                               | Ports        |
-| ------------------------------ | --------------------------------- | -------- | ------------------------------------- | ------------ |
-| Mos                            | Mos Transistor                    | PHYSICAL | MOS                                   | d, g, s, b   |
-| IdealResistor                  | Ideal Resistor                    | IDEAL    | R, Res, Resistor, IdealR, IdealRes    | p, n         |
-| PhysicalResistor               | Physical Resistor                 | PHYSICAL | PhyR, PhyRes, ResPhy, PhyResistor     | p, n, b      |
-| ThreeTerminalResistor          | Three Terminal Resistor           | PHYSICAL | Res3, PhyRes3, ResPhy3, PhyResistor3  | p, n, b      |
-| IdealCapacitor                 | Ideal Capacitor                   | IDEAL    | C, Cap, Capacitor, IdealC, IdealCap   | p, n         |
-| PhysicalCapacitor              | Physical Capacitor                | PHYSICAL | PhyC, PhyCap, CapPhy, PhyCapacitor    | p, n         |
-| ThreeTerminalCapacitor         | Three Terminal Capacitor          | PHYSICAL | Cap3, PhyCap3, CapPhy3, PhyCapacitor3 | p, n, b      |
-| IdealInductor                  | Ideal Inductor                    | IDEAL    | L, Ind, Inductor, IdealL, IdealInd    | p, n         |
-| PhysicalInductor               | Physical Inductor                 | PHYSICAL | PhyL, PhyInd, IndPhy, PhyInductor     | p, n         |
-| ThreeTerminalInductor          | Three Terminal Inductor           | PHYSICAL | Ind3, PhyInd3, IndPhy3, PhyInductor3  | p, n, b      |
-| PhysicalShort                  | Short-Circuit/ Net-Tie            | PHYSICAL | Short                                 | p, n         |
-| DcVoltageSource                | DC Voltage Source                 | IDEAL    | V, Vdc, Vsrc                          | p, n         |
-| PulseVoltageSource             | Pulse Voltage Source              | IDEAL    | Vpu, Vpulse                           | p, n         |
-| CurrentSource                  | Ideal DC Current Source           | IDEAL    | I, Idc, Isrc                          | p, n         |
-| VoltageControlledVoltageSource | Voltage Controlled Voltage Source | IDEAL    | Vcvs, VCVS                            | p, n, cp, cn |
-| CurrentControlledVoltageSource | Current Controlled Voltage Source | IDEAL    | Ccvs, CCVS                            | p, n, cp, cn |
-| VoltageControlledCurrentSource | Voltage Controlled Current Source | IDEAL    | Vccs, VCCS                            | p, n, cp, cn |
-| CurrentControlledCurrentSource | Current Controlled Current Source | IDEAL    | Cccs, CCCS                            | p, n, cp, cn |
-| Bipolar                        | Bipolar Transistor                | PHYSICAL | Bjt, BJT                              | c, b, e      |
-| Diode                          | Diode                             | PHYSICAL | D                                     | p, n         |
-
-Each primitive is available in the `hdl21.primitives` namespace, either through its full name or any of its aliases. Most primitives have fairly verbose names (e.g. `VoltageControlledCurrentSource`, `IdealResistor`), but also expose short-form aliases (e.g. `Vcvs`, `R`). Each of the aliases in Table 1 above refer to _the same_ Python object; choose whichever name works for you. In other words
-
-### `ExternalModules`
-
-Alternately Hdl21 includes an `ExternalModule` type which defines the interface to a module-implementation outside Hdl21. These external definitions are common for instantiating technology-specific modules and libraries. Other popular modern HDLs refer to these as module _black boxes_. An example `ExternalModule`:
-
-```python
-import hdl21 as h
-from hdl21.prefix import µ
-from hdl21.primitives import Diode
-
-@h.paramclass
-class BandGapParams:
-    self_destruct = h.Param(
-        dtype=bool,
-        desc="Whether to include the self-destruction feature",
-        default=True,
-    )
-
-BandGap = h.ExternalModule(
-    name="BandGap",
-    desc="Example ExternalModule, defined outside Hdl21",
-    port_list=[h.Port(name="vref"), h.Port(name="enable")],
-    paramtype=BandGapParams,
-)
-```
-
-Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few other pieces of metadata, but no internal implementation: no internal signals, and no instances of other modules. Unlike `Modules`, both _do_ have parameters. `Primitives` each have an associated `paramclass`, while `ExternalModules` can optionally declare one via their `paramtype` attribute. Their parameter-types are limited to a small subset of those possible for `Generators` - scalar numeric types (`int`, `float`) and `str` - primarily limited by the need to need to provide them to legacy HDLs.
-
-`Primitives` and `ExternalModules` can be instantiated and connected in all the same styles as `Modules`:
-
-```python
-# Continuing from the snippet above:
-params = BandGapParams(self_destruct=False)  # Watch out there!
-
-@h.module
-class BandGapPlus:
-    vref, enable = h.Signals(2)
-    # Instantiate the `ExternalModule` defined above
-    bg = BandGap(params)(vref=vref, enable=enable)
-    # ...Anything else...
-
-@h.module
-class DiodePlus:
-    p, n = h.Signals(2)
-    # Parameterize, instantiate, and connect a `primitives.Diode`
-    d = Diode(w=1 * µ, l=1 * µ)(p=p, n=n)
-    # ... Everything else ...
-```
-
-## Process Technologies
-
-Designing for a specific implementation technology (or "process development kit", or PDK) with Hdl21 can use either of (or a combination of) two routes:
-
-- Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its tech-specific transistor and passive modules, and potentially larger cells, for example from a cell library.
-- Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21.pdk` converter.
-
-Hdl21 PDKs are Python packages which generally include two primary elements:
-
-- (a) A library `ExternalModules` describing the technology's cells, and
-- (b) A `compile` conversion-method which transforms a hierarchical Hdl21 tree, mapping generic `hdl21.Primitives` into the tech-specific `ExternalModules`.
-
-## Exporting
-
-Hdl21's primary interchange format is [VLSIR](https://github.com/Vlsir/Vlsir). VLSIR is a binary ProtoBuf-based format with support for a variety of industry-standard formats and tools. The `hdl21.to_proto()` function converts an Hdl21 `Module` or group of `Modules` into VLSIR `Package`. The `hdl21.from_proto()` function similarly imports a VLSIR `Package` into a namespace of Hdl21 `Modules`.
+Hdl21's primary import/ export format is [VLSIR](https://github.com/Vlsir/Vlsir). VLSIR is a binary ProtoBuf-based format with support for a variety of industry-standard formats and tools. The `hdl21.to_proto()` function converts an Hdl21 `Module` or group of `Modules` into VLSIR `Package`. The `hdl21.from_proto()` function similarly imports a VLSIR `Package` into a namespace of Hdl21 `Modules`.
 
 Exporting to industry-standard netlist formats is a particularly common operation for Hdl21 users. The `hdl21.netlist()` function uses VLSIR to export any of its supported netlist formats.
 
@@ -575,6 +476,285 @@ s.include("/home/models")
 s.lib(path="/home/models", section="fast")
 s.options(reltol=1e-9)
 ```
+
+## Primitives and External Modules
+
+The leaf-nodes of each hierarchical Hdl21 circuit are generally defined in one of two places:
+
+- `Primitive` elements, defined in the `hdl21.primitives` package. These include transistors, resistors, capacitors, and other irreducible components. Simulation-level behavior of these elements is typically defined _inside of_ simulation tools and other EDA software.
+- `ExternalModules`, defined outside Hdl21. Such "module wrappers", which might alternately be called "black boxes", are common for including circuits from other HDLs.
+
+### `Primitives`
+
+Hdl21 `Primitives` come in _ideal_ and _physical_ flavors. The difference is most frequently relevant for passive elements, which can for example represent either (a) technology-specific passives, e.g. a MIM or MOS capacitor, or (b) an _ideal_ capacitor. Some element-types have solely physical implementations, some are solely ideal, and others include both.
+
+### The `hdl21.primitives` Library
+
+The `Primitive` type and all its valid values are defined by the `hdl21.primitives` package. A summary of the `hdl21.primitives` library content:
+
+| Name                           | Description                       | Type     | Aliases                               | Ports        |
+| ------------------------------ | --------------------------------- | -------- | ------------------------------------- | ------------ |
+| Mos                            | Mos Transistor                    | PHYSICAL | MOS                                   | d, g, s, b   |
+| IdealResistor                  | Ideal Resistor                    | IDEAL    | R, Res, Resistor, IdealR, IdealRes    | p, n         |
+| PhysicalResistor               | Physical Resistor                 | PHYSICAL | PhyR, PhyRes, ResPhy, PhyResistor     | p, n, b      |
+| ThreeTerminalResistor          | Three Terminal Resistor           | PHYSICAL | Res3, PhyRes3, ResPhy3, PhyResistor3  | p, n, b      |
+| IdealCapacitor                 | Ideal Capacitor                   | IDEAL    | C, Cap, Capacitor, IdealC, IdealCap   | p, n         |
+| PhysicalCapacitor              | Physical Capacitor                | PHYSICAL | PhyC, PhyCap, CapPhy, PhyCapacitor    | p, n         |
+| ThreeTerminalCapacitor         | Three Terminal Capacitor          | PHYSICAL | Cap3, PhyCap3, CapPhy3, PhyCapacitor3 | p, n, b      |
+| IdealInductor                  | Ideal Inductor                    | IDEAL    | L, Ind, Inductor, IdealL, IdealInd    | p, n         |
+| PhysicalInductor               | Physical Inductor                 | PHYSICAL | PhyL, PhyInd, IndPhy, PhyInductor     | p, n         |
+| ThreeTerminalInductor          | Three Terminal Inductor           | PHYSICAL | Ind3, PhyInd3, IndPhy3, PhyInductor3  | p, n, b      |
+| PhysicalShort                  | Short-Circuit/ Net-Tie            | PHYSICAL | Short                                 | p, n         |
+| DcVoltageSource                | DC Voltage Source                 | IDEAL    | V, Vdc, Vsrc                          | p, n         |
+| PulseVoltageSource             | Pulse Voltage Source              | IDEAL    | Vpu, Vpulse                           | p, n         |
+| CurrentSource                  | Ideal DC Current Source           | IDEAL    | I, Idc, Isrc                          | p, n         |
+| VoltageControlledVoltageSource | Voltage Controlled Voltage Source | IDEAL    | Vcvs, VCVS                            | p, n, cp, cn |
+| CurrentControlledVoltageSource | Current Controlled Voltage Source | IDEAL    | Ccvs, CCVS                            | p, n, cp, cn |
+| VoltageControlledCurrentSource | Voltage Controlled Current Source | IDEAL    | Vccs, VCCS                            | p, n, cp, cn |
+| CurrentControlledCurrentSource | Current Controlled Current Source | IDEAL    | Cccs, CCCS                            | p, n, cp, cn |
+| Bipolar                        | Bipolar Transistor                | PHYSICAL | Bjt, BJT                              | c, b, e      |
+| Diode                          | Diode                             | PHYSICAL | D                                     | p, n         |
+
+Each primitive is available in the `hdl21.primitives` namespace, either through its full name or any of its aliases. Most primitives have fairly verbose names (e.g. `VoltageControlledCurrentSource`, `IdealResistor`), but also expose short-form aliases (e.g. `Vcvs`, `R`). Each of the aliases in Table 1 above refer to _the same_ Python object; choose whichever name works for you. In other words
+
+### `ExternalModules`
+
+Alternately Hdl21 includes an `ExternalModule` type which defines the interface to a module-implementation outside Hdl21. These external definitions are common for instantiating technology-specific modules and libraries. Other popular modern HDLs refer to these as module _black boxes_. An example `ExternalModule`:
+
+```python
+import hdl21 as h
+from hdl21.prefix import µ
+from hdl21.primitives import Diode
+
+@h.paramclass
+class BandGapParams:
+    self_destruct = h.Param(
+        dtype=bool,
+        desc="Whether to include the self-destruction feature",
+        default=True,
+    )
+
+BandGap = h.ExternalModule(
+    name="BandGap",
+    desc="Example ExternalModule, defined outside Hdl21",
+    port_list=[h.Port(name="vref"), h.Port(name="enable")],
+    paramtype=BandGapParams,
+)
+```
+
+Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few other pieces of metadata, but no internal implementation: no internal signals, and no instances of other modules. Unlike `Modules`, both _do_ have parameters. `Primitives` each have an associated `paramclass`, while `ExternalModules` can optionally declare one via their `paramtype` attribute. Their parameter-types are limited to a small subset of those possible for `Generators` - scalar numeric types (`int`, `float`) and `str` - primarily limited by the need to need to provide them to legacy HDLs.
+
+`Primitives` and `ExternalModules` can be instantiated and connected in all the same styles as `Modules`:
+
+```python
+# Continuing from the snippet above:
+params = BandGapParams(self_destruct=False)  # Watch out there!
+
+@h.module
+class BandGapPlus:
+    vref, enable = h.Signals(2)
+    # Instantiate the `ExternalModule` defined above
+    bg = BandGap(params)(vref=vref, enable=enable)
+    # ...Anything else...
+
+@h.module
+class DiodePlus:
+    p, n = h.Signals(2)
+    # Parameterize, instantiate, and connect a `primitives.Diode`
+    d = Diode(w=1 * µ, l=1 * µ)(p=p, n=n)
+    # ... Everything else ...
+```
+
+## Process Technologies
+
+Designing for a specific implementation technology (or "process development kit", or PDK) with Hdl21 can use either of (or a combination of) two routes:
+
+- Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its tech-specific transistor and passive modules, and potentially larger cells, for example from a cell library.
+- Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21.pdk` converter.
+
+Hdl21 PDKs are Python packages which generally include two primary elements:
+
+- (a) A library `ExternalModules` describing the technology's cells, and
+- (b) A `compile` conversion-method which transforms a hierarchical Hdl21 tree, mapping generic `hdl21.Primitives` into the tech-specific `ExternalModules`.
+
+Since PDKs are python packages, using them is as simple as importing them. Hdl21 includes two built-in PDKs: the academic predicitive [ASAP7](https://pypi.org/project/asap7-hdl21/) technology, and the open-source [SkyWater 130nm](https://pypi.org/project/sky130-hdl21/) technology.
+
+```python
+import hdl21 as h
+import sky130
+
+@h.module
+class SkyInv:
+    """ An inverter, demonstrating using PDK modules """
+
+    # Create some IO
+    i, o, VDD, VSS = h.Ports(4)
+
+    # And create some transistors!
+    ps = sky130.modules.sky130_fd_pr__pfet_01v8(w=1, l=1)(d=o, g=i, s=VDD, b=VDD)
+    ns = sky130.modules.sky130_fd_pr__nfet_01v8(w=1, l=1)(d=o, g=i, s=VSS, b=VSS)
+```
+
+Process-portable modules instead use Hdl21 `Primitives`, which can be compiled to a target technology:
+
+```python
+import hdl21 as h
+from hdl21.prefix import µ
+from hdl21.primitives import Nmos, Pmos, MosVth
+
+@h.module
+class Inv:
+    """ An inverter, demonstrating instantiating PDK modules """
+
+    # Create some IO
+    i, o, VDD, VSS = h.Ports(4)
+
+    # And now create some generic transistors!
+    ps = Pmos(w=1*µ, l=1*µ, vth=MosVth.STD)(d=o, g=i, s=VDD, b=VDD)
+    ns = Nmos(w=1*µ, l=1*µ, vth=MosVth.STD)(d=o, g=i, s=VSS, b=VSS)
+```
+
+Compiling the generic devices to a target PDK then just requires a pass through the PDK's `compile()` method:
+
+```python
+import hdl21 as h
+import sky130
+
+sky130.compile(Inv) # Produces the same content as `SkyInv` above
+```
+
+Hdl21 includes an `hdl21.pdk` subpackage which tracks the available in-memory PDKs. If there is a single PDK available, it need not be explicitly imported: `hdl21.pdk.compile()` will use it by default.
+
+```python
+import hdl21 as h
+import sky130  # Note this import can be elsewhere in the program, i.e. in a configuration layer.
+
+h.pdk.compile(Inv)  # With `sky130` in memory, this does the same thing as above.
+```
+
+### PDK Corners
+
+The `hdl21.pdk` package inclues a three-valued `Corner` enumerated type and related classes for describing common process-corner variations. In pseudo [type-union](https://peps.python.org/pep-0604/) code:
+
+```
+Corner = TYP | SLOW | FAST
+```
+
+Typical technologies includes several quantities which undergo such variations. Values of the `Corner` enum can mean either the variations in a particular quantity, e.g. the "slow" versus "fast" variations of a poly resistor, or can just as oftern refer to a set of such variations within a given technology. In the latter case `Corner` values are often expanded by PDK-level code to include each constituent device variation. For example `my.pdk.corner(Corner.FAST)` may expand to definitions of "fast" Cmos transistors, resistors, and capacitors.
+
+Quantities which can be varied are often keyed by a `CornerType`. In similar pseudo-code:
+
+```
+CornerType = MOS | CMOS | RES | CAP | ...
+```
+
+A particularly common such use case pairs NMOS and PMOS transistors into a `CmosCornerPair`, and to evauate circuits at its four extremes, plus their typical case:
+
+```python
+@dataclass
+class CmosCornerPair:
+    nmos: Corner
+    pmos: Corner
+```
+
+```
+CmosCorner = TT | FF | SS | SF | FS
+```
+
+Hdl21 exposes each of these corner-types as Python enumerations and combinations thereof. Each PDK package then defines its mapping from these `Corner` types to the content they include, typically in the form of external files.
+
+
+### PDK Installations and Sites
+
+# PDK Installations 
+
+Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `_nfet` and `_pfet` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type. 
+
+Each `PdkInstallation` is a runtime type-checked Python `dataclass` which extends the base `hdl21.pdk.PdkInstallation` type. Installations are free to define arbitrary fields and methods, which will be type-validated for each `Install` instance. Example: 
+
+```python
+""" A sample PDK package with an `Install` type """
+
+from pydantic.dataclasses import dataclass
+from hdl21.pdk import PdkInstallation
+
+@dataclass
+class Install(PdkInstallation):
+    """Sample Pdk Installation Data"""
+
+    model_lib: Path  # Filesystem `Path` to transistor models
+```
+
+The name of each PDK's installation-type is by convention `Install` with a capital I. PDK packages which include an installation-type also conventionally include an `Install` instance named `install`, with a lower-case i. Code using the PDK package can then refer to the PDK's `install` attribute. Extending the example above: 
+
+```python
+""" A sample PDK package with an `Install` type """
+
+@dataclass
+class Install(PdkInstallation):
+    """Sample Pdk Installation Data"""
+
+    model_lib: Path  # Filesystem `Path` to transistor models
+
+install: Optional[Install] = None  # The active installation, if any
+```
+
+The content of this installation data varies from site to site. To enable "site-portable" code to use the PDK installation, Hdl21 PDK users conventionally define a "site-specific" module or package which:  
+
+* Imports the target PDK module 
+* Creates an instance of its `PdkInstallation` subtype
+* Affixes that instance to the PDK package's `install` attribute 
+
+For example: 
+
+```python
+# In "sitepdks.py" or similar
+import mypdk 
+
+mypdk.install = mypdk.Install(
+    models = "/path/to/models",
+    path2 = "/path/2",
+    # etc.
+)
+```
+
+These "site packages" are named `sitepdks` by convention. They can often be shared among several PDKs on a given filesystem. Hdl21 includes one built-in example such site-package, [SampleSitePdks](./SampleSitePdks/), which demonstrates setting up both built-in PDKs, Sky130 and ASAP7: 
+
+```python
+# The built-in sample `sitepdks` package
+from pathlib import Path
+
+import sky130
+sky130.install = sky130.Install(model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice")
+
+import asap7
+asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "TT.pm")
+```
+
+"Site-portable" code requiring external PDK content can then refer to the PDK package's `install`, without being directly aware of its contents. 
+An example simulation using `mypdk`'s models with the `sitepdk`s defined above:
+
+```python 
+# sim_my_pdk.py
+import hdl21 as h 
+from hdl21.sim import Lib
+import sitepdks as _ # <= This sets up `mypdk.install`
+import mypdk
+
+@h.sim
+class SimMyPdk:
+    # A set of simulation input using `mypdk`'s installation 
+    tb = MyTestBench()
+    models = Lib(
+        path=mypdk.install.models, # <- Here
+        section="ss"
+    )
+
+# And run it!
+SimMyPdk.run()
+```
+
+Note that `sim_my_pdk.py` need not necessarily import or directly depend upon `sitepdks` itself. So long as `sitepdks` is imported and configures the PDK installation anywhere in the Python program, further code will be able to refer to the PDK's `install`.
 
 ---
 
