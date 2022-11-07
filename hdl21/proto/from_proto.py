@@ -227,11 +227,15 @@ def import_vlsir_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
     # FIXME: specialized importing of their parameters!
     prim_map = {
         "vdc": "DcVoltageSource",
-        "vpluse": "PulseVoltageSource",
+        "vpulse": "PulseVoltageSource",
         "isource": "CurrentSource",
         "resistor": "IdealResistor",
         "capacitor": "IdealCapacitor",
         "inductor": "IdealInductor",
+        "vcvs": "VoltageControlledVoltageSource",
+        "vccs": "VoltageControlledCurrentSource",
+        "ccvs": "CurrentControlledVoltageSource",
+        "cccs": "CurrentControlledCurrentSource",
     }
     if pref.name not in prim_map:
         msg = f"Invalid or unsupported VLSIR Primitive: {pref.name}"
