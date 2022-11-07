@@ -187,6 +187,7 @@ class ProtoExporter:
                     prim_map = {
                         "DcVoltageSource": "vdc",
                         "PulseVoltageSource": "vpulse",
+                        "SineVoltageSource": "vsin",
                         "CurrentSource": "isource",
                         "IdealResistor": "resistor",
                         "IdealCapacitor": "capacitor",

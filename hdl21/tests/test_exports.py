@@ -112,6 +112,11 @@ def test_ideal_primitives():
             v2=0*h.prefix.m, period=0*h.prefix.m, 
             rise=0*h.prefix.m, fall=0*h.prefix.m, width=0*h.prefix.m)
         vpu = h.Vpulse(_vpu)(p=p, n=n)
+        _vsin = h.Vsin.Params(
+            voff=0*h.prefix.m, vamp=0*h.prefix.m, 
+            freq=0*h.prefix.m, td=0*h.prefix.m, 
+            phase=0*h.prefix.m)
+        vsin = h.Vsin(_vsin)(p=p, n=n)
         _idc = h.Idc.Params(dc=0*h.prefix.m)
         idc = h.Idc(_idc)(p=p, n=n)
         _vcvs = h.Vcvs.Params(gain=1*h.prefix.m)

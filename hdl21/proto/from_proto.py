@@ -229,6 +229,7 @@ def import_vlsir_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
     prim_map = {
         "vdc": "DcVoltageSource",
         "vpulse": "PulseVoltageSource",
+        "vsin": "SineVoltageSource",
         "isource": "CurrentSource",
         "resistor": "IdealResistor",
         "capacitor": "IdealCapacitor",

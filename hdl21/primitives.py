@@ -474,6 +474,29 @@ _add(
 
 
 @paramclass
+class SineVoltageSourceParams:
+    """`SineVoltageSource` Parameters"""
+
+    voff = Param(dtype=Optional[Prefixed], default=None, desc="Offset (V)")
+    vamp = Param(dtype=Optional[Prefixed], default=None, desc="Amplitude (V)")
+    freq = Param(dtype=Optional[Prefixed], default=None, desc="Frequency (Hz)")
+    td = Param(dtype=Optional[Prefixed], default=None, desc="Delay (s)")
+    phase = Param(dtype=Optional[Prefixed], default=None, desc="Phase at td (degrees)")
+
+
+_add(
+    prim=Primitive(
+        name="SineVoltageSource",
+        desc="Sine Voltage Source",
+        port_list=copy.deepcopy(PassivePorts),
+        paramtype=SineVoltageSourceParams,
+        primtype=PrimitiveType.IDEAL,
+    ),
+    aliases=["Vsin"],
+)
+
+
+@paramclass
 class CurrentSourceParams:
     dc = Param(dtype=Optional[Prefixed], default=0, desc="DC Value (A)")
 
