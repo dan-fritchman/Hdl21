@@ -2,7 +2,7 @@
 hdl21 ProtoBuf Import 
 """
 from types import SimpleNamespace
-from typing import Union, Any, Dict, List
+from typing import Union, Any, Dict, List, Optional
 
 # Local imports
 # Proto-definitions
@@ -18,7 +18,7 @@ from ..signal import Signal, PortDir, Visibility
 from ..slice import Slice
 from ..concat import Concat
 from .. import primitives
-from ..primitives import Primitive
+from ..primitives import Primitive, Vpulse
 
 
 def from_proto(pkg: vckt.Package) -> SimpleNamespace:
@@ -155,7 +155,8 @@ class ProtoImporter:
             if ref.external.domain == "vlsir.primitives":
                 # Import a VLSIR primitive to an ideal element, and convert its parameters
                 target = import_vlsir_primitive(ref.external)
-                params = target.Params(**params)
+                remapped_params = import_primitive_params(target, params)
+                params = target.Params(**remapped_params)
 
             elif ref.external.domain in (
                 "hdl21.primitives",
@@ -370,3 +371,22 @@ def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
         raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
     return Prefixed(prefix=prefix, number=number)
+
+
+def import_primitive_params(target: Primitive, params: Any) -> Dict[str, Optional[Prefixed]]:
+    """Convert the parameters of an `IDEAL` VLSIR element into a primtive form.
+    Returns the result as a dictionary of {name: value}s."""
+
+    if target is Vpulse:
+        return dict(
+            v1=params["v1"],
+            v2=params["v2"],
+            delay=params["td"],
+            rise=params["tr"],
+            fall=params["tf"],
+            width=params["tpw"],
+            period=params["tper"],
+        )
+
+    return params
+
