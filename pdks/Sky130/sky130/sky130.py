@@ -26,7 +26,7 @@ or added to this package via pull request.
 
 import copy
 from pathlib import Path
-from typing import Union, Dict, Tuple, Optional
+from typing import Union, Dict, Tuple
 from types import SimpleNamespace
 
 from pydantic.dataclasses import dataclass
@@ -50,8 +50,16 @@ class Sky130MosParams:
 
     # l = 1 w = 1 ad = 0 as = 0 pd = 0 ps = 0 nrd = 0 nrs = 0 sa = 0 sb = 0 sd = 0 mult = 1 nf = 1.0
 
-    w = h.Param(dtype=str, desc="Width, in PDK Units (microns)", default=1)
-    l = h.Param(dtype=str, desc="Length, in PDK Units (microns)", default=1)
+    w = h.Param(
+        dtype=h.Prefixed,
+        desc="Width, in PDK Units (microns)",
+        default=1 * h.Prefix.UNIT,
+    )
+    l = h.Param(
+        dtype=h.Prefixed,
+        desc="Length, in PDK Units (microns)",
+        default=1 * h.Prefix.UNIT,
+    )
     nf = h.Param(dtype=int, desc="Number of Fingers", default=1)
     mult = h.Param(dtype=int, desc="Multiplier", default=1)
 
@@ -76,7 +84,10 @@ xtors: Dict[Tuple[MosType, MosVth], h.ExternalModule] = {
     (MosType.NMOS, MosVth.LOW): _xtor_module("sky130_fd_pr__nfet_01v8_lvt"),
     (MosType.PMOS, MosVth.STD): _xtor_module("sky130_fd_pr__pfet_01v8"),
     (MosType.PMOS, MosVth.HIGH): _xtor_module("sky130_fd_pr__pfet_01v8_hvt"),
-    # Note there are no NMOS HVT or PMOS LVT!
+    (MosType.PMOS, MosVth.LOW): _xtor_module("sky130_fd_pr__pfet_01v8_lvt"),
+    # Note there are no NMOS HVT!
+    # PMOS LVT was added at some point in history,
+    # and added to this package in v3.0.
 }
 
 # Collected `ExternalModule`s are stored in the `modules` namespace
@@ -122,11 +133,14 @@ class Sky130Walker(h.HierarchyWalker):
 
         # Convert to `mod`s parameter-space
         # Note this silly PDK keeps parameter-values in *microns* rather than SI meters.
-        w = "650n" if params.w is None else params.w
-        l = "150n" if params.l is None else params.l
+        # Convert to microns here, multiplying by 1e6.
+        from hdl21.prefix import NANO, MEGA
+
+        w = 650 * NANO if params.w is None else params.w * MEGA
+        l = 150 * NANO if params.l is None else params.l * MEGA
         modparams = Sky130MosParams(
-            w=f"({w} * 1e6)",
-            l=f"({l} * 1e6)",
+            w=w,
+            l=l,
             nf=params.npar,
             mult=1,
         )
