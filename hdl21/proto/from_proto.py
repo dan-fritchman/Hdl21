@@ -374,7 +374,9 @@ def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
     return Prefixed(prefix=prefix, number=number)
 
 
-def import_primitive_params(target: Primitive, params: Any) -> Dict[str, Optional[Prefixed]]:
+def import_primitive_params(
+    target: Primitive, params: Any
+) -> Dict[str, Optional[Prefixed]]:
     """Convert the parameters of an `IDEAL` VLSIR element into a primtive form.
     Returns the result as a dictionary of {name: value}s."""
 
@@ -390,4 +392,3 @@ def import_primitive_params(target: Primitive, params: Any) -> Dict[str, Optiona
         )
 
     return params
-

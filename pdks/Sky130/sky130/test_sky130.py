@@ -65,3 +65,10 @@ def test_module1():
         nl = s.sky130_fd_pr__nfet_01v8_lvt(mp)()
         ps = s.sky130_fd_pr__pfet_01v8(mp)()
         ph = s.sky130_fd_pr__pfet_01v8_hvt(mp)()
+
+
+def test_walker_contents():
+    from hdl21.tests.content import walker_test_content
+
+    content = walker_test_content()
+    sky130.compile(content)

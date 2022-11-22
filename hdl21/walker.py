@@ -6,12 +6,12 @@
 from typing import List
 
 # Local imports
-from .elab import Elaboratables
+from .elab import Elaboratable, Elaboratables, elaborate, is_elaboratable
+from .instance import Instance
+from .instantiable import Instantiable
 from .module import Module
 from .external_module import ExternalModuleCall
-from .instance import Instance
 from .primitives import PrimitiveCall
-from .bundle import BundleInstance
 from .generator import GeneratorCall
 
 
@@ -23,51 +23,86 @@ class HierarchyWalker:
     Designed to be used as a base-class for extensions such as process-specific instance-replacements.
     """
 
-    def visit_elaboratables(self, src: Elaboratables) -> None:
+    def visit_elaboratables(self, src: Elaboratables) -> Elaboratables:
         """Visit an `Elaboratables` object.
         Largely dispatches across the type-union of elaboratable objects."""
+
+        # First ensure all the `src` modules and generators are elaborated.
+        # This is a functional no-op if they already are.
+        elaborate(src)
+
+        if isinstance(src, List):
+            for x in src:
+                self.visit_elaboratable(x)
+            return src
+        if is_elaboratable(src):
+            return self.visit_elaboratable(src)
+        raise TypeError(f"Cannot walk non-elaboratable {src}")
+
+    def visit_elaboratable(self, src: Elaboratable) -> Elaboratable:
+        """Visit an `Elaboratable` object."""
 
         if isinstance(src, Module):
             return self.visit_module(src)
         if isinstance(src, GeneratorCall):
             return self.visit_generator_call(src)
-        if isinstance(src, List):
-            for x in src:
-                self.visit_elaboratables(x)
-            return
-        raise TypeError
+        raise TypeError(f"Cannot walk non-elaboratable {src}")
 
-    def visit_generator_call(self, call: GeneratorCall) -> None:
-        """Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`."""
-        return self.visit_module(call.gen._resolved)  # FIXME! think we broke this one.
-
-    def visit_module(self, module: Module) -> None:
+    def visit_module(self, module: Module) -> Instantiable:
         """Visit a `Module`.
         Primary method for most manipulations."""
 
+        # Step into each of the Module's instances.
+        # Note that as we have already elaborated, it no longer has bundles.
         for inst in module.instances.values():
             self.visit_instance(inst)
-        for inst in module.bundles.values():
-            self.visit_bundle_instance(inst)
+        return module
 
-    def visit_external_module(self, call: ExternalModuleCall) -> None:
-        return
+    def visit_generator_call(self, call: GeneratorCall) -> Instantiable:
+        """Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`."""
+        if call.result is None:
+            raise RuntimeError(f"Generator {call} has not been elaborated")
+        return self.visit_module(call.result)
 
-    def visit_primitive_call(self, call: PrimitiveCall) -> None:
-        return
+    def visit_external_module_call(self, call: ExternalModuleCall) -> Instantiable:
+        """Visit an `ExternalModuleCall`.
+        A common place to perform "module replacement" in sub-classes.
+        Base implementation does nothing."""
+        return call
 
-    def visit_bundle_instance(self, inst: BundleInstance) -> None:
-        return
+    def visit_primitive_call(self, call: PrimitiveCall) -> Instantiable:
+        """Visit an `PrimitiveCall`.
+        A common place to perform "module replacement" in sub-classes,
+        especially when transforming Hdl21's generic `Primitive`s into technology-specific devices.
+        Base implementation does nothing."""
+        return call
 
-    def visit_instance(self, inst: Instance) -> None:
-        """Visit a hierarchical `Instance`."""
+    def visit_instance(self, inst: Instance) -> Instance:
+        """Visit a hierarchical `Instance`.
+        Visits and sets its `of` field to the result of `visit_instantiable`."""
+        inst.of = self.visit_instantiable(inst.of)
+        return inst
 
-        if isinstance(inst.of, GeneratorCall):
-            return self.visit_generator_call(call=inst.of)
-        if isinstance(inst.of, Module):
-            return self.visit_module(inst.of)
-        if isinstance(inst.of, PrimitiveCall):
-            return self.visit_primitive_call(inst.of)
-        if isinstance(inst.of, ExternalModuleCall):
-            return self.visit_external_module(inst.of)
-        raise TypeError(f"Invalid Instance of {inst.of}")
+    def visit_instantiable(self, of: Instantiable) -> Instantiable:
+        """Visit an `Instantiable` instance-target."""
+
+        if isinstance(of, GeneratorCall):
+            return self.visit_generator_call(call=of)
+        if isinstance(of, Module):
+            return self.visit_module(of)
+        if isinstance(of, PrimitiveCall):
+            return self.visit_primitive_call(of)
+        if isinstance(of, ExternalModuleCall):
+            return self.visit_external_module_call(of)
+        raise TypeError(f"Invalid Instance of {of}")
+
+    @classmethod
+    def walk(cls, src: Elaboratables) -> Elaboratables:
+        """Walk a hierarchical design tree or list of them.
+        Class-level method commonly called on sub-classes, e.g. in PDK compilation methods."""
+        return cls().visit_elaboratables(src)
+
+
+def walk(src: Elaboratables) -> Elaboratables:
+    """Walk a hierarchical design tree or list of them."""
+    return HierarchyWalker.walk(src)

@@ -90,32 +90,24 @@ class Sky130Walker(h.HierarchyWalker):
     """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
 
     def __init__(self):
+        super().__init__()
+        # Keep a cache of `ExternalModuleCall`s to avoid creating duplicates
         self.mos_modcalls = dict()
 
-    def visit_instance(self, inst: h.Instance):
-        """Replace instances of `h.Primitive` with our `ExternalModule`s"""
-        if isinstance(inst.of, h.PrimitiveCall):
-            inst.of = self.replace_primitive(inst.of)
-            return
-        # Otherwise keep traversing, instance unmodified
-        return super().visit_instance(inst)
-
-    def replace_primitive(
-        self, primcall: h.PrimitiveCall
-    ) -> Union[h.ExternalModuleCall, h.PrimitiveCall]:
+    def visit_primitive_call(self, call: h.PrimitiveCall) -> h.Instantiable:
+        """Replace instances of `h.primitive.Mos` with our `ExternalModule`s"""
         # Replace transistors
-        if primcall.prim is h.primitives.Mos:
-            return self.mos_module_call(primcall.params)
+        if call.prim is h.primitives.Mos:
+            return self.mos_module_call(call.params)
         # Return everything else as-is
-        return primcall
+        return call
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         mod = xtors.get((params.tp, params.vth), None)
         if mod is None:
-            raise RuntimeError(
-                f"No Mos module for model combination {(params.tp, params.vth)}"
-            )
+            msg = f"No Mos module for model combination {(params.tp, params.vth)}"
+            raise RuntimeError(msg)
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
@@ -147,4 +139,4 @@ class Sky130Walker(h.HierarchyWalker):
 
 def compile(src: h.Elaboratables) -> None:
     """Compile `src` to the Sample technology"""
-    return Sky130Walker().visit_elaboratables(src)
+    Sky130Walker().walk(src)
