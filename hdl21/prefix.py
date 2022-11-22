@@ -66,7 +66,7 @@ class Prefix(Enum):
             targ = self.value + other.prefix.value
             prefix = Prefix.from_exp(targ)
             if prefix is not None:
-                return Prefixed(other.value, prefix)
+                return Prefixed(other.number, prefix)
 
             # Didn't land on a supported prefix. Scale to the nearest smaller one.
             closest = max(
@@ -116,7 +116,7 @@ So: all `Decimal`, all `pydantic.dataclasses`.
 from pydantic.dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)  # `frozen` for hashability
 class Prefixed:
     """
     # Prefixed
