@@ -406,13 +406,15 @@ def test_netlist_fmts():
 
 
 def test_spice_netlister():
+    from hdl21.prefix import e
+
     @h.module
     class DUT:
         a = h.Input(width=5)
         b = h.Output(width=5)
-        res = h.IdealResistor(h.ResistorParams(r=10e3))(p=a[0], n=b[0])
-        cap = h.IdealCapacitor(h.IdealCapacitorParams(c=10e-12))(p=a[1], n=b[1])
-        ind = h.IdealInductor(h.IdealInductorParams(l=10e-9))(p=a[2], n=b[2])
+        res = h.IdealResistor(h.ResistorParams(r=10 * e(3)))(p=a[0], n=b[0])
+        cap = h.IdealCapacitor(h.IdealCapacitorParams(c=10 * e(-12)))(p=a[1], n=b[1])
+        ind = h.IdealInductor(h.IdealInductorParams(l=10 * e(-9)))(p=a[2], n=b[2])
 
     ppkg = h.to_proto(DUT)
     nl = StringIO()
@@ -423,13 +425,13 @@ def test_spice_netlister():
     assert "+ a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0" in nl
     assert "rres" in nl
     assert "+ a_0 b_0" in nl
-    assert "+ 10000.0" in nl
+    assert "+ 10K" in nl
     assert "ccap" in nl
     assert "+ a_1 b_1" in nl
-    assert "+ 1e-11" in nl
+    assert "+ 10p" in nl
     assert "lind" in nl
     assert "+ a_2 b_2" in nl
-    assert "+ 1e-08" in nl
+    assert "+ 10n" in nl
 
 
 def test_bad_proto_naming():

@@ -51,12 +51,12 @@ class Sky130MosParams:
     # l = 1 w = 1 ad = 0 as = 0 pd = 0 ps = 0 nrd = 0 nrs = 0 sa = 0 sb = 0 sd = 0 mult = 1 nf = 1.0
 
     w = h.Param(
-        dtype=h.Prefixed,
+        dtype=h.Scalar,
         desc="Width, in PDK Units (microns)",
         default=1 * h.Prefix.UNIT,
     )
     l = h.Param(
-        dtype=h.Prefixed,
+        dtype=h.Scalar,
         desc="Length, in PDK Units (microns)",
         default=1 * h.Prefix.UNIT,
     )
