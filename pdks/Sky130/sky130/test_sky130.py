@@ -51,7 +51,9 @@ def test_netlist():
 
     # Netlist it for the PDK
     sky130.compile(hasmos)
+    h.netlist(hasmos, StringIO(), fmt="spice")
     h.netlist(hasmos, StringIO(), fmt="spectre")
+    h.netlist(hasmos, StringIO(), fmt="verilog")
 
 
 def test_module1():
