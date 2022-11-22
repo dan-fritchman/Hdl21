@@ -1187,3 +1187,39 @@ def test_param_calls():
         R("not_a_ResistorParams_as_positional_arg")
     with pytest.raises(RuntimeError):
         R(R.Params(r=11), z=12)
+
+
+def test_bad_generators():
+    """Test generator functions with bad call-signatures."""
+
+    @h.paramclass
+    class P:
+        ...
+
+    @h.generator  # A good, working generator!
+    def good(p: P) -> h.Module:
+        return h.Module()
+
+    with pytest.raises(RuntimeError):
+        # Bad 1st argument type
+        @h.generator
+        def bad(p: TabError) -> h.Module:
+            return h.Module()
+
+    with pytest.raises(RuntimeError):
+        # Bad 2nd argument type
+        @h.generator
+        def bad(p: P, ctx: TabError) -> h.Module:
+            return h.Module()
+
+    with pytest.raises(RuntimeError):
+        # Extra arg
+        @h.generator
+        def bad(p: P, ctx: h.Context, something_else: int) -> h.Module:
+            return h.Module()
+
+    with pytest.raises(RuntimeError):
+        # Bad return type
+        @h.generator
+        def bad(p: P) -> TabError:
+            return h.Module()
