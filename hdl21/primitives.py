@@ -78,7 +78,7 @@ from .prefix import Prefix, Prefixed
 
 # # The `Scalar` parameter type
 #
-# Most primitive parameters "prefer" to be the `Prefixed` type, for reasons outline in
+# Most primitive parameters "prefer" to be the `Prefixed` type, for reasons outlined in
 # https://github.com/dan-fritchman/Hdl21#prefixed-numeric-parameters.
 # They often also need a string-valued escape hatch, e.g. when referring to out-of-Hdl21 quantities
 # such as parameters in external netlists, or simulation decks.

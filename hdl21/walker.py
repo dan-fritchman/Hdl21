@@ -62,7 +62,8 @@ class HierarchyWalker:
         """Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`."""
         if call.result is None:
             raise RuntimeError(f"Generator {call} has not been elaborated")
-        return self.visit_module(call.result)
+        call.result = self.visit_module(call.result)
+        return call.result
 
     def visit_external_module_call(self, call: ExternalModuleCall) -> Instantiable:
         """Visit an `ExternalModuleCall`.

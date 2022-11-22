@@ -6,8 +6,8 @@ Unit Tests
 
 from io import StringIO
 import hdl21 as h
-from . import sky130
-from .sky130 import modules as s
+from . import pdk as sky130
+from .pdk import modules as s
 
 
 def test_default():
