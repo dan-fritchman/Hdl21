@@ -21,13 +21,17 @@ from ..prefix import Prefixed
 from ..instance import Instance
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
+from ..primitives import Scalar
 
-
-# Union of types which can serve as parameter values
+# Type which can serve as simulation parameter values
 # The `str` variant is the escape hatch for:
 # * References to other parameter(s) by name
 # * Compound expressions among parameters, e.g. `5µ * a + b`
-ParamVal = Union[Prefixed, str]
+# FIXME: deprecate this.
+# It was the same thing that `Scalar` eventually became.
+# Users may be importing it as `ParamVal` from here, so leave this name for now.
+# And probably move `Scalar` to a dedicated module.
+ParamVal = Scalar
 
 
 def tb(name: str) -> Module:
@@ -88,7 +92,7 @@ class Param:
     """Simulation Parameter-Value"""
 
     # Parameter Value
-    val: ParamVal
+    val: Scalar
     # Parameter Name. Generally required at simulation-time, but `Optional` for during construction stages.
     name: Optional[str] = None
 
@@ -97,17 +101,17 @@ class Param:
 class LinearSweep:
     """Linear Sweep"""
 
-    start: ParamVal
-    stop: ParamVal
-    step: ParamVal
+    start: Scalar
+    stop: Scalar
+    step: Scalar
 
 
 @datatype
 class LogSweep:
     """Logarithmic / Decade Sweep"""
 
-    start: ParamVal
-    stop: ParamVal
+    start: Scalar
+    stop: Scalar
     npts: int
 
 
@@ -115,7 +119,7 @@ class LogSweep:
 class PointSweep:
     """List of Points Sweep"""
 
-    points: List[ParamVal]
+    points: List[Scalar]
 
 
 # Sweep type-union
@@ -184,8 +188,8 @@ class Ac:
 class Tran:
     """Transient Analysis"""
 
-    tstop: ParamVal  # Stop time
-    tstep: Optional[ParamVal] = None  # Optional time-step recommendation
+    tstop: Scalar  # Stop time
+    tstep: Optional[Scalar] = None  # Optional time-step recommendation
     name: Optional[str] = None  # Optional analysis name
 
     @property
@@ -346,6 +350,7 @@ class Options:
 
     temper: Optional[int] = None  # Temperature
     tnom: Optional[int] = None  # Nominal temperature
+    # FIXME NOTE: these three will in short order become `Scalar`s!
     gmin: Optional[float] = None
     reltol: Optional[float] = None
     iabstol: Optional[float] = None

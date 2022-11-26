@@ -26,7 +26,7 @@ or added to this package via pull request.
 
 import copy
 from pathlib import Path
-from typing import Union, Dict, Tuple, Optional
+from typing import Union, Dict, Tuple
 from types import SimpleNamespace
 
 from pydantic.dataclasses import dataclass
@@ -50,8 +50,16 @@ class Sky130MosParams:
 
     # l = 1 w = 1 ad = 0 as = 0 pd = 0 ps = 0 nrd = 0 nrs = 0 sa = 0 sb = 0 sd = 0 mult = 1 nf = 1.0
 
-    w = h.Param(dtype=str, desc="Width, in PDK Units (microns)", default=1)
-    l = h.Param(dtype=str, desc="Length, in PDK Units (microns)", default=1)
+    w = h.Param(
+        dtype=h.Scalar,
+        desc="Width, in PDK Units (microns)",
+        default=1 * h.Prefix.UNIT,
+    )
+    l = h.Param(
+        dtype=h.Scalar,
+        desc="Length, in PDK Units (microns)",
+        default=1 * h.Prefix.UNIT,
+    )
     nf = h.Param(dtype=int, desc="Number of Fingers", default=1)
     mult = h.Param(dtype=int, desc="Multiplier", default=1)
 
@@ -76,7 +84,10 @@ xtors: Dict[Tuple[MosType, MosVth], h.ExternalModule] = {
     (MosType.NMOS, MosVth.LOW): _xtor_module("sky130_fd_pr__nfet_01v8_lvt"),
     (MosType.PMOS, MosVth.STD): _xtor_module("sky130_fd_pr__pfet_01v8"),
     (MosType.PMOS, MosVth.HIGH): _xtor_module("sky130_fd_pr__pfet_01v8_hvt"),
-    # Note there are no NMOS HVT or PMOS LVT!
+    (MosType.PMOS, MosVth.LOW): _xtor_module("sky130_fd_pr__pfet_01v8_lvt"),
+    # Note there are no NMOS HVT!
+    # PMOS LVT was added at some point in history,
+    # and added to this package in v3.0.
 }
 
 # Collected `ExternalModule`s are stored in the `modules` namespace
@@ -90,32 +101,24 @@ class Sky130Walker(h.HierarchyWalker):
     """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
 
     def __init__(self):
+        super().__init__()
+        # Keep a cache of `ExternalModuleCall`s to avoid creating duplicates
         self.mos_modcalls = dict()
 
-    def visit_instance(self, inst: h.Instance):
-        """Replace instances of `h.Primitive` with our `ExternalModule`s"""
-        if isinstance(inst.of, h.PrimitiveCall):
-            inst.of = self.replace_primitive(inst.of)
-            return
-        # Otherwise keep traversing, instance unmodified
-        return super().visit_instance(inst)
-
-    def replace_primitive(
-        self, primcall: h.PrimitiveCall
-    ) -> Union[h.ExternalModuleCall, h.PrimitiveCall]:
+    def visit_primitive_call(self, call: h.PrimitiveCall) -> h.Instantiable:
+        """Replace instances of `h.primitive.Mos` with our `ExternalModule`s"""
         # Replace transistors
-        if primcall.prim is h.primitives.Mos:
-            return self.mos_module_call(primcall.params)
+        if call.prim is h.primitives.Mos:
+            return self.mos_module_call(call.params)
         # Return everything else as-is
-        return primcall
+        return call
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         mod = xtors.get((params.tp, params.vth), None)
         if mod is None:
-            raise RuntimeError(
-                f"No Mos module for model combination {(params.tp, params.vth)}"
-            )
+            msg = f"No Mos module for model combination {(params.tp, params.vth)}"
+            raise RuntimeError(msg)
         return mod
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
@@ -130,11 +133,14 @@ class Sky130Walker(h.HierarchyWalker):
 
         # Convert to `mod`s parameter-space
         # Note this silly PDK keeps parameter-values in *microns* rather than SI meters.
-        w = "650n" if params.w is None else params.w
-        l = "150n" if params.l is None else params.l
+        # Convert to microns here, multiplying by 1e6.
+        from hdl21.prefix import NANO, MEGA
+
+        w = 650 * NANO if params.w is None else params.w * MEGA
+        l = 150 * NANO if params.l is None else params.l * MEGA
         modparams = Sky130MosParams(
-            w=f"({w} * 1e6)",
-            l=f"({l} * 1e6)",
+            w=w,
+            l=l,
             nf=params.npar,
             mult=1,
         )
@@ -147,4 +153,4 @@ class Sky130Walker(h.HierarchyWalker):
 
 def compile(src: h.Elaboratables) -> None:
     """Compile `src` to the Sample technology"""
-    return Sky130Walker().visit_elaboratables(src)
+    Sky130Walker().walk(src)

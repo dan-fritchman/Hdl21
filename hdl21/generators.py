@@ -7,8 +7,7 @@ from dataclasses import asdict, replace
 from typing import Optional, Tuple, Union
 
 from . import primitives
-from .prefix import Prefixed
-from .primitives import MosType, MosVth
+from .primitives import MosType, MosVth, Scalar
 from .generator import generator
 from .module import Module
 from .params import paramclass, Param
@@ -20,8 +19,8 @@ from .instantiable import Instantiable
 class MosParams:
     """Mos Series-Stack Generator Parameters"""
 
-    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     nser = Param(dtype=int, desc="Number of series fingers", default=1)
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)

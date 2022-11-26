@@ -76,6 +76,19 @@ from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
 from .prefix import Prefix, Prefixed
 
+# # The `Scalar` parameter type
+#
+# Most primitive parameters "prefer" to be the `Prefixed` type, for reasons outlined in
+# https://github.com/dan-fritchman/Hdl21#prefixed-numeric-parameters.
+# They often also need a string-valued escape hatch, e.g. when referring to out-of-Hdl21 quantities
+# such as parameters in external netlists, or simulation decks.
+#
+# Note: conversion into `Scalar` from Python's built-in numeric types `int` and `float`
+# may be slightly counter-intuitive: both create the *string* variant, not `Prefixed`.
+# These would probably preferably convert to `Prefixed` instead, some day.
+#
+Scalar = Union[Prefixed, str]
+
 
 class PrimitiveType(Enum):
     """Enumerated Primitive-Types"""
@@ -201,8 +214,8 @@ class MosVth(Enum):
 class MosParams:
     """MOS Transistor Parameters"""
 
-    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
@@ -262,7 +275,7 @@ ThreeTerminalPorts = [Port(name="p"), Port(name="n"), Port(name="b")]
 
 @paramclass
 class ResistorParams:
-    r = Param(dtype=float, desc="Resistance (ohms)")
+    r = Param(dtype=Scalar, desc="Resistance (ohms)")
 
 
 _add(
@@ -279,8 +292,8 @@ _add(
 
 @paramclass
 class PhysicalResistorParams:
-    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
@@ -310,7 +323,7 @@ _add(
 
 @paramclass
 class IdealCapacitorParams:
-    c = Param(dtype=float, desc="Capacitance (F)")
+    c = Param(dtype=Scalar, desc="Capacitance (F)")
 
 
 _add(
@@ -327,7 +340,7 @@ _add(
 
 @paramclass
 class PhysicalCapacitorParams:
-    c = Param(dtype=float, desc="Capacitance (F)")
+    c = Param(dtype=Scalar, desc="Capacitance (F)")
 
 
 _add(
@@ -356,7 +369,7 @@ _add(
 
 @paramclass
 class IdealInductorParams:
-    l = Param(dtype=float, desc="Inductance (H)")
+    l = Param(dtype=Scalar, desc="Inductance (H)")
 
 
 _add(
@@ -373,7 +386,7 @@ _add(
 
 @paramclass
 class PhysicalInductorParams:
-    l = Param(dtype=float, desc="Inductance (H)")
+    l = Param(dtype=Scalar, desc="Inductance (H)")
 
 
 _add(
@@ -403,8 +416,8 @@ _add(
 @paramclass
 class PhysicalShortParams:
     layer = Param(dtype=Optional[Union[int, str]], desc="Metal layer", default=None)
-    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
 
 
 _add(
@@ -428,8 +441,8 @@ Sources
 class DcVoltageSourceParams:
     """`DcVoltageSource` Parameters"""
 
-    dc = Param(dtype=Optional[Prefixed], default=0, desc="DC Value (V)")
-    ac = Param(dtype=Optional[Prefixed], default=None, desc="AC Amplitude (V)")
+    dc = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="DC Value (V)")
+    ac = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="AC Amplitude (V)")
 
 
 _add(
@@ -452,13 +465,13 @@ _add(
 class PulseVoltageSourceParams:
     """`PulseVoltageSource` Parameters"""
 
-    delay = Param(dtype=Optional[Prefixed], default=None, desc="Time Delay (s)")
-    v1 = Param(dtype=Optional[Prefixed], default=None, desc="One Value (V)")
-    v2 = Param(dtype=Optional[Prefixed], default=None, desc="Zero Value (V)")
-    period = Param(dtype=Optional[Prefixed], default=None, desc="Period (s)")
-    rise = Param(dtype=Optional[Prefixed], default=None, desc="Rise time (s)")
-    fall = Param(dtype=Optional[Prefixed], default=None, desc="Fall time (s)")
-    width = Param(dtype=Optional[Prefixed], default=None, desc="Pulse width (s)")
+    delay = Param(dtype=Optional[Scalar], default=None, desc="Time Delay (s)")
+    v1 = Param(dtype=Optional[Scalar], default=None, desc="One Value (V)")
+    v2 = Param(dtype=Optional[Scalar], default=None, desc="Zero Value (V)")
+    period = Param(dtype=Optional[Scalar], default=None, desc="Period (s)")
+    rise = Param(dtype=Optional[Scalar], default=None, desc="Rise time (s)")
+    fall = Param(dtype=Optional[Scalar], default=None, desc="Fall time (s)")
+    width = Param(dtype=Optional[Scalar], default=None, desc="Pulse width (s)")
 
 
 _add(
@@ -474,8 +487,31 @@ _add(
 
 
 @paramclass
+class SineVoltageSourceParams:
+    """`SineVoltageSource` Parameters"""
+
+    voff = Param(dtype=Optional[Scalar], default=None, desc="Offset (V)")
+    vamp = Param(dtype=Optional[Scalar], default=None, desc="Amplitude (V)")
+    freq = Param(dtype=Optional[Scalar], default=None, desc="Frequency (Hz)")
+    td = Param(dtype=Optional[Scalar], default=None, desc="Delay (s)")
+    phase = Param(dtype=Optional[Scalar], default=None, desc="Phase at td (degrees)")
+
+
+_add(
+    prim=Primitive(
+        name="SineVoltageSource",
+        desc="Sine Voltage Source",
+        port_list=copy.deepcopy(PassivePorts),
+        paramtype=SineVoltageSourceParams,
+        primtype=PrimitiveType.IDEAL,
+    ),
+    aliases=["Vsin"],
+)
+
+
+@paramclass
 class CurrentSourceParams:
-    dc = Param(dtype=Optional[Prefixed], default=0, desc="DC Value (A)")
+    dc = Param(dtype=Optional[Scalar], default=0, desc="DC Value (A)")
 
 
 _add(
@@ -497,7 +533,7 @@ Controlled Sources
 
 @paramclass
 class ControlledSourceParams:
-    gain = Param(dtype=Prefixed, default=1 * Prefix.UNIT, desc="Gain in SI Units")
+    gain = Param(dtype=Scalar, default=1 * Prefix.UNIT, desc="Gain in SI Units")
 
 
 # Controlled Sources Port List
@@ -565,8 +601,8 @@ class BipolarType(Enum):
 class BipolarParams:
     """Bipolar Transistor Parameters"""
 
-    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     tp = Param(
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
@@ -610,8 +646,8 @@ Diodes
 
 @paramclass
 class DiodeParams:
-    w = Param(dtype=Optional[Prefixed], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Prefixed], desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     # FIXME: whether to include `model`
 

@@ -59,13 +59,23 @@ class GeneratorElaborator(Elaborator):
     def elaborate_generator_call(self, call: GeneratorCall) -> Module:
         """Elaborate Generator-function-call `call`. Returns the generated Module."""
 
-        # Check our cache, see if we've already generated its module.
-        if call in self.generator_calls:  # Already done!
-            # Give the `call` a reference to its result.
-            # Note this *has not* necessarily already happened, as the `self.generator_calls` key may be an equally-valued (but distinct) `GeneratorCall`.
-            result = self.generator_calls[call]
-            call.result = result
-            return result
+        # First and foremost - caching.
+        # See if we've already run this generator-parameters combo.
+        # There are two places its result could be cached:
+        # (a) In our cache, if we've already run it or a parameter-equal call to it. Or,
+        # (b) On the `call`, on its `result` field - if a *different elaborator* has already run it.
+        # If there's a Module in both places, and the aren't the same Module... not sure what happened. Fail.
+        cached_result = self.generator_calls.get(call, None)
+        if call.result is not None and cached_result is not None:
+            if call.result is not cached_result:
+                msg = f"GeneratorCall {call} has two different results: {call.result} and {cached_result}"
+                self.fail(msg)
+        if call.result is not None:
+            self.generator_calls[call] = call.result
+            return call.result
+        if cached_result is not None:
+            call.result = cached_result
+            return call.result
 
         # Add both the `Call` and `Generator` to our stack.
         self.stack.append(call)

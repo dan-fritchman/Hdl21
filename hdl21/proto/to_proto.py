@@ -187,10 +187,15 @@ class ProtoExporter:
                     prim_map = {
                         "DcVoltageSource": "vdc",
                         "PulseVoltageSource": "vpulse",
+                        "SineVoltageSource": "vsin",
                         "CurrentSource": "isource",
                         "IdealResistor": "resistor",
                         "IdealCapacitor": "capacitor",
                         "IdealInductor": "inductor",
+                        "VoltageControlledVoltageSource": "vcvs",
+                        "CurrentControlledVoltageSource": "ccvs",
+                        "VoltageControlledCurrentSource": "vccs",
+                        "CurrentControlledCurrentSource": "cccs",
                     }
                     if call.prim.name not in prim_map:
                         msg = f"Invalid Primitive {call.prim.name} in PrimitiveCall {inst.name}"

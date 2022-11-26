@@ -6,8 +6,8 @@ Unit Tests
 
 from io import StringIO
 import hdl21 as h
-from . import sky130
-from .sky130 import modules as s
+from . import pdk as sky130
+from .pdk import modules as s
 
 
 def test_default():
@@ -51,7 +51,9 @@ def test_netlist():
 
     # Netlist it for the PDK
     sky130.compile(hasmos)
+    h.netlist(hasmos, StringIO(), fmt="spice")
     h.netlist(hasmos, StringIO(), fmt="spectre")
+    h.netlist(hasmos, StringIO(), fmt="verilog")
 
 
 def test_module1():
@@ -65,3 +67,10 @@ def test_module1():
         nl = s.sky130_fd_pr__nfet_01v8_lvt(mp)()
         ps = s.sky130_fd_pr__pfet_01v8(mp)()
         ph = s.sky130_fd_pr__pfet_01v8_hvt(mp)()
+
+
+def test_walker_contents():
+    from hdl21.tests.content import walker_test_content
+
+    content = walker_test_content()
+    sky130.compile(content)

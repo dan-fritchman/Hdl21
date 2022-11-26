@@ -10,7 +10,7 @@ performing one or more transformation-passes.
 from typing import List, Optional
 
 # Local imports
-from .elaboratable import Elaboratable, Elaboratables
+from .elaboratable import Elaboratable, Elaboratables, is_elaboratable
 from .context import Context
 from .elabpass import ElabPass
 

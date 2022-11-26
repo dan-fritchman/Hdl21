@@ -84,6 +84,62 @@ def test_prim_proto1():
         assert isinstance(inst._resolved, h.primitives.PrimitiveCall)
 
 
+def test_ideal_primitives():
+    # Test round-tripping ideal primitives
+
+    @h.module
+    class HasPrims:
+        p = h.Signal()
+        n = h.Signal()
+        p2 = h.Signal()
+        n2 = h.Signal()
+
+        # Wire up a bunch of two-terminal primitives in parallel
+        _rp = h.R.Params(r=50)
+        r = h.Resistor(_rp)(p=p, n=n)
+        _cp = h.C.Params(c=1e-12)
+        c = h.Capacitor(_cp)(p=p, n=n)
+        _lp = h.L.Params(l=1e-15)
+        l = h.Inductor(_lp)(p=p, n=n)
+        _dp = h.D.Params()
+        d = h.Diode(_dp)(p=p, n=n)
+        _sp = h.Short.Params()
+        s = h.Short(_sp)(p=p, n=n)
+        _vdc = h.Vdc.Params(dc=0 * h.prefix.m, ac=0 * h.prefix.m)
+        vdc = h.Vdc(_vdc)(p=p, n=n)
+        _vpu = h.Vpulse.Params(
+            delay=0 * h.prefix.m,
+            v1=0 * h.prefix.m,
+            v2=0 * h.prefix.m,
+            period=0 * h.prefix.m,
+            rise=0 * h.prefix.m,
+            fall=0 * h.prefix.m,
+            width=0 * h.prefix.m,
+        )
+        vpu = h.Vpulse(_vpu)(p=p, n=n)
+        _vsin = h.Vsin.Params(
+            voff=0 * h.prefix.m,
+            vamp=0 * h.prefix.m,
+            freq=0 * h.prefix.m,
+            td=0 * h.prefix.m,
+            phase=0 * h.prefix.m,
+        )
+        vsin = h.Vsin(_vsin)(p=p, n=n)
+        _idc = h.Idc.Params(dc=0 * h.prefix.m)
+        idc = h.Idc(_idc)(p=p, n=n)
+        _vcvs = h.Vcvs.Params(gain=1 * h.prefix.m)
+        vcvs = h.Vcvs(_vcvs)(p=p, n=n, cp=p2, cn=n2)
+        _ccvs = h.Ccvs.Params(gain=1 * h.prefix.m)
+        ccvs = h.Ccvs(_ccvs)(p=p, n=n, cp=p2, cn=n2)
+        _vccs = h.Vccs.Params(gain=1 * h.prefix.m)
+        vccs = h.Vccs(_vccs)(p=p, n=n, cp=p2, cn=n2)
+        _cccs = h.Cccs.Params(gain=1 * h.prefix.m)
+        cccs = h.Cccs(_cccs)(p=p, n=n, cp=p2, cn=n2)
+
+    ppkg = h.to_proto(HasPrims)
+    ns = h.from_proto(ppkg)
+
+
 def test_proto1():
     # First Proto-export test
 
@@ -350,13 +406,15 @@ def test_netlist_fmts():
 
 
 def test_spice_netlister():
+    from hdl21.prefix import e
+
     @h.module
     class DUT:
         a = h.Input(width=5)
         b = h.Output(width=5)
-        res = h.IdealResistor(h.ResistorParams(r=10e3))(p=a[0], n=b[0])
-        cap = h.IdealCapacitor(h.IdealCapacitorParams(c=10e-12))(p=a[1], n=b[1])
-        ind = h.IdealInductor(h.IdealInductorParams(l=10e-9))(p=a[2], n=b[2])
+        res = h.IdealResistor(h.ResistorParams(r=10 * e(3)))(p=a[0], n=b[0])
+        cap = h.IdealCapacitor(h.IdealCapacitorParams(c=10 * e(-12)))(p=a[1], n=b[1])
+        ind = h.IdealInductor(h.IdealInductorParams(l=10 * e(-9)))(p=a[2], n=b[2])
 
     ppkg = h.to_proto(DUT)
     nl = StringIO()
@@ -367,13 +425,13 @@ def test_spice_netlister():
     assert "+ a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0" in nl
     assert "rres" in nl
     assert "+ a_0 b_0" in nl
-    assert "+ 10000.0" in nl
+    assert "+ 10K" in nl
     assert "ccap" in nl
     assert "+ a_1 b_1" in nl
-    assert "+ 1e-11" in nl
+    assert "+ 10p" in nl
     assert "lind" in nl
     assert "+ a_2 b_2" in nl
-    assert "+ 1e-08" in nl
+    assert "+ 10n" in nl
 
 
 def test_bad_proto_naming():

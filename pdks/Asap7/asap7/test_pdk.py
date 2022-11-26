@@ -5,7 +5,7 @@ Unit Tests
 """
 
 import hdl21 as h
-from . import asap7
+from . import pdk as asap7
 
 
 def test_default():

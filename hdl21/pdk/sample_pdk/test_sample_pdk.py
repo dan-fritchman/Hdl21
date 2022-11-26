@@ -50,4 +50,6 @@ def test_netlist():
 
     # Netlist it for the PDK
     sample_pdk.compile(hasmos)
+    h.netlist(hasmos, StringIO(), fmt="spice")
     h.netlist(hasmos, StringIO(), fmt="spectre")
+    h.netlist(hasmos, StringIO(), fmt="verilog")
