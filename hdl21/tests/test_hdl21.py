@@ -738,6 +738,28 @@ def test_elab_noconn():
     assert len(HasNoConn.signals) == 1
 
 
+def test_elab_noconn2():
+    """Slightly more elaborate test of elaborating a `NoConn`"""
+
+    @h.module
+    class M3:  # Layer 3: just a Port
+        p = h.Port()
+
+    @h.module
+    class M2:  # Layer 2: instantiate & connect M3
+        p = h.Port()
+        m3 = M3(p=p)
+
+    @h.module
+    class M1:  # Layer 1: connect a `NoConn` to all that
+        p = h.NoConn()
+        m2 = M2(p=p)
+
+    h.elaborate(M1)
+
+    assert len(M1.signals) == 1
+
+
 def test_bad_noconn():
     """Test that a doubly-connected `NoConn` should fail"""
 
