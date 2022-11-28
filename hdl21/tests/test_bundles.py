@@ -499,3 +499,34 @@ def test_anon_bundle_refs():
         h3 = HasDiff(d=h.AnonymousBundle(p=d.n, n=d.p))
 
     h.elaborate(HasHasDiff)
+
+
+@pytest.mark.xfail(reason="#68 https://github.com/dan-fritchman/Hdl21/issues/68")
+def test_no_role_directions():
+    """Test directions on Bundles without Roles"""
+
+    @h.bundle
+    class B:
+        # A Bundle with directed Ports
+        a = h.Input()
+        b = h.Output()
+        c = h.Inout()
+        d = h.Port()
+        e = h.Signal()
+
+    @h.module
+    class HasB:
+        b = B(port=True)
+
+    @h.module
+    class HasHasB:
+        b = B()
+        h1 = HasB(b=b)
+
+    h.elaborate(HasHasB)
+
+    assert HasB.b_a.direction == h.PortDir.INPUT
+    assert HasB.b_b.direction == h.PortDir.OUTPUT
+    assert HasB.b_c.direction == h.PortDir.INPUT
+    assert HasB.b_d.direction == h.PortDir.NONE
+    assert HasB.b_e.direction == None
