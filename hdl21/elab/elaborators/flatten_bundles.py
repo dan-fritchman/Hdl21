@@ -294,7 +294,7 @@ class BundleFlattener(Elaborator):
         ```
 
         The bundle instances in `Outer` have also been flattened.
-        It now has signals named `outer_b_z`, `outer_b_y`, and `outer_b_z`,
+        It now has signals named `outer_b_x`, `outer_b_y`, and `outer_b_z`,
         which are stored in a `FlatBundleInst` keyed by `x`, `y`, and `z`.
         After this function it will (or should) look like:
 
@@ -328,6 +328,12 @@ class BundleFlattener(Elaborator):
             #   * In the example, its values will be `inner_b_x`, `inner_b_y`, and `inner_b_z`.
             # * Neither takes on the values `outer_b_x`, `outer_b_y`, and `outer_b_z`.
             #   * These would be `flat.signals[pathstr].name`
+            if pathstr not in flat.signals:
+                msg = f"Missing connection to `{pathstr.val}` "
+                msg += f"in Connection to `{portname}` on Instance `{inst.name}`. "
+                msg += f"Has Signals `{[p.val for p in flat.signals.keys()]}`, "
+                msg += f"but no `{pathstr.val}`."
+                self.fail(msg)
             inst.connect(flat_port.name, flat.signals[pathstr])
 
     def flatten_bundle_def(self, bundle: Bundle) -> FlatBundleDef:
