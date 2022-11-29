@@ -6,6 +6,8 @@ Controllable Oscillator Module, Based on Gated Inverter Cells from the open-sour
 
 import sys
 import hdl21 as h
+from hdl21.prefix import m
+from hdl21.primitives import V, C
 
 # Sky130 Gated-Inverter Cell Declaration
 GatedInv = h.ExternalModule(
@@ -47,18 +49,17 @@ class GatedInvWrapper:
 
 @h.paramclass
 class RoParams:
+    """# Ring Oscillator Parameters"""
+
     stages = h.Param(dtype=int, default=3, desc="Number of stages")
     rows = h.Param(dtype=int, default=3, desc="Number of rows")
-
-    def __post_init_post_parse__(self):
-        if not self.stages % 2:
-            raise ValueError("stages must be odd")
 
 
 @h.generator
 def Ro(params: RoParams) -> h.Module:
-    """Create a parametric oscillator"""
-    from hdl21.primitives import IdealCapacitor as C
+    """# Parametric ring oscillator generator"""
+    if not params.stages % 2:
+        raise ValueError("stages must be odd")
 
     ro = h.Module()
     ro.ctrlb = h.Input(width=params.stages * params.rows, desc="Control code")
@@ -85,45 +86,50 @@ def Ro(params: RoParams) -> h.Module:
     return ro
 
 
+@h.paramclass
+class TbParams:
+    """# Ring Oscillator Testbench Parameters"""
+
+    ro = h.Param(dtype=RoParams, default=RoParams(), desc="RO Parameters")
+    code = h.Param(dtype=int, default=3, desc="Control Code. Default: 3")
+
+
 @h.generator
-def RoTb(params: RoParams) -> h.Module:
-    """Ring Osc Testbench
-    Primarily instantiates the RO and a thermometer-encoder for its control code.
-
-    This module includes a bit of hacking into the SPICE-domain world.
-    It has no ports and is meant to be "the entirety" of a sim, save for analysis and control statements.
-    Don't try it on its own! At minimum, it relies on:
-    * SPICE/ Spectre's concept of "node zero", which it instantiates, and
-    * A SPICE-level parameter `code` which sets the integer control value.
-    This serves as an early case-study for how hdl21 modules and
-    these SPICE-native things can play together (and perhaps how they shouldn't).
+def RoTb(params: TbParams) -> h.Module:
     """
-    from hdl21.primitives import V
+    # Ring Oscillator Testbench
+    Primarily instantiates the RO and a thermometer-encoded control code driver.
+    """
 
-    # Create our module
-    m = h.Module()
-    # Add the DUT
-    m.ro = Ro(params)()
-    # Create signals around it
-    m.ro.ctrlb = m.ctrlb = h.Signal(
-        width=params.stages * params.rows, desc="Control code"
-    )
-    m.ro.osc = m.osc = h.Signal(width=params.stages, desc="Primary Oscillator Output")
-    m.ro.VDD = m.VDD = h.Signal()
-    m.ro.VSS = vss = m.add(h.Signal(name="0"))
+    @h.module
+    class RoTb:
+        # The IO interface required for any testbench: a sole port for VSS.
+        VSS = h.Port()
 
-    # Create the supply
-    m.vvdd = V(V.Params(dc=1.8))(p=m.VDD, n=vss)
+        # Testbench Signals
+        ctrlb = h.Signal(width=params.ro.stages * params.ro.rows, desc="Control code")
+        osc = h.Signal(width=params.ro.stages, desc="Primary Oscillator Output")
+        VDD = h.Signal(desc="Power Supply")
 
-    # Now do some SPICE-fu to generate the control code, from a sweep parameter
-    for k in range(params.rows * params.stages):
-        v = V(V.Params(dc=f"1.8*(code <= {k})"))
-        m.add(name=f"vbin{k}b", val=v(p=m.ctrlb[k], n=vss))
+        # Drive the supply
+        vvdd = V(dc=1800 * m)(p=VDD, n=VSS)
 
-    # And don't forget to return em!
-    return m
+        # Instantiate our RO DUT
+        ro = Ro(params.ro)(osc=osc, ctrlb=ctrlb, VSS=VSS, VDD=VDD)
+
+    # Now generate a thermometer-encoded control code
+    for k in range(params.ro.rows * params.ro.stages):
+        dc = 1800 * m if k <= params.code else 0 * m
+        RoTb.add(name=f"vctrl{k}b", val=V(dc=dc)(p=RoTb.ctrlb[k], n=RoTb.VSS))
+
+    # And don't forget to return the module!
+    return RoTb
 
 
-# Netlist this stuff!
-ppkg = h.to_proto([RoTb(RoParams())], domain="ro130")
-netlist = h.netlist(pkg=ppkg, dest=sys.stdout)
+def main():
+    # Netlist this stuff!
+    h.netlist(RoTb(h.Default), dest=sys.stdout)
+
+
+if __name__ == "__main__":
+    main()
