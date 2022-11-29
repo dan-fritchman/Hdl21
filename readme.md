@@ -18,7 +18,8 @@ Hdl21 generates hardware databases in the [VLSIR](https://github.com/Vlsir/Vlsir
 - [Primitive Elements](#primitives-and-external-modules)
 - [Process Technology (PDK) Packages](#process-technologies)
 - Coming Soon: Structured Connections with `Bundle`s
-- Coming Soon: Schematics
+- Coming Soon: [Schematics](https://github.com/Vlsir/Hdl21Schematics)
+- [Examples Library](#examples-library)
 
 ## Modules
 
@@ -331,7 +332,6 @@ from hdl21.prefix import e, µ
 These `e()` values are also most common in multiplication expressions,
 to create `Prefixed` values in "floating point" style such as `11 * e(-9)`.
 
-
 ## Exporting and Importing
 
 Hdl21's primary import/ export format is [VLSIR](https://github.com/Vlsir/Vlsir). VLSIR is a binary ProtoBuf-based format with support for a variety of industry-standard formats and tools. The `hdl21.to_proto()` function converts an Hdl21 `Module` or group of `Modules` into VLSIR `Package`. The `hdl21.from_proto()` function similarly imports a VLSIR `Package` into a namespace of Hdl21 `Modules`.
@@ -517,10 +517,10 @@ The `Primitive` type and all its valid values are defined by the `hdl21.primitiv
 | Bipolar                        | Bipolar Transistor                | PHYSICAL | Bjt, BJT                              | c, b, e      |
 | Diode                          | Diode                             | PHYSICAL | D                                     | p, n         |
 
-Each primitive is available in the `hdl21.primitives` namespace, either through its full name or any of its aliases. Most primitives have fairly verbose names (e.g. `VoltageControlledCurrentSource`, `IdealResistor`), but also expose short-form aliases (e.g. `Vcvs`, `R`). Each of the aliases in Table 1 above refer to _the same_ Python object, i.e. 
+Each primitive is available in the `hdl21.primitives` namespace, either through its full name or any of its aliases. Most primitives have fairly verbose names (e.g. `VoltageControlledCurrentSource`, `IdealResistor`), but also expose short-form aliases (e.g. `Vcvs`, `R`). Each of the aliases in Table 1 above refer to _the same_ Python object, i.e.
 
-```python 
-from hdl21.primitives import R, Res, IdealResistor 
+```python
+from hdl21.primitives import R, Res, IdealResistor
 
 R is Res            # evaluates to True
 R is IdealResistor  # also evaluates to True
@@ -578,7 +578,7 @@ class DiodePlus:
 
 Designing for a specific implementation technology (or "process development kit", or PDK) with Hdl21 can use either of (or a combination of) two routes:
 
-- Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its process-specific transistor and passive modules, and potentially larger cells, for example from a cell library. Such external modules are frequently defined as part of a PDK (python) package, but can also be defined anywhere else, including inline among Hdl21 generator code. 
+- Instantiate `ExternalModules` corresponding to the target technology. These would commonly include its process-specific transistor and passive modules, and potentially larger cells, for example from a cell library. Such external modules are frequently defined as part of a PDK (python) package, but can also be defined anywhere else, including inline among Hdl21 generator code.
 - Use `hdl21.Primitives`, each of which is designed to be a technology-independent representation of a primitive component. Moving to a particular technology then generally requires passing the design through an `hdl21.pdk` converter.
 
 Hdl21 PDKs are Python packages which generally include two primary elements:
@@ -672,12 +672,11 @@ CmosCorner = TT | FF | SS | SF | FS
 
 Hdl21 exposes each of these corner-types as Python enumerations and combinations thereof. Each PDK package then defines its mapping from these `Corner` types to the content they include, typically in the form of external files.
 
-
 ### PDK Installations and Sites
 
-Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `_nfet` and `_pfet` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type. 
+Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `_nfet` and `_pfet` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type.
 
-Each `PdkInstallation` is a runtime type-checked Python `dataclass` which extends the base `hdl21.pdk.PdkInstallation` type. Installations are free to define arbitrary fields and methods, which will be type-validated for each `Install` instance. Example: 
+Each `PdkInstallation` is a runtime type-checked Python `dataclass` which extends the base `hdl21.pdk.PdkInstallation` type. Installations are free to define arbitrary fields and methods, which will be type-validated for each `Install` instance. Example:
 
 ```python
 """ A sample PDK package with an `Install` type """
@@ -692,7 +691,7 @@ class Install(PdkInstallation):
     model_lib: Path  # Filesystem `Path` to transistor models
 ```
 
-The name of each PDK's installation-type is by convention `Install` with a capital I. PDK packages which include an installation-type also conventionally include an `Install` instance named `install`, with a lower-case i. Code using the PDK package can then refer to the PDK's `install` attribute. Extending the example above: 
+The name of each PDK's installation-type is by convention `Install` with a capital I. PDK packages which include an installation-type also conventionally include an `Install` instance named `install`, with a lower-case i. Code using the PDK package can then refer to the PDK's `install` attribute. Extending the example above:
 
 ```python
 """ A sample PDK package with an `Install` type """
@@ -706,17 +705,17 @@ class Install(PdkInstallation):
 install: Optional[Install] = None  # The active installation, if any
 ```
 
-The content of this installation data varies from site to site. To enable "site-portable" code to use the PDK installation, Hdl21 PDK users conventionally define a "site-specific" module or package which:  
+The content of this installation data varies from site to site. To enable "site-portable" code to use the PDK installation, Hdl21 PDK users conventionally define a "site-specific" module or package which:
 
-* Imports the target PDK module 
-* Creates an instance of its `PdkInstallation` subtype
-* Affixes that instance to the PDK package's `install` attribute 
+- Imports the target PDK module
+- Creates an instance of its `PdkInstallation` subtype
+- Affixes that instance to the PDK package's `install` attribute
 
-For example: 
+For example:
 
 ```python
 # In "sitepdks.py" or similar
-import mypdk 
+import mypdk
 
 mypdk.install = mypdk.Install(
     models = "/path/to/models",
@@ -725,7 +724,7 @@ mypdk.install = mypdk.Install(
 )
 ```
 
-These "site packages" are named `sitepdks` by convention. They can often be shared among several PDKs on a given filesystem. Hdl21 includes one built-in example such site-package, [SampleSitePdks](./SampleSitePdks/), which demonstrates setting up both built-in PDKs, Sky130 and ASAP7: 
+These "site packages" are named `sitepdks` by convention. They can often be shared among several PDKs on a given filesystem. Hdl21 includes one built-in example such site-package, [SampleSitePdks](./SampleSitePdks/), which demonstrates setting up both built-in PDKs, Sky130 and ASAP7:
 
 ```python
 # The built-in sample `sitepdks` package
@@ -738,19 +737,19 @@ import asap7
 asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "TT.pm")
 ```
 
-"Site-portable" code requiring external PDK content can then refer to the PDK package's `install`, without being directly aware of its contents. 
+"Site-portable" code requiring external PDK content can then refer to the PDK package's `install`, without being directly aware of its contents.
 An example simulation using `mypdk`'s models with the `sitepdk`s defined above:
 
-```python 
+```python
 # sim_my_pdk.py
-import hdl21 as h 
+import hdl21 as h
 from hdl21.sim import Lib
 import sitepdks as _ # <= This sets up `mypdk.install`
 import mypdk
 
 @h.sim
 class SimMyPdk:
-    # A set of simulation input using `mypdk`'s installation 
+    # A set of simulation input using `mypdk`'s installation
     tb = MyTestBench()
     models = Lib(
         path=mypdk.install.models, # <- Here
@@ -763,15 +762,24 @@ SimMyPdk.run()
 
 Note that `sim_my_pdk.py` need not necessarily import or directly depend upon `sitepdks` itself. So long as `sitepdks` is imported and configures the PDK installation anywhere in the Python program, further code will be able to refer to the PDK's `install` fields.
 
----
+## Examples Library
+
+Hdl21's source tree includes a built-in [examples](./examples/) library. Each is designed to be a straightforward but realistic use-case, and is a self-contained Python program which can be run directly, e.g. with:
+
+```bash
+python examples/rdac.py
+```
+
+Reading, copying, or cloning these example programs is generally among the best ways to get started.  
+And adding an example is a **highly** encouraged form of [pull request](https://github.com/dan-fritchman/Hdl21/pulls)!
 
 ## Why Use Python?
 
-Custom IC design is a complicated field. Its practitioners have to know 
-[a](https://people.eecs.berkeley.edu/~boser/courses/240B/lectures/M07%20OTA%20II.pdf) | 
-[lot](http://rfic.eecs.berkeley.edu/~niknejad/ee142_fa05lects/pdf/lect24.pdf) | 
-[of](https://www.delroy.com/PLL_dir/ISSCC2004/PLLTutorialISSCC2004.pdf) | 
-[stuff](https://inst.eecs.berkeley.edu/~ee247/fa10/files07/lectures/L25_2_f10.pdf), 
+Custom IC design is a complicated field. Its practitioners have to know
+[a](https://people.eecs.berkeley.edu/~boser/courses/240B/lectures/M07%20OTA%20II.pdf) |
+[lot](http://rfic.eecs.berkeley.edu/~niknejad/ee142_fa05lects/pdf/lect24.pdf) |
+[of](https://www.delroy.com/PLL_dir/ISSCC2004/PLLTutorialISSCC2004.pdf) |
+[stuff](https://inst.eecs.berkeley.edu/~ee247/fa10/files07/lectures/L25_2_f10.pdf),
 independent of any programming background. Many have little or no programming experience at all. Python is reknowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like.
 
 Hdl21 exposes the ideas they're used to - `Modules`, `Ports`, `Signals` - via as simple of a Python interface as it can. `Generators` are just functions. For many, this fact alone is enough to create powerfully reusable hardware.

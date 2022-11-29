@@ -256,7 +256,9 @@ def import_parameters(pparams: List[vlsir.Param]) -> Dict[str, Any]:
     return {pparam.name: import_parameter_value(pparam.value) for pparam in pparams}
 
 
-def import_parameter_value(pparam: vlsir.ParamValue) -> Any:
+def import_parameter_value(
+    pparam: vlsir.ParamValue,
+) -> Union[int, float, str, Prefixed]:
     """Import a `ParamValue`"""
     ptype = pparam.WhichOneof("value")
     if ptype == "integer":
@@ -265,10 +267,10 @@ def import_parameter_value(pparam: vlsir.ParamValue) -> Any:
         return float(pparam.double)
     if ptype == "string":
         return str(pparam.string)
+    if ptype == "literal":
+        return str(pparam.literal)
     if ptype == "prefixed":
         return import_prefixed(pparam.prefixed)
-    if ptype == "literal":
-        raise NotImplementedError
     raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
 

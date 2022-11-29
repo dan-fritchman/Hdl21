@@ -83,12 +83,12 @@ class Signal:
         return hash(id(self))
 
     def __copy__(self) -> "Signal":
-        # If this Signal has been connected to stuff, bail.
-        if self._slices or self._concats or self._connected_ports:
-            raise TabError
-
-        # Create a new Signal with all of our public fields
-        rv = Signal(
+        """Signal copying implementation
+        Keeps "public" fields such as name and width,
+        while dropping "per-module" fields such as `_slices`."""
+        # Notably `_parent_module` *is not* copied.
+        # It will generally be set when the copy is added to any new Module.
+        return Signal(
             name=self.name,
             width=self.width,
             vis=self.vis,
@@ -97,13 +97,10 @@ class Signal:
             src=self.src,
             dest=self.dest,
         )
-        # Copy the parent module by reference, i.e. as a pointer
-        rv._parent_module = self._parent_module
-        # And return the new Signal
-        return rv
 
     def __deepcopy__(self, _memo) -> "Signal":
-        # Signal "deep" copies are the same as shallow ones; there is no "deep" data being copied.
+        """Signal "deep" copies"""
+        # The same as shallow ones; there is no "deep" data being copied.
         return self.__copy__()
 
 

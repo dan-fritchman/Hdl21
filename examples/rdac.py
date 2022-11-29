@@ -1,17 +1,27 @@
+"""
+# Resistor DAC Example
+
+An example of using `ExternalModule`s representing an implementation technology/ PDK 
+in a parametric resistive DAC generator.
+"""
+
 import sys
-from typing import Dict, Any, Tuple, Sequence
+from typing import Dict, Optional
 
 import hdl21 as h
+from hdl21.prefix import µ, n
 
 
 @h.paramclass
 class PdkResistorParams:
-    w = h.Param(dtype=float, desc="Resistor width (m)")
-    l = h.Param(dtype=float, desc="Resistor length (m)")
+    """PDK Resistor Parameters"""
+
+    w = h.Param(dtype=h.Prefixed, desc="Resistor width (m)")
+    l = h.Param(dtype=h.Prefixed, desc="Resistor length (m)")
 
 
 PdkResistor = h.ExternalModule(
-    name="rupolym_m",
+    name="pdk_resistor",
     desc="PDK Resistor",
     domain="RDAC's Favorite PDK",
     port_list=[h.Inout(name="PLUS"), h.Inout(name="MINUS")],
@@ -21,11 +31,13 @@ PdkResistor = h.ExternalModule(
 
 @h.paramclass
 class PdkMosParams:
-    l = h.Param(dtype=float, desc="Channel length (m)")
+    """PDK MOSFET Parameters"""
+
+    l = h.Param(dtype=h.Prefixed, desc="Channel length (m)")
 
 
-NchMac = h.ExternalModule(
-    name="nch_mac",
+Nch = h.ExternalModule(
+    name="nch",
     desc="PDK NMOS Transistor",
     port_list=[
         h.Inout(name="D"),
@@ -35,8 +47,8 @@ NchMac = h.ExternalModule(
     ],
     paramtype=PdkMosParams,
 )
-PchMac = h.ExternalModule(
-    name="pch_mac",
+Pch = h.ExternalModule(
+    name="pch",
     desc="PDK PMOS Transistor",
     port_list=[
         h.Inout(name="D"),
@@ -50,59 +62,75 @@ PchMac = h.ExternalModule(
 
 @h.paramclass
 class RLadderParams:
-    nseg = h.Param(dtype=int, desc="Number of segments")
-    res = h.Param(dtype=h.ExternalModule, desc="Resistor Primitive")
-    res_params = h.Param(dtype=PdkResistorParams, desc="Resistor params")
-    res_conns = h.Param(
-        dtype=Dict[str, str],
-        desc="A dict mapping res ports to value P, N and any other res ports to pass through",
+    """# Resistor Ladder Parameters
+
+    Note the use of the `hdl21.Instantiable` type for the unit resistor element.
+    This generally means "something we can make an `Instance` of" - most commonly a `Module`.
+
+    Here we will be using a combination of an `ExternalModule` and its parameter-values,
+    in something like:
+
+    ```python
+    RLadderParams(
+        res=PdkResistor(w=4 * µ, l=10 * µ)
     )
+    ```
+    """
+
+    nseg = h.Param(dtype=int, desc="Number of segments")
+    res = h.Param(dtype=h.Instantiable, desc="Unit resistor, with params applied")
 
 
 @h.generator
 def rladder(params: RLadderParams) -> h.Module:
+    """# Resistor Ladder Generator"""
 
-    # Base Module, we'll just declare IO
     @h.module
     class RLadder:
+        # IO
         top = h.Inout()
         bot = h.Inout()
         taps = h.Output(width=params.nseg - 1)
 
-    # A list of all the nets, from the bottom to the top
-    netnames = (
-        [RLadder.bot]
-        + [RLadder.taps[i] for i in range(params.nseg - 1)]
-        + [RLadder.top]
-    )
-    pconns = [
-        k for k, v in params.res_conns.items() if v == "P"
-    ]  # All the ports of res that connect to P
-    nconns = [
-        k for k, v in params.res_conns.items() if v == "N"
-    ]  # All the ports of res that connect to N
-    conns = params.res_conns.copy()  # Make a copy we will mutate
-    for i, net in enumerate(netnames[:-1]):
-        for k in pconns:
-            conns[k] = netnames[i + 1]  # Connect P to the P net for this resistor
-        for k in nconns:
-            conns[k] = netnames[i]  # Connect N to the N net for this resistor
-        # Set each resistor of RLadder as an attibute by calling the generator then adding conns
-        RLadder.add(name=f"R{i}", val=params.res(params.res_params)(**conns))
+        # Create concatenations for the P and N sides of each resistor
+        nsides = h.Concat(bot, taps)
+        psides = h.Concat(taps, top)
+
+        # And create our unit resistor array
+        runits = params.nseg * params.res(PLUS=psides, MINUS=nsides)
 
     return RLadder
 
 
 @h.paramclass
 class PassGateParams:
-    nmos = h.Param(dtype=h.ExternalModule, desc="NMOS generator")
-    nmos_params = h.Param(dtype=PdkMosParams, desc="PMOS Parameters")
-    pmos = h.Param(dtype=h.ExternalModule, desc="PMOS generator")
-    pmos_params = h.Param(dtype=PdkMosParams, desc="PMOS parameters")
+    """# Pass Gate Parameters
+
+    See the commentary on `RLadderParams` above regarding the use of `hdl21.Instantiable`,
+    which here serves as the parameter type for each transistor. It will generally be used like:
+
+    ```python
+    PassGateParams(
+        nmos=Nch(PdkMosParams(l=1 * n)),
+        pmos=Pch(PdkMosParams(l=1 * n)),
+    )
+    ```
+
+    Both `nmos` and `pmos` parameters are `Optional`, which means they can be set to the Python built-in `None` value.
+    If either is `None`, its "half" of the pass gate will be omitted.
+    Setting *both* to `None` will cause a generator exception.
+    """
+
+    nmos = h.Param(dtype=Optional[h.Instantiable], desc="NMOS. Disabled if None.")
+    pmos = h.Param(dtype=Optional[h.Instantiable], desc="PMOS. Disabled if None")
 
 
 @h.generator
 def passgate(params: PassGateParams) -> h.Module:
+    """# Pass Gate Generator"""
+    if params.nmos is None and params.pmos is None:
+        raise RuntimeError("A pass gate needs at least *one* transistor!")
+
     @h.module
     class PassGate:
         source = h.Inout()
@@ -111,14 +139,14 @@ def passgate(params: PassGateParams) -> h.Module:
     if params.pmos is not None:
         PassGate.VDD = h.Inout()
         PassGate.en_b = h.Input()
-        PassGate.PSW = params.pmos(params.pmos_params)(
+        PassGate.PSW = params.pmos(
             D=PassGate.drain, S=PassGate.source, G=PassGate.en_b, B=PassGate.VDD
         )
 
     if params.nmos is not None:
         PassGate.VSS = h.Inout()
         PassGate.en = h.Input()
-        PassGate.NSW = params.nmos(params.nmos_params)(
+        PassGate.NSW = params.nmos(
             D=PassGate.drain, S=PassGate.source, G=PassGate.en, B=PassGate.VSS
         )
 
@@ -127,6 +155,8 @@ def passgate(params: PassGateParams) -> h.Module:
 
 @h.generator
 def mux(params: PassGateParams) -> h.Module:
+    """# Pass-Gate Analog Mux Generator"""
+
     @h.module
     class Mux:
         sourceA = h.Input()
@@ -158,6 +188,8 @@ def mux(params: PassGateParams) -> h.Module:
 
 @h.paramclass
 class MuxTreeParams:
+    """# Mux Tree Parameters"""
+
     nbit = h.Param(dtype=int, desc="Number of bits")
     mux_params = h.Param(dtype=PassGateParams, desc="Parameters for the MUX generator")
 
@@ -210,60 +242,28 @@ def mux_tree(params: MuxTreeParams) -> h.Module:
     return MuxTree
 
 
-def external_factory(
-    name: str, param_names: Sequence[str], port_names: Sequence[str]
-) -> Tuple[h.ExternalModule, h.Param]:
-    """
-    Parameters:
-        name: should correspond to the expected name in output netlists
-        param_names: A list of parameters instances of this external primitive take
-        port_names: A list of port names of this external primitive
-    Outputs:
-        NewPrimitive: An instance of h.Primitive
-        NewParamClass: An instance of h.paramclass
-    """
-    param_attr_dict = {
-        n: h.Param(dtype=Any, desc=f"Gen parameter {n} of {name}") for n in param_names
-    }
-    # Dynamically create the parameter class, pass it to the h.paramclass decorator function
-    custom_params = h.paramclass(type(f"{name}Params", (), param_attr_dict))
-    return (
-        h.ExternalModule(
-            name,
-            desc=f"external_module_{name}",
-            port_list=[h.Inout(name=n) for n in port_names],
-        ),
-        custom_params,
-    )
-
-
 def main():
     """Main function, generating an `rladder` and `mux_tree` and netlisting each."""
 
+    # Create parameter values for each of our top-level generators
     rparams = RLadderParams(
         nseg=15,
-        res=PdkResistor,
-        res_params=dict(w=4, l=10),
-        res_conns=dict(PLUS="P", MINUS="N"),
+        res=PdkResistor(w=4 * µ, l=10 * µ),
     )
     mparams = MuxTreeParams(
         nbit=4,
         mux_params=PassGateParams(
-            nmos=NchMac,
-            nmos_params=PdkMosParams(l=1),
-            pmos=PchMac,
-            pmos_params=PdkMosParams(l=1),
+            nmos=Nch(PdkMosParams(l=1 * n)),
+            pmos=Pch(PdkMosParams(l=1 * n)),
         ),
     )
 
-    # Convert each to VLSIR protobuf
-    proto = h.to_proto([rladder(rparams), mux_tree(mparams)], domain="rdac")
-
-    # And netlist in a handful of formats
-    h.netlist(proto, sys.stdout, fmt="verilog")
-    h.netlist(proto, sys.stdout, fmt="spectre")
-    h.netlist(proto, sys.stdout, fmt="spice")
-    h.netlist(proto, sys.stdout, fmt="xyce")
+    # Netlist in a handful of formats
+    duts = [rladder(rparams), mux_tree(mparams)]
+    h.netlist(duts, sys.stdout, fmt="verilog")
+    h.netlist(duts, sys.stdout, fmt="spectre")
+    h.netlist(duts, sys.stdout, fmt="spice")
+    h.netlist(duts, sys.stdout, fmt="xyce")
 
 
 if __name__ == "__main__":
