@@ -150,6 +150,7 @@ class Op:
     """Operating Point Analysis"""
 
     name: Optional[str] = None  # Optional analysis name
+    raw: Optional[str] = ""
 
     @property
     def tp(self) -> AnalysisType:
@@ -164,6 +165,7 @@ class Dc:
     var: Union[str, Param]  # Swept parameter, or its name
     sweep: Sweep  # Sweep values
     name: Optional[str] = None  # Optional analysis name
+    raw: Optional[str] = ""
 
     @property
     def tp(self) -> AnalysisType:
@@ -177,6 +179,7 @@ class Ac:
 
     sweep: LogSweep  # Frequency sweep values. Always log-valued.
     name: Optional[str] = None  # Optional analysis name
+    raw: Optional[str] = ""
 
     @property
     def tp(self) -> AnalysisType:
@@ -191,6 +194,8 @@ class Tran:
     tstop: Scalar  # Stop time
     tstep: Optional[Scalar] = None  # Optional time-step recommendation
     name: Optional[str] = None  # Optional analysis name
+    parameters: Optional[List[Param]] = None
+    raw: Optional[str] = ""
 
     @property
     def tp(self) -> AnalysisType:
@@ -212,6 +217,7 @@ class Noise:
 
     sweep: LogSweep  # Frequency sweep values. Always log-valued.
     name: Optional[str] = None  # Optional analysis name
+    raw: Optional[str] = ""
 
     @property
     def tp(self) -> AnalysisType:
