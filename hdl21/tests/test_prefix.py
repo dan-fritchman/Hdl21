@@ -189,7 +189,7 @@ def test_prefixed_and_scalar_conversions():
     # Test with an expression-literal for the `Scalar`
     p = P(x=11.11, y="m*x+b")
     assert p.x == h.Prefixed(number=Decimal(11.11))
-    assert p.y.inner == h.Literal(content="m*x+b")
+    assert p.y.inner == h.Literal(txt="m*x+b")
 
     # Test some invalid types
     with pytest.raises(ValidationError):

@@ -47,7 +47,7 @@ class Scalar(BaseModel):
             try:  # Try to convert to a Prefixed, which internally converts to a Decimal
                 inner = Prefixed(number=v)
             except Exception:  # Catch all exceptions
-                inner = Literal(content=v)
+                inner = Literal(txt=v)
             return Scalar(inner=inner)
 
         # Everything else - notably including `int` and `float` - must be convertible to `Prefixed`, or fails in its validation.

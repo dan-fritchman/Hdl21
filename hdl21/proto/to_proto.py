@@ -369,7 +369,7 @@ def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
         # `Scalar` will either have an internal `Literal` or `Prefixed` value.
         val = val.inner
     if isinstance(val, Literal):  # String/ expression literals
-        return vlsir.ParamValue(literal=val.content)
+        return vlsir.ParamValue(literal=val.txt)
     if isinstance(val, Prefixed):
         return vlsir.ParamValue(prefixed=export_prefixed(val))
 
