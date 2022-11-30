@@ -17,7 +17,8 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 from enum import Enum
 from decimal import Decimal
-from typing import Optional, Any
+from typing import Optional, Any, Union
+from pydantic import BaseModel, ValidationError, Field
 
 
 class Prefix(Enum):
@@ -59,7 +60,7 @@ class Prefix(Enum):
 
         if isinstance(other, (Decimal, float, int, str)):
             # The usual use-case, e.g. `5 * µ`
-            return Prefixed(other, self)
+            return Prefixed(number=other, prefix=self)
 
         if isinstance(other, Prefixed):
             # Prefixed times Prefix, e.g. `(5 * n) * G`
@@ -113,11 +114,8 @@ triggers some highly inscrutable errors in the standard-library methods.
 So: all `Decimal`, all `pydantic.dataclasses`.
 """
 
-from pydantic.dataclasses import dataclass
 
-
-@dataclass(frozen=True)  # `frozen` for hashability
-class Prefixed:
+class Prefixed(BaseModel):
     """
     # Prefixed
 
@@ -126,8 +124,33 @@ class Prefixed:
     are represented as `Prefixed`.
     """
 
-    number: Decimal  # Numeric Portion. See the long note above.
-    prefix: Prefix = Prefix.UNIT  # Enumerated SI Prefix. Defaults to unity.
+    # Numeric Portion. See the long note above.
+    number: Decimal
+    # Enumerated SI Prefix. Defaults to unity.
+    prefix: Prefix = Field(default=Prefix.UNIT)
+
+    @classmethod
+    def validate(cls, v: Union["Prefixed", "ToPrefixed"]) -> "Prefixed":
+        if isinstance(v, Prefixed):
+            return v  # Done validating
+        if isinstance(v, Decimal):
+            return Prefixed(number=v)  # Also pretty much done
+        if isinstance(v, (int, float, str)):
+            # Convert these types to `Decimal` inline
+            return Prefixed(number=Decimal(v))
+        raise ValidationError(f"Cannot convert {v} to Prefixed number")
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    def __hash__(self):
+        return hash((self.number, self.prefix))
+
+    def __eq__(self, other: "Prefixed") -> bool:
+        if not isinstance(other, Prefixed):
+            return NotImplemented
+        return self.number == other.number and self.prefix == other.prefix
 
     def __float__(self) -> float:
         """Convert to float"""
@@ -169,6 +192,10 @@ class Prefixed:
         return f"{self.number}*{self.prefix.name}"
 
     # FIXME: add comparison operations
+
+
+# Union of the types which can be converted to `Prefixed`
+ToPrefixed = Union[int, float, str, Decimal]
 
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:

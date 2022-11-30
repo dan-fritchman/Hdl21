@@ -350,6 +350,7 @@ def import_prefix(vpre: vlsir.SIPrefix) -> Prefix:
         vlsir.SIPrefix.EXA: Prefix.EXA,
         vlsir.SIPrefix.ZETTA: Prefix.ZETTA,
         vlsir.SIPrefix.YOTTA: Prefix.YOTTA,
+        vlsir.SIPrefix.UNIT: Prefix.UNIT,  # Welcome to the party, as of version 2.0!
     }
     if vpre not in map:
         raise ValueError(f"Invalid Prefix {vpre}")

@@ -1,5 +1,9 @@
-import hdl21 as h
+import pytest
 from decimal import Decimal
+from pydantic import ValidationError
+from pydantic.dataclasses import dataclass
+
+import hdl21 as h
 
 
 def test_decimal():
@@ -19,8 +23,6 @@ def test_decimal():
     assert Decimal(11.1) != Decimal("11.1")
 
     # Create a dataclass with a `Decimal` field
-    from pydantic.dataclasses import dataclass
-
     @dataclass
     class HasDecimal:
         d: Decimal
@@ -35,15 +37,15 @@ def test_decimal():
 def test_prefix_numbers():
     """Check that we get the numeric types we expect in each `Prefixed`"""
 
-    x = h.Prefixed(11, h.Prefix.FEMTO)
+    x = h.Prefixed(number=11, prefix=h.Prefix.FEMTO)
     assert isinstance(x.number, Decimal)
     assert x.number == 11
 
-    x = h.Prefixed(11.1, h.Prefix.FEMTO)
+    x = h.Prefixed(number=11.1, prefix=h.Prefix.FEMTO)
     assert isinstance(x.number, Decimal)
     assert x.number == Decimal("11.1")
 
-    x = h.Prefixed(Decimal("11.11"), h.Prefix.FEMTO)
+    x = h.Prefixed(number=Decimal("11.11"), prefix=h.Prefix.FEMTO)
     assert isinstance(x.number, Decimal)
     assert x.number == Decimal("11.11")
 
@@ -96,7 +98,7 @@ def test_prefix_mul():
     from hdl21.prefix import µ
 
     assert 5 * µ == 5 * h.Prefix.MICRO
-    assert 5 * µ == h.Prefixed(5, h.Prefix.MICRO)
+    assert 5 * µ == h.Prefixed(number=5, prefix=h.Prefix.MICRO)
 
 
 def test_e():
@@ -129,7 +131,7 @@ def test_e_mult():
     """Test multiplying by the `e` function results, e.g. `11 * e(-9)"""
     from hdl21.prefix import e
 
-    assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
+    assert 11 * e(-9) == h.Prefixed(number=11, prefix=h.Prefix.NANO)
 
 
 def test_prefix_scaling():
@@ -156,6 +158,41 @@ def test_prefix_conversion():
 
 def test_unit_prefix():
     """Test the UNIT prefix"""
-    assert h.Prefixed(11) == h.Prefixed(11, h.Prefix.UNIT)
-    assert h.Prefixed("11") == h.Prefixed(11)
-    assert h.Prefixed("11") == h.Prefixed(11.0)
+    assert h.Prefixed(number=11) == h.Prefixed(number=11, prefix=h.Prefix.UNIT)
+    assert h.Prefixed(number="11") == h.Prefixed(number=11)
+    assert h.Prefixed(number="11") == h.Prefixed(number=11.0)
+
+
+def test_prefixed_and_scalar_conversions():
+    """Test inline conversions of built-in numeric types to `Prefixed` and `Scalar`."""
+
+    @dataclass
+    class P:
+        x: h.Prefixed
+        y: h.Scalar
+
+    # Test with int for each
+    p = P(x=1, y=1)
+    assert p.x == h.Prefixed(number=Decimal(1))
+    assert p.y.inner == h.Prefixed(number=Decimal(1))
+
+    # Test with float for each
+    p = P(x=3.0, y=3.0)
+    assert p.x == h.Prefixed(number=Decimal(3.0))
+    assert p.y.inner == h.Prefixed(number=Decimal(3.0))
+
+    # Test with str for each
+    p = P(x="2e-9", y="2e-9")
+    assert p.x == h.Prefixed(number=Decimal("2e-9"))
+    assert p.y.inner == h.Prefixed(number=Decimal("2e-9"))
+
+    # Test with an expression-literal for the `Scalar`
+    p = P(x=11.11, y="m*x+b")
+    assert p.x == h.Prefixed(number=Decimal(11.11))
+    assert p.y.inner == h.Literal(content="m*x+b")
+
+    # Test some invalid types
+    with pytest.raises(ValidationError):
+        p = P(x=None, y=2)
+    with pytest.raises(ValidationError):
+        p = P(x=3, y=None)

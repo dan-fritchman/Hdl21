@@ -25,6 +25,8 @@ import vlsir.circuit_pb2 as vckt
 # HDL
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
+from ..scalar import Scalar
+from ..literal import Literal
 from ..elab import Elaboratables, elaborate
 from ..module import Module
 from ..qualname import qualname as module_qualname
@@ -342,7 +344,9 @@ def dictify_params(params: Any) -> Dict[str, Optional[Prefixed]]:
 # These can generally be summarized as "numbers, strings, and things easily convertible into them".
 # Hdl21 parameters can of course be a much larger set of types.
 # Anything outside this list produces a `TypeError` when exported.
-ToVlsirParam = Union[type(None), int, float, str, Decimal, Prefixed, Enum]
+ToVlsirParam = Union[
+    type(None), int, float, str, Decimal, Enum, Prefixed, Scalar, Literal
+]
 
 
 def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
@@ -360,11 +364,18 @@ def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
             raise TypeError(f"Enum-valued parameters must be strings, not {val.value}")
         return vlsir.ParamValue(literal=val.value)
 
-    # Numbers
+    # Internal numeric (and number-like) types
+    if isinstance(val, Scalar):
+        # `Scalar` will either have an internal `Literal` or `Prefixed` value.
+        val = val.inner
+    if isinstance(val, Literal):  # String/ expression literals
+        return vlsir.ParamValue(literal=val.content)
     if isinstance(val, Prefixed):
         return vlsir.ParamValue(prefixed=export_prefixed(val))
+
+    # Standard-Lib Numbers
     if isinstance(val, Decimal):
-        return vlsir.ParamValue(string=str(val))
+        return vlsir.ParamValue(literal=str(val))
     if isinstance(val, int):
         return vlsir.ParamValue(integer=val)
     if isinstance(val, float):

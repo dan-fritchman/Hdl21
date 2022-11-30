@@ -36,6 +36,8 @@ from .instantiable import *
 from .diff_pair import *
 from . import prefix
 from .prefix import Prefix, Prefixed
+from .scalar import Scalar
+from .literal import Literal
 from . import sim
 from . import proto
 from .proto import to_proto, from_proto

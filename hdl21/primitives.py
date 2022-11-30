@@ -74,20 +74,7 @@ from .call import param_call
 from .params import paramclass, Param, isparamclass, NoParams
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
-from .prefix import Prefix, Prefixed
-
-# # The `Scalar` parameter type
-#
-# Most primitive parameters "prefer" to be the `Prefixed` type, for reasons outlined in
-# https://github.com/dan-fritchman/Hdl21#prefixed-numeric-parameters.
-# They often also need a string-valued escape hatch, e.g. when referring to out-of-Hdl21 quantities
-# such as parameters in external netlists, or simulation decks.
-#
-# Note: conversion into `Scalar` from Python's built-in numeric types `int` and `float`
-# may be slightly counter-intuitive: both create the *string* variant, not `Prefixed`.
-# These would probably preferably convert to `Prefixed` instead, some day.
-#
-Scalar = Union[Prefixed, str]
+from .scalar import Scalar
 
 
 class PrimitiveType(Enum):
@@ -441,8 +428,8 @@ Sources
 class DcVoltageSourceParams:
     """`DcVoltageSource` Parameters"""
 
-    dc = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="DC Value (V)")
-    ac = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="AC Amplitude (V)")
+    dc = Param(dtype=Optional[Scalar], default=0, desc="DC Value (V)")
+    ac = Param(dtype=Optional[Scalar], default=0, desc="AC Amplitude (V)")
 
 
 _add(
@@ -533,7 +520,7 @@ Controlled Sources
 
 @paramclass
 class ControlledSourceParams:
-    gain = Param(dtype=Scalar, default=1 * Prefix.UNIT, desc="Gain in SI Units")
+    gain = Param(dtype=Scalar, default=1, desc="Gain in SI Units")
 
 
 # Controlled Sources Port List
