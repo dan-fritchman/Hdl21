@@ -4,7 +4,7 @@ Spice-Class Simulation Interface
 
 from decimal import Decimal
 from enum import Enum
-from typing import Union, Any, Optional, List, Sequence, Tuple
+from typing import Union, Any, Optional, List, Sequence, Tuple, Awaitable
 from pathlib import Path
 from dataclasses import field
 
@@ -399,6 +399,12 @@ class Sim:
         from .to_proto import to_proto
 
         return vsp.sim(inp=to_proto(self), opts=opts)
+    
+    async def run_async(self, opts: Optional[vsp.SimOptions] = None) -> Awaitable[vsp.SimResultUnion]:
+        """Invoke simulation via `vlsirtools.spice`."""
+        from .to_proto import to_proto
+
+        return await vsp.sim_async(inp=to_proto(self), opts=opts)
 
 
 def run(
