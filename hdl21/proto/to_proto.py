@@ -352,13 +352,13 @@ def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
         return None  # `None` serves as the null identifier for "no value".
 
     if isinstance(val, str):
-        # FIXME: the debate between `string` and `literal`. For now, we use `string`.
-        return vlsir.ParamValue(string=val)
+        # FIXME: the debate between `string` and `literal`. For now, we use LITERAL.
+        return vlsir.ParamValue(literal=val)
     # Enum-valued parameters must also be strings, or fail
     if isinstance(val, Enum):
         if not isinstance(val.value, str):
             raise TypeError(f"Enum-valued parameters must be strings, not {val.value}")
-        return vlsir.ParamValue(string=val.value)
+        return vlsir.ParamValue(literal=val.value)
 
     # Numbers
     if isinstance(val, Prefixed):

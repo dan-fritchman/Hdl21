@@ -135,27 +135,6 @@ class FlatBundleInst:
         return self.root_scope.signals
 
 
-def get(
-    flat: Union[FlatBundleDef, FlatBundleInst], path: Path
-) -> Union[Signal, BundleScope]:
-    if isinstance(flat, FlatBundleDef):
-        ns = flat
-    elif isinstance(flat, FlatBundleInst):
-        ns = flat.root_scope
-    else:
-        raise TypeError
-
-    for seg in path.segs:
-        seg = PathStr(seg)
-        if seg in ns.signals:
-            ns = ns.signals[seg]
-        elif seg in ns.scopes:
-            ns = ns.scopes[seg]
-        else:
-            raise ValueError(f"{flat} has no attribute {seg} in {ns}")
-    return ns
-
-
 class BundleFlattener(Elaborator):
     """Bundle-Flattening Elaborator Pass"""
 
@@ -294,7 +273,7 @@ class BundleFlattener(Elaborator):
         ```
 
         The bundle instances in `Outer` have also been flattened.
-        It now has signals named `outer_b_z`, `outer_b_y`, and `outer_b_z`,
+        It now has signals named `outer_b_x`, `outer_b_y`, and `outer_b_z`,
         which are stored in a `FlatBundleInst` keyed by `x`, `y`, and `z`.
         After this function it will (or should) look like:
 
@@ -328,6 +307,12 @@ class BundleFlattener(Elaborator):
             #   * In the example, its values will be `inner_b_x`, `inner_b_y`, and `inner_b_z`.
             # * Neither takes on the values `outer_b_x`, `outer_b_y`, and `outer_b_z`.
             #   * These would be `flat.signals[pathstr].name`
+            if pathstr not in flat.signals:
+                msg = f"Missing connection to `{pathstr.val}` "
+                msg += f"in Connection to `{portname}` on Instance `{inst.name}`. "
+                msg += f"Has Signals `{[p.val for p in flat.signals.keys()]}`, "
+                msg += f"but no `{pathstr.val}`."
+                self.fail(msg)
             inst.connect(flat_port.name, flat.signals[pathstr])
 
     def flatten_bundle_def(self, bundle: Bundle) -> FlatBundleDef:
@@ -495,7 +480,7 @@ class BundleFlattener(Elaborator):
             msg = f"Invalid BundleRef to {bref.parent}"
             self.fail(msg)
 
-        bref.resolved = resolved = get(flat_root, Path(path))
+        bref.resolved = resolved = self.resolve_path(flat_root, Path(path))
 
         if isinstance(resolved, BundleScope):
             for connected_port in list(bref._connected_ports):
@@ -510,7 +495,31 @@ class BundleFlattener(Elaborator):
             update_ref_deps(bref, resolved)
             return resolved
 
-        raise TypeError(f"BundleRef {bref} resolved to invalid {resolved}")
+        return self.fail(f"BundleRef {bref} resolved to invalid {resolved}")
+
+    def resolve_path(
+        self, flat: Union[FlatBundleDef, FlatBundleInst], path: Path
+    ) -> Union[Signal, BundleScope]:
+        """Resolve `path` in the flattend bundle `flat`, producing either a Signal or nested BundleScope."""
+        if isinstance(flat, FlatBundleDef):
+            ns = flat
+        elif isinstance(flat, FlatBundleInst):
+            ns = flat.root_scope
+        else:
+            msg = f"Invalid target for path resolution {flat} must be FlatBundleDef or FlatBundleInst"
+            return self.fail(msg)
+
+        for seg in path.segs:
+            seg = PathStr(seg)
+            if seg in ns.signals:
+                ns = ns.signals[seg]
+            elif seg in ns.scopes:
+                ns = ns.scopes[seg]
+            else:
+                pathstr = ".".join(path.segs)
+                msg = f"Cannot resolve path `{pathstr}` in `{flat.src.name}`"
+                return self.fail(msg)
+        return ns
 
 
 def instances_and_arrays(module: Module) -> List[Instance]:

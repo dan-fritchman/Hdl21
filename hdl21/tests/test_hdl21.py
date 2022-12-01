@@ -706,19 +706,25 @@ def test_orphanage4():
 def test_wrong_decorator():
     """Mistake `Module` for `module` and vice versa"""
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError) as e:
 
         @h.Module  # Bad!
         class M:
             ...
 
-    with pytest.raises(TypeError):
+    assert "Did you mean to use the `module` decorator?" in str(e)
+
+    with pytest.raises(TypeError) as e:
 
         h.Module(2)  # Bad!
 
-    with pytest.raises(TypeError):
+    assert "Invalid Module name" in str(e)
+
+    with pytest.raises(TypeError) as e:
         ok = h.Module("ok")  # OK
         h.Module(ok)  # Bad!
+
+    assert "Invalid Module name" in str(e)
 
 
 def test_elab_noconn():
@@ -736,6 +742,28 @@ def test_elab_noconn():
     h.elaborate(HasNoConn)
 
     assert len(HasNoConn.signals) == 1
+
+
+def test_elab_noconn2():
+    """Slightly more elaborate test of elaborating a `NoConn`"""
+
+    @h.module
+    class M3:  # Layer 3: just a Port
+        p = h.Port()
+
+    @h.module
+    class M2:  # Layer 2: instantiate & connect M3
+        p = h.Port()
+        m3 = M3(p=p)
+
+    @h.module
+    class M1:  # Layer 1: connect a `NoConn` to all that
+        p = h.NoConn()
+        m2 = M2(p=p)
+
+    h.elaborate(M1)
+
+    assert len(M1.signals) == 1
 
 
 def test_bad_noconn():
