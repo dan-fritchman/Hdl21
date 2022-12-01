@@ -706,19 +706,25 @@ def test_orphanage4():
 def test_wrong_decorator():
     """Mistake `Module` for `module` and vice versa"""
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError) as e:
 
         @h.Module  # Bad!
         class M:
             ...
 
-    with pytest.raises(TypeError):
+    assert "Did you mean to use the `module` decorator?" in str(e)
+
+    with pytest.raises(TypeError) as e:
 
         h.Module(2)  # Bad!
 
-    with pytest.raises(TypeError):
+    assert "Invalid Module name" in str(e)
+
+    with pytest.raises(TypeError) as e:
         ok = h.Module("ok")  # OK
         h.Module(ok)  # Bad!
+
+    assert "Invalid Module name" in str(e)
 
 
 def test_elab_noconn():

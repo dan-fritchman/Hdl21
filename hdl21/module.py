@@ -57,7 +57,7 @@ class Module:
     Parametric hardware is produced through Hdl21's `generator` facility, which defines python functions which create and return `Module`s.
     """
 
-    def __init__(self, *, name: Optional[str] = None):
+    def __init__(self, name: Optional[str] = None):
         if name is not None and not isinstance(name, str):
             # Something wrong with this `name`.
             # Most common case: confusion with the `module` decorator.
