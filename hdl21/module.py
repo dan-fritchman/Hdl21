@@ -76,8 +76,12 @@ class Module:
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
+        # Elaborated version of this module.
+        # Set at the end of elaboration.
+        # For most modules this will be `self`.
+        self._elaborated: Optional[Module] = None
         self._importpath = None  # Optional field set by importers
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._initialized = True
 
     """
@@ -284,6 +288,9 @@ def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
     """Internal `Module.add` and `Module.__setattr__` implementation.
     Primarily sort `val` into one of our type-based containers.
     Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
+
+    if module._elaborated is not None:
+        raise RuntimeError(f"Cannot add {val} to {module} after elaboration.")
 
     if isinstance(val, Signal):
         module.namespace[val.name] = val

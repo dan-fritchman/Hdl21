@@ -52,7 +52,6 @@ class Elaborator:
         self.tops = tops
         self.ctx = ctx
         self.stack: List[ElabStackEntry] = list()
-        self.modules: Dict[int, Module] = dict()
 
     def elaborate_tops(self) -> List[Elaboratable]:
         """Elaborate our top nodes"""
@@ -89,8 +88,9 @@ class Elaborator:
         `elaborate_module_base` instead.
         """
 
-        if id(module) in self.modules:  # Check our cache
-            return module  # Already done!
+        # Check if this has already been elaborated
+        if module._elaborated is not None:
+            return module._elaborated
 
         if not module.name:
             msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
@@ -113,8 +113,7 @@ class Elaborator:
         # Run the pass-specific `elaborate_module`
         result = self.elaborate_module(module)
 
-        # Store a reference to the now-elaborated Module in our cache, and return it
-        self.modules[id(module)] = result
+        # Pop the hierarchy-stack and return it
         self.stack.pop()
         return result
 
@@ -185,6 +184,14 @@ class Elaborator:
 
     def fail(self, msg: str):
         """Error helper, adding stack and state info to an error"""
+        lines = self.format_hier_path()
+        msg = "Elaboration Error at hierarchical path: \n" + "".join(lines) + msg
+        # This also serves as a very helpful place for a debugger breakpoint.
+        raise RuntimeError(msg)
+
+    def format_hier_path(self) -> List[str]:
+        """Create a list of lines describing the current hierarchy path
+        Generally intended for debug use, especially in error messages."""
 
         lines = []
         for s in self.stack:
@@ -213,7 +220,4 @@ class Elaborator:
 
             line += "\n"
             lines.append(line)
-
-        msg = "Elaboration Error at hierarchical path: \n" + "".join(lines) + msg
-        # This also serves as a very helpful place for a debugger breakpoint.
-        raise RuntimeError(msg)
+        return lines

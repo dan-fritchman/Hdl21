@@ -1145,10 +1145,7 @@ def test_deep_hierarchy():
             M1 = m
         prev = m
 
-    # Elaborate the final, highest-level module.
-    h.elaborate(m)
-
-    # Screw up a connection, and check we get a RuntimeError.
+    # Screw up a connection, and check that we get an elaboration-time error when elaborating the top-level module.
     M1.i.not_a_real_port = M1.p
     with pytest.raises(RuntimeError):
         h.elaborate(m)
