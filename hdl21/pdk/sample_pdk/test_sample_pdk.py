@@ -6,7 +6,7 @@ Unit Tests
 
 import hdl21 as h
 from io import StringIO
-from . import sample_pdk
+from . import pdk as sample_pdk
 
 
 def test_default():

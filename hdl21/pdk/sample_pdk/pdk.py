@@ -4,7 +4,8 @@
 
 # Std-Lib Imports
 import copy
-from typing import Union, Optional
+from pathlib import Path
+from typing import Optional
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
@@ -17,12 +18,7 @@ from hdl21.pdk import PdkInstallation
 
 @dataclass
 class Install(PdkInstallation):
-    ...  # No content
-
-
-# The optional external-data installation.
-# Set by an instantiator of `Install`, if available.
-install: Optional[Install] = None
+    models: Path  # Path to the models file
 
 
 @h.paramclass
@@ -31,7 +27,7 @@ class SamplePdkMosParams:
 
     w = h.Param(dtype=Optional[int], desc="Width in resolution units", default=None)
     l = h.Param(dtype=Optional[int], desc="Length in resolution units", default=None)
-    npar = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
+    npar = h.Param(dtype=Optional[int], desc="Number of parallel fingers", default=None)
 
     def __post_init_post_parse__(self):
         """Value Checks"""
