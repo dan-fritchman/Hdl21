@@ -445,8 +445,8 @@ Sources
 class DcVoltageSourceParams:
     """`DcVoltageSource` Parameters"""
 
-    dc = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="DC Value (V)")
-    ac = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="AC Amplitude (V)")
+    dc = Param(dtype=Scalar, default=0 * Prefix.UNIT, desc="DC Value (V)")
+    ac = Param(dtype=Optional[Scalar], default=None, desc="AC Amplitude (V)")
 
 
 _add(
