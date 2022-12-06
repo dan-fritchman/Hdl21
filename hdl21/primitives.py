@@ -208,6 +208,11 @@ class MosVth(Enum):
     STD = "STD"
     LOW = "LOW"
     HIGH = "HIGH"
+    ULTRA_LOW = "ULTRA_LOW"
+    ULTRA_HIGH = "ULTRA_HIGH"
+    IO_STD = "IO_STD"
+    IO_LOW = "IO_LOW"
+    IO_HIGH = "IO_HIGH"
 
 
 @paramclass
@@ -217,9 +222,9 @@ class MosParams:
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     nf = Param(dtype=Optional[Scalar], desc="Number of parallel fingers", default=1)
-    npar = Param(dtype=int, desc="Number of parallel transistors", default=1)
+    mult = Param(dtype=int, desc="Number of parallel transistors", default=1)
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
-    vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
+    vth = Param(dtype=Any, desc="Threshold voltage specifier", default=MosVth.STD)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     # FIXME: whether to include `model`
 
