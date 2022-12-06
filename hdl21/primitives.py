@@ -216,7 +216,8 @@ class MosParams:
 
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
+    nf = Param(dtype=Optional[Scalar], desc="Number of parallel fingers", default=1)
+    npar = Param(dtype=int, desc="Number of parallel transistors", default=1)
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
