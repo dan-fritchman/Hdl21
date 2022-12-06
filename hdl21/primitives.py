@@ -253,14 +253,18 @@ Mos = _add(
 )
 
 
-def Nmos(params: MosParams) -> Primitive:
+def Nmos(arg: Any = Default, **kwargs) -> Primitive:
     """Nmos Constructor. A thin wrapper around `hdl21.primitives.Mos`"""
-    return Mos(replace(params, tp=MosType.NMOS))
+    mos = Mos(arg, **kwargs)
+    mos.params = replace(mos.params, tp=MosType.NMOS)
+    return mos
 
 
-def Pmos(params: MosParams) -> Primitive:
+def Pmos(arg: Any = Default, **kwargs) -> Primitive:
     """Pmos Constructor. A thin wrapper around `hdl21.primitives.Mos`"""
-    return Mos(replace(params, tp=MosType.PMOS))
+    mos = Mos(arg, **kwargs)
+    mos.params = replace(mos.params, tp=MosType.PMOS)
+    return mos
 
 
 """ 
@@ -441,8 +445,8 @@ Sources
 class DcVoltageSourceParams:
     """`DcVoltageSource` Parameters"""
 
-    dc = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="DC Value (V)")
-    ac = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="AC Amplitude (V)")
+    dc = Param(dtype=Scalar, default=0 * Prefix.UNIT, desc="DC Value (V)")
+    ac = Param(dtype=Optional[Scalar], default=None, desc="AC Amplitude (V)")
 
 
 _add(
@@ -629,14 +633,18 @@ Bipolar = _add(
 )
 
 
-def Npn(params: BipolarParams) -> Primitive:
+def Npn(arg: Any = Default, **kwargs) -> Primitive:
     """Npn Constructor. A thin wrapper around `hdl21.primitives.Bipolar`"""
-    return Bipolar(replace(params, tp=BipolarType.NPN))
+    bip = Bipolar(arg, **kwargs)
+    bip.params = replace(bip.params, tp=BipolarType.NPN)
+    return bip
 
 
-def Pnp(params: BipolarParams) -> Primitive:
+def Pnp(arg: Any = Default, **kwargs) -> Primitive:
     """Pnp Constructor. A thin wrapper around `hdl21.primitives.Bipolar`"""
-    return Bipolar(replace(params, tp=BipolarType.PNP))
+    bip = Bipolar(arg, **kwargs)
+    bip.params = replace(bip.params, tp=BipolarType.PNP)
+    return bip
 
 
 """ 

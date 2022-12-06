@@ -530,3 +530,28 @@ def test_no_role_directions():
     assert HasB.b_c.direction == h.PortDir.INPUT
     assert HasB.b_d.direction == h.PortDir.NONE
     assert HasB.b_e.direction == None
+
+
+def test_re_elab_generator_with_bundle_portref():
+    """Test re-elaborating a generator with a bundle port, and a `PortRef` to it.
+    This can be problematic as bundle ports are flattened during elaboration."""
+
+    @h.generator
+    def G(_: h.HasNoParams) -> h.Module:
+        @h.module
+        class G:
+            p = h.Diff(port=True)
+
+        return G
+
+    @h.generator
+    def T(_: h.HasNoParams) -> h.Module:
+        @h.module
+        class T:
+            g1 = G()()
+            g2 = G()(p=g1.p)
+
+        return T
+
+    h.elaborate(T())
+    h.elaborate(T())

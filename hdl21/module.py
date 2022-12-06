@@ -57,7 +57,7 @@ class Module:
     Parametric hardware is produced through Hdl21's `generator` facility, which defines python functions which create and return `Module`s.
     """
 
-    def __init__(self, *, name: Optional[str] = None):
+    def __init__(self, name: Optional[str] = None):
         if name is not None and not isinstance(name, str):
             # Something wrong with this `name`.
             # Most common case: confusion with the `module` decorator.
@@ -76,8 +76,12 @@ class Module:
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
+        # Elaborated version of this module.
+        # Set at the end of elaboration.
+        # For most modules this will be `self`.
+        self._elaborated: Optional[Module] = None
         self._importpath = None  # Optional field set by importers
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._initialized = True
 
     """
@@ -284,6 +288,9 @@ def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
     """Internal `Module.add` and `Module.__setattr__` implementation.
     Primarily sort `val` into one of our type-based containers.
     Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
+
+    if module._elaborated is not None:
+        raise RuntimeError(f"Cannot add {val} to {module} after elaboration.")
 
     if isinstance(val, Signal):
         module.namespace[val.name] = val

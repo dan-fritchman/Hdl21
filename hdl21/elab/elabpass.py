@@ -15,6 +15,7 @@ from .elaborators import (
     ResolvePortRefs,
     ArrayFlattener,
     SliceResolver,
+    MarkModules,
 )
 
 
@@ -38,12 +39,17 @@ class ElabPass(Enum):
     FLATTEN_BUNDLES = BundleFlattener
     FLATTEN_ARRAYS = ArrayFlattener
     RESOLVE_SLICES = SliceResolver
+    MARK_MODULES = MarkModules
 
     @classmethod
     def default(cls) -> List["ElabPass"]:
         """Return the default ordered Elaborator Passes."""
         # Returns each in definition order, then a final few tests.
-        return list(ElabPass) + [ElabPass.CONN_TYPES, ElabPass.ORPHANAGE]
+        return list(ElabPass)[:-1] + [
+            ElabPass.CONN_TYPES,
+            ElabPass.ORPHANAGE,
+            ElabPass.MARK_MODULES,
+        ]
 
     @property
     def elaborate(self):
