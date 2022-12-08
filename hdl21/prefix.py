@@ -15,6 +15,8 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 """
 
+import math
+
 from enum import Enum
 from decimal import Decimal
 from typing import Optional, Any
@@ -49,10 +51,20 @@ class Prefix(Enum):
     @classmethod
     def from_exp(cls, exp: int) -> Optional["Prefix"]:
         """Get the prefix from the exponent.
-        Returns None if the exponent does not correspond to a valid prefix.
-        FIXME: apply scaling here for non first class exponents."""
+        Returns greatest lowest bound of exponent in Prefix values
+        If exp is not found in the Prefix values to begin with"""
         inverted = {v.value: v for v in cls.__members__.values()}
-        return inverted.get(exp, None)
+        closest = min(inverted.keys(), key = lambda x:abs(x-exp))
+        return inverted.get(closest)
+
+    def __mul__(self, other: Any):
+
+        if isinstance(other, Prefix):
+            # Prefix times Prefix, eg. `p * M == µ`
+            targ = self.value + other.value
+            return e(targ)
+
+        return NotImplemented
 
     def __rmul__(self, other: Any):
         """Right-hand-side multiplication operator, e.g. `5 * µ`."""
@@ -64,20 +76,39 @@ class Prefix(Enum):
         if isinstance(other, Prefixed):
             # Prefixed times Prefix, e.g. `(5 * n) * G`
             targ = self.value + other.prefix.value
-            prefix = Prefix.from_exp(targ)
-            if prefix is not None:
-                return Prefixed(other.number, prefix)
+            prefix = e(targ)
 
-            # Didn't land on a supported prefix. Scale to the nearest smaller one.
-            closest = max(
-                [v.value for v in type(self).__members__.values() if v.value < targ]
-            )
             # Scale the other number
-            new_num = other.number * 10 ** (targ - closest)
+            new_num = other.number * 10 ** (targ - prefix.value)
+
             # And create a corresponding `Prefixed`
-            return Prefixed(number=new_num, prefix=Prefix.from_exp(closest))
+            return Prefixed(new_num, prefix)
 
         return NotImplemented
+
+    def __truediv__(self, other: Any):
+        """Division operator, e.g. `p / µ == µ`
+        typical usage to evaluate prefix arithmetic"""
+
+        if isinstance(other, Prefix):
+
+            # Prefix divided by Prefix, eg. `p / M == a`
+            targ = self.value - other.value          
+            return e(targ)
+
+        return NotImplemented
+
+    def __pow__(self, other: Any):
+        """Power operator, e.g. `K ** 2 == M
+        typical usage to evaluate prefix raised to integer powers"""
+
+        if isinstance(other, (int, float, Decimal)):
+            # Prefix raised to power of number, eg. `µ ** 4 == y`
+            targ = self.value * other
+            return e(targ)
+        
+        return NotImplemented
+
 
 
 """
@@ -129,24 +160,38 @@ class Prefixed:
     number: Decimal  # Numeric Portion. See the long note above.
     prefix: Prefix = Prefix.UNIT  # Enumerated SI Prefix. Defaults to unity.
 
+    def __int__(self) -> int:
+        return int(self.number) * 10 ** self.prefix.value
+
     def __float__(self) -> float:
         """Convert to float"""
-        return float(self.number) * 10**self.prefix.value
+        return float(self.number) * 10 ** self.prefix.value
 
     def __mul__(self, other) -> "Prefixed":
-        if not isinstance(other, (int, float, Decimal)):
+        if isinstance(other, Prefixed):
+            return Prefixed(self.number * other.number, self.prefix * other.prefix).scale()
+        elif not isinstance(other, (int, float, Decimal)):
             return NotImplemented
         return Prefixed(self.number * other, self.prefix)
 
     def __rmul__(self, other) -> "Prefixed":
-        if not isinstance(other, (int, float, Decimal)):
+        if isinstance(other, Prefixed):
+            return Prefixed(self.number * other.number, self.prefix * other.prefix).scale()
+        elif not isinstance(other, (int, float, Decimal)):
             return NotImplemented
         return Prefixed(self.number * other, self.prefix)
 
     def __truediv__(self, other) -> "Prefixed":
-        if not isinstance(other, (int, float, Decimal)):
+        if isinstance(other, Prefixed):
+            return Prefixed(self.number / other.number, self.prefix / other.prefix).scale() 
+        elif not isinstance(other, (int, float, Decimal)):
             return NotImplemented
         return Prefixed(self.number / other, self.prefix)
+
+    def __pow__(self, other) -> "Prefixed":
+        if not isinstance(other, (int, float, Decimal)):
+            return NotImplemented
+        return Prefixed(self.number ** other, self.prefix ** other).scale()
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
         return _add(lhs=self, rhs=other)
@@ -160,15 +205,43 @@ class Prefixed:
     def __rsub__(self, other: "Prefixed") -> "Prefixed":
         return _subtract(lhs=other, rhs=self)
 
-    def scaleto(self, prefix: Prefix) -> "Prefixed":
+    def scale(self, prefix = None) -> "Prefixed":
         """Scale to a new `Prefix`"""
-        newnum = self.number * 10 ** (self.prefix.value - prefix.value)
-        return Prefixed(newnum, prefix)
+        if isinstance(prefix, Prefix):
+            newnum = self.number * 10 ** (self.prefix.value - prefix.value)
+            return Prefixed(newnum, prefix)
+        else:
+            newpref = math.log10(self.number) + self.prefix.value
+            return self.scale(e(newpref))
+
 
     def __repr__(self) -> str:
         return f"{self.number}*{self.prefix.name}"
 
-    # FIXME: add comparison operations
+    # FIXME: Comparison operators that respect class convention
+    def __lt__(self, other) -> bool:
+        lhs,rhs = _scale_to_smaller(self,other)
+        return lhs.number < rhs.number
+
+    def __le__(self, other) -> bool:
+        lhs,rhs = _scale_to_smaller(self,other)
+        return lhs.number <= rhs.number
+
+    def __eq__(self, other) -> bool:
+        lhs,rhs = _scale_to_smaller(self,other)
+        return lhs.number == rhs.number
+    
+    def __ne__(self,other) -> bool:
+        lhs,rhs = _scale_to_smaller(self,other)
+        return lhs.number != rhs.number
+
+    def __gt__(self,other) -> bool:
+        lhs,rhs = _scale_to_smaller(self,other)
+        return lhs.number > rhs.number
+
+    def __ge__(self,other) -> bool:
+        lhs,rhs = _scale_to_smaller(self,other)
+        return lhs.number >= rhs.number
 
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
@@ -181,7 +254,7 @@ def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
 
     # Different prefix values. Scale to the smaller of the two
     smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
-    newnum = lhs.scaleto(smaller).number + rhs.scaleto(smaller).number
+    newnum = lhs.scale(smaller).number + rhs.scale(smaller).number
     return Prefixed(newnum, smaller)
 
 
@@ -195,21 +268,34 @@ def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
 
     # Different prefix values. Scale to the smaller of the two
     smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
-    newnum = lhs.scaleto(smaller).number - rhs.scaleto(smaller).number
+    newnum = lhs.scale(smaller).number - rhs.scale(smaller).number
     return Prefixed(newnum, smaller)
 
+def _scale_to_smaller(lhs: Prefixed, rhs: Prefixed) -> tuple[Prefixed, Prefixed]:
+    smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
+    return lhs.scale(smaller), rhs.scale(smaller)
 
 # Common prefixes as single-character identifiers, and exposed in the module namespace.
+y = YOCTO = Prefix.YOCTO
+z = ZEPTO = Prefix.ZEPTO
+a = ATTO = Prefix.ATTO
 f = FEMTO = Prefix.FEMTO
 p = PICO = Prefix.PICO
 n = NANO = Prefix.NANO
 µ = MICRO = Prefix.MICRO
 m = MILLI = Prefix.MILLI
+c = CENTI = Prefix.CENTI
+d = DECI = Prefix.DECI
+D = DECA = Prefix.DECA
 K = KILO = Prefix.KILO
 M = MEGA = Prefix.MEGA
 G = GIGA = Prefix.GIGA
 T = TERA = Prefix.TERA
 P = PETA = Prefix.PETA
+E = EXA = Prefix.EXA
+Z = ZETTA = Prefix.ZETTA
+Y = YOTTA = Prefix.YOTTA
+
 # The Unit prefix doesn't get a single-character name, since it's kinda confusing with `µ`,
 # but is exposed at module scope.
 UNIT = Prefix.UNIT

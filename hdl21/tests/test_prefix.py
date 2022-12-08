@@ -49,6 +49,9 @@ def test_prefix_numbers():
 
 
 def test_prefix_shortname():
+    assert h.prefix.y == h.Prefix.YOCTO
+    assert h.prefix.z == h.Prefix.ZEPTO
+    assert h.prefix.a == h.Prefix.ATTO
     assert h.prefix.f == h.Prefix.FEMTO
     assert h.prefix.p == h.Prefix.PICO
     assert h.prefix.n == h.Prefix.NANO
@@ -59,7 +62,9 @@ def test_prefix_shortname():
     assert h.prefix.G == h.Prefix.GIGA
     assert h.prefix.T == h.Prefix.TERA
     assert h.prefix.P == h.Prefix.PETA
-
+    assert h.prefix.E == h.Prefix.EXA
+    assert h.prefix.Z == h.Prefix.ZETTA
+    assert h.prefix.Y == h.Prefix.YOTTA
 
 def test_prefix_from_exp():
     """Test creating `Prefix` from an integer exponent."""
@@ -86,18 +91,37 @@ def test_prefix_from_exp():
     assert h.Prefix.from_exp(21) == h.Prefix.ZETTA
     assert h.Prefix.from_exp(24) == h.Prefix.YOTTA
 
-    # Check a few unsupported values
-    assert h.Prefix.from_exp(-100) is None
-    assert h.Prefix.from_exp(+100) is None
-
+    # Check autoscaling
+    assert h.Prefix.from_exp(-100) == h.Prefix.YOCTO
+    assert h.Prefix.from_exp(+100) == h.Prefix.YOTTA
+    assert h.Prefix.from_exp(-5) == h.Prefix.MICRO
+    assert h.Prefix.from_exp(+5) == h.Prefix.MEGA
+    assert h.Prefix.from_exp(0.5) == h.Prefix.UNIT
+    assert h.Prefix.from_exp(-1.5) == h.Prefix.CENTI
 
 def test_prefix_mul():
     """Test `Prefix` multiplication."""
-    from hdl21.prefix import µ
+    from hdl21.prefix import µ, M
 
     assert 5 * µ == 5 * h.Prefix.MICRO
     assert 5 * µ == h.Prefixed(5, h.Prefix.MICRO)
+    assert µ * M == h.Prefix.UNIT
+    
 
+def test_prefix_div():
+    """Test `Prefix` division"""
+    from hdl21.prefix import µ, M
+
+    assert M / µ == h.Prefix.TERA
+    assert µ / M == h.Prefix.PICO
+
+def test_prefix_pow():
+    """Test `Prefix` exponentiation"""
+    from hdl21.prefix import µ
+
+    assert µ ** 2 == h.Prefix.PICO
+    assert µ ** 0.5 == h.Prefix.MILLI
+    assert µ ** -1 == h.Prefix.MEGA
 
 def test_e():
     """Test the `e` shorthand notation for exponential creation"""
@@ -136,15 +160,61 @@ def test_prefix_scaling():
     """Test cases of `Prefixed` multiplication which do not land on other `Prefix`es, and require scaling"""
     from hdl21.prefix import e
 
-    # 1e-11, scaled to 10e-12
-    assert 1 * e(-9) * h.Prefix.CENTI == 10 * e(-12)
+    # Explicit scaling
+    assert (11.11 * e(2)).scale(e(0)) == 1111 * e(0)
+    assert (1.11 * e(-1)).scale(e(-3)) == 111 * e(-3)
+    assert (111 * e(0)).scale(e(3)) == 0.111 * e(3)
 
-    # 5e4, scaled to 50e3
-    assert 5 * e(6) * h.Prefix.CENTI == 50 * e(3)
+    # Inline Scaling
+    assert 11.11 * e(2) * e(0) == 1111 * e(0)
+    assert 1.11 * e(-1) * e(-3) == 111 * e(-4)
+    assert 111 * e(0) * e(3) == 0.111 * e(3)
 
-    # 11.11e14, scaled to 1111e12
-    assert 11.11 * e(15) * h.Prefix.DECI == 1111 * e(12)
+    # Automatic Scaling
+    assert (1000 * e(0)).scale() == 1 * e(3)
+    assert (0.001 * e(0)).scale() == 1 * e(-3)
+    assert (1000 * e(3)).scale == 1 * e(6)
 
+def test_prefix_comparison():
+    """Test cases of `Prefixed` comparison operators"""
+    from hdl21.prefix import e
+
+    # Less than
+    assert 1 * e(0) < 2 * e(0)
+    assert 1 * e(3) < 1 * e(6)
+    assert 1 * e(-6) < 1 * e(-3)
+
+    # Less than or equal to
+    assert 1 * e(0) <= 2 * e(0)
+    assert 1 * e(0) <= 1 * e(0)
+    assert 1 * e(3) <= 1 * e(6)
+    assert 1 * e(3) <= 1 * e(3)
+    assert 1 * e(-6) <= 1 * e(-3)
+    assert 1 * e(-6) <= 1 * e(-6)
+
+    # Equal to
+    assert 1 * e(-3) == 0.001 * e(0)
+    assert 1 * e(0) == 1 * e(0)
+    assert 1 * e(3) == 1000 * e(0)
+
+    # Not Equal to
+    assert 1 * e(0) != 2 * e(0)
+    assert 1 * e(-12) != 0.00001 * e(-5)
+    assert 1 * e(6) != 10000 * e(1)
+
+    # Greater than
+    assert 2 * e(0) > 1 * e(0)
+    assert 1 * e(6) > 1 * e(3)
+    assert 1 * e(-3) > 1 * e(-6)
+
+    # Greater than or equal to
+    assert 2 * e(0) >= 1 * e(0)
+    assert 1 * e(0) >= 1 * e(0)
+    assert 1 * e(6) >= 1 * e(3)
+    assert 1 * e(3) >= 1 * e(3)
+    assert 1 * e(-3) >= 1 * e(-6)
+    assert 1 * e(-6) >= 1 * e(-6)
+   
 
 def test_prefix_conversion():
     """Test types that can be converted to `Prefixed`'s internal `Decimal`."""
