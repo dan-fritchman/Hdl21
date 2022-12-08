@@ -79,7 +79,7 @@ class Prefix(Enum):
             prefix = e(targ)
 
             # Scale the other number
-            new_num = other.number * 10 ** (targ - prefix.value)
+            new_num = other.number * Decimal(10) ** (targ - prefix.value)
 
             # And create a corresponding `Prefixed`
             return Prefixed(new_num, prefix)
@@ -208,7 +208,7 @@ class Prefixed:
     def scale(self, prefix = None) -> "Prefixed":
         """Scale to a new `Prefix`"""
         if isinstance(prefix, Prefix):
-            newnum = self.number * 10 ** (self.prefix.value - prefix.value)
+            newnum = self.number * Decimal(10) ** (self.prefix.value - prefix.value)
             return Prefixed(newnum, prefix)
         else:
             newpref = math.log10(self.number) + self.prefix.value

@@ -167,13 +167,13 @@ def test_prefix_scaling():
 
     # Inline Scaling
     assert 11.11 * e(2) * e(0) == 1111 * e(0)
-    assert 1.11 * e(-1) * e(-3) == 111 * e(-4)
-    assert 111 * e(0) * e(3) == 0.111 * e(3)
+    assert 1.11 * e(-2) * e(-3) == 11.1 * e(-6)
+    assert 111 * e(3) * e(3) == 0.111 * e(9)
 
     # Automatic Scaling
     assert (1000 * e(0)).scale() == 1 * e(3)
     assert (0.001 * e(0)).scale() == 1 * e(-3)
-    assert (1000 * e(3)).scale == 1 * e(6)
+    assert (1000 * e(3)).scale() == 1 * e(6)
 
 def test_prefix_comparison():
     """Test cases of `Prefixed` comparison operators"""
