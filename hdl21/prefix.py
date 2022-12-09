@@ -172,51 +172,50 @@ class Prefixed:
 
     def __mul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
-            return self.number * other.number * self.prefix * other.prefix
+            return (self.number * other.number * self.prefix * other.prefix).scale()
         elif not isinstance(other, (int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * other, self.prefix)
+        return Prefixed(self.number * other, self.prefix).scale()
 
     def __rmul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
-            return self.number * other.number * self.prefix * other.prefix
+            return (self.number * other.number * self.prefix * other.prefix).scale()
         elif not isinstance(other, (int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * other, self.prefix)
+        return Prefixed(self.number * other, self.prefix).scale()
 
     def __truediv__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
-            return (self.number / other.number) * (self.prefix / other.prefix)
+            return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
         elif not isinstance(other, (int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number / other, self.prefix)
+        return Prefixed(self.number / other, self.prefix).scale()
 
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (int, float, Decimal)):
             return NotImplemented
-        return (self.number ** Decimal(other)) * (self.prefix ** other)
+        return ((self.number ** Decimal(other)) * (self.prefix ** other)).scale()
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
-        return _add(lhs=self, rhs=other)
+        return _add(lhs=self, rhs=other).scale()
 
     def __radd__(self, other: "Prefixed") -> "Prefixed":
-        return _add(lhs=other, rhs=self)
+        return _add(lhs=other, rhs=self).scale()
 
     def __sub__(self, other: "Prefixed") -> "Prefixed":
-        return _subtract(lhs=self, rhs=other)
+        return _subtract(lhs=self, rhs=other).scale()
 
     def __rsub__(self, other: "Prefixed") -> "Prefixed":
-        return _subtract(lhs=other, rhs=self)
+        return _subtract(lhs=other, rhs=self).scale()
 
-    def scale(self, prefix = None) -> "Prefixed":
+    def scale(self, prefix : Prefix = None) -> "Prefixed":
         """Scale to a new `Prefix`"""
         if isinstance(prefix, Prefix):
             newnum = self.number * Decimal(10) ** (self.prefix.value - prefix.value)
             return Prefixed(newnum, prefix)
         else:
-            newpref = math.log10(self.number) + self.prefix.value
-            return self.scale(e(newpref))
-
+            newpref = Prefix.closest(self.number.log10() + self.prefix.value)
+            return self.scale(newpref)
 
     def __repr__(self) -> str:
         return f"{self.number}*{self.prefix.name}"

@@ -183,6 +183,24 @@ def test_e_div():
     assert _epsilon_equiv((-1*e(-2))/(-1*e(-2.3)), 1 * e(0.3), 10)
     assert _epsilon_equiv((2*e(2.9))/(4*e(0.4)),0.5*e(2.5),10)
 
+def test_prefix_scaling():
+    """Test cases of `Prefixed` multiplication which do not land on other `Prefix`es, and require scaling"""
+    from hdl21.prefix import e, _epsilon_equiv
+
+    # Explicit scaling
+    assert _epsilon_equiv((Decimal(11.11) * e(2)).scale(e(0).symbol),Decimal(1111) * e(0), 12)
+    assert _epsilon_equiv((Decimal(1.11) * e(-1)).scale(e(-3).symbol), Decimal(111) * e(-3), 12)
+    assert _epsilon_equiv((Decimal(111) * e(0)).scale(e(3).symbol), Decimal(0.111) * e(3), 12)
+
+    # Inline Scaling
+    assert _epsilon_equiv(Decimal(11.11) * e(2) * e(0), Decimal(1111) * e(0), 12)
+    assert _epsilon_equiv(1.11 * e(-2) * e(-3), 11.1 * e(-6), 12)
+    assert _epsilon_equiv(111 * e(3) * e(3), 0.111 * e(9), 12)
+
+    # Automatic Scaling
+    assert _epsilon_equiv((1000 * e(0)).scale(), 1 * e(3),12)
+    assert _epsilon_equiv((0.001 * e(0)).scale(), 1 * e(-3),12)
+    assert _epsilon_equiv((1000 * e(3)).scale(), 1 * e(6),12)
 
 def test_prefix_comparison():
     """Test cases of `Prefixed` comparison operators"""
