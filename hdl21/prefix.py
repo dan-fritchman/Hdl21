@@ -53,12 +53,12 @@ class Prefix(Enum):
         """Get the prefix from the exponent. If `exp` is not
         in the members of Prefix, returns None instead"""
         inverted = {v.value: v for v in cls.__members__.values()}
-        
+
         return inverted.get(exp, None)
 
     @classmethod
     def closest(cls, exp: Any) -> Optional["Prefix"]:
-        return min(cls.__members__.values(), key = lambda x: abs(x.value-exp))
+        return min(cls.__members__.values(), key=lambda x: abs(x.value - exp))
 
     def __mul__(self, other: Any):
 
@@ -96,7 +96,7 @@ class Prefix(Enum):
         if isinstance(other, Prefix):
 
             # Prefix divided by Prefix, eg. `p / M == a`
-            targ = self.value - other.value          
+            targ = self.value - other.value
             return e(targ)
 
         return NotImplemented
@@ -109,9 +109,8 @@ class Prefix(Enum):
             # Prefix raised to power of number, eg. `µ ** 4 == y`
             targ = self.value * other
             return e(targ)
-        
-        return NotImplemented
 
+        return NotImplemented
 
 
 """
@@ -164,11 +163,11 @@ class Prefixed:
     prefix: Prefix = Prefix.UNIT  # Enumerated SI Prefix. Defaults to unity.
 
     def __int__(self) -> int:
-        return int(self.number) * 10 ** self.prefix.value
+        return int(self.number) * 10**self.prefix.value
 
     def __float__(self) -> float:
         """Convert to float"""
-        return float(self.number) * 10 ** self.prefix.value
+        return float(self.number) * 10**self.prefix.value
 
     def __mul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
@@ -194,7 +193,7 @@ class Prefixed:
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (int, float, Decimal)):
             return NotImplemented
-        return ((self.number ** Decimal(other)) * (self.prefix ** other)).scale()
+        return ((self.number ** Decimal(other)) * (self.prefix**other)).scale()
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
         return _add(lhs=self, rhs=other).scale()
@@ -208,7 +207,7 @@ class Prefixed:
     def __rsub__(self, other: "Prefixed") -> "Prefixed":
         return _subtract(lhs=other, rhs=self).scale()
 
-    def scale(self, prefix : Prefix = None) -> "Prefixed":
+    def scale(self, prefix: Prefix = None) -> "Prefixed":
         """Scale to a new `Prefix`"""
         if isinstance(prefix, Prefix):
             newnum = self.number * Decimal(10) ** (self.prefix.value - prefix.value)
@@ -222,29 +221,28 @@ class Prefixed:
 
     # Comparison operators that respect class convention
     def __lt__(self, other) -> bool:
-        lhs,rhs = _scale_to_smaller(self,other)
+        lhs, rhs = _scale_to_smaller(self, other)
         return lhs.number < rhs.number
 
     def __le__(self, other) -> bool:
-        lhs,rhs = _scale_to_smaller(self,other)
+        lhs, rhs = _scale_to_smaller(self, other)
         return lhs.number <= rhs.number
 
     def __eq__(self, other) -> bool:
-        lhs,rhs = _scale_to_smaller(self,other)
+        lhs, rhs = _scale_to_smaller(self, other)
         return lhs.number == rhs.number
-    
-    def __ne__(self,other) -> bool:
-        lhs,rhs = _scale_to_smaller(self,other)
+
+    def __ne__(self, other) -> bool:
+        lhs, rhs = _scale_to_smaller(self, other)
         return lhs.number != rhs.number
 
-    def __gt__(self,other) -> bool:
-        lhs,rhs = _scale_to_smaller(self,other)
+    def __gt__(self, other) -> bool:
+        lhs, rhs = _scale_to_smaller(self, other)
         return lhs.number > rhs.number
 
-    def __ge__(self,other) -> bool:
-        lhs,rhs = _scale_to_smaller(self,other)
+    def __ge__(self, other) -> bool:
+        lhs, rhs = _scale_to_smaller(self, other)
         return lhs.number >= rhs.number
-
 
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
@@ -274,13 +272,16 @@ def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     newnum = lhs.scale(smaller).number - rhs.scale(smaller).number
     return Prefixed(newnum, smaller)
 
-def _scale_to_smaller(lhs: Prefixed, rhs: Prefixed) -> tuple[Prefixed, Prefixed]:
+
+def _scale_to_smaller(lhs: Prefixed, rhs: Prefixed):
     smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
     return lhs.scale(smaller), rhs.scale(smaller)
 
-def _epsilon_equiv(lhs: Prefixed,rhs: Prefixed,epsilon):
-    lhs, rhs = _scale_to_smaller(lhs,rhs)
-    return round(lhs.number,epsilon) == round(rhs.number,epsilon)
+
+def _epsilon_equiv(lhs: Prefixed, rhs: Prefixed, epsilon):
+    lhs, rhs = _scale_to_smaller(lhs, rhs)
+    return round(lhs.number, epsilon) == round(rhs.number, epsilon)
+
 
 # Common prefixes as single-character identifiers, and exposed in the module namespace.
 y = YOCTO = Prefix.YOCTO
@@ -307,6 +308,7 @@ Y = YOTTA = Prefix.YOTTA
 # but is exposed at module scope.
 UNIT = Prefix.UNIT
 
+
 @dataclass
 class Exponent:
     """
@@ -318,31 +320,34 @@ class Exponent:
     A important feature of the design of Exponent is that it is a helper class: so it may
     only be invoked by other classes and can only interact with itself and Decimal/int/floats.
     """
-    symbol : Prefix # Prefix symbol for calculation
-    residual : Decimal = Decimal(0) # Prefix
+
+    symbol: Prefix  # Prefix symbol for calculation
+    residual: Decimal = Decimal(0)  # Prefix
 
     @classmethod
-    def from_exp(self, exp : Any):
+    def from_exp(self, exp: Any):
 
         out_symbol = Prefix.closest(exp)
         out_residual = exp - out_symbol.value
         return Exponent(out_symbol, out_residual)
 
-    def __mul__(self,other : Optional["Exponent"]) -> Optional["Exponent"]:
+    def __mul__(self, other: Optional["Exponent"]) -> Optional["Exponent"]:
 
         if isinstance(other, Exponent):
             # Exponent(n,0.3) * Exponent(K,0.4) == e(-8.7) * e(3.4) = e(-5.3)
-            return Exponent.from_exp(self.symbol.value + other.symbol.value + self.residual + other.residual)
+            return Exponent.from_exp(
+                self.symbol.value + other.symbol.value + self.residual + other.residual
+            )
 
         return NotImplemented
 
-    def __rmul__(self, other : Any) -> Prefixed:
+    def __rmul__(self, other: Any) -> Prefixed:
 
         if isinstance(other, (int, float, Decimal)):
             # 16 * Exponent(Symbol.UNIT,0.25) == 2 * Prefix.UNIT
 
             out_number = Decimal(other) * Decimal(10) ** self.residual
-            
+
             return Prefixed(out_number, self.symbol)
 
         elif isinstance(other, Prefixed):
@@ -353,26 +358,29 @@ class Exponent:
 
         return NotImplemented
 
-    def __truediv__(self, other : Any) -> Optional["Exponent"]:
+    def __truediv__(self, other: Any) -> Optional["Exponent"]:
 
-        if isinstance(other, (int,float,Decimal)):
+        if isinstance(other, (int, float, Decimal)):
             # Exponent(1) / 2 = Exponent(log(5))
             inv_other = Decimal(1) / other
             return inv_other * self
 
         elif isinstance(other, Exponent):
-            return self * (other ** -1)
+            return self * (other**-1)
 
-    def __pow__(self, other : Any) -> Optional["Exponent"]:
+    def __pow__(self, other: Any) -> Optional["Exponent"]:
 
         if isinstance(other, (int, float, Decimal)):
             # Exponent(0.25) ** 4 == Exponent(1)
-            return Exponent.from_exp(((self.symbol.value + self.residual) * Decimal(other)))
+            return Exponent.from_exp(
+                ((self.symbol.value + self.residual) * Decimal(other))
+            )
 
         return NotImplemented
 
     def __repr__(self) -> str:
         return f"e({self.symbol.value+self.residual})"
+
 
 def e(exp: Any) -> Exponent:
     """# Exponential `Prefix` Creation
@@ -385,8 +393,8 @@ def e(exp: Any) -> Exponent:
     The `e()` function is most commonly useful with multiplication,
     to create "floating point" values such as `11 * e(-9)`.
     """
-    
-    if isinstance(exp, (int,float,Decimal)):
+
+    if isinstance(exp, (int, float, Decimal)):
 
         out_symbol = Prefix.closest(exp)
         out_residual = exp - out_symbol.value
@@ -398,4 +406,4 @@ def e(exp: Any) -> Exponent:
 
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
 # They can be explicityle imported from `hdl21.prefix` instead.
-__all__ = ["Prefix", "Prefixed"]
+__all__ = ["Prefix", "Prefixed", "Exponent"]
