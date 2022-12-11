@@ -2,6 +2,7 @@ import hdl21 as h
 from decimal import Decimal, getcontext
 import pytest as pt
 
+
 def test_decimal():
     """This isnt a test of Hdl21 so much as a demo and reminder of how
     the standard library's `Decimal` works, particularly in conjunction with
@@ -247,18 +248,18 @@ def test_prefix_scaling():
     from hdl21.prefix import e
 
     # Explicit scaling
-    assert (Decimal('11.11') * e(2)).scale(e(0).symbol) == Decimal(1111) * e(0)
-    assert (Decimal('1.11') * e(-1)).scale(e(-3).symbol) == Decimal(111) * e(-3)
-    assert (Decimal(111) * e(0)).scale(e(3).symbol) == Decimal('0.111') * e(3)
+    assert (Decimal("11.11") * e(2)).scale(e(0).symbol) == Decimal(1111) * e(0)
+    assert (Decimal("1.11") * e(-1)).scale(e(-3).symbol) == Decimal(111) * e(-3)
+    assert (Decimal(111) * e(0)).scale(e(3).symbol) == Decimal("0.111") * e(3)
 
     # Inline Scaling
-    assert Decimal('11.11') * e(2) * e(0) == Decimal(1111) * e(0)
-    assert Decimal('1.11') * e(-2) * e(-3) == Decimal('11.1') * e(-6)
-    assert 111 * e(3) * e(3) == Decimal('0.111') * e(9)
+    assert Decimal("11.11") * e(2) * e(0) == Decimal(1111) * e(0)
+    assert Decimal("1.11") * e(-2) * e(-3) == Decimal("11.1") * e(-6)
+    assert 111 * e(3) * e(3) == Decimal("0.111") * e(9)
 
     # Automatic Scaling
     assert (1000 * e(0)).scale(), 1 * e(3)
-    assert (Decimal('0.001') * e(0)).scale(), 1 * e(-3)
+    assert (Decimal("0.001") * e(0)).scale(), 1 * e(-3)
     assert (1000 * e(3)).scale(), 1 * e(6)
 
 
@@ -300,13 +301,16 @@ def test_prefix_comparison():
     # Equal to with special emphasis on precision error
     assert 0.123 * e(3) == 123 * e(0)
     assert 0.456 * e(-2) == 4.56 * e(-3)
-    assert (2 * e(1/3)) ** 2 == 4 * e(2/3)
+    assert (2 * e(1 / 3)) ** 2 == 4 * e(2 / 3)
+
 
 def test_prefix_conversion():
     """Test types that can be converted to `Prefixed`'s internal `Decimal`."""
     from hdl21.prefix import e, y
 
-    assert h.Prefixed(number="11.11", prefix=y) == h.Prefixed(Decimal("11.11"), prefix=y)
+    assert h.Prefixed(number="11.11", prefix=y) == h.Prefixed(
+        Decimal("11.11"), prefix=y
+    )
     assert h.Prefixed(number=11.11, prefix=y) == h.Prefixed(Decimal("11.11"), prefix=y)
     assert h.Prefixed(number=11, prefix=y) == h.Prefixed(Decimal(11), prefix=y)
 

@@ -23,6 +23,7 @@ from typing import Optional, Any
 
 EPSILON = 20
 
+
 class Prefix(Enum):
     """Enumerated Unit Prefixes
     Values are equal to the associated power-of-ten exponent."""
@@ -59,9 +60,7 @@ class Prefix(Enum):
 
     @classmethod
     def closest(cls, exp: Any) -> Optional["Prefix"]:
-        return min(
-            cls.__members__.values(), key=lambda x: abs(x.value - exp)
-        )
+        return min(cls.__members__.values(), key=lambda x: abs(x.value - exp))
 
     def __mul__(self, other: Any):
 
