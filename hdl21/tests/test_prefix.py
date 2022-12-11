@@ -1,5 +1,6 @@
 import hdl21 as h
 from decimal import Decimal
+import pytest as pt
 
 
 def test_decimal():
@@ -119,6 +120,59 @@ def test_prefix_pow():
     assert µ**-1 == e(6)
 
 
+def test_prefixed_mul():
+    """Test `Prefixed` Multiplication"""
+    from hdl21.prefix import e
+
+    assert (1 * e(1)) * (1 * e(2)) == 1 * e(3)
+    assert 2 * (1 * e(2)) == 2 * e(2)
+    assert (1 * e(2)) * 2 == 2 * e(2)
+
+
+def test_prefixed_div():
+    """Test `Prefixed` True Division"""
+    from hdl21.prefix import e
+
+    assert (1 * e(0)) / 2 == 0.5 * e(0)
+    assert (1 * e(0)) / (2 * e(0)) == 0.5 * e(0)
+
+
+def test_prefixed_pow():
+    """Test `Prefixed` Power"""
+    from hdl21.prefix import e
+
+    assert (1 * e(1)) ** 2 == 1 * e(2)
+    assert (2 * e(-2)) ** 2 == 4 * e(-4)
+
+
+def test_prefixed_addition():
+    """Test `Prefixed Addition"""
+    from hdl21.prefix import e, _epsilon_equiv
+
+    assert (1 * e(0)) + (1 * e(0)) == 2 * e(0)
+    assert (1 * e(0)) + (1 * e(-2)) == 101 * e(-2)
+    assert (1 * e(2)) + (1 * e(0)) == 101 * e(0)
+
+    # Good enough tests
+    assert _epsilon_equiv((1 * e(0)) + (1 * e(0)), 0.2 * e(1), 10)
+    assert _epsilon_equiv((1 * e(0)) + (1 * e(-2)), 1.01 * e(0), 10)
+    assert _epsilon_equiv((1 * e(2)) + (1 * e(0)), 1.01 * e(2), 10)
+
+
+def test_prefixed_subtraction():
+    """Test `Prefixed` Subtraction"""
+    from hdl21.prefix import e, _epsilon_equiv
+
+    assert (1 * e(0)) - (1 * e(0)) == 0 * e(0)
+    assert (1 * e(0)) - (1 * e(-2)) == 99 * e(-2)
+    assert (1 * e(2)) - (1 * e(0)) == 99 * e(0)
+
+    # Good enough tests
+    assert _epsilon_equiv((1 * e(0)) - (1 * e(0)), 0.0 * e(1), 10)
+    assert _epsilon_equiv((1 * e(0)) - (1 * e(-2)), 0.99 * e(0), 10)
+    assert _epsilon_equiv((1 * e(2)) - (1 * e(0)), 0.99 * e(2), 10)
+
+
 def test_e():
     """Test the `e` shorthand notation for exponential creation"""
     from hdl21.prefix import e
@@ -151,16 +205,16 @@ def test_e_mult():
 
     assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
     assert 11 * e(1.5) * e(4.5) == 11 * e(6)
-    assert 11 * e(0.123) * e(0.123) * e(0.123) == 11 * e(0.369)
     assert 11 * e(1) * e(-1) == 11 * e(0)
     assert 11 * e(1) * e(-2) * e(3) == 11 * e(2)
-    assert 1 * e(0.123) * e(-0.123) == 1 * e(0)
     assert 1 * e(-0.5) * e(1) == 1 * e(0.5)
 
     # Good enough tests
     assert _epsilon_equiv(1 * e(-3) * e(3.3), 1 * e(0.3), 10)
-    assert _epsilon_equiv(1 * e(-0.75) * e(0.5), 1 * e(-0.25), 25)
-    assert _epsilon_equiv(1 * e(-0.123) * e(0.003) * e(0.1), 1 * e(-0.02), 25)
+    assert _epsilon_equiv(1 * e(-0.75) * e(0.5), 1 * e(-0.25), 10)
+    assert _epsilon_equiv(1 * e(-0.123) * e(0.003) * e(0.1), 1 * e(-0.02), 10)
+    assert _epsilon_equiv(11 * e(0.123) * e(0.123) * e(0.123), 11 * e(0.369), 10)
+    assert _epsilon_equiv(1 * e(0.123) * e(-0.123), 1 * e(0), 10)
 
 
 def test_e_pow():
@@ -253,10 +307,22 @@ def test_prefix_comparison():
 
 def test_prefix_conversion():
     """Test types that can be converted to `Prefixed`'s internal `Decimal`."""
+    from hdl21.prefix import e, y, _epsilon_equiv
 
-    h.Prefixed(number="11.11", prefix=h.Prefix.YOCTO)
-    h.Prefixed(number=11.11, prefix=h.Prefix.YOCTO)
-    h.Prefixed(number=11, prefix=h.Prefix.YOCTO)
+    assert _epsilon_equiv(
+        h.Prefixed(number="11.11", prefix=y), h.Prefixed(Decimal(11.11), y), 10
+    )
+    assert _epsilon_equiv(
+        h.Prefixed(number=11.11, prefix=y), h.Prefixed(Decimal(11.11), prefix=y), 10
+    )
+    assert _epsilon_equiv(
+        h.Prefixed(number=11, prefix=y), h.Prefixed(Decimal(11), y), 10
+    )
+
+    assert type(float(1 * e(1))) == float
+    assert float(1 * e(1)) == 10.0
+    assert type(int(2 * e(2))) == int
+    assert int(2 * e(2)) == 200
 
 
 def test_unit_prefix():
@@ -264,3 +330,55 @@ def test_unit_prefix():
     assert h.Prefixed(11) == h.Prefixed(11, h.Prefix.UNIT)
     assert h.Prefixed("11") == h.Prefixed(11)
     assert h.Prefixed("11") == h.Prefixed(11.0)
+
+
+def test_not_implemented_prefix():
+    """Test all NotImplemented Returns of Prefix Class"""
+    from hdl21.prefix import K
+
+    with pt.raises(TypeError):
+        assert K * [] == NotImplemented
+    with pt.raises(TypeError):
+        assert [] * K == NotImplemented
+    with pt.raises(TypeError):
+        assert K / 3 == NotImplemented
+    with pt.raises(TypeError):
+        assert 3 / K == NotImplemented
+    with pt.raises(TypeError):
+        assert K ** [] == NotImplemented
+
+
+def test_not_implemented_prefixed():
+    """Test all NotImplemented Returns of Prefixed Class"""
+    from hdl21.prefix import e
+
+    with pt.raises(TypeError):
+        assert type([] * (2 * e(1))) == NotImplemented
+    with pt.raises(TypeError):
+        assert type((2 * e(2)) * []) == NotImplemented
+    with pt.raises(TypeError):
+        assert type((1 * e(0)) / []) == NotImplemented
+    with pt.raises(TypeError):
+        assert type((1 * e(4)) ** []) == NotImplemented
+    with pt.raises(TypeError):
+        assert type(1 + (1 * e(0))) == NotImplemented
+    with pt.raises(TypeError):
+        assert type((1 * e(0)) + 1) == NotImplemented
+    with pt.raises(TypeError):
+        assert type(1 - (1 * e(0))) == NotImplemented
+    with pt.raises(TypeError):
+        assert type((1 * e(0)) - 1) == NotImplemented
+
+
+def test_not_implemented_exponent():
+    from hdl21.prefix import Exponent, K, e
+
+    with pt.raises(TypeError):
+        assert [] * Exponent(K, Decimal(0)) == NotImplemented
+    with pt.raises(TypeError):
+        assert Exponent(K, Decimal(0)) * [] == NotImplemented
+    with pt.raises(TypeError):
+        assert Exponent(K, Decimal(0)) / [] == NotImplemented
+    with pt.raises(TypeError):
+        assert Exponent(K, Decimal(0)) ** [] == NotImplemented
+    assert e([]) == NotImplemented

@@ -105,9 +105,9 @@ class Prefix(Enum):
         """Power operator, e.g. `K ** 2 == M
         typical usage to evaluate prefix raised to integer powers"""
 
-        if isinstance(other, (int, float, Decimal)):
+        if isinstance(other, (str, int, float, Decimal)):
             # Prefix raised to power of number, eg. `µ ** 4 == y`
-            targ = self.value * other
+            targ = self.value * Decimal(other)
             return e(targ)
 
         return NotImplemented
@@ -172,39 +172,49 @@ class Prefixed:
     def __mul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return (self.number * other.number * self.prefix * other.prefix).scale()
-        elif not isinstance(other, (int, float, Decimal)):
+        elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * other, self.prefix).scale()
+        return Prefixed(self.number * Decimal(other), self.prefix).scale()
 
     def __rmul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return (self.number * other.number * self.prefix * other.prefix).scale()
-        elif not isinstance(other, (int, float, Decimal)):
+        elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * other, self.prefix).scale()
+        return Prefixed(self.number * Decimal(other), self.prefix).scale()
 
     def __truediv__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
-        elif not isinstance(other, (int, float, Decimal)):
+        elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number / other, self.prefix).scale()
+        return Prefixed(self.number / Decimal(other), self.prefix).scale()
 
     def __pow__(self, other) -> "Prefixed":
-        if not isinstance(other, (int, float, Decimal)):
+        if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return ((self.number ** Decimal(other)) * (self.prefix**other)).scale()
+        return (
+            (self.number ** Decimal(other)) * (self.prefix ** Decimal(other))
+        ).scale()
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
+        if not isinstance(other, Prefixed):
+            return NotImplemented
         return _add(lhs=self, rhs=other).scale()
 
     def __radd__(self, other: "Prefixed") -> "Prefixed":
+        if not isinstance(other, Prefixed):
+            return NotImplemented
         return _add(lhs=other, rhs=self).scale()
 
     def __sub__(self, other: "Prefixed") -> "Prefixed":
+        if not isinstance(other, Prefixed):
+            return NotImplemented
         return _subtract(lhs=self, rhs=other).scale()
 
     def __rsub__(self, other: "Prefixed") -> "Prefixed":
+        if not isinstance(other, Prefixed):
+            return NotImplemented
         return _subtract(lhs=other, rhs=self).scale()
 
     def scale(self, prefix: Prefix = None) -> "Prefixed":
@@ -247,9 +257,6 @@ class Prefixed:
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     """`Prefixed` Addition"""
-    if not isinstance(lhs, Prefixed) or not isinstance(rhs, Prefixed):
-        return NotImplemented
-
     if lhs.prefix == rhs.prefix:
         return Prefixed(lhs.number + rhs.number, lhs.prefix)
 
@@ -261,9 +268,6 @@ def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
 
 def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     """`Prefixed` Subtraction"""
-    if not isinstance(lhs, Prefixed) or not isinstance(rhs, Prefixed):
-        return NotImplemented
-
     if lhs.prefix == rhs.prefix:
         return Prefixed(lhs.number - rhs.number, lhs.prefix)
 
@@ -343,7 +347,7 @@ class Exponent:
 
     def __rmul__(self, other: Any) -> Prefixed:
 
-        if isinstance(other, (int, float, Decimal)):
+        if isinstance(other, (str, int, float, Decimal)):
             # 16 * Exponent(Symbol.UNIT,0.25) == 2 * Prefix.UNIT
 
             out_number = Decimal(other) * Decimal(10) ** self.residual
@@ -360,17 +364,19 @@ class Exponent:
 
     def __truediv__(self, other: Any) -> Optional["Exponent"]:
 
-        if isinstance(other, (int, float, Decimal)):
+        if isinstance(other, (str, int, float, Decimal)):
             # Exponent(1) / 2 = Exponent(log(5))
-            inv_other = Decimal(1) / other
+            inv_other = Decimal(1) / Decimal(other)
             return inv_other * self
 
         elif isinstance(other, Exponent):
             return self * (other**-1)
 
+        return NotImplemented
+
     def __pow__(self, other: Any) -> Optional["Exponent"]:
 
-        if isinstance(other, (int, float, Decimal)):
+        if isinstance(other, (str, int, float, Decimal)):
             # Exponent(0.25) ** 4 == Exponent(1)
             return Exponent.from_exp(
                 ((self.symbol.value + self.residual) * Decimal(other))
@@ -394,10 +400,10 @@ def e(exp: Any) -> Exponent:
     to create "floating point" values such as `11 * e(-9)`.
     """
 
-    if isinstance(exp, (int, float, Decimal)):
+    if isinstance(exp, (str, int, float, Decimal)):
 
         out_symbol = Prefix.closest(exp)
-        out_residual = exp - out_symbol.value
+        out_residual = Decimal(exp) - out_symbol.value
 
         return Exponent(out_symbol, out_residual)
 
