@@ -1,7 +1,6 @@
 import hdl21 as h
-from decimal import Decimal
+from decimal import Decimal, getcontext
 import pytest as pt
-
 
 def test_decimal():
     """This isnt a test of Hdl21 so much as a demo and reminder of how
@@ -147,30 +146,30 @@ def test_prefixed_pow():
 
 def test_prefixed_addition():
     """Test `Prefixed Addition"""
-    from hdl21.prefix import e, _epsilon_equiv
+    from hdl21.prefix import e
 
     assert (1 * e(0)) + (1 * e(0)) == 2 * e(0)
     assert (1 * e(0)) + (1 * e(-2)) == 101 * e(-2)
     assert (1 * e(2)) + (1 * e(0)) == 101 * e(0)
 
-    # Good enough tests
-    assert _epsilon_equiv((1 * e(0)) + (1 * e(0)), 0.2 * e(1), 10)
-    assert _epsilon_equiv((1 * e(0)) + (1 * e(-2)), 1.01 * e(0), 10)
-    assert _epsilon_equiv((1 * e(2)) + (1 * e(0)), 1.01 * e(2), 10)
+    # Precision-error tests
+    assert (1 * e(0)) + (1 * e(0)) == 0.2 * e(1)
+    assert (1 * e(0)) + (1 * e(-2)) == 1.01 * e(0)
+    assert (1 * e(2)) + (1 * e(0)) == 1.01 * e(2)
 
 
 def test_prefixed_subtraction():
     """Test `Prefixed` Subtraction"""
-    from hdl21.prefix import e, _epsilon_equiv
+    from hdl21.prefix import e
 
     assert (1 * e(0)) - (1 * e(0)) == 0 * e(0)
     assert (1 * e(0)) - (1 * e(-2)) == 99 * e(-2)
     assert (1 * e(2)) - (1 * e(0)) == 99 * e(0)
 
-    # Good enough tests
-    assert _epsilon_equiv((1 * e(0)) - (1 * e(0)), 0.0 * e(1), 10)
-    assert _epsilon_equiv((1 * e(0)) - (1 * e(-2)), 0.99 * e(0), 10)
-    assert _epsilon_equiv((1 * e(2)) - (1 * e(0)), 0.99 * e(2), 10)
+    # Precision-error tests
+    assert (1 * e(0)) - (1 * e(0)) == 0.0 * e(1)
+    assert (1 * e(0)) - (1 * e(-2)) == 0.99 * e(0)
+    assert (1 * e(2)) - (1 * e(0)) == 0.99 * e(2)
 
 
 def test_e():
@@ -201,7 +200,7 @@ def test_e():
 
 def test_e_mult():
     """Test multiplying by the `e` function results, e.g. `11 * e(-9)"""
-    from hdl21.prefix import e, _epsilon_equiv
+    from hdl21.prefix import e
 
     assert 11 * e(-9) == h.Prefixed(11, h.Prefix.NANO)
     assert 11 * e(1.5) * e(4.5) == 11 * e(6)
@@ -209,28 +208,28 @@ def test_e_mult():
     assert 11 * e(1) * e(-2) * e(3) == 11 * e(2)
     assert 1 * e(-0.5) * e(1) == 1 * e(0.5)
 
-    # Good enough tests
-    assert _epsilon_equiv(1 * e(-3) * e(3.3), 1 * e(0.3), 10)
-    assert _epsilon_equiv(1 * e(-0.75) * e(0.5), 1 * e(-0.25), 10)
-    assert _epsilon_equiv(1 * e(-0.123) * e(0.003) * e(0.1), 1 * e(-0.02), 10)
-    assert _epsilon_equiv(11 * e(0.123) * e(0.123) * e(0.123), 11 * e(0.369), 10)
-    assert _epsilon_equiv(1 * e(0.123) * e(-0.123), 1 * e(0), 10)
+    # Precision-error tests
+    assert 1 * e(-3) * e(3.3) == 1 * e(0.3)
+    assert 1 * e(-0.75) * e(0.5) == 1 * e(-0.25)
+    assert 1 * e(-0.123) * e(0.003) * e(0.1) == 1 * e(-0.02)
+    assert 11 * e(0.123) * e(0.123) * e(0.123) == 11 * e(0.369)
+    assert 1 * e(0.123) * e(-0.123) == 1 * e(0)
 
 
 def test_e_pow():
     """Test raising Prefixed numbers to powers"""
-    from hdl21.prefix import e, _epsilon_equiv
+    from hdl21.prefix import e
 
     assert (1 * e(1)) ** 2 == 1 * e(2)
     assert (2 * e(-2)) ** 2 == 4 * e(-4)
 
-    # Good enough tests
-    assert _epsilon_equiv((3 * e(4)) ** 0.25, Decimal(3**0.25) * e(1), 15)
+    # Precision-error tests
+    assert (3 * e(4)) ** 0.25, Decimal(3**0.25) * e(1)
 
 
 def test_e_div():
     """Test dividing Prefixed numbers by numbers"""
-    from hdl21.prefix import e, _epsilon_equiv
+    from hdl21.prefix import e
 
     assert e(3) / e(2) == e(1)
     assert (1 * e(3)) / (1 * e(2)) == 1 * e(1)
@@ -238,35 +237,29 @@ def test_e_div():
     # Test scalar division
     assert (1 * e(2)) / 2 == 0.5 * e(2) == 5 * e(1)
 
-    # Good enough tests
-    assert _epsilon_equiv((-1 * e(-2)) / (-1 * e(-2.3)), 1 * e(0.3), 10)
-    assert _epsilon_equiv((2 * e(2.9)) / (4 * e(0.4)), 0.5 * e(2.5), 10)
+    # Precision-error tests
+    assert (-1 * e(-2)) / (-1 * e(-2.3)) == 1 * e(0.3)
+    assert (2 * e(2.9)) / (4 * e(0.4)) == 0.5 * e(2.5)
 
 
 def test_prefix_scaling():
     """Test cases of `Prefixed` multiplication which do not land on other `Prefix`es, and require scaling"""
-    from hdl21.prefix import e, _epsilon_equiv
+    from hdl21.prefix import e
 
     # Explicit scaling
-    assert _epsilon_equiv(
-        (Decimal(11.11) * e(2)).scale(e(0).symbol), Decimal(1111) * e(0), 12
-    )
-    assert _epsilon_equiv(
-        (Decimal(1.11) * e(-1)).scale(e(-3).symbol), Decimal(111) * e(-3), 12
-    )
-    assert _epsilon_equiv(
-        (Decimal(111) * e(0)).scale(e(3).symbol), Decimal(0.111) * e(3), 12
-    )
+    assert (Decimal('11.11') * e(2)).scale(e(0).symbol) == Decimal(1111) * e(0)
+    assert (Decimal('1.11') * e(-1)).scale(e(-3).symbol) == Decimal(111) * e(-3)
+    assert (Decimal(111) * e(0)).scale(e(3).symbol) == Decimal('0.111') * e(3)
 
     # Inline Scaling
-    assert _epsilon_equiv(Decimal(11.11) * e(2) * e(0), Decimal(1111) * e(0), 12)
-    assert _epsilon_equiv(1.11 * e(-2) * e(-3), 11.1 * e(-6), 12)
-    assert _epsilon_equiv(111 * e(3) * e(3), 0.111 * e(9), 12)
+    assert Decimal('11.11') * e(2) * e(0) == Decimal(1111) * e(0)
+    assert Decimal('1.11') * e(-2) * e(-3) == Decimal('11.1') * e(-6)
+    assert 111 * e(3) * e(3) == Decimal('0.111') * e(9)
 
     # Automatic Scaling
-    assert _epsilon_equiv((1000 * e(0)).scale(), 1 * e(3), 12)
-    assert _epsilon_equiv((0.001 * e(0)).scale(), 1 * e(-3), 12)
-    assert _epsilon_equiv((1000 * e(3)).scale(), 1 * e(6), 12)
+    assert (1000 * e(0)).scale(), 1 * e(3)
+    assert (Decimal('0.001') * e(0)).scale(), 1 * e(-3)
+    assert (1000 * e(3)).scale(), 1 * e(6)
 
 
 def test_prefix_comparison():
@@ -304,20 +297,18 @@ def test_prefix_comparison():
     assert 1 * e(-3) >= 1 * e(-6)
     assert 1 * e(-6) >= 1 * e(-6)
 
+    # Equal to with special emphasis on precision error
+    assert 0.123 * e(3) == 123 * e(0)
+    assert 0.456 * e(-2) == 4.56 * e(-3)
+    assert (2 * e(1/3)) ** 2 == 4 * e(2/3)
 
 def test_prefix_conversion():
     """Test types that can be converted to `Prefixed`'s internal `Decimal`."""
-    from hdl21.prefix import e, y, _epsilon_equiv
+    from hdl21.prefix import e, y
 
-    assert _epsilon_equiv(
-        h.Prefixed(number="11.11", prefix=y), h.Prefixed(Decimal(11.11), y), 10
-    )
-    assert _epsilon_equiv(
-        h.Prefixed(number=11.11, prefix=y), h.Prefixed(Decimal(11.11), prefix=y), 10
-    )
-    assert _epsilon_equiv(
-        h.Prefixed(number=11, prefix=y), h.Prefixed(Decimal(11), y), 10
-    )
+    assert h.Prefixed(number="11.11", prefix=y) == h.Prefixed(Decimal("11.11"), prefix=y)
+    assert h.Prefixed(number=11.11, prefix=y) == h.Prefixed(Decimal("11.11"), prefix=y)
+    assert h.Prefixed(number=11, prefix=y) == h.Prefixed(Decimal(11), prefix=y)
 
     assert type(float(1 * e(1))) == float
     assert float(1 * e(1)) == 10.0
@@ -329,7 +320,7 @@ def test_unit_prefix():
     """Test the UNIT prefix"""
     assert h.Prefixed(11) == h.Prefixed(11, h.Prefix.UNIT)
     assert h.Prefixed("11") == h.Prefixed(11)
-    assert h.Prefixed("11") == h.Prefixed(11.0)
+    assert h.Prefixed(11.0) == h.Prefixed(11.0)
 
 
 def test_not_implemented_prefix():

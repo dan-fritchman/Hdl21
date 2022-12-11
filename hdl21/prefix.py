@@ -21,6 +21,7 @@ from enum import Enum
 from decimal import Decimal
 from typing import Optional, Any
 
+EPSILON = 20
 
 class Prefix(Enum):
     """Enumerated Unit Prefixes
@@ -58,7 +59,9 @@ class Prefix(Enum):
 
     @classmethod
     def closest(cls, exp: Any) -> Optional["Prefix"]:
-        return min(cls.__members__.values(), key=lambda x: abs(x.value - exp))
+        return min(
+            cls.__members__.values(), key=lambda x: abs(x.value - exp)
+        )
 
     def __mul__(self, other: Any):
 
@@ -107,7 +110,7 @@ class Prefix(Enum):
 
         if isinstance(other, (str, int, float, Decimal)):
             # Prefix raised to power of number, eg. `µ ** 4 == y`
-            targ = self.value * Decimal(other)
+            targ = self.value * Decimal(str(other))
             return e(targ)
 
         return NotImplemented
@@ -174,27 +177,27 @@ class Prefixed:
             return (self.number * other.number * self.prefix * other.prefix).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * Decimal(other), self.prefix).scale()
+        return Prefixed(self.number * Decimal(str(other)), self.prefix).scale()
 
     def __rmul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return (self.number * other.number * self.prefix * other.prefix).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * Decimal(other), self.prefix).scale()
+        return Prefixed(self.number * Decimal(str(other)), self.prefix).scale()
 
     def __truediv__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number / Decimal(other), self.prefix).scale()
+        return Prefixed(self.number / Decimal(str(other)), self.prefix).scale()
 
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
         return (
-            (self.number ** Decimal(other)) * (self.prefix ** Decimal(other))
+            self.number ** Decimal(str(other)) * (self.prefix ** Decimal(str(other)))
         ).scale()
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
@@ -232,27 +235,27 @@ class Prefixed:
     # Comparison operators that respect class convention
     def __lt__(self, other) -> bool:
         lhs, rhs = _scale_to_smaller(self, other)
-        return lhs.number < rhs.number
+        return round(lhs.number, EPSILON) < round(rhs.number, EPSILON)
 
     def __le__(self, other) -> bool:
         lhs, rhs = _scale_to_smaller(self, other)
-        return lhs.number <= rhs.number
+        return round(lhs.number, EPSILON) <= round(rhs.number, EPSILON)
 
     def __eq__(self, other) -> bool:
         lhs, rhs = _scale_to_smaller(self, other)
-        return lhs.number == rhs.number
+        return round(lhs.number, EPSILON) == round(rhs.number, EPSILON)
 
     def __ne__(self, other) -> bool:
         lhs, rhs = _scale_to_smaller(self, other)
-        return lhs.number != rhs.number
+        return round(lhs.number, EPSILON) != round(rhs.number, EPSILON)
 
     def __gt__(self, other) -> bool:
         lhs, rhs = _scale_to_smaller(self, other)
-        return lhs.number > rhs.number
+        return round(lhs.number, EPSILON) > round(rhs.number, EPSILON)
 
     def __ge__(self, other) -> bool:
         lhs, rhs = _scale_to_smaller(self, other)
-        return lhs.number >= rhs.number
+        return round(lhs.number, EPSILON) >= round(rhs.number, EPSILON)
 
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
@@ -280,11 +283,6 @@ def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
 def _scale_to_smaller(lhs: Prefixed, rhs: Prefixed):
     smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
     return lhs.scale(smaller), rhs.scale(smaller)
-
-
-def _epsilon_equiv(lhs: Prefixed, rhs: Prefixed, epsilon):
-    lhs, rhs = _scale_to_smaller(lhs, rhs)
-    return round(lhs.number, epsilon) == round(rhs.number, epsilon)
 
 
 # Common prefixes as single-character identifiers, and exposed in the module namespace.
@@ -332,7 +330,7 @@ class Exponent:
     def from_exp(self, exp: Any):
 
         out_symbol = Prefix.closest(exp)
-        out_residual = exp - out_symbol.value
+        out_residual = Decimal(str(exp)) - out_symbol.value
         return Exponent(out_symbol, out_residual)
 
     def __mul__(self, other: Optional["Exponent"]) -> Optional["Exponent"]:
@@ -350,7 +348,7 @@ class Exponent:
         if isinstance(other, (str, int, float, Decimal)):
             # 16 * Exponent(Symbol.UNIT,0.25) == 2 * Prefix.UNIT
 
-            out_number = Decimal(other) * Decimal(10) ** self.residual
+            out_number = Decimal(str(other)) * Decimal(10) ** self.residual
 
             return Prefixed(out_number, self.symbol)
 
@@ -366,7 +364,7 @@ class Exponent:
 
         if isinstance(other, (str, int, float, Decimal)):
             # Exponent(1) / 2 = Exponent(log(5))
-            inv_other = Decimal(1) / Decimal(other)
+            inv_other = Decimal(1) / Decimal(str(other))
             return inv_other * self
 
         elif isinstance(other, Exponent):
@@ -379,7 +377,7 @@ class Exponent:
         if isinstance(other, (str, int, float, Decimal)):
             # Exponent(0.25) ** 4 == Exponent(1)
             return Exponent.from_exp(
-                ((self.symbol.value + self.residual) * Decimal(other))
+                ((self.symbol.value + self.residual) * Decimal(str(other)))
             )
 
         return NotImplemented
@@ -403,7 +401,7 @@ def e(exp: Any) -> Exponent:
     if isinstance(exp, (str, int, float, Decimal)):
 
         out_symbol = Prefix.closest(exp)
-        out_residual = Decimal(exp) - out_symbol.value
+        out_residual = Decimal(str(exp)) - out_symbol.value
 
         return Exponent(out_symbol, out_residual)
 
