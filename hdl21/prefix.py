@@ -15,8 +15,6 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 """
 
-import math
-
 from enum import Enum
 from decimal import Decimal
 from typing import Optional, Any
