@@ -17,20 +17,14 @@ from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
 from ..datatype import datatype
-from ..prefix import Prefixed
 from ..instance import Instance
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
-from ..primitives import Scalar
+from ..scalar import Scalar
+from ..literal import Literal
 
-# Type which can serve as simulation parameter values
-# The `str` variant is the escape hatch for:
-# * References to other parameter(s) by name
-# * Compound expressions among parameters, e.g. `5µ * a + b`
-# FIXME: deprecate this.
-# It was the same thing that `Scalar` eventually became.
+# FIXME: deprecate `ParamVal`.
 # Users may be importing it as `ParamVal` from here, so leave this name for now.
-# And probably move `Scalar` to a dedicated module.
 ParamVal = Scalar
 
 
@@ -84,6 +78,10 @@ def simattr(cls) -> type:
     # which also becomes the method-name on `sim`.
     _simattrs[cls.__name__.lower()] = cls
     return cls
+
+
+# Apply that "decorator" to the `Literal` class
+simattr(Literal)
 
 
 @simattr
@@ -322,16 +320,6 @@ class Lib:
 
     path: Path  # Path to include
     section: str  # Library Section
-    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
-
-
-@simattr
-@datatype
-class Literal:
-    """Simulation-Control Literal,
-    expressed as netlist-language text for a particular target language."""
-
-    txt: str
     name: Optional[str] = None  # Name, used in class-based `Sim` definitions
 
 
