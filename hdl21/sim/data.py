@@ -388,6 +388,14 @@ class Sim:
 
         return vsp.sim(inp=to_proto(self), opts=opts)
 
+    async def run_async(
+        self, opts: Optional[vsp.SimOptions] = None
+    ) -> vsp.SimResultUnion:
+        """Invoke simulation via `vlsirtools.spice`."""
+        from .to_proto import to_proto
+
+        return await vsp.sim_async(inp=to_proto(self), opts=opts)
+
 
 def run(
     inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None
