@@ -4,5 +4,5 @@
 # Everything, notably including VLSIR, comes from PyPi
 #
 
-pip install -e ".[dev]"
+pip install --pre --editable ".[dev]"
 pre-commit install

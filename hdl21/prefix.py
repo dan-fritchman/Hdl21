@@ -17,7 +17,10 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 from enum import Enum
 from decimal import Decimal
-from typing import Optional, Any
+from typing import Optional, Any, Union
+from pydantic import BaseModel, ValidationError, Field
+from pydantic.dataclasses import dataclass
+
 
 EPSILON = 20
 
@@ -74,7 +77,7 @@ class Prefix(Enum):
 
         if isinstance(other, (Decimal, float, int, str)):
             # The usual use-case, e.g. `5 * µ`
-            return Prefixed(other, self)
+            return Prefixed(number=other, prefix=self)
 
         if isinstance(other, Prefixed):
             # Prefixed times Prefix, e.g. `(5 * n) * G`
@@ -85,7 +88,7 @@ class Prefix(Enum):
             new_num = other.number * Decimal(10) ** (targ - exptemp.symbol.value)
 
             # And create a corresponding `Prefixed`
-            return Prefixed(new_num, exptemp.symbol)
+            return Prefixed.new(new_num, exptemp.symbol)
 
         return NotImplemented
 
@@ -146,11 +149,8 @@ triggers some highly inscrutable errors in the standard-library methods.
 So: all `Decimal`, all `pydantic.dataclasses`.
 """
 
-from pydantic.dataclasses import dataclass
 
-
-@dataclass(frozen=True)  # `frozen` for hashability
-class Prefixed:
+class Prefixed(BaseModel):
     """
     # Prefixed
 
@@ -159,8 +159,47 @@ class Prefixed:
     are represented as `Prefixed`.
     """
 
-    number: Decimal  # Numeric Portion. See the long note above.
-    prefix: Prefix = Prefix.UNIT  # Enumerated SI Prefix. Defaults to unity.
+    # Numeric Portion. See the long note above.
+    number: Decimal
+    # Enumerated SI Prefix. Defaults to unity.
+    prefix: Prefix = Field(default=Prefix.UNIT)
+
+    @classmethod
+    def new(cls, number: Decimal, prefix: Prefix = Prefix.UNIT) -> "Prefixed":
+        """Create a new Prefixed number.
+        Alias for `Prefixed(number=number, prefix=prefix), and a (slight) shorthand
+        for using arguments by-position, which `pydantic.BaseModel` does not support."""
+        return cls(number=number, prefix=prefix)
+
+    @classmethod
+    def validate(cls, v: Union["Prefixed", "ToPrefixed"]) -> "Prefixed":
+        """Validate `v` as a `Prefixed` number, or convert to `Prefixed` if applicable.
+        While usable elsewhere, `validate` is primarily intended for use in type-validated
+        dataclass trees, such as those generated in `paramclass`es."""
+
+        if isinstance(v, Prefixed):
+            return v  # Valid as-is, return it.
+        if isinstance(v, Decimal):
+            return Prefixed(number=v)  # Also pretty much done
+        # Convert the remaining convertible types to `Decimal` inline
+        if isinstance(v, (int, float)):
+            # Note that, like `pydantic`, we convert numeric types to `str` before passing to `Decimal`.
+            return Prefixed(number=Decimal(str(v)))
+        if isinstance(v, str):
+            return Prefixed(number=Decimal(v))
+        raise ValidationError(f"Cannot convert {v} to Prefixed number")
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    def __hash__(self):
+        return hash((self.number, self.prefix))
+
+    def __eq__(self, other: "Prefixed") -> bool:
+        if not isinstance(other, Prefixed):
+            return NotImplemented
+        return self.number == other.number and self.prefix == other.prefix
 
     def __int__(self) -> int:
         return int(self.number) * 10**self.prefix.value
@@ -174,21 +213,21 @@ class Prefixed:
             return (self.number * other.number * self.prefix * other.prefix).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * Decimal(str(other)), self.prefix).scale()
+        return Prefixed.new(self.number * Decimal(str(other)), self.prefix).scale()
 
     def __rmul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return (self.number * other.number * self.prefix * other.prefix).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number * Decimal(str(other)), self.prefix).scale()
+        return Prefixed.new(self.number * Decimal(str(other)), self.prefix).scale()
 
     def __truediv__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed(self.number / Decimal(str(other)), self.prefix).scale()
+        return Prefixed.new(self.number / Decimal(str(other)), self.prefix).scale()
 
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal)):
@@ -221,7 +260,7 @@ class Prefixed:
         """Scale to a new `Prefix`"""
         if isinstance(prefix, Prefix):
             newnum = self.number * Decimal(10) ** (self.prefix.value - prefix.value)
-            return Prefixed(newnum, prefix)
+            return Prefixed.new(newnum, prefix)
         else:
             newpref = Prefix.closest(self.number.log10() + self.prefix.value)
             return self.scale(newpref)
@@ -255,26 +294,30 @@ class Prefixed:
         return round(lhs.number, EPSILON) >= round(rhs.number, EPSILON)
 
 
+# Union of the types which can be converted to `Prefixed`
+ToPrefixed = Union[int, float, str, Decimal]
+
+
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     """`Prefixed` Addition"""
     if lhs.prefix == rhs.prefix:
-        return Prefixed(lhs.number + rhs.number, lhs.prefix)
+        return Prefixed.new(lhs.number + rhs.number, lhs.prefix)
 
     # Different prefix values. Scale to the smaller of the two
     smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
     newnum = lhs.scale(smaller).number + rhs.scale(smaller).number
-    return Prefixed(newnum, smaller)
+    return Prefixed.new(newnum, smaller)
 
 
 def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     """`Prefixed` Subtraction"""
     if lhs.prefix == rhs.prefix:
-        return Prefixed(lhs.number - rhs.number, lhs.prefix)
+        return Prefixed.new(lhs.number - rhs.number, lhs.prefix)
 
     # Different prefix values. Scale to the smaller of the two
     smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
     newnum = lhs.scale(smaller).number - rhs.scale(smaller).number
-    return Prefixed(newnum, smaller)
+    return Prefixed.new(newnum, smaller)
 
 
 def _scale_to_smaller(lhs: Prefixed, rhs: Prefixed):
@@ -347,7 +390,7 @@ class Exponent:
 
             out_number = Decimal(str(other)) * Decimal(10) ** self.residual
 
-            return Prefixed(out_number, self.symbol)
+            return Prefixed.new(out_number, self.symbol)
 
         elif isinstance(other, Prefixed):
             # 2 * Prefix.UNIT * Exponent(Symbol.KILO,0) == 2 * Prefix.KILO

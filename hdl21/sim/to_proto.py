@@ -13,6 +13,7 @@ import vlsir.spice_pb2 as vsp
 # Local Imports
 from . import data
 from ..prefix import Prefixed
+from ..scalar import Scalar
 from ..signal import Signal
 from ..connect import is_connectable
 
@@ -343,13 +344,15 @@ def export_literal(literal: data.Literal) -> str:
     return literal.txt
 
 
-def export_float(num: Union[float, int, Decimal, Prefixed]) -> float:
+def export_float(num: Union[float, int, Decimal, Prefixed, Scalar]) -> float:
     """Export a `Number` union-type to a float, or protobuf float/double."""
     if num is None:
         # FIXME: this is the protobuf default, but we really wanna make fields that use it optional
         return 0.0
     if isinstance(num, float):
         return num
+    if isinstance(num, Scalar):
+        return float(num.inner)
     if isinstance(num, (int, str, Decimal, Prefixed)):
         return float(num)
     raise TypeError(f"Invalid value for proto float: {num}")
