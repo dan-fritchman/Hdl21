@@ -158,8 +158,13 @@ def compile(
     if pdk is None:  # Check for no-default-available cases
         if not len(_mgr.modules):
             raise RuntimeError("No PDK modules registered")
-        else:
-            raise RuntimeError("Multiple PDK modules registered")
+            
+        msg = f"Multiple ({len(_mgr.modules)}) PDK modules registered: [\n"
+        for m in _mgr.modules:
+            msg += "\t" + str(m) + "\n"
+        msg += "] \n"
+        msg += f"Set one as the default via `hdl21.pdk.set_default()` (or remove all others) to use `h.pdk.compile()`."
+        raise RuntimeError(msg)
 
     # Run the compiler
     return pdk.compile(src)
