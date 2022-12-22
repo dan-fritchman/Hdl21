@@ -441,6 +441,44 @@ def test_nested_bundle_conn():
     h.elaborate(HasB4)
 
 
+def test_nested_bundle_conn2():
+    """Test some bundles which have multiple instances of the same bundle as attributes."""
+
+    @h.bundle
+    class Ab:
+        a, b = h.Signals(2)
+
+    @h.bundle
+    class FourAbs:
+        i0 = Ab()
+        i1 = Ab()
+        i2 = Ab()
+        i3 = Ab()
+
+    @h.module
+    class HasAbPort:
+        ab = Ab(port=True)
+
+    @h.module
+    class HasThose:
+        four_abs = FourAbs()
+        i0 = HasAbPort(ab=four_abs.i0)
+        i1 = HasAbPort(ab=four_abs.i1)
+        i2 = HasAbPort(ab=four_abs.i2)
+        i3 = HasAbPort(ab=four_abs.i3)
+
+    h.elaborate(HasThose)
+
+    assert HasThose.instances["i0"].conns["ab_a"].name == "four_abs_i0_a"
+    assert HasThose.instances["i0"].conns["ab_b"].name == "four_abs_i0_b"
+    assert HasThose.instances["i1"].conns["ab_a"].name == "four_abs_i1_a"
+    assert HasThose.instances["i1"].conns["ab_b"].name == "four_abs_i1_b"
+    assert HasThose.instances["i2"].conns["ab_a"].name == "four_abs_i2_a"
+    assert HasThose.instances["i2"].conns["ab_b"].name == "four_abs_i2_b"
+    assert HasThose.instances["i3"].conns["ab_a"].name == "four_abs_i3_a"
+    assert HasThose.instances["i3"].conns["ab_b"].name == "four_abs_i3_b"
+
+
 def test_anon_bundle_port_conn():
     """Test connecting via PortRef to an AnonymousBundle"""
 
