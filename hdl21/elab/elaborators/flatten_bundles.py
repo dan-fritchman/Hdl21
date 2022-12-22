@@ -28,6 +28,7 @@ from .base import Elaborator
 
 @dataclass(frozen=True)
 class Path:
+
     """
     # Hierarchical String-Valued Path
 
