@@ -158,7 +158,7 @@ def compile(
     if pdk is None:  # Check for no-default-available cases
         if not len(_mgr.modules):
             raise RuntimeError("No PDK modules registered")
-            
+
         msg = f"Multiple ({len(_mgr.modules)}) PDK modules registered: [\n"
         for m in _mgr.modules:
             msg += "\t" + str(m) + "\n"

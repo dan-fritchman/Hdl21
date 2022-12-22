@@ -409,4 +409,5 @@ def instances_and_arrays(module: Module) -> List[Instance]:
     """Get a list of `module`'s instances and instance arrays."""
     return list(module.instances.values()) + list(module.instarrays.values())
 
+
 __all__ = ["BundleFlattener"]
