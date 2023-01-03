@@ -593,3 +593,33 @@ def test_re_elab_generator_with_bundle_portref():
 
     h.elaborate(T())
     h.elaborate(T())
+
+
+@pytest.mark.xfail(reason="#70 https://github.com/dan-fritchman/Hdl21/issues/70")
+def test_re_elab_bundle_port():
+    """Test elaborating, then re-elaborating Modules with Bundle-ports."""
+
+    @h.bundle
+    class Ab:
+        a, b = h.Signals(2)
+
+    @h.module
+    class Bot:
+        ab = Ab(port=True)
+
+    @h.module
+    class Top1:
+        ab = Ab()
+        bot = Bot(ab=ab)
+
+    # Elaborate `Top1`. This works just fine.
+    h.elaborate(Top1)
+
+    # Now the problem children
+    @h.module
+    class Top2:
+        ab = Ab()
+        bot = Bot(ab=ab)  # <= especially this here
+
+    # Elaborating `Top2` fails, as `Bot`'s bundle-valued ports have been flattened
+    h.elaborate(Top2)
