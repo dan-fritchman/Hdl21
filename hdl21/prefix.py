@@ -196,11 +196,6 @@ class Prefixed(BaseModel):
     def __hash__(self):
         return hash((self.number, self.prefix))
 
-    def __eq__(self, other: "Prefixed") -> bool:
-        if not isinstance(other, Prefixed):
-            return NotImplemented
-        return self.number == other.number and self.prefix == other.prefix
-
     def __int__(self) -> int:
         return int(self.number) * 10**self.prefix.value
 
@@ -262,7 +257,7 @@ class Prefixed(BaseModel):
             newnum = self.number * Decimal(10) ** (self.prefix.value - prefix.value)
             return Prefixed.new(newnum, prefix)
         else:
-            newpref = Prefix.closest(self.number.log10() + self.prefix.value)
+            newpref = Prefix.closest(abs(self.number).log10() + self.prefix.value)
             return self.scale(newpref)
 
     def __repr__(self) -> str:
