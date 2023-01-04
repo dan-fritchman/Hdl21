@@ -3,14 +3,16 @@
 """
 
 # Std-Lib Imports
-from typing import List, Union
+from typing import List, Union, Sequence
 from decimal import Decimal
 
 # VLSIR Import
 import vlsir
+import vlsir.circuit_pb2 as vckt
 import vlsir.spice_pb2 as vsp
 
 # Local Imports
+from ..one_or_more import OneOrMore
 from . import data
 from ..prefix import Prefixed
 from ..scalar import Scalar
@@ -18,35 +20,49 @@ from ..signal import Signal
 from ..connect import is_connectable
 
 
-def to_proto(sim: data.Sim) -> vsp.SimInput:
+def to_proto(inp: OneOrMore[data.Sim]) -> OneOrMore[vsp.SimInput]:
     """Convert a `Sim` to a VLSIR `SimInput`"""
-    exporter = ProtoExporter(sim=sim)
-    return exporter.export()
+    from ..proto import to_proto as module_to_proto
+
+    # Convert the testbench module and all its dependencies into a `Package`
+    single_input = False
+    if not isinstance(inp, Sequence):
+        inp = [inp]
+        single_input = True
+
+    # Co-export, in the process co-elaborating, all provided testbenches
+    pkg: vckt.Package = module_to_proto([i.tb for i in inp])
+
+    # Export each individual `Sim`
+    results = [SimProtoExporter(sim=s, pkg=pkg).export() for s in inp]
+
+    # And return the result in the form in which it came
+    if single_input:
+        return results[0]
+    return results
 
 
-class ProtoExporter:
+class SimProtoExporter:
     """Simulation Protobuf Exporter"""
 
-    def __init__(self, sim: data.Sim):
+    def __init__(self, sim: data.Sim, pkg: vckt.Package):
         self.sim = sim  # Store the input `Sim`
+        self.pkg = pkg
         self.inp = None  # Initialize our resultant `vsp.SimInput`
         self.analysis_count = 0
 
     def export(self) -> vsp.SimInput:
         """Primary export method. Converts `sim.tb` and its dependencies to a `Package`,
         and all other `SimAttr`s to VLSIR attributes."""
-        from ..proto import to_proto as module_to_proto
-        from ..instantiable import qualname
 
-        # Convert the testbench module and all its dependencies into a `Package`
-        pkg = module_to_proto(self.sim.tb)
+        from ..instantiable import qualname
 
         # Now that the testbench has been elaborated, ensure it adheres to the testbench interface.
         if not data.is_tb(self.sim.tb):
             raise RuntimeError(f"Invalid Testbench {self.sim.tb} for Simulation")
 
         # Create our `SimInput`, and provide it with a "link" to the testbench, via its name
-        self.inp = vsp.SimInput(pkg=pkg, top=qualname(self.sim.tb))
+        self.inp = vsp.SimInput(pkg=self.pkg, top=qualname(self.sim.tb))
 
         # Export each simulation attribute
         for attr in self.sim.attrs:

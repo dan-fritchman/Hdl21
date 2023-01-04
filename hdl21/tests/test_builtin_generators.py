@@ -30,6 +30,40 @@ def test_mos_generator():
     assert len(m.signals) == 1
     assert "unit0_d" in m.signals
 
+    Nmos = h.generators.Nmos
+    Pmos = h.generators.Pmos
+
+    @h.generator
+    def NmosWrapper(params: Nmos.Params) -> h.Module:
+        return Nmos(params)
+
+    @h.module
+    class M:
+        VSS = h.Signal()
+
+        n1 = Nmos(nser=1, npar=1)(d=VSS, g=VSS, s=VSS, b=VSS)
+        n2 = Nmos(nser=2, npar=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+        n2b = Nmos(nser=2, npar=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+
+        nw1 = NmosWrapper(nser=1, npar=1)(d=VSS, g=VSS, s=VSS, b=VSS)
+        nw2 = NmosWrapper(nser=2, npar=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+        nw2b = NmosWrapper(nser=2, npar=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+
+        p1 = Pmos(nser=1, npar=1)(d=VSS, g=VSS, s=VSS, b=VSS)
+        p2 = Pmos(nser=2, npar=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+        p2b = Pmos(nser=2, npar=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+
+        mp1 = Mos(tp=h.MosType.PMOS, npar=1, nser=1)(d=VSS, g=VSS, s=VSS, b=VSS)
+        mp2 = Mos(tp=h.MosType.PMOS, npar=2, nser=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+        mp2b = Mos(tp=h.MosType.PMOS, npar=2, nser=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+
+        mn1 = Mos(tp=h.MosType.NMOS, npar=1, nser=1)(d=VSS, g=VSS, s=VSS, b=VSS)
+        mn2 = Mos(tp=h.MosType.NMOS, npar=2, nser=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+        mn2b = Mos(tp=h.MosType.NMOS, npar=2, nser=2)(d=VSS, g=VSS, s=VSS, b=VSS)
+
+    h.to_proto(M)
+    h.to_proto(M)
+
 
 def test_series_parallel_generator():
     """Initial test of the general-purpose series-parallel generator"""

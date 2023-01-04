@@ -80,6 +80,8 @@ class Module:
         # Set at the end of elaboration.
         # For most modules this will be `self`.
         self._elaborated: Optional[Module] = None
+        # The source `GeneratorCall`, for generated Modules.
+        self._generated_by: Optional["GeneratorCall"] = None
         self._importpath = None  # Optional field set by importers
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._initialized = True
