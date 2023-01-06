@@ -4,13 +4,13 @@
 
 # Std-Lib Imports
 import copy
-from typing import Any, Union
+from typing import Any, Union, Dict
 
 # Local imports
 from ...connect import is_connectable, Connectable
 from ...portref import PortRef
 from ...module import Module
-from ...instance import InstanceArray, Instance
+from ...instance import Instance
 from ...noconn import NoConn
 from ...bundle import (
     AnonymousBundle,
@@ -18,7 +18,14 @@ from ...bundle import (
     BundleRef,
     Bundle,
 )
-from .width import HasWidth
+from .width import width, HasWidth
+from ...instantiable import (
+    io,
+    Instantiable,
+    GeneratorCall,
+    ExternalModuleCall,
+    PrimitiveCall,
+)
 
 # Import the base class
 from .base import Elaborator
@@ -52,20 +59,15 @@ class ConnTypes(Elaborator):
         # No errors means it checked out, return the Module unchanged
         return module
 
-    def check_instance(
-        self, module: Module, inst: Union[Instance, InstanceArray]
-    ) -> None:
+    def check_instance(self, module: Module, inst: Instance) -> None:
         """Check the connections of `inst` in parent `module`"""
         self.stack.append(inst)
 
         # Get copies of both the instance's ports and connections.
-        # These will be two {str: Signal-like} dictionaries, who should have the same keys,
+        # These will be two {str: Connectable} dictionaries, who should have the same keys,
         # and each paired value should be connection-compatible.
-        targ = inst._resolved
-        io = copy.copy(targ.ports)
-        if hasattr(targ, "bundle_ports"):  # FIXME: make this "Module-like-wide"
-            io.update(copy.copy(targ.bundle_ports))
         conns = copy.copy(inst.conns)
+        io = io_for_checking(parent=module, i=inst._resolved)
 
         # FIXME: the errors here could perhaps instead cover "the whole instance", rather than the first problem that we encounter.
         # For example if an instance has some of each or all of
@@ -175,10 +177,44 @@ class ConnTypes(Elaborator):
 
     def get_width(self, conn: Connectable) -> int:
         """Get the `width` of a conn. Fails for types which this pass is not designed to handle."""
-        from .width import width
 
         if isinstance(conn, (NoConn, PortRef)):
             msg = f"Internal error: {type(conn).__name__} remaining in connection-types check"
             return self.fail(msg)
 
         return width(conn, failer=self.fail)
+
+
+def io_for_checking(parent: Module, i: Instantiable) -> Dict[str, "Connectable"]:
+    """Get the relevant IOs of Instantiable `i` for checking.
+    Depending on the elaboration state of `parent` and `i`, this may include the "bundled" or "flattened" IOs."""
+
+    if isinstance(i, GeneratorCall):
+        # Take the result of the generator call
+        i = i.result
+
+    if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
+        # These do not have Bundle-valued ports
+        return copy.copy(i.ports)
+
+    if not isinstance(i, Module):
+        raise TypeError(f"Invalid Instantiable: {i}")
+
+    # OK we've got a Module.
+    # Whether to check the "bundled" or "flattened" IO is dependent on
+    # whether the *parent* and `i` have or haven't been flattened.
+    parent_flattened = parent._pre_flattening_io is not None
+    child_flattened = i._pre_flattening_io is not None
+
+    if parent_flattened and not child_flattened:
+        msg = f"Error child {i} has not been elaborated before parent {parent}"
+        raise RuntimeError(msg)
+
+    if parent_flattened != child_flattened:
+        # Mismatch between parent and child status.
+        # Return the child IOs from just *before* the flattening pass.
+        return copy.copy(i._pre_flattening_io)
+
+    # Parent and child statuses match, whether flattened or not.
+    # Return the child IOs as they are now.
+    return io(i)

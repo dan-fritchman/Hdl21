@@ -8,7 +8,7 @@ This module primarily defines:
 """
 
 from inspect import isclass
-from typing import Any, Optional, Union, List
+from typing import Any, Optional, Union, List, Dict
 
 # Local imports
 from .source_info import source_info, SourceInfo
@@ -80,8 +80,15 @@ class Module:
         # Set at the end of elaboration.
         # For most modules this will be `self`.
         self._elaborated: Optional[Module] = None
+
+        # IOs as captured before bundle-flattening.
+        # Bundle-valued ports are flattened into `ports` and removed from `bundles`, but need to be kept *somewhere* afterwards.
+        # Set to `None` initially to indicate that it hasn't been set yet.
+        self._pre_flattening_io: Optional[Dict[str, "Connectable"]] = None
+
         # The source `GeneratorCall`, for generated Modules.
         self._generated_by: Optional["GeneratorCall"] = None
+
         self._importpath = None  # Optional field set by importers
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._initialized = True

@@ -595,7 +595,6 @@ def test_re_elab_generator_with_bundle_portref():
     h.elaborate(T())
 
 
-@pytest.mark.xfail(reason="#70 https://github.com/dan-fritchman/Hdl21/issues/70")
 def test_re_elab_bundle_port():
     """Test elaborating, then re-elaborating Modules with Bundle-ports."""
 
