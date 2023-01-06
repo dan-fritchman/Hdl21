@@ -33,6 +33,8 @@ from typing import TypeVar, Type
 # The list of defined datatypes
 datatypes = []
 
+T = TypeVar("T")
+
 
 def datatype(cls: Type[T]) -> Type[T]:
     """Register a class as a datatype."""
