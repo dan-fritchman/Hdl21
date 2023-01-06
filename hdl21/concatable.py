@@ -6,9 +6,11 @@ Solely a marker used by `Concat` for validity checking.
 
 # Local imports
 from .connect import is_connectable
+from typing import TypeVar, Type
 
+T = TypeVar("T")
 
-def concatable(cls: type) -> type:
+def concatable(cls: Type[T]) -> Type[T]:
     """Decorator for `Concat`-compatible types."""
     if not is_connectable(cls):
         raise TypeError(f"{cls} is not connectable")

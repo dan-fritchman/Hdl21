@@ -28,12 +28,13 @@ Notes:
 """
 
 from pydantic.dataclasses import dataclass
+from typing import TypeVar, Type
 
 # The list of defined datatypes
 datatypes = []
 
 
-def datatype(cls: type) -> type:
+def datatype(cls: Type[T]) -> Type[T]:
     """Register a class as a datatype."""
 
     # Convert `cls` to a `pydantic.dataclasses.dataclass`,

@@ -5,7 +5,7 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
 # Std-Lib Imports
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Type, TypeVar
 from dataclasses import dataclass, field
 from textwrap import dedent
 
@@ -14,6 +14,7 @@ from .source_info import source_info, SourceInfo
 from .attrmagic import init
 from .connect import Connectable, is_connectable
 
+T = TypeVar("T")
 
 @init
 class _Instance:
@@ -343,7 +344,7 @@ Instantiation Decorator
 """
 
 
-def calls_instantiate(cls: type) -> type:
+def calls_instantiate(cls: Type[T]) -> Type[T]:
     """# Calls Instantiate
     Decorator which adds 'calls produce `hdl21.Instance`s' functionality.
     Added to `Module`, `GeneratorCall`, and everything else that is `Instantiable`."""
