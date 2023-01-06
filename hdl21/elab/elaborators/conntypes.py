@@ -6,6 +6,9 @@
 import copy
 from typing import Any, Union, Dict
 
+# PyPi Imports
+from pydantic.dataclasses import dataclass
+
 # Local imports
 from ...connect import is_connectable, Connectable
 from ...portref import PortRef
@@ -29,6 +32,44 @@ from ...instantiable import (
 
 # Import the base class
 from .base import Elaborator
+
+
+"""
+Connection Statuses
+"""
+
+
+class Valid:
+    # Valid connection
+    ...  # empty
+
+
+@dataclass
+class NoPort:
+    name: str
+
+    def __repr__(self) -> str:
+        return f"Connection to non-existent Port `{self.name}`"
+
+
+@dataclass
+class Unconnected:
+    name: str
+
+    def __repr__(self) -> str:
+        return f"Missing connection to Port `{self.name}`"
+
+
+@dataclass
+class InvalidType:
+    msg: str  # Free-form error message
+
+    def __repr__(self) -> str:
+        return self.msg
+
+
+# The union of these things is a `ConnStatus`
+ConnStatus = Union[Valid, NoPort, Unconnected, InvalidType]
 
 
 class ConnTypes(Elaborator):
@@ -69,40 +110,34 @@ class ConnTypes(Elaborator):
         conns = copy.copy(inst.conns)
         io = io_for_checking(parent=module, i=inst._resolved)
 
-        # FIXME: the errors here could perhaps instead cover "the whole instance", rather than the first problem that we encounter.
-        # For example if an instance has some of each or all of
-        # (a) missing port connections, (b) connections to non-existent ports, and (c) incompatible connection types,
-        # it'd probably be more helpful to list "all of the above" in the failure.
-        # As is, we report the first one that we come across.
+        # Track the status of each connection, so we can report the Instance-wide state if there are errors.
+        statuses: Dict[str, ConnStatus] = dict()
 
         for portname, port in io.items():
             # Get the corresponding connection
             conn = conns.pop(portname, None)
             if conn is None:
-                msg = f"Missing connection to Port `{portname}` on Instance `{inst.name}` in Module `{module.name}`"
-                self.fail(msg)
-
-            # Check its connection-compatibility
-            self.assert_compatible(port, conn)
+                statuses[portname] = Unconnected(portname)
+            else:  # Check its connection-compatibility
+                statuses[portname] = self.check_compatible(port, conn)
 
         # Now check if anything remains in `conns`, i.e. that there are invalid connections to nonexistent ports.
-        if conns:
-            if len(conns) > 1:
-                # If there are multiple such errant connections, make an error message including all of them
-                remaining = " ".join(list(conns.keys()))
-                msg = f"Connections to invalid Ports `{remaining}` on Instance `{inst.name}` in Module `{module.name}`"
-                self.fail(msg)
+        for conn_name in conns.keys():
+            statuses[conn_name] = NoPort(conn_name)
 
-            # Otherwise pop the sole item to get its name
-            portname, _ = conns.popitem()
-            msg = f"Connection to invalid Port `{portname}` on Instance `{inst.name}` in Module `{module.name}`"
+        # Look for any non-`Valid` connections. And if we have any, fail.
+        bad_conns = {
+            name: s for name, s in statuses.items() if not isinstance(s, Valid)
+        }
+        if bad_conns:
+            msg = f"Invalid connections `{bad_conns}` on Instance `{inst.name}` in Module `{module.name}`"
             self.fail(msg)
 
         self.stack.pop()  # Checks out, we good, pop this Instance from our elab-stack.
 
-    def assert_bundles_compatible(
+    def check_bundles_compatible(
         self, bundle: Bundle, other: Union[BundleInstance, AnonymousBundle]
-    ):
+    ) -> ConnStatus:
         """Assert that `bundle` is compatible for connection with `other`.
         Raises a `RuntimeError` if not compatible.
         This includes key-matching and Signal-width matching, but *does not* examine Signal directions.
@@ -111,67 +146,72 @@ class ConnTypes(Elaborator):
         if isinstance(other, BundleInstance):
             other = other.of
             if other is bundle:
-                return None  # Same types, we good
+                return Valid()  # Same types, we good
 
             # Different types. Check each field in `signals` and `bundles` match.
             if sorted(bundle.signals.keys()) != sorted(other.signals.keys()):
                 msg = f"Signal names do not match: {bundle.signals.keys()} != {other.signals.keys()}"
-                self.fail(msg)
+                return InvalidType(msg)
 
             if sorted(bundle.bundles.keys()) != sorted(other.bundles.keys()):
                 msg = f"Bundle names do not match: {bundle.signals.keys()} != {other.signals.keys()}"
-                self.fail(msg)
+                return InvalidType(msg)
 
             # Check that each Signal is compatible
             for key, val in bundle.signals.items():
-                self.assert_signals_compatible(val, other.signals[key])
+                sts = self.check_signals_compatible(val, other.signals[key])
+                if not isinstance(sts, Valid):
+                    return sts
 
             # Recursively check that each Bundle is compatible
             for key, val in bundle.bundles.items():
-                self.assert_bundles_compatible(val.of, other.bundles[key].of)
+                sts = self.check_bundles_compatible(val.of, other.bundles[key].of)
+                if not isinstance(sts, Valid):
+                    return sts
 
-            return None  # Checks out, we good
+            return Valid()  # Checks out, we good
 
         if isinstance(other, AnonymousBundle):
             # FIXME: checks on port-refs, signal-widths, etc.
             # For now this just returns success; later checks may often fail where this (eventually) should.
-            return None
+            return Valid()
 
         msg = f"Invalid connection-compatibility check between {bundle} and {other}"
         self.fail(msg)
 
-    def assert_signals_compatible(self, sig: HasWidth, other: Any) -> None:
+    def check_signals_compatible(self, sig: HasWidth, other: Any) -> ConnStatus:
         """Assert that `HasWidth`s (generally `Signal`s) a and b are compatible for connection."""
 
         if not isinstance(other, HasWidth.__args__):
-            self.fail(f"Invalid connection to non-Signal {other}")
+            msg = f"Invalid connection to non-Signal {other}"
+            return InvalidType(msg)
 
         if self.get_width(sig) != self.get_width(other):
             signame = getattr(sig, "name", f"Anonymous(width={sig.width})")
             othername = getattr(other, "name", f"Anonymous(width={other.width})")
             msg = f"Signals `{signame}` and `{othername}` width mismatch: {sig.width} != {other.width}"
-            self.fail(msg)
+            return InvalidType(msg)
 
-        return None  # Checks out.
+        return Valid()  # Checks out.
 
-    def assert_compatible(self, port: Connectable, conn: Connectable) -> None:
+    def check_compatible(self, port: Connectable, conn: Connectable) -> ConnStatus:
         """Assert that `port` and `conn` are compatible for connection."""
 
         if not is_connectable(conn):
-            self.fail(f"Invalid Connection {conn}")
+            return InvalidType(f"Invalid Connection {conn}")
 
         if isinstance(conn, BundleRef):
             # Recursively call this function on the ref's resolved value
             from .resolve_ref_types import resolve_bundleref_type
 
             referent = resolve_bundleref_type(conn, self.fail)
-            return self.assert_compatible(port, referent)
+            return self.check_compatible(port, referent)
 
         if isinstance(port, HasWidth.__args__):
-            return self.assert_signals_compatible(port, conn)
+            return self.check_signals_compatible(port, conn)
 
         if isinstance(port, BundleInstance):
-            return self.assert_bundles_compatible(port.of, conn)
+            return self.check_bundles_compatible(port.of, conn)
 
         self.fail(f"Invalid Port {port}")
 

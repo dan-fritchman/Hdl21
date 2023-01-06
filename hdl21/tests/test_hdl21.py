@@ -1022,7 +1022,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Connections to invalid Ports" in str(e.value)
+    assert "Connection to non-existent Port" in str(e.value)
 
     @h.module
     class O:
@@ -1032,6 +1032,7 @@ def test_bad_conns():
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
     assert "Missing connection to" in str(e.value)
+    assert "Connection to non-existent Port" in str(e.value)
 
     @h.module
     class O:
@@ -1040,7 +1041,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Connection to invalid Port" in str(e.value)
+    assert "Connection to non-existent Port" in str(e.value)
 
     @h.module
     class O:
