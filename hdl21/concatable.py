@@ -10,6 +10,7 @@ from typing import TypeVar, Type
 
 T = TypeVar("T")
 
+
 def concatable(cls: Type[T]) -> Type[T]:
     """Decorator for `Concat`-compatible types."""
     if not is_connectable(cls):

@@ -32,7 +32,9 @@ def qualname(mod: Union["Module", "ExternalModule"]) -> Optional[str]:
     # Defined the old fashioned way. Use the Python module name.
     return mod._source_info.pymodule.__name__ + "." + mod.name
 
+
 T = TypeVar("T")
+
 
 def qualname_magic_methods(cls: Type[T]) -> Type[T]:
     """Decorator to add the 'use qualname for equality, hashing, and pickling'

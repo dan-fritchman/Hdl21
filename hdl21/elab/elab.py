@@ -17,6 +17,7 @@ from .elabpass import ElabPass
 
 ElaboratableType = TypeVar("ElaboratableType", bound=Elaboratable)
 
+
 def elaborate(
     top: ElaboratableType,
     *,

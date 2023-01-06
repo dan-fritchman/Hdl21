@@ -16,6 +16,7 @@ from .connect import Connectable, is_connectable
 
 T = TypeVar("T")
 
+
 @init
 class _Instance:
     """Shared base class for Instance-like types (Instance, InstanceArray)"""
