@@ -15,6 +15,11 @@ from ...instantiable import Instantiable
 from .base import Elaborator
 
 
+# Cache GeneratorCalls to their (Module) results
+# (Yes, GeneratorCalls can be hashed.)
+THE_GENERATOR_CALL_CACHE: Dict[GeneratorCall, Module] = dict()
+
+
 class GeneratorElaborator(Elaborator):
     """
     # Generator Elaborator
@@ -31,12 +36,6 @@ class GeneratorElaborator(Elaborator):
     For reuse, this fact is embedded into the base-class in a few places,
     and `GeneratorElaborator`'s special-ish case is left to over-ride it.
     """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Cache GeneratorCalls to their (Module) results
-        # (Yes, GeneratorCalls can be hashed.)
-        self.generator_calls: Dict[GeneratorCall, Module] = dict()
 
     def elaborate_tops(self) -> List[Module]:
         """Elaborate our top nodes"""
@@ -61,19 +60,14 @@ class GeneratorElaborator(Elaborator):
 
         # First and foremost - caching.
         # See if we've already run this generator-parameters combo.
-        # There are two places its result could be cached:
-        # (a) In our cache, if we've already run it or a parameter-equal call to it. Or,
-        # (b) On the `call`, on its `result` field - if a *different elaborator* has already run it.
-        # If there's a Module in both places, and the aren't the same Module... not sure what happened. Fail.
-        cached_result = self.generator_calls.get(call, None)
-        if call.result is not None and cached_result is not None:
-            if call.result is not cached_result:
+        # We store this both in the module-scope cache, and on the Call itself.
+        # If the two are different Modules... not sure what would cause that, but fail.
+        global THE_GENERATOR_CALL_CACHE
+        cached_result = THE_GENERATOR_CALL_CACHE.get(call, None)
+        if cached_result is not None:
+            if call.result is not None and call.result is not cached_result:
                 msg = f"GeneratorCall {call} has two different results: {call.result} and {cached_result}"
                 self.fail(msg)
-        if call.result is not None:
-            self.generator_calls[call] = call.result
-            return call.result
-        if cached_result is not None:
             call.result = cached_result
             return call.result
 
@@ -95,31 +89,36 @@ class GeneratorElaborator(Elaborator):
         except Exception as e:
             self.fail(f"{call.gen} raised an exception: \n{e}")
 
-        # Type-check the result
-        # Generators may return other (potentially nested) generator-calls; unwind any of them
-        while isinstance(m, GeneratorCall):
-            # Note this should hit Python's recursive stack-check if it doesn't terminate
-            m = self.elaborate_generator_call(m)
+        # Give the result a reference bay to the generating `Call`
+        if isinstance(m, Module):
+            m._generated_by = call
+
+            # If the Module that comes back is anonymous, start by giving it a name equal to the Generator's
+            if m.name is None:
+                m.name = call.gen.func.__name__
+
+            # Then add a unique suffix per its parameter-values
+            if not isinstance(call.params, HasNoParams):
+                m.name += "(" + _unique_name(call.params) + ")"
+
+            # And elaborate the module
+            m = self.elaborate_module_base(m)  # Note the `_base` here!
+
+        # Generators may return other (potentially nested) generator-calls; recursively unwind any of them
+        # Note this should hit Python's recursive stack-check if it doesn't terminate
+        elif isinstance(m, GeneratorCall):
+            m._generated_by = call
+            m: Module = self.elaborate_generator_call(m)
+
+        # Type-check the result.
         # Ultimately they've gotta resolve to Modules, or they fail.
-        if not isinstance(m, Module):
+        else:
             msg = f"Generator {call.gen.func.__name__} returned {type(m)}, must return Module."
             self.fail(msg)
 
-        # Give the GeneratorCall a reference to its result, and store it in our local dict
+        # Store the result in our cache, and on the Call.
         call.result = m
-        self.generator_calls[call] = m
-
-        # Create a unique name
-        # If the Module that comes back is anonymous, start by giving it a name equal to the Generator's
-        if m.name is None:
-            m.name = call.gen.func.__name__
-
-        # Then add a unique suffix per its parameter-values
-        if not isinstance(call.params, HasNoParams):
-            m.name += "(" + _unique_name(call.params) + ")"
-
-        # And elaborate the module
-        m = self.elaborate_module_base(m)  # Note the `_base` here!
+        THE_GENERATOR_CALL_CACHE[call] = m
 
         # Pop both the `Call` and `Generator` off the stack
         self.stack.pop()

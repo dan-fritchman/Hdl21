@@ -593,3 +593,100 @@ def test_re_elab_generator_with_bundle_portref():
 
     h.elaborate(T())
     h.elaborate(T())
+
+
+def test_re_elab_bundle_port():
+    """Test elaborating, then re-elaborating Modules with Bundle-ports."""
+
+    @h.bundle
+    class Ab:
+        a, b = h.Signals(2)
+
+    @h.module
+    class Bot:
+        ab = Ab(port=True)
+
+    @h.module
+    class Top1:
+        ab = Ab()
+        bot = Bot(ab=ab)
+
+    # Elaborate `Top1`. This works just fine.
+    h.elaborate(Top1)
+
+    # Now the problem children
+    @h.module
+    class Top2:
+        ab = Ab()
+        bot = Bot(ab=ab)  # <= especially this here
+
+    # Elaborating `Top2` fails, as `Bot`'s bundle-valued ports have been flattened
+    h.elaborate(Top2)
+
+
+def test_bundle_noconns():
+    """Test connecting `NoConn` to bundle-valued ports"""
+
+    @h.bundle
+    class A:
+        ...  # empty
+
+    @h.bundle
+    class B:
+        s1 = h.Signal()
+
+    @h.bundle
+    class C:
+        s1, s2, s3 = h.Signals(3)
+
+    @h.module
+    class Bot:
+        a = A(port=True)
+        b = B(port=True)
+        c = C(port=True)
+
+    @h.module
+    class Top:
+        bot1 = Bot(
+            a=h.NoConn(),
+            b=h.NoConn(),
+            c=h.NoConn(),
+        )
+
+    # Add another instance procedurally, and connect it via PortRefs
+    Top.bot2 = Bot()
+    Top.bot2.a = h.NoConn()
+    Top.bot2.b = h.NoConn()
+    Top.bot2.c = h.NoConn()
+
+    # Elaborate it, flesh all this out
+    h.elaborate(Top)
+
+    assert len(Bot.ports) == 4
+    assert sorted(Bot.ports.keys()) == [
+        "b_s1",
+        "c_s1",
+        "c_s2",
+        "c_s3",
+    ]
+    assert len(Top.signals) == 8
+    assert sorted(Top.signals.keys()) == [
+        "bot1_b_s1",
+        "bot1_c_s1",
+        "bot1_c_s2",
+        "bot1_c_s3",
+        "bot2_b_s1",
+        "bot2_c_s1",
+        "bot2_c_s2",
+        "bot2_c_s3",
+    ]
+
+    assert Top.bot1.conns["b_s1"] is Top.bot1_b_s1
+    assert Top.bot1.conns["c_s1"] is Top.bot1_c_s1
+    assert Top.bot1.conns["c_s2"] is Top.bot1_c_s2
+    assert Top.bot1.conns["c_s3"] is Top.bot1_c_s3
+
+    assert Top.bot2.conns["b_s1"] is Top.bot2_b_s1
+    assert Top.bot2.conns["c_s1"] is Top.bot2_c_s1
+    assert Top.bot2.conns["c_s2"] is Top.bot2_c_s2
+    assert Top.bot2.conns["c_s3"] is Top.bot2_c_s3

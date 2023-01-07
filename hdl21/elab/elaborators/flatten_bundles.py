@@ -5,7 +5,7 @@
 # Std-Lib Imports
 import copy
 from dataclasses import field
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Union, Optional
 
 # PyPi
 from pydantic.dataclasses import dataclass
@@ -20,6 +20,7 @@ from ...bundle import (
     BundleRef,
 )
 from ...signal import PortDir, Signal, Visibility
+from ...instantiable import io
 from .resolve_ref_types import update_ref_deps
 
 # Import the base class
@@ -28,7 +29,6 @@ from .base import Elaborator
 
 @dataclass(frozen=True)
 class Path:
-
     """
     # Hierarchical String-Valued Path
 
@@ -95,29 +95,55 @@ class BundleScope:
 BundleScope.__pydantic_model__.update_forward_refs()
 
 
+@dataclass
+class BundlePortEntry:
+    """# Bundle-Port Entry in the Cache
+    Hashable combination of a Module and a portname."""
+
+    module: Module
+    portname: str
+
+    def __eq__(self, other: "BundlePortEntry") -> bool:
+        if not isinstance(other, BundlePortEntry):
+            return NotImplemented
+        return self.module is other.module and self.portname == other.portname
+
+    def __hash__(self) -> int:
+        return hash((id(self.module), self.portname))
+
+
+@dataclass
+class Cache:
+    """
+    The Bundle Flattening Cache
+    Designed to operate at Module level, across multiple Elaborators.
+    """
+
+    bundle_insts: Dict[int, BundleScope] = field(default_factory=dict)
+    # BundleInstance replacements, {id(BundleInst) => BundleScope}
+
+    anon_bundles: Dict[int, BundleScope] = field(default_factory=dict)
+    # AnonymousBundle replacements, {id(AnonBundle) => BundleScope}
+
+    flat_bundle_ports: Dict[BundlePortEntry, BundleScope] = field(default_factory=dict)
+    # Replacement flattened Bundle-valued ports.
+    # Keyed by Module and port-name.
+    # {BundlePortEntry(module, portname) => BundleScope}
+
+
+# The module-scope flattening cache
+THE_CACHE = Cache()
+
+
 class BundleFlattener(Elaborator):
     """Bundle-Flattening Elaborator Pass"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Class-specific data tracking.
-        # There's *plenty* to be done here, as this class largely maps "folded" Signals into "flattened" ones.
-
-        self.bundle_insts: Dict[int, BundleScope] = dict()
-        # BundleInstance replacements, id(BundleInst) => BundleScope
-
-        self.flat_bundle_ports: Dict[Tuple[int, str], BundleScope] = dict()
-        # Replacement flattened Bundle-valued ports.
-        # Keyed by Module and port-name.
-        # (id(Module), portname) => BundleScope
-
-        self.anon_bundles: Dict[int, BundleScope] = dict()
-        # AnonymousBundle replacements, id(AnonBundle) => BundleScope
 
     def elaborate_module(self, module: Module) -> Module:
         """Flatten Module `module`s Bundles, replacing them with newly-created Signals.
         Reconnect the flattened Signals to any Instances connected to said Bundles."""
+
+        # Cache the state of the Module's IOs before flattening
+        module._pre_flattening_io = copy.copy(io(module))
 
         # Remove and replace each `BundleInstance` from the Module
         while module.bundles:
@@ -146,7 +172,7 @@ class BundleFlattener(Elaborator):
         and replacing all of its Instance connections with their flattened replacements."""
 
         # Check we haven't (somehow) already replaced it
-        if id(bundle_inst) in self.bundle_insts:
+        if id(bundle_inst) in THE_CACHE.bundle_insts:
             msg = f"Bundle Instance {bundle_inst} in Module {module} flattened more than once. Was it actually part of another Module?"
             self.fail(msg)
 
@@ -181,9 +207,10 @@ class BundleFlattener(Elaborator):
             module.add(sig)
 
         # Store the result in our caches
-        self.bundle_insts[id(bundle_inst)] = flat
+        THE_CACHE.bundle_insts[id(bundle_inst)] = flat
         if bundle_inst.port:
-            self.flat_bundle_ports[(id(module), bundle_inst.name)] = flat
+            entry = BundlePortEntry(module, bundle_inst.name)
+            THE_CACHE.flat_bundle_ports[entry] = flat
 
         # Replace connections to any connected instances
         for portref in list(bundle_inst._connected_ports):
@@ -247,9 +274,8 @@ class BundleFlattener(Elaborator):
         particularly between the Instance and instantiating module.
         """
 
-        flat_bundle_port = self.flat_bundle_ports.get(
-            (id(inst._resolved), portname), None
-        )
+        entry = BundlePortEntry(inst._resolved, portname)
+        flat_bundle_port = THE_CACHE.flat_bundle_ports.get(entry, None)
         if flat_bundle_port is None:
             msg = f"Invalid Port Connection to {portname} on Instance {inst}"
             self.fail(msg)
@@ -311,8 +337,8 @@ class BundleFlattener(Elaborator):
         Differs from bundle-class instances in that each attribute of anonymous-bundles
         are generally "references", owned by something else, commonly a Module."""
 
-        if id(anon) in self.anon_bundles:
-            return self.anon_bundles[id(anon)]
+        if id(anon) in THE_CACHE.anon_bundles:
+            return THE_CACHE.anon_bundles[id(anon)]
 
         scope = BundleScope(src=anon)
 
@@ -334,7 +360,7 @@ class BundleFlattener(Elaborator):
             # Finally handle nested, Bundle-like types, which produce sub-scopes
             elif isinstance(attr, BundleInstance):
                 # BundleInstances have all been visited by now, and hence better be in the cache
-                flat_inst = self.bundle_insts.get(id(attr), None)
+                flat_inst = THE_CACHE.bundle_insts.get(id(attr), None)
                 if flat_inst is None:
                     self.fail(f"Invalid AnonymousBundle attribute {attr}")
                 scope.add_subscope(name, flat_inst)
@@ -345,10 +371,10 @@ class BundleFlattener(Elaborator):
 
             elif isinstance(attr, BundleScope):
                 scope.add_subscope(name, attr)
-            else:
-                raise TypeError  # Shouldn't be reachable
+            else:  # Shouldn't be reachable
+                raise TypeError(f"Invalid AnonBundle attribute {attr}")
 
-        self.anon_bundles[id(anon)] = scope
+        THE_CACHE.anon_bundles[id(anon)] = scope
         return scope
 
     def resolve_bundleref(self, bref: BundleRef) -> Union[Signal, BundleScope]:
@@ -362,7 +388,7 @@ class BundleFlattener(Elaborator):
         root: BundleInstance = bref.root()
 
         # Get the flattened version of the root BundleInstance
-        flat_root = self.bundle_insts.get(id(root), None)
+        flat_root = THE_CACHE.bundle_insts.get(id(root), None)
         if flat_root is None:
             msg = f"Invalid BundleRef to {bref.parent}"
             self.fail(msg)

@@ -63,6 +63,8 @@ class GeneratorCall:
         self.params = params
         self.result: Optional[Module] = None
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
+        # The source/ parent `GeneratorCall`, for nested Generator calls
+        self._generated_by: Optional["GeneratorCall"] = None
 
     def __eq__(self, other) -> bool:
         """Generator-Call equality requires:
