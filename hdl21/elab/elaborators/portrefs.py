@@ -6,11 +6,12 @@ Creates concrete `Signal`s and `BundleInstance`s to replace `PortRef`s.
 
 # Std-Lib Imports
 import copy
-from typing import Union, List, Optional, Set
+from typing import Union, List, Optional, Dict
 
 # Local imports
 from ...connect import Connectable
 from ...instance import _get_connref
+from ...instantiable import io
 from ...module import Module
 from ...portref import PortRef
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
@@ -258,11 +259,11 @@ class ResolvePortRefs(Elaborator):
         return self.replace_noconn(module, portref=group[0], noconn=group[1])
 
     def replace_noconn(self, module: Module, portref: PortRef, noconn: NoConn):
-        """Replace `noconn` with a newly minted `Signal`."""
+        """Replace `noconn` with a newly minted `Signal` or `BundleInstance`."""
 
         # Get the target Module's port-object corresponding to `portref`
-        mod = portref.inst._resolved
-        port = mod.ports.get(portref.portname, None)
+        io_dict: Dict[str, Connectable] = io(portref.inst._resolved)
+        port = io_dict.get(portref.portname, None)
         if port is None:
             msg = f"Invalid port connection to `{portref}` in Module `{module}`"
             self.fail(msg)

@@ -1110,7 +1110,6 @@ def test_pair1():
     assert len(O.instbundles) == 0
 
 
-@pytest.mark.xfail(reason="#33 https://github.com/dan-fritchman/Hdl21/issues/33")
 def test_noconn_types():
     """Test connecting `NoConn`s to a variety of port-types."""
 
@@ -1125,7 +1124,17 @@ def test_noconn_types():
     class Outer:
         i = Inner(s=h.NoConn(), b=h.NoConn(), d=h.NoConn())
 
+    # Most of the test is here, just seeing that this can elaborate
     h.elaborate(Outer)
+
+    assert len(Inner.signals) == 0
+    assert len(Outer.ports) == 0
+    assert sorted(Inner.ports.keys()) == ["b", "d_n", "d_p", "s"]
+    assert sorted(Outer.signals.keys()) == ["i_b", "i_d_n", "i_d_p", "i_s"]
+    assert Outer.i.conns["b"] is Outer.i_b
+    assert Outer.i.conns["d_n"] is Outer.i_d_n
+    assert Outer.i.conns["d_p"] is Outer.i_d_p
+    assert Outer.i.conns["s"] is Outer.i_s
 
 
 def test_deep_hierarchy():
