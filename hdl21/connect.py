@@ -5,10 +5,12 @@ Applied to types that are "used as connections", e.g. Signal.
 """
 
 # Std-Lib Imports
-from typing import Any, Union
+from typing import Any, Union, TypeVar, Type
+
+T = TypeVar("T")
 
 
-def connectable(cls: type) -> type:
+def connectable(cls: Type[T]) -> Type[T]:
     """Decorator for connectable types"""
     cls.__connectable__ = True
     return cls

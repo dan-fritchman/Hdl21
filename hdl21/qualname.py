@@ -7,7 +7,7 @@ and many of their import/ export languages (e.g. Verilog, netlists) do not.
 """
 
 
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, TypeVar, Type
 
 
 def qualname(mod: Union["Module", "ExternalModule"]) -> Optional[str]:
@@ -33,7 +33,10 @@ def qualname(mod: Union["Module", "ExternalModule"]) -> Optional[str]:
     return mod._source_info.pymodule.__name__ + "." + mod.name
 
 
-def qualname_magic_methods(cls) -> type:
+T = TypeVar("T")
+
+
+def qualname_magic_methods(cls: Type[T]) -> Type[T]:
     """Decorator to add the 'use qualname for equality, hashing, and pickling'
     magic methods to a class."""
 

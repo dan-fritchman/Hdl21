@@ -2,12 +2,14 @@
 # Slice-Enabling Decorator
 """
 
-from typing import Union
+from typing import Union, TypeVar, Type
 
 from .connect import is_connectable
 
+T = TypeVar("T")
 
-def sliceable(cls: type) -> type:
+
+def sliceable(cls: Type[T]) -> Type[T]:
     """Decorator to add the 'square-bracket indexing produces `Slice`s' behavior."""
 
     if getattr(cls, "__getitem__", None) is not None:

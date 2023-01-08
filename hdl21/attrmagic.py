@@ -19,8 +19,13 @@ The scheme adopted here is what we've empirically observed to be the most reliab
 The methods here primarily serve as a central reminder of and reusable source for this scheme. 
 """
 
+from typing import TypeVar, Type
 
-def init(cls: type) -> type:
+
+T = TypeVar("T")
+
+
+def init(cls: Type[T]) -> Type[T]:
     """
     Initialization decorator for "attr magic" types.
 
