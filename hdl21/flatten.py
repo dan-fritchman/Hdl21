@@ -1,14 +1,7 @@
-import copy
-import random
 from dataclasses import dataclass, field, replace
-from enum import Enum, auto
-from typing import Any, Generator
-
-import tree
-from loguru import logger
+from typing import Generator
 
 import hdl21 as h
-from hdl21.primitives import MosType
 
 
 @dataclass
@@ -31,7 +24,7 @@ def walk(m: h.Module, parents=tuple(), conns=dict()) -> Generator[PrimNode, None
     if not conns:
         conns = {**m.signals, **m.ports}
     for inst in m.instances.values():
-        logger.debug(f"walk: {m.name} / {inst.name}")
+        # logger.debug(f"walk: {m.name} / {inst.name}")
         new_conns = {}
         new_parents = parents + (inst,)
         for src_port_name, sig in inst.conns.items():
@@ -81,28 +74,38 @@ def is_flat(m: h.Instance | h.Instantiable) -> bool:
         raise ValueError(f"Unexpected type {type(m)}")
 
 
+def _walk_conns(conns, parents=tuple()):
+    for key, val in conns.items():
+        if isinstance(val, dict):
+            yield from _walk_conns(val, parents + (key,))
+        else:
+            yield parents + (key,), val
+
+
 def flat_conns(conns):
-    flat = tree.flatten_with_path(conns)
-    return {":".join(reversed(path)): value.name for path, value in flat}
+    return {":".join(reversed(path)): value.name for path, value in _walk_conns(conns)}
 
 
 def flat_module(m: h.Module):
     m = h.elaborate(m)
 
+    # recursively walk the module and collect all primitive instances
     nodes = list(walk(m))
-    for n in nodes:
-        logger.debug(str(n))
+    # for n in nodes:
+    # logger.debug(str(n))
 
     new_module = h.Module((m.name or "module") + "_flat")
     for port_name in m.ports:
         new_module.add(h.Port(name=port_name))
 
+    # add all signals to the root level
     for n in nodes:
         for sig in n.conns.values():
             sig_name = sig.name
             if sig_name not in new_module.ports:
                 new_module.add(h.Signal(name=sig_name))
 
+    # add all connections to the root level with names resolved
     for n in nodes:
         new_inst = new_module.add(n.inst.of(), name=n.make_name())
 
