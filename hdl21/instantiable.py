@@ -44,6 +44,8 @@ def io(i: Instantiable) -> Dict[str, "Connectable"]:
     Copies the Instantiable's top-level dictionary so that it is not modified by consumers."""
 
     if isinstance(i, GeneratorCall):
+        if i.result is None:
+            raise RuntimeError(f"Cannot get IO of unelaborated Generator {i}")
         # Take the result of the generator call
         i = i.result
 
