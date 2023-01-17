@@ -1258,3 +1258,29 @@ def test_bad_generators():
         @h.generator
         def bad(p: P) -> TabError:
             return h.Module()
+
+
+def test_multi_portref_conns():
+    """Test making several PortRef-based connections with a single assignment line."""
+
+    @h.module
+    class I:  # Inner Module
+        a, b = h.Ports(2)
+
+    @h.module
+    class O:  # Outer, instantiating Module
+        i1 = I()
+        i2 = I()
+        i3 = I()
+
+        # The several connections
+        i1.a = i2.a = i3.a
+
+    # And do so again outside the class body
+    O.i1.b = O.i2.b = O.i3.b
+
+    h.elaborate(O)
+
+    assert list(O.signals.keys()) == ["i3_a", "i3_b"]
+    assert O.i1.conns["a"] is O.i2.conns["a"] is O.i3.conns["a"] is O.i3_a
+    assert O.i1.conns["b"] is O.i2.conns["b"] is O.i3.conns["b"] is O.i3_b
