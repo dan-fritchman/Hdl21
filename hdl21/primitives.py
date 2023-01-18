@@ -123,6 +123,14 @@ class Primitive:
     def ports(self) -> Dict[str, Signal]:
         return {p.name: p for p in self.port_list}
 
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
+
 
 @calls_instantiate
 @dataclass
@@ -144,9 +152,24 @@ class PrimitiveCall:
     def ports(self) -> dict:
         return self.prim.ports
 
+    def __eq__(self, other) -> bool:
+        """Call equality requires:
+        * *Identity* between prims, and
+        * *Equality* between parameter-values."""
+        return self.prim is other.prim and self.params == other.params
+
+    def __hash__(self):
+        """Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its prim, and
+        * *Value* of its parameters.
+        The two are joined for hashing as a two-element tuple."""
+        return hash((id(self.prim), self.params))
+
 
 @dataclass
 class PrimLibEntry:
+    """# Entry in the Primitive Library"""
+
     prim: Primitive
     aliases: List[str]
 

@@ -3,8 +3,6 @@
 """
 
 import inspect
-import pickle
-from textwrap import dedent
 from typing import Callable, Any, Optional, Dict
 
 # Local imports
@@ -36,6 +34,17 @@ class Generator:
         params = param_call(callee=self, arg=arg, **kwargs)
         return GeneratorCall(gen=self, params=params)
 
+    def __repr__(self) -> str:
+        return f"Generator(name={self.name})"
+
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
+
     @property
     def name(self) -> str:
         """Generator Name
@@ -46,9 +55,6 @@ class Generator:
     def Params(self) -> type:
         """Parameter-Type Property"""
         return self.paramtype
-
-    def __repr__(self) -> str:
-        return f"Generator(name={self.name})"
 
 
 @calls_instantiate
@@ -77,7 +83,7 @@ class GeneratorCall:
         * *Identity* of its generator, and
         * *Value* of its parameters.
         The two are joined for hashing as a two-element tuple."""
-        return hash((id(self.gen), pickle.dumps(self.params)))
+        return hash((id(self.gen), self.params))
 
     def __repr__(self) -> str:
         return f"GeneratorCall(gen={self.gen.name})"

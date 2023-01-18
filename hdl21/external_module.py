@@ -76,6 +76,14 @@ class ExternalModule:
         params = param_call(callee=self, arg=arg, **kwargs)
         return ExternalModuleCall(module=self, params=params)
 
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
+
 
 @calls_instantiate
 @dataclass
@@ -99,6 +107,19 @@ class ExternalModuleCall:
     @property
     def ports(self) -> Dict[str, Signal]:
         return self.module.ports
+
+    def __eq__(self, other) -> bool:
+        """Call equality requires:
+        * *Identity* between modules, and
+        * *Equality* between parameter-values."""
+        return self.module is other.module and self.params == other.params
+
+    def __hash__(self):
+        """Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its module, and
+        * *Value* of its parameters.
+        The two are joined for hashing as a two-element tuple."""
+        return hash((id(self.module), self.params))
 
 
 __all__ = ["ExternalModule", "ExternalModuleCall"]
