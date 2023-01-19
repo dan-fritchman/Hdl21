@@ -11,7 +11,7 @@ from pydantic.dataclasses import dataclass
 from .default import Default
 from .call import param_call
 from .source_info import source_info, SourceInfo
-from .params import HasNoParams, isparamclass
+from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
 from .qualname import qualname_magic_methods
@@ -101,8 +101,8 @@ class ExternalModuleCall:
             raise TypeError(msg)
 
     @property
-    def name(self) -> Optional[str]:
-        return self.module.name
+    def name(self) -> str:
+        return self.module.name + "(" + _unique_name(self.params) + ")"
 
     @property
     def ports(self) -> Dict[str, Signal]:

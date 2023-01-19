@@ -71,7 +71,7 @@ from pydantic.dataclasses import dataclass
 # Local imports
 from .default import Default
 from .call import param_call
-from .params import paramclass, Param, isparamclass, NoParams
+from .params import paramclass, Param, isparamclass, NoParams, _unique_name
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
 from .scalar import Scalar
@@ -117,6 +117,7 @@ class Primitive:
 
     @property
     def Params(self) -> Type:
+        """Type-style alias for the parameter-type."""
         return self.paramtype
 
     @property
@@ -147,6 +148,10 @@ class PrimitiveCall:
         if not isinstance(self.params, self.prim.paramtype):
             msg = f"Invalid parameters {self.params} for Primitive {self.prim}. Must be {self.prim.paramtype}"
             raise TypeError(msg)
+
+    @property
+    def name(self) -> str:
+        return self.prim.name + "(" + _unique_name(self.params) + ")"
 
     @property
     def ports(self) -> dict:

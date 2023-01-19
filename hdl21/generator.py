@@ -8,7 +8,7 @@ from typing import Callable, Any, Optional, Dict
 # Local imports
 from .default import Default
 from .call import param_call
-from .params import HasNoParams, _unique_name
+from .params import _unique_name
 from .source_info import SourceInfo, source_info
 from .module import Module
 from .instance import calls_instantiate
@@ -26,7 +26,7 @@ class Generator:
         self.func = func
         self.paramtype = paramtype
         self.usecontext = usecontext
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
 
     def __call__(self, arg: Any = Default, **kwargs: Dict) -> "GeneratorCall":
         """Calls to Generators create GeneratorCall-objects
@@ -53,7 +53,7 @@ class Generator:
 
     @property
     def Params(self) -> type:
-        """Parameter-Type Property"""
+        """Type-style alias for the parameter-type."""
         return self.paramtype
 
 
@@ -90,16 +90,7 @@ class GeneratorCall:
 
     @property
     def name(self) -> str:
-        """GeneratorCall Naming
-        Once elaborated, returns the name of the generated Module.
-        If not elaborated, raises a `RuntimeError`."""
-        if self.result is None:
-            name = self.gen.name
-            if not isinstance(self.params, HasNoParams):
-                name += "(" + _unique_name(self.params) + ")"
-            return name
-        return self.result.name  # FIXME: do we need this case?
-        # They are probably always the same already, but can be made 110% the same for sure.
+        return self.gen.name + "(" + _unique_name(self.params) + ")"
 
 
 def generator(f: Callable) -> Generator:
