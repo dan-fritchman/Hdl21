@@ -89,20 +89,21 @@ class GeneratorElaborator(Elaborator):
         except Exception as e:
             self.fail(f"{call.gen} raised an exception: \n{e}")
 
-        # Give the result a reference bay to the generating `Call`
         if isinstance(m, Module):
+            # Give the result a reference back to the generating `Call`
             m._generated_by = call
+
+            # And elaborate the module
+            m = self.elaborate_module_base(m)  # Note the `_base` here!
 
             # If the Module that comes back is anonymous, start by giving it a name equal to the Generator's
             if m.name is None:
                 m.name = call.gen.func.__name__
 
             # Then add a unique suffix per its parameter-values
+            # Note this part may require that `m` has been through elaboration above!
             if not isinstance(call.params, HasNoParams):
                 m.name += "(" + _unique_name(call.params) + ")"
-
-            # And elaborate the module
-            m = self.elaborate_module_base(m)  # Note the `_base` here!
 
         # Generators may return other (potentially nested) generator-calls; recursively unwind any of them
         # Note this should hit Python's recursive stack-check if it doesn't terminate

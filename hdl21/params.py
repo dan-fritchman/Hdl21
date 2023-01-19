@@ -179,7 +179,7 @@ def hdl21_naming_encoder(obj: Any) -> Any:
 
     Note this *does not fully serialize `Module`s and the like -
     see `hdl21.to_proto` for this. This JSON-ization is just good enough
-    to enable unique naming of Hdl-object-value parameters."""
+    to enable unique naming of Hdl-object-valued parameters."""
 
     from .module import Module
     from .qualname import qualname as module_qualname
@@ -190,15 +190,19 @@ def hdl21_naming_encoder(obj: Any) -> Any:
     if isinstance(obj, (Instance, Generator)):
         # Not supported as parameters
         raise RuntimeError(f"Invalid `hdl21.paramclass` field {obj}")
+    if isinstance(obj, GeneratorCall):
+        # Peel out its `result` Module
+        if obj.result is None:
+            raise RuntimeError(
+                f"Invalid attempt to name unelaborated GeneratorCall {obj}"
+            )
+        return module_qualname(obj.result)
     if isinstance(obj, (Module, ExternalModule)):
         # Modules use their qualified class names/paths
         return module_qualname(obj)
     if isinstance(obj, ExternalModuleCall):
         # Mix the qualified class names/paths with the parameters
         return module_qualname(obj.module) + _unique_name(obj.params)
-    if isinstance(obj, GeneratorCall):
-        # Most other Hdl21 objects as parameters are pending, maybe, maybe not, support as parameter-values.
-        raise NotImplementedError
 
     # Dataclasses also require custom handling, as the default encoder deep-copies them,
     # often invoking methods not supported on several Hdl21 types.

@@ -92,10 +92,6 @@ class Elaborator:
         if module._elaborated is not None:
             return module._elaborated
 
-        if not module.name:
-            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
-            self.fail(msg)
-
         self.stack.append(module)
 
         # Depth-first traverse instances, ensuring their targets are defined
