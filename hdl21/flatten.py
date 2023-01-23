@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, replace
-from typing import Generator
+from typing import Generator, Union
 
 import hdl21 as h
 
@@ -62,7 +62,7 @@ def _find_signal(m: h.Module, name: str) -> h.Signal:
     raise ValueError(f"Signal {name} not found in module {m.name}")
 
 
-def is_flat(m: h.Instance | h.Instantiable) -> bool:
+def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
     if isinstance(m, h.Instance):
         return is_flat(m.of)
     elif isinstance(m, (h.PrimitiveCall, h.GeneratorCall, h.ExternalModuleCall)):
