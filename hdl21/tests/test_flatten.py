@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 import hdl21 as h
-from hdl21.flatten import flatten, is_flat
+from hdl21.flatten import flatten, is_flat, walk
 
 
 @h.module
@@ -104,3 +104,11 @@ def test_flatten_inv_buffer():
     assert inv_buffer_flat.ports.keys() == {"vdd", "vss", "vin", "vout"}
     assert inv_buffer_flat.signals.keys() == {"inv_vout", "buffer:inv_1_vout"}
     assert is_flat(inv_buffer_flat)
+
+
+def test_flatten_node_desc():
+    nodes = list(walk(Buffer))
+    assert (
+        str(nodes[0])
+        == "{'name': 'inv_1:pmos', 'path': ['inv_1', 'pmos'], 'conns': {'d': 'inv_1_vout', 'g': 'vin', 's': 'vdd', 'b': 'vdd'}}"
+    )
