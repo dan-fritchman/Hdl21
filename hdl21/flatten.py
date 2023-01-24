@@ -1,26 +1,30 @@
 from dataclasses import dataclass, field, replace
-from typing import Generator, Union
+from typing import Generator, Union, Tuple, Dict
 
 import hdl21 as h
 
 
 @dataclass
-class PrimNode:
+class _PrimitiveNode:
     inst: h.Instance
-    path: tuple[h.Module, ...] = tuple()
-    conns: dict[str, h.Signal] = field(default_factory=dict)  # type: ignore
+    path: Tuple[h.Module, ...] = tuple()
+    conns: Dict[str, h.Signal] = field(default_factory=dict)  # type: ignore
 
     def __str__(self):
         name = self.make_name()
         path = [p.name for p in self.path]
-        conns = flat_conns(self.conns)
+        conns = _flat_conns(self.conns)
         return str(dict(name=name, path=path, conns=conns))
 
     def make_name(self):
         return ":".join([p.name or "_" for p in self.path])
 
 
-def walk(m: h.Module, parents=tuple(), conns=dict()) -> Generator[PrimNode, None, None]:
+def _walk(
+    m: h.Module,
+    parents=tuple(),
+    conns=None,
+) -> Generator[_PrimitiveNode, None, None]:
     if not conns:
         conns = {**m.signals, **m.ports}
     for inst in m.instances.values():
@@ -28,13 +32,13 @@ def walk(m: h.Module, parents=tuple(), conns=dict()) -> Generator[PrimNode, None
         new_conns = {}
         new_parents = parents + (inst,)
         for src_port_name, sig in inst.conns.items():
-            match sig:
-                case h.Signal():
-                    key = sig.name
-                case h.PortRef():
-                    key = sig.portname
-                case _:
-                    raise ValueError(f"unexpected signal type: {type(sig)}")
+            if isinstance(sig, h.Signal):
+                key = sig.name
+            elif isinstance(sig, h.PortRef):
+                key = sig.portname
+            else:
+                raise ValueError(f"unexpected signal type: {type(sig)}")
+
             new_sig_name = ":".join([p.name for p in parents] + [key])
             if key in conns:
                 target_sig = conns[key]
@@ -47,9 +51,9 @@ def walk(m: h.Module, parents=tuple(), conns=dict()) -> Generator[PrimNode, None
             new_conns[src_port_name] = target_sig
 
         if isinstance(inst.of, h.PrimitiveCall):
-            yield PrimNode(inst, new_parents, new_conns)
+            yield _PrimitiveNode(inst, new_parents, new_conns)
         else:
-            yield from walk(inst.of, new_parents, new_conns)
+            yield from _walk(inst.of, new_parents, new_conns)
 
 
 def _find_signal(m: h.Module, name: str) -> h.Signal:
@@ -82,18 +86,19 @@ def _walk_conns(conns, parents=tuple()):
             yield parents + (key,), val
 
 
-def flat_conns(conns):
+def _flat_conns(conns):
     return {":".join(reversed(path)): value.name for path, value in _walk_conns(conns)}
 
 
-def flat_module(m: h.Module):
+def flatten(m: h.Module) -> h.Module:
     m = h.elaborate(m)
+    if is_flat(m):
+        return m
 
     # recursively walk the module and collect all primitive instances
-    nodes = list(walk(m))
-    # for n in nodes:
-    # logger.debug(str(n))
+    nodes = list(_walk(m))
 
+    # NOTE: should we rename the module here?
     new_module = h.Module((m.name or "module") + "_flat")
     for port_name in m.ports:
         new_module.add(h.Port(name=port_name))
