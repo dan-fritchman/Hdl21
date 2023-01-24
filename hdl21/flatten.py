@@ -4,6 +4,18 @@ from typing import Generator, Union, Tuple, Dict
 import hdl21 as h
 
 
+def _walk_conns(conns, parents=tuple()):
+    for key, val in conns.items():
+        if isinstance(val, dict):
+            yield from _walk_conns(val, parents + (key,))
+        else:
+            yield parents + (key,), val
+
+
+def _flat_conns(conns):
+    return {":".join(reversed(path)): value.name for path, value in _walk_conns(conns)}
+
+
 @dataclass
 class _PrimitiveNode:
     inst: h.Instance
@@ -20,7 +32,7 @@ class _PrimitiveNode:
         return ":".join([p.name or "_" for p in self.path])
 
 
-def _walk(
+def walk(
     m: h.Module,
     parents=tuple(),
     conns=None,
@@ -53,7 +65,7 @@ def _walk(
         if isinstance(inst.of, h.PrimitiveCall):
             yield _PrimitiveNode(inst, new_parents, new_conns)
         else:
-            yield from _walk(inst.of, new_parents, new_conns)
+            yield from walk(inst.of, new_parents, new_conns)
 
 
 def _find_signal(m: h.Module, name: str) -> h.Signal:
@@ -78,25 +90,13 @@ def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
         raise ValueError(f"Unexpected type {type(m)}")
 
 
-def _walk_conns(conns, parents=tuple()):
-    for key, val in conns.items():
-        if isinstance(val, dict):
-            yield from _walk_conns(val, parents + (key,))
-        else:
-            yield parents + (key,), val
-
-
-def _flat_conns(conns):
-    return {":".join(reversed(path)): value.name for path, value in _walk_conns(conns)}
-
-
 def flatten(m: h.Module) -> h.Module:
     m = h.elaborate(m)
     if is_flat(m):
         return m
 
     # recursively walk the module and collect all primitive instances
-    nodes = list(_walk(m))
+    nodes = list(walk(m))
 
     # NOTE: should we rename the module here?
     new_module = h.Module((m.name or "module") + "_flat")
