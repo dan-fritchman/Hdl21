@@ -92,10 +92,6 @@ class Elaborator:
         if module._elaborated is not None:
             return module._elaborated
 
-        if not module.name:
-            msg = f"Anonymous Module {module} cannot be elaborated (did you forget to name it?)"
-            self.fail(msg)
-
         self.stack.append(module)
 
         # Depth-first traverse instances, ensuring their targets are defined
@@ -196,7 +192,9 @@ class Elaborator:
         lines = []
         for s in self.stack:
             # Format: `  Module          MyModule      `
-            line = "  " + type(s).__name__.ljust(14) + str(s.name).ljust(28)
+            s_name = s.name or ""
+            # Filter out None-valued names, common during elaboration errors.
+            line = "  " + type(s).__name__.ljust(14) + s_name.ljust(28)
 
             source_info = getattr(s, "_source_info", None)
             if source_info is not None:

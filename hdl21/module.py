@@ -208,6 +208,14 @@ class Module:
             return f"Module(name={self.name})"
         return f"Module(_anon_)"
 
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
+
 
 def module(cls: type) -> Module:
     """

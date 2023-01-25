@@ -10,14 +10,14 @@ and many of their import/ export languages (e.g. Verilog, netlists) do not.
 from typing import Any, Optional, Union, TypeVar, Type
 
 
-def qualname(mod: Union["Module", "ExternalModule"]) -> Optional[str]:
+def qualname(mod: Union["Module", "ExternalModule", "Generator"]) -> Optional[str]:
     """# Qualified Name
     Helper for exporting. Returns a module's path-qualified name.
     This is generally one of a few things:
     * If "normally" defined via Python code, it's the Python module path plus the module name.
     * If *imported*, it's the path inferred during import."""
 
-    if mod._importpath is not None:
+    if getattr(mod, "_importpath", None) is not None:
         # Imported. Return the period-separated import path.
         return ".".join(mod._importpath)
 

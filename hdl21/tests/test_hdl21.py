@@ -413,26 +413,61 @@ def test_slice_module1():
     h.elaborate(P)
 
 
-def test_module_as_param():
-    """Test using a `Module` as a parameter-value"""
+def test_instantiable_as_param():
+    """Test using each Instantiable type as a parameter-value."""
 
     @h.paramclass
-    class HasModuleParam:
-        m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")
-        e = h.Param(
-            dtype=h.ExternalModule, desc="An `ExternalModule` provided as a parameter"
-        )
+    class Params:
+        m = h.Param(dtype=h.Module, desc="A `Module`")
+        e = h.Param(dtype=h.ExternalModule, desc="An `ExternalModule`")
+        ec = h.Param(dtype=h.ExternalModuleCall, desc="An `ExternalModuleCall`")
+        # FIXME: `Generator` is the one exception here. Maybe it can work, some day.
+        # g = h.Param(dtype=h.Generator, desc="An `Generator`")
+        gc = h.Param(dtype=h.GeneratorCall, desc="An `GeneratorCall`")
+        p = h.Param(dtype=h.Primitive, desc="An `Primitive`")
+        pc = h.Param(dtype=h.PrimitiveCall, desc="An `PrimitiveCall`")
+        i = h.Param(dtype=h.Instantiable, desc="An `Instantiable`")
 
     @h.generator
-    def UsesModuleParam(params: HasModuleParam) -> h.Module:
-        return params.m  # Returns the Module unmodified
+    def UsesThemParams(params: Params) -> h.Module:
+        @h.module
+        class M:
+            x = h.Signal()
+
+            m = params.m(x=x)
+            e = params.e()(x=x)
+            ec = params.ec(x=x)
+            # g = params.g()(x=x)
+            gc = params.gc(x=x)
+            p = params.p()(d=x, g=x, s=x, b=x)
+            pc = params.pc(d=x, g=x, s=x, b=x)
+            i = params.i(x=x)
+
+        return M
 
     Mod = h.Module(name="Mod")
-    Emod = h.ExternalModule(name="Emod", port_list=[])
-    p = HasModuleParam(m=Mod, e=Emod)
-    m = UsesModuleParam(p)
+    Mod.x = h.Port()
+    Emod = h.ExternalModule(name="Emod", port_list=[h.Port(name="x")])
+
+    @h.generator
+    def Gen(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.x = h.Port()
+        return m
+
+    p = Params(
+        m=Mod,
+        e=Emod,
+        ec=Emod(),
+        # g=Gen,
+        gc=Gen(),
+        p=h.Mos,
+        pc=h.Mos(),
+        i=Mod,
+    )
+    m = UsesThemParams(p)
     m = h.elaborate(m)
-    assert m == Mod
+    # assert m == Mod
 
 
 def test_instance_mult():
@@ -1258,3 +1293,29 @@ def test_bad_generators():
         @h.generator
         def bad(p: P) -> TabError:
             return h.Module()
+
+
+def test_multi_portref_conns():
+    """Test making several PortRef-based connections with a single assignment line."""
+
+    @h.module
+    class I:  # Inner Module
+        a, b = h.Ports(2)
+
+    @h.module
+    class O:  # Outer, instantiating Module
+        i1 = I()
+        i2 = I()
+        i3 = I()
+
+        # The several connections
+        i1.a = i2.a = i3.a
+
+    # And do so again outside the class body
+    O.i1.b = O.i2.b = O.i3.b
+
+    h.elaborate(O)
+
+    assert list(O.signals.keys()) == ["i3_a", "i3_b"]
+    assert O.i1.conns["a"] is O.i2.conns["a"] is O.i3.conns["a"] is O.i3_a
+    assert O.i1.conns["b"] is O.i2.conns["b"] is O.i3.conns["b"] is O.i3_b
