@@ -34,6 +34,7 @@ from .elab import *
 from .walker import HierarchyWalker
 from .instantiable import *
 from .diff_pair import *
+from .props import Properties
 from . import prefix
 from .prefix import Prefix, Prefixed
 from .scalar import Scalar

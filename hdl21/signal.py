@@ -31,6 +31,7 @@ from .visibility import Visibility
 from .connect import connectable
 from .sliceable import sliceable
 from .concat import concatable
+from .props import Properties
 
 
 class PortDir(Enum):
@@ -83,6 +84,7 @@ class Signal:
     vis: Visibility = field(repr=False, default=Visibility.INTERNAL)  # Port visibility
     direction: PortDir = field(repr=False, default=PortDir.NONE)  # Port direction
     usage: Usage = field(repr=False, default=Usage.SIGNAL)  # Signal usage
+    props: Properties = field(repr=False, default_factory=Properties)  # Properties
     desc: Optional[str] = None  # Description
     src: Optional[Enum] = field(repr=False, default=None)
     dest: Optional[Enum] = field(repr=False, default=None)

@@ -102,8 +102,7 @@ class ProtoExporter:
         Raises a `RuntimeError` if unique name is taken."""
 
         mname = module_qualname(module)
-        if "Mos(7271d1c5009776529f754c575eb55012)" in mname:
-            print(5)
+
         if mname in self.modules_by_name:
             conflict = self.modules_by_name[mname].hmod
             msg = f"Cannot serialize Module {module} due to conflicting name with {conflict}. \n"
@@ -116,6 +115,10 @@ class ProtoExporter:
 
         if id(module) in self.modules_by_id:  # Already done
             return self.modules_by_id[id(module)].pmod
+
+        if module.literals:
+            msg = f"Module {module.name} with Literals {list(module.literals.values())}"
+            raise NotImplementedError(msg)
 
         if module.bundles:  # Can't handle these, at least for now
             msg = f"Invalid attribute for Proto export: Module {module.name} with Bundles {list(module.bundles.keys())}"
@@ -381,7 +384,7 @@ def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
         # `Scalar` will either have an internal `Literal` or `Prefixed` value.
         val = val.inner
     if isinstance(val, Literal):  # String/ expression literals
-        return vlsir.ParamValue(literal=val.txt)
+        return vlsir.ParamValue(literal=val.text)
     if isinstance(val, Prefixed):
         return vlsir.ParamValue(prefixed=export_prefixed(val))
 

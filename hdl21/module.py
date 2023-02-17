@@ -22,9 +22,13 @@ from .instance import (
 )
 from .bundle import BundleInstance
 from .qualname import qualname_magic_methods
+from .props import Properties
+from .literal import Literal
 
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, Instance, InstanceArray, InstanceBundle, BundleInstance]
+ModuleAttr = Union[
+    Signal, Instance, InstanceArray, InstanceBundle, BundleInstance, Literal
+]
 
 
 @qualname_magic_methods
@@ -74,7 +78,10 @@ class Module:
         self.instarrays = dict()
         self.instbundles = dict()
         self.bundles = dict()
+        self.literals = dict()
         self.namespace = dict()  # Combination of all these
+
+        self.props: Properties = Properties()
 
         # Elaborated version of this module.
         # Set at the end of elaboration.
@@ -295,7 +302,9 @@ _banned = [
     "instarrays",
     "instbundles",
     "bundles",
+    "literals",
     "namespace",
+    "props",
     "add",
     "get",
 ]
@@ -309,28 +318,30 @@ def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
     if module._elaborated is not None:
         raise RuntimeError(f"Cannot add {val} to {module} after elaboration.")
 
+    # Sort out which of our type-based containers to add `val` to.
     if isinstance(val, Signal):
-        module.namespace[val.name] = val
         if val.vis == Visibility.PORT:
-            module.ports[val.name] = val
+            type_ctr = module.ports
         else:
-            module.signals[val.name] = val
+            type_ctr = module.signals
     elif isinstance(val, Instance):
-        module.instances[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.instances
     elif isinstance(val, InstanceArray):
-        module.instarrays[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.instarrays
     elif isinstance(val, InstanceBundle):
-        module.instbundles[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.instbundles
     elif isinstance(val, BundleInstance):
-        module.bundles[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.bundles
+    elif isinstance(val, Literal):
+        type_ctr = module.literals
     else:
         # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
         # Nonetheless gotta raise an error if we get here, somehow.
         _attr_type_error(val)
+
+    # Add it to the module namespace, and the type-specific container
+    type_ctr[val.name] = val
+    module.namespace[val.name] = val
 
     # Give it a reference to us.
     #

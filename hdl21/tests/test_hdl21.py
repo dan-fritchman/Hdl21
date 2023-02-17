@@ -1341,3 +1341,73 @@ def test_signal_usage():
     assert all(g.usage == h.Usage.GROUND for g in g)
     c = h.Clocks(5)
     assert all(c.usage == h.Usage.CLOCK for c in c)
+
+
+def test_properties():
+    """Test adding `Properties` to signals, modules, instances, and the like."""
+
+    s = h.Signal()
+
+    s.props.set("foo", "bar")
+    assert s.props.get("foo") == "bar"
+    assert s.props["foo"] == "bar"
+
+    s.props.set("foo", 4)
+    assert s.props.get("foo") == 4
+    assert s.props["foo"] == 4
+
+    with pytest.raises(TypeError):
+        s.props[3] = 4
+
+    with pytest.raises(TypeError):
+        s.props[TabError] = 11
+
+    with pytest.raises(TypeError):
+        s.props.set(key=None, val=5)
+
+    with pytest.raises(TypeError):
+        s.props.set(None, None)
+
+    with pytest.raises(TypeError):
+        s.props.get(None)
+
+    m = h.Module(name="m")
+    m.props["my_favorite_number"] = 42
+    assert m.props["my_favorite_number"] == 42
+
+    @h.module
+    class M:
+        ...
+
+    M.props["your_favorite_number"] = 11
+    assert M.props["your_favorite_number"] == 11
+
+    mi = M()
+    mi.props["abc"] = 123
+    assert mi.props["abc"] == 123
+
+    @h.bundle
+    class B:
+        ...
+
+    B.props["their_favorite_number"] = 3
+    assert B.props["their_favorite_number"] == 3
+
+    bi = B()
+    bi.props["xyz"] = None
+    assert bi.props["xyz"] is None
+
+
+def test_module_literals():
+    """Test adding `Literal`s to modules."""
+
+    @h.module
+    class HasLit:
+        l1 = h.Literal("mother")
+        l2 = h.Literal("father")
+
+    HasLit.l3 = h.Literal("child")
+
+    assert HasLit.l1.text == "mother"
+    assert HasLit.l2.text == "father"
+    assert HasLit.l3.text == "child"
