@@ -1319,3 +1319,25 @@ def test_multi_portref_conns():
     assert list(O.signals.keys()) == ["i3_a", "i3_b"]
     assert O.i1.conns["a"] is O.i2.conns["a"] is O.i3.conns["a"] is O.i3_a
     assert O.i1.conns["b"] is O.i2.conns["b"] is O.i3.conns["b"] is O.i3_b
+
+
+def test_signal_usage():
+    """Test that the `usage` property of `Signal`s is set correctly."""
+
+    s = h.Signal()
+    assert s.usage == h.Usage.SIGNAL
+    p = h.Power()
+    assert p.usage == h.Usage.POWER
+    g = h.Ground()
+    assert g.usage == h.Usage.GROUND
+    c = h.Clock()
+    assert c.usage == h.Usage.CLOCK
+
+    s = h.Signals(2)
+    assert all(s.usage == h.Usage.SIGNAL for s in s)
+    p = h.Powers(3)
+    assert all(p.usage == h.Usage.POWER for p in p)
+    g = h.Grounds(4)
+    assert all(g.usage == h.Usage.GROUND for g in g)
+    c = h.Clocks(5)
+    assert all(c.usage == h.Usage.CLOCK for c in c)
