@@ -1,12 +1,12 @@
 
-# {{ cookiecutter.repo_name }}
+# PDK Template 
 
-Hdl21 PDK plug-in for the {{ cookiecutter.pdk_name }} PDK.
+A [cookiecutter](https://github.com/cookiecutter/cookiecutter) project template for Hdl21 PDK plug-ins. 
 
-## About This Technology 
+Typical usage: 
 
-(...)
+```
+cookiecutter /path/to/PdkTemplate
+```
 
-## About This PDK Plug-In
-
-(...)
+Will produce a set of prompts about the target PDK, notably its names and versions. 
