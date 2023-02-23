@@ -12,6 +12,7 @@ from .generator import generator
 from .module import Module
 from .params import paramclass, Param
 from .signal import Signal
+from .instance import Instance
 from .instantiable import Instantiable
 
 
@@ -171,19 +172,17 @@ def Wrapper(m: Module) -> Module:
     """
 
     # FIXME: find this function a home with a less-confusing name!
+    from .instantiable import io
 
     # Initialize our wrapper-module
     wrapper = Module(name=f"{m.name}Wrapper")
 
-    # Copy the unit-cell ports
-    for p in m.io.values():
-        wrapper.add(deepcopy(p))
-
-    # Create a connections-dict mirroring them
-    conns = {port.name: port for port in wrapper.io.values()}
+    # Copy the inner-cell ports
+    # Note this also serves as the connections-dict to the inner instance
+    wrapper_io = {p.name: wrapper.add(deepcopy(p)) for p in io(m).values()}
 
     # Create the inner instance
-    wrapper.add(name="inner", val=m(**conns))
+    wrapper.add(Instance(name="inner", of=m)(**wrapper_io))
 
     # And return the wrapper
     return wrapper

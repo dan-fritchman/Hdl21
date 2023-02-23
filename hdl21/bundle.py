@@ -13,6 +13,8 @@ from .connect import connectable, is_connectable
 from .sliceable import sliceable
 from .concat import concatable
 from .signal import Signal
+from .visibility import Visibility
+from .props import Properties
 
 
 def getattr_bundle_refs(cls: type) -> type:
@@ -73,7 +75,7 @@ class BundleInstance:
         "src",
         "dest",
         "desc",
-        "refs_to_me",
+        "props" "refs_to_me",
     ]
 
     def __init__(
@@ -96,6 +98,7 @@ class BundleInstance:
         self.desc = desc
         # References handed out to our children
         self.refs_to_me: Dict[str, "BundleRef"] = dict()
+        self.props: Properties = Properties()
         # Connected port references
         self._connected_ports: Set["PortRef"] = set()
         self._parent_module: Optional["Module"] = None
@@ -133,6 +136,7 @@ class Bundle:
         self.signals = dict()
         self.bundles = dict()
         self.namespace = dict()  # Combination of all these
+        self.props: Properties = Properties()
         self._elaborated = False
         self._initialized = True
 

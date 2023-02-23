@@ -23,7 +23,7 @@ Hdl21 generates hardware databases in the [VLSIR](https://github.com/Vlsir/Vlsir
 
 ## Modules
 
-Hdl21's primary unit of harware reuse is the `Module`. Think of it as Verilog's `module`, or VHDL's `entity`, or SPICE's `subckt`. Better yet if you are used to graphical schematics, think of it as the content of a schematic. Hdl21 `Modules` are containers of a handful of `hdl21` types. Think of them as including:
+Hdl21's primary unit of hardware reuse is the `Module`. Think of it as Verilog's `module`, or VHDL's `entity`, or SPICE's `subckt`. Better yet if you are used to graphical schematics, think of it as the content of a schematic. Hdl21 `Modules` are containers of a handful of `hdl21` types. Think of them as including:
 
 - Instances of other `Modules`
 - Connections between them, defined by `Signals` and `Ports`

@@ -3,14 +3,12 @@
 """
 
 import inspect
-import pickle
-from textwrap import dedent
 from typing import Callable, Any, Optional, Dict
 
 # Local imports
 from .default import Default
 from .call import param_call
-from .params import HasNoParams, _unique_name
+from .params import _unique_name
 from .source_info import SourceInfo, source_info
 from .module import Module
 from .instance import calls_instantiate
@@ -28,13 +26,24 @@ class Generator:
         self.func = func
         self.paramtype = paramtype
         self.usecontext = usecontext
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
 
     def __call__(self, arg: Any = Default, **kwargs: Dict) -> "GeneratorCall":
         """Calls to Generators create GeneratorCall-objects
         to be expanded during elaboration."""
         params = param_call(callee=self, arg=arg, **kwargs)
         return GeneratorCall(gen=self, params=params)
+
+    def __repr__(self) -> str:
+        return f"Generator(name={self.name})"
+
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
 
     @property
     def name(self) -> str:
@@ -44,11 +53,8 @@ class Generator:
 
     @property
     def Params(self) -> type:
-        """Parameter-Type Property"""
+        """Type-style alias for the parameter-type."""
         return self.paramtype
-
-    def __repr__(self) -> str:
-        return f"Generator(name={self.name})"
 
 
 @calls_instantiate
@@ -63,6 +69,8 @@ class GeneratorCall:
         self.params = params
         self.result: Optional[Module] = None
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=False)
+        # The source/ parent `GeneratorCall`, for nested Generator calls
+        self._generated_by: Optional["GeneratorCall"] = None
 
     def __eq__(self, other) -> bool:
         """Generator-Call equality requires:
@@ -75,23 +83,14 @@ class GeneratorCall:
         * *Identity* of its generator, and
         * *Value* of its parameters.
         The two are joined for hashing as a two-element tuple."""
-        return hash((id(self.gen), pickle.dumps(self.params)))
+        return hash((id(self.gen), self.params))
 
     def __repr__(self) -> str:
         return f"GeneratorCall(gen={self.gen.name})"
 
     @property
     def name(self) -> str:
-        """GeneratorCall Naming
-        Once elaborated, returns the name of the generated Module.
-        If not elaborated, raises a `RuntimeError`."""
-        if self.result is None:
-            name = self.gen.name
-            if not isinstance(self.params, HasNoParams):
-                name += "(" + _unique_name(self.params) + ")"
-            return name
-        return self.result.name  # FIXME: do we need this case?
-        # They are probably always the same already, but can be made 110% the same for sure.
+        return self.gen.name + "(" + _unique_name(self.params) + ")"
 
 
 def generator(f: Callable) -> Generator:

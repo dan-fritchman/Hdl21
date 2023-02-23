@@ -350,6 +350,7 @@ def import_prefix(vpre: vlsir.SIPrefix) -> Prefix:
         vlsir.SIPrefix.EXA: Prefix.EXA,
         vlsir.SIPrefix.ZETTA: Prefix.ZETTA,
         vlsir.SIPrefix.YOTTA: Prefix.YOTTA,
+        vlsir.SIPrefix.UNIT: Prefix.UNIT,  # Welcome to the party, as of version 2.0!
     }
     if vpre not in map:
         raise ValueError(f"Invalid Prefix {vpre}")
@@ -373,7 +374,7 @@ def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
     else:
         raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
-    return Prefixed(prefix=prefix, number=number)
+    return Prefixed(number=number, prefix=prefix)
 
 
 def import_primitive_params(

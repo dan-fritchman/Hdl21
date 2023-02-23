@@ -4,7 +4,7 @@ Spice-Class Simulation Interface
 
 from decimal import Decimal
 from enum import Enum
-from typing import Union, Any, Optional, List, Sequence, Tuple
+from typing import Union, Any, Optional, List, Sequence, Awaitable
 from pathlib import Path
 from dataclasses import field
 
@@ -16,21 +16,16 @@ from vlsirtools.spice.sim_data import SimResult
 from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
+from ..one_or_more import OneOrMore
 from ..datatype import datatype
-from ..prefix import Prefixed
 from ..instance import Instance
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
-from ..primitives import Scalar
+from ..scalar import Scalar
+from ..literal import Literal
 
-# Type which can serve as simulation parameter values
-# The `str` variant is the escape hatch for:
-# * References to other parameter(s) by name
-# * Compound expressions among parameters, e.g. `5µ * a + b`
-# FIXME: deprecate this.
-# It was the same thing that `Scalar` eventually became.
+# FIXME: deprecate `ParamVal`.
 # Users may be importing it as `ParamVal` from here, so leave this name for now.
-# And probably move `Scalar` to a dedicated module.
 ParamVal = Scalar
 
 
@@ -84,6 +79,10 @@ def simattr(cls) -> type:
     # which also becomes the method-name on `sim`.
     _simattrs[cls.__name__.lower()] = cls
     return cls
+
+
+# Apply that "decorator" to the `Literal` class
+simattr(Literal)
 
 
 @simattr
@@ -331,16 +330,6 @@ class Lib:
     name: Optional[str] = None  # Name, used in class-based `Sim` definitions
 
 
-@simattr
-@datatype
-class Literal:
-    """Simulation-Control Literal,
-    expressed as netlist-language text for a particular target language."""
-
-    txt: str
-    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
-
-
 # Spice-Sim Attribute-Union
 Control = Union[Include, Lib, Save, Meas, Param, Literal]
 
@@ -389,7 +378,7 @@ class Sim:
     # Optional simulation name
     name: Optional[str] = None
 
-    def add(self, *attrs: List[SimAttr]) -> Union[SimAttr, List[SimAttr]]:
+    def add(self, *attrs: List[SimAttr]) -> OneOrMore[SimAttr]:
         """Add one or more `SimAttr`s to the simulation.
         Returns the inserted attributes, either as a list or a single `SimAttr`."""
         for attr in attrs:
@@ -402,22 +391,32 @@ class Sim:
 
     def run(self, opts: Optional[vsp.SimOptions] = None) -> vsp.SimResultUnion:
         """Invoke simulation via `vlsirtools.spice`."""
-        from .to_proto import to_proto
+        return run(self, opts=opts)
 
-        return vsp.sim(inp=to_proto(self), opts=opts)
+    async def run_async(
+        self, opts: Optional[vsp.SimOptions] = None
+    ) -> Awaitable[vsp.SimResultUnion]:
+        """Invoke simulation via `vlsirtools.spice`."""
+        return run_async(self, opts=opts)
 
 
 def run(
-    inp: Union[Sim, Sequence[Sim]], opts: Optional[vsp.SimOptions] = None
-) -> Union[vsp.SimResultUnion, Sequence[vsp.SimResultUnion]]:
+    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
+) -> OneOrMore[vsp.SimResultUnion]:
     """Invoke one or more `Sim`s via `vlsirtools.spice`."""
 
     from .to_proto import to_proto
 
-    if not isinstance(inp, Sequence):
-        return vsp.sim(inp=inp, opts=opts)
+    return vsp.sim(inp=to_proto(inp), opts=opts)
 
-    return vsp.sim(inp=[to_proto(s) for s in inp], opts=opts)
+
+async def run_async(
+    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
+) -> OneOrMore[Awaitable[vsp.SimResultUnion]]:
+    """Invoke simulation via `vlsirtools.spice`."""
+    from .to_proto import to_proto
+
+    return await vsp.sim_async(inp=to_proto(inp), opts=opts)
 
 
 def _add_attr_func(name: str, cls: type):

@@ -71,23 +71,10 @@ from pydantic.dataclasses import dataclass
 # Local imports
 from .default import Default
 from .call import param_call
-from .params import paramclass, Param, isparamclass, NoParams
+from .params import paramclass, Param, isparamclass, NoParams, _unique_name
 from .signal import Port, Signal, Visibility
 from .instance import calls_instantiate
-from .prefix import Prefix, Prefixed
-
-# # The `Scalar` parameter type
-#
-# Most primitive parameters "prefer" to be the `Prefixed` type, for reasons outlined in
-# https://github.com/dan-fritchman/Hdl21#prefixed-numeric-parameters.
-# They often also need a string-valued escape hatch, e.g. when referring to out-of-Hdl21 quantities
-# such as parameters in external netlists, or simulation decks.
-#
-# Note: conversion into `Scalar` from Python's built-in numeric types `int` and `float`
-# may be slightly counter-intuitive: both create the *string* variant, not `Prefixed`.
-# These would probably preferably convert to `Prefixed` instead, some day.
-#
-Scalar = Union[Prefixed, str]
+from .scalar import Scalar
 
 
 class PrimitiveType(Enum):
@@ -130,11 +117,20 @@ class Primitive:
 
     @property
     def Params(self) -> Type:
+        """Type-style alias for the parameter-type."""
         return self.paramtype
 
     @property
     def ports(self) -> Dict[str, Signal]:
         return {p.name: p for p in self.port_list}
+
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
 
 
 @calls_instantiate
@@ -154,12 +150,31 @@ class PrimitiveCall:
             raise TypeError(msg)
 
     @property
+    def name(self) -> str:
+        return self.prim.name + "(" + _unique_name(self.params) + ")"
+
+    @property
     def ports(self) -> dict:
         return self.prim.ports
+
+    def __eq__(self, other) -> bool:
+        """Call equality requires:
+        * *Identity* between prims, and
+        * *Equality* between parameter-values."""
+        return self.prim is other.prim and self.params == other.params
+
+    def __hash__(self):
+        """Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its prim, and
+        * *Value* of its parameters.
+        The two are joined for hashing as a two-element tuple."""
+        return hash((id(self.prim), self.params))
 
 
 @dataclass
 class PrimLibEntry:
+    """# Entry in the Primitive Library"""
+
     prim: Primitive
     aliases: List[str]
 
@@ -259,14 +274,18 @@ Mos = _add(
 )
 
 
-def Nmos(params: MosParams) -> Primitive:
+def Nmos(arg: Any = Default, **kwargs) -> Primitive:
     """Nmos Constructor. A thin wrapper around `hdl21.primitives.Mos`"""
-    return Mos(replace(params, tp=MosType.NMOS))
+    mos = Mos(arg, **kwargs)
+    mos.params = replace(mos.params, tp=MosType.NMOS)
+    return mos
 
 
-def Pmos(params: MosParams) -> Primitive:
+def Pmos(arg: Any = Default, **kwargs) -> Primitive:
     """Pmos Constructor. A thin wrapper around `hdl21.primitives.Mos`"""
-    return Mos(replace(params, tp=MosType.PMOS))
+    mos = Mos(arg, **kwargs)
+    mos.params = replace(mos.params, tp=MosType.PMOS)
+    return mos
 
 
 """ 
@@ -447,8 +466,8 @@ Sources
 class DcVoltageSourceParams:
     """`DcVoltageSource` Parameters"""
 
-    dc = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="DC Value (V)")
-    ac = Param(dtype=Optional[Scalar], default=0 * Prefix.UNIT, desc="AC Amplitude (V)")
+    dc = Param(dtype=Optional[Scalar], default=0, desc="DC Value (V)")
+    ac = Param(dtype=Optional[Scalar], default=None, desc="AC Amplitude (V)")
 
 
 _add(
@@ -539,7 +558,7 @@ Controlled Sources
 
 @paramclass
 class ControlledSourceParams:
-    gain = Param(dtype=Scalar, default=1 * Prefix.UNIT, desc="Gain in SI Units")
+    gain = Param(dtype=Scalar, default=1, desc="Gain in SI Units")
 
 
 # Controlled Sources Port List
@@ -635,14 +654,18 @@ Bipolar = _add(
 )
 
 
-def Npn(params: BipolarParams) -> Primitive:
+def Npn(arg: Any = Default, **kwargs) -> Primitive:
     """Npn Constructor. A thin wrapper around `hdl21.primitives.Bipolar`"""
-    return Bipolar(replace(params, tp=BipolarType.NPN))
+    bip = Bipolar(arg, **kwargs)
+    bip.params = replace(bip.params, tp=BipolarType.NPN)
+    return bip
 
 
-def Pnp(params: BipolarParams) -> Primitive:
+def Pnp(arg: Any = Default, **kwargs) -> Primitive:
     """Pnp Constructor. A thin wrapper around `hdl21.primitives.Bipolar`"""
-    return Bipolar(replace(params, tp=BipolarType.PNP))
+    bip = Bipolar(arg, **kwargs)
+    bip.params = replace(bip.params, tp=BipolarType.PNP)
+    return bip
 
 
 """ 

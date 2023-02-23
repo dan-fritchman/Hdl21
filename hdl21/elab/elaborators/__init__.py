@@ -12,3 +12,4 @@ from .arrays import ArrayFlattener
 from .portrefs import ResolvePortRefs
 from .conntypes import ConnTypes
 from .flatten_bundles import BundleFlattener
+from .mark_modules import MarkModules

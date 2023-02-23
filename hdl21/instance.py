@@ -5,7 +5,7 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
 # Std-Lib Imports
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Type, TypeVar
 from dataclasses import dataclass, field
 from textwrap import dedent
 
@@ -13,6 +13,9 @@ from textwrap import dedent
 from .source_info import source_info, SourceInfo
 from .attrmagic import init
 from .connect import Connectable, is_connectable
+from .props import Properties
+
+T = TypeVar("T")
 
 
 @init
@@ -33,6 +36,7 @@ class _Instance:
         self.name: Optional[str] = name
         self.of: "Instantiable" = of
         self.conns: Dict[str, "Connectable"] = dict()
+        self.props: Properties = Properties()
 
         # References we give out, either for refering to ports or entries in out own `conns`
         self._refs = Refs()
@@ -343,7 +347,7 @@ Instantiation Decorator
 """
 
 
-def calls_instantiate(cls: type) -> type:
+def calls_instantiate(cls: Type[T]) -> Type[T]:
     """# Calls Instantiate
     Decorator which adds 'calls produce `hdl21.Instance`s' functionality.
     Added to `Module`, `GeneratorCall`, and everything else that is `Instantiable`."""
@@ -367,6 +371,7 @@ def calls_instantiate(cls: type) -> type:
 Selected star-exports 
 Notably excludes the base class, and module-level functions
 """
+
 __all__ = [
     "Instance",
     "InstanceArray",

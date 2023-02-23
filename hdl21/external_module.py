@@ -11,7 +11,7 @@ from pydantic.dataclasses import dataclass
 from .default import Default
 from .call import param_call
 from .source_info import source_info, SourceInfo
-from .params import HasNoParams, isparamclass
+from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
 from .qualname import qualname_magic_methods
@@ -76,6 +76,14 @@ class ExternalModule:
         params = param_call(callee=self, arg=arg, **kwargs)
         return ExternalModuleCall(module=self, params=params)
 
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
+
 
 @calls_instantiate
 @dataclass
@@ -93,12 +101,25 @@ class ExternalModuleCall:
             raise TypeError(msg)
 
     @property
-    def name(self) -> Optional[str]:
-        return self.module.name
+    def name(self) -> str:
+        return self.module.name + "(" + _unique_name(self.params) + ")"
 
     @property
     def ports(self) -> Dict[str, Signal]:
         return self.module.ports
+
+    def __eq__(self, other) -> bool:
+        """Call equality requires:
+        * *Identity* between modules, and
+        * *Equality* between parameter-values."""
+        return self.module is other.module and self.params == other.params
+
+    def __hash__(self):
+        """Generator-Call hashing, consistent with `__eq__` above, uses:
+        * *Identity* of its module, and
+        * *Value* of its parameters.
+        The two are joined for hashing as a two-element tuple."""
+        return hash((id(self.module), self.params))
 
 
 __all__ = ["ExternalModule", "ExternalModuleCall"]

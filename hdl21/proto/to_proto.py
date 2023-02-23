@@ -17,6 +17,8 @@ from dataclasses import fields
 from enum import Enum
 from typing import Optional, List, Union, Dict, Any
 
+from pydantic.dataclasses import dataclass
+
 # Local imports
 # Proto-definitions
 import vlsir
@@ -25,6 +27,8 @@ import vlsir.circuit_pb2 as vckt
 # HDL
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
+from ..scalar import Scalar
+from ..literal import Literal
 from ..elab import Elaboratables, elaborate
 from ..module import Module
 from ..qualname import qualname as module_qualname
@@ -54,6 +58,12 @@ def to_proto(
     return exporter.export()
 
 
+@dataclass
+class ModuleMapping:
+    hmod: Module  # hdl21.Module
+    pmod: vckt.Module  # VLSIR Module
+
+
 class ProtoExporter:
     """
     Hierarchical Protobuf Exporter
@@ -64,9 +74,14 @@ class ProtoExporter:
 
     def __init__(self, tops: List[Module], domain: Optional[str] = None):
         self.tops = tops
-        self.modules = dict()  # Module-id to Proto-Module dict
-        self.module_names = dict()  # (Serialized) Module-name to Proto-Module dict
-        self.ext_modules = dict()  # ExternalModule-id to Proto-ExternalModule dict
+
+        # Module mappings, keyed by (a) hdl21.Module (ID), and (b) vlsir.Module (name)
+        self.modules_by_id: Dict[int, ModuleMapping] = dict()
+        self.modules_by_name: Dict[str, ModuleMapping] = dict()
+
+        # ExternalModule-id to Proto-ExternalModule dict
+        self.ext_modules: Dict[int, vckt.ExternalModule] = dict()
+
         # Default `domain` AKA package-name is the empty string
         self.pkg = vckt.Package(domain=domain or "")
 
@@ -87,22 +102,23 @@ class ProtoExporter:
         Raises a `RuntimeError` if unique name is taken."""
 
         mname = module_qualname(module)
-        if mname in self.module_names:
-            conflict = self.module_names[mname]
-            raise RuntimeError(
-                dedent(
-                    f"""\
-                    Cannot serialize Module {module} due to conflicting name with {conflict}. 
-                    (Was this a generator that didn't get decorated with `@hdl21.generator`?) """
-                )
-            )
+
+        if mname in self.modules_by_name:
+            conflict = self.modules_by_name[mname].hmod
+            msg = f"Cannot serialize Module {module} due to conflicting name with {conflict}. \n"
+            msg += "(Was this a generator that didn't get decorated with `@hdl21.generator`?) "
+            raise RuntimeError(msg)
         return mname
 
     def export_module(self, module: Module) -> vckt.Module:
         """Export a Module `module` and all its dependencies."""
 
-        if id(module) in self.modules:  # Already done
-            return self.modules[id(module)]
+        if id(module) in self.modules_by_id:  # Already done
+            return self.modules_by_id[id(module)].pmod
+
+        if module.literals:
+            msg = f"Module {module.name} with Literals {list(module.literals.values())}"
+            raise NotImplementedError(msg)
 
         if module.bundles:  # Can't handle these, at least for now
             msg = f"Invalid attribute for Proto export: Module {module.name} with Bundles {list(module.bundles.keys())}"
@@ -132,8 +148,9 @@ class ProtoExporter:
             pmod.instances.append(pinst)
 
         # Store references to the result, and return it
-        self.modules[id(module)] = pmod
-        self.module_names[pmod.name] = pmod
+        mapping = ModuleMapping(module, pmod)
+        self.modules_by_id[id(module)] = mapping
+        self.modules_by_name[pmod.name] = mapping
         self.pkg.modules.append(pmod)
         return pmod
 
@@ -342,7 +359,9 @@ def dictify_params(params: Any) -> Dict[str, Optional[Prefixed]]:
 # These can generally be summarized as "numbers, strings, and things easily convertible into them".
 # Hdl21 parameters can of course be a much larger set of types.
 # Anything outside this list produces a `TypeError` when exported.
-ToVlsirParam = Union[type(None), int, float, str, Decimal, Prefixed, Enum]
+ToVlsirParam = Union[
+    type(None), int, float, str, Decimal, Enum, Prefixed, Scalar, Literal
+]
 
 
 def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
@@ -360,11 +379,18 @@ def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
             raise TypeError(f"Enum-valued parameters must be strings, not {val.value}")
         return vlsir.ParamValue(literal=val.value)
 
-    # Numbers
+    # Internal numeric (and number-like) types
+    if isinstance(val, Scalar):
+        # `Scalar` will either have an internal `Literal` or `Prefixed` value.
+        val = val.inner
+    if isinstance(val, Literal):  # String/ expression literals
+        return vlsir.ParamValue(literal=val.text)
     if isinstance(val, Prefixed):
         return vlsir.ParamValue(prefixed=export_prefixed(val))
+
+    # Standard-Lib Numbers
     if isinstance(val, Decimal):
-        return vlsir.ParamValue(string=str(val))
+        return vlsir.ParamValue(literal=str(val))
     if isinstance(val, int):
         return vlsir.ParamValue(integer=val)
     if isinstance(val, float):

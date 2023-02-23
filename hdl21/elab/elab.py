@@ -7,7 +7,7 @@ performing one or more transformation-passes.
 """
 
 # Std-Lib Imports
-from typing import List, Optional
+from typing import List, Optional, TypeVar
 
 # Local imports
 from .elaboratable import Elaboratable, Elaboratables, is_elaboratable
@@ -15,12 +15,15 @@ from .context import Context
 from .elabpass import ElabPass
 
 
+ElaboratableType = TypeVar("ElaboratableType", bound=Elaboratable)
+
+
 def elaborate(
-    top: Elaboratables,
+    top: ElaboratableType,
     *,
     ctx: Optional[Context] = None,
     passes: Optional[List[ElabPass]] = None,
-) -> Elaboratables:
+) -> ElaboratableType:
     """
     # Hdl21 Elaboration
 

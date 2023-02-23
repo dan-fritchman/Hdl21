@@ -8,7 +8,7 @@ This module primarily defines:
 """
 
 from inspect import isclass
-from typing import Any, Optional, Union, List
+from typing import Any, Optional, Union, List, Dict
 
 # Local imports
 from .source_info import source_info, SourceInfo
@@ -22,9 +22,13 @@ from .instance import (
 )
 from .bundle import BundleInstance
 from .qualname import qualname_magic_methods
+from .props import Properties
+from .literal import Literal
 
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[Signal, Instance, InstanceArray, InstanceBundle, BundleInstance]
+ModuleAttr = Union[
+    Signal, Instance, InstanceArray, InstanceBundle, BundleInstance, Literal
+]
 
 
 @qualname_magic_methods
@@ -74,10 +78,26 @@ class Module:
         self.instarrays = dict()
         self.instbundles = dict()
         self.bundles = dict()
+        self.literals = dict()
         self.namespace = dict()  # Combination of all these
 
-        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
+        self.props: Properties = Properties()
+
+        # Elaborated version of this module.
+        # Set at the end of elaboration.
+        # For most modules this will be `self`.
+        self._elaborated: Optional[Module] = None
+
+        # IOs as captured before bundle-flattening.
+        # Bundle-valued ports are flattened into `ports` and removed from `bundles`, but need to be kept *somewhere* afterwards.
+        # Set to `None` initially to indicate that it hasn't been set yet.
+        self._pre_flattening_io: Optional[Dict[str, "Connectable"]] = None
+
+        # The source `GeneratorCall`, for generated Modules.
+        self._generated_by: Optional["GeneratorCall"] = None
+
         self._importpath = None  # Optional field set by importers
+        self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._initialized = True
 
     """
@@ -195,6 +215,14 @@ class Module:
             return f"Module(name={self.name})"
         return f"Module(_anon_)"
 
+    def __eq__(self, other) -> bool:
+        # Identity is equality
+        return id(self) == id(other)
+
+    def __hash__(self) -> bool:
+        # Identity is equality
+        return hash(id(self))
+
 
 def module(cls: type) -> Module:
     """
@@ -274,7 +302,9 @@ _banned = [
     "instarrays",
     "instbundles",
     "bundles",
+    "literals",
     "namespace",
+    "props",
     "add",
     "get",
 ]
@@ -285,28 +315,33 @@ def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
     Primarily sort `val` into one of our type-based containers.
     Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
 
+    if module._elaborated is not None:
+        raise RuntimeError(f"Cannot add {val} to {module} after elaboration.")
+
+    # Sort out which of our type-based containers to add `val` to.
     if isinstance(val, Signal):
-        module.namespace[val.name] = val
         if val.vis == Visibility.PORT:
-            module.ports[val.name] = val
+            type_ctr = module.ports
         else:
-            module.signals[val.name] = val
+            type_ctr = module.signals
     elif isinstance(val, Instance):
-        module.instances[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.instances
     elif isinstance(val, InstanceArray):
-        module.instarrays[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.instarrays
     elif isinstance(val, InstanceBundle):
-        module.instbundles[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.instbundles
     elif isinstance(val, BundleInstance):
-        module.bundles[val.name] = val
-        module.namespace[val.name] = val
+        type_ctr = module.bundles
+    elif isinstance(val, Literal):
+        type_ctr = module.literals
     else:
         # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
         # Nonetheless gotta raise an error if we get here, somehow.
         _attr_type_error(val)
+
+    # Add it to the module namespace, and the type-specific container
+    type_ctr[val.name] = val
+    module.namespace[val.name] = val
 
     # Give it a reference to us.
     #

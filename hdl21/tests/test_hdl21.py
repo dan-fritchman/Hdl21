@@ -413,26 +413,61 @@ def test_slice_module1():
     h.elaborate(P)
 
 
-def test_module_as_param():
-    """Test using a `Module` as a parameter-value"""
+def test_instantiable_as_param():
+    """Test using each Instantiable type as a parameter-value."""
 
     @h.paramclass
-    class HasModuleParam:
-        m = h.Param(dtype=h.Module, desc="A `Module` provided as a parameter")
-        e = h.Param(
-            dtype=h.ExternalModule, desc="An `ExternalModule` provided as a parameter"
-        )
+    class Params:
+        m = h.Param(dtype=h.Module, desc="A `Module`")
+        e = h.Param(dtype=h.ExternalModule, desc="An `ExternalModule`")
+        ec = h.Param(dtype=h.ExternalModuleCall, desc="An `ExternalModuleCall`")
+        # FIXME: `Generator` is the one exception here. Maybe it can work, some day.
+        # g = h.Param(dtype=h.Generator, desc="An `Generator`")
+        gc = h.Param(dtype=h.GeneratorCall, desc="An `GeneratorCall`")
+        p = h.Param(dtype=h.Primitive, desc="An `Primitive`")
+        pc = h.Param(dtype=h.PrimitiveCall, desc="An `PrimitiveCall`")
+        i = h.Param(dtype=h.Instantiable, desc="An `Instantiable`")
 
     @h.generator
-    def UsesModuleParam(params: HasModuleParam) -> h.Module:
-        return params.m  # Returns the Module unmodified
+    def UsesThemParams(params: Params) -> h.Module:
+        @h.module
+        class M:
+            x = h.Signal()
+
+            m = params.m(x=x)
+            e = params.e()(x=x)
+            ec = params.ec(x=x)
+            # g = params.g()(x=x)
+            gc = params.gc(x=x)
+            p = params.p()(d=x, g=x, s=x, b=x)
+            pc = params.pc(d=x, g=x, s=x, b=x)
+            i = params.i(x=x)
+
+        return M
 
     Mod = h.Module(name="Mod")
-    Emod = h.ExternalModule(name="Emod", port_list=[])
-    p = HasModuleParam(m=Mod, e=Emod)
-    m = UsesModuleParam(p)
+    Mod.x = h.Port()
+    Emod = h.ExternalModule(name="Emod", port_list=[h.Port(name="x")])
+
+    @h.generator
+    def Gen(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.x = h.Port()
+        return m
+
+    p = Params(
+        m=Mod,
+        e=Emod,
+        ec=Emod(),
+        # g=Gen,
+        gc=Gen(),
+        p=h.Mos,
+        pc=h.Mos(),
+        i=Mod,
+    )
+    m = UsesThemParams(p)
     m = h.elaborate(m)
-    assert m == Mod
+    # assert m == Mod
 
 
 def test_instance_mult():
@@ -1022,7 +1057,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Connections to invalid Ports" in str(e.value)
+    assert "Connection to non-existent Port" in str(e.value)
 
     @h.module
     class O:
@@ -1032,6 +1067,7 @@ def test_bad_conns():
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
     assert "Missing connection to" in str(e.value)
+    assert "Connection to non-existent Port" in str(e.value)
 
     @h.module
     class O:
@@ -1040,7 +1076,7 @@ def test_bad_conns():
 
     with pytest.raises(RuntimeError) as e:
         h.elaborate(O)
-    assert "Connection to invalid Port" in str(e.value)
+    assert "Connection to non-existent Port" in str(e.value)
 
     @h.module
     class O:
@@ -1109,7 +1145,6 @@ def test_pair1():
     assert len(O.instbundles) == 0
 
 
-@pytest.mark.xfail(reason="#33 https://github.com/dan-fritchman/Hdl21/issues/33")
 def test_noconn_types():
     """Test connecting `NoConn`s to a variety of port-types."""
 
@@ -1124,7 +1159,17 @@ def test_noconn_types():
     class Outer:
         i = Inner(s=h.NoConn(), b=h.NoConn(), d=h.NoConn())
 
+    # Most of the test is here, just seeing that this can elaborate
     h.elaborate(Outer)
+
+    assert len(Inner.signals) == 0
+    assert len(Outer.ports) == 0
+    assert sorted(Inner.ports.keys()) == ["b", "d_n", "d_p", "s"]
+    assert sorted(Outer.signals.keys()) == ["i_b", "i_d_n", "i_d_p", "i_s"]
+    assert Outer.i.conns["b"] is Outer.i_b
+    assert Outer.i.conns["d_n"] is Outer.i_d_n
+    assert Outer.i.conns["d_p"] is Outer.i_d_p
+    assert Outer.i.conns["s"] is Outer.i_s
 
 
 def test_deep_hierarchy():
@@ -1145,10 +1190,7 @@ def test_deep_hierarchy():
             M1 = m
         prev = m
 
-    # Elaborate the final, highest-level module.
-    h.elaborate(m)
-
-    # Screw up a connection, and check we get a RuntimeError.
+    # Screw up a connection, and check that we get an elaboration-time error when elaborating the top-level module.
     M1.i.not_a_real_port = M1.p
     with pytest.raises(RuntimeError):
         h.elaborate(m)
@@ -1251,3 +1293,121 @@ def test_bad_generators():
         @h.generator
         def bad(p: P) -> TabError:
             return h.Module()
+
+
+def test_multi_portref_conns():
+    """Test making several PortRef-based connections with a single assignment line."""
+
+    @h.module
+    class I:  # Inner Module
+        a, b = h.Ports(2)
+
+    @h.module
+    class O:  # Outer, instantiating Module
+        i1 = I()
+        i2 = I()
+        i3 = I()
+
+        # The several connections
+        i1.a = i2.a = i3.a
+
+    # And do so again outside the class body
+    O.i1.b = O.i2.b = O.i3.b
+
+    h.elaborate(O)
+
+    assert list(O.signals.keys()) == ["i3_a", "i3_b"]
+    assert O.i1.conns["a"] is O.i2.conns["a"] is O.i3.conns["a"] is O.i3_a
+    assert O.i1.conns["b"] is O.i2.conns["b"] is O.i3.conns["b"] is O.i3_b
+
+
+def test_signal_usage():
+    """Test that the `usage` property of `Signal`s is set correctly."""
+
+    s = h.Signal()
+    assert s.usage == h.Usage.SIGNAL
+    p = h.Power()
+    assert p.usage == h.Usage.POWER
+    g = h.Ground()
+    assert g.usage == h.Usage.GROUND
+    c = h.Clock()
+    assert c.usage == h.Usage.CLOCK
+
+    s = h.Signals(2)
+    assert all(s.usage == h.Usage.SIGNAL for s in s)
+    p = h.Powers(3)
+    assert all(p.usage == h.Usage.POWER for p in p)
+    g = h.Grounds(4)
+    assert all(g.usage == h.Usage.GROUND for g in g)
+    c = h.Clocks(5)
+    assert all(c.usage == h.Usage.CLOCK for c in c)
+
+
+def test_properties():
+    """Test adding `Properties` to signals, modules, instances, and the like."""
+
+    s = h.Signal()
+
+    s.props.set("foo", "bar")
+    assert s.props.get("foo") == "bar"
+    assert s.props["foo"] == "bar"
+
+    s.props.set("foo", 4)
+    assert s.props.get("foo") == 4
+    assert s.props["foo"] == 4
+
+    with pytest.raises(TypeError):
+        s.props[3] = 4
+
+    with pytest.raises(TypeError):
+        s.props[TabError] = 11
+
+    with pytest.raises(TypeError):
+        s.props.set(key=None, val=5)
+
+    with pytest.raises(TypeError):
+        s.props.set(None, None)
+
+    with pytest.raises(TypeError):
+        s.props.get(None)
+
+    m = h.Module(name="m")
+    m.props["my_favorite_number"] = 42
+    assert m.props["my_favorite_number"] == 42
+
+    @h.module
+    class M:
+        ...
+
+    M.props["your_favorite_number"] = 11
+    assert M.props["your_favorite_number"] == 11
+
+    mi = M()
+    mi.props["abc"] = 123
+    assert mi.props["abc"] == 123
+
+    @h.bundle
+    class B:
+        ...
+
+    B.props["their_favorite_number"] = 3
+    assert B.props["their_favorite_number"] == 3
+
+    bi = B()
+    bi.props["xyz"] = None
+    assert bi.props["xyz"] is None
+
+
+def test_module_literals():
+    """Test adding `Literal`s to modules."""
+
+    @h.module
+    class HasLit:
+        l1 = h.Literal("mother")
+        l2 = h.Literal("father")
+
+    HasLit.l3 = h.Literal("child")
+
+    assert HasLit.l1.text == "mother"
+    assert HasLit.l2.text == "father"
+    assert HasLit.l3.text == "child"
