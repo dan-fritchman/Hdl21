@@ -15,11 +15,11 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
 
-_VLSIR_VERSION = {{cookiecutter.vlsir_version}}
+_VLSIR_VERSION = "{{cookiecutter.vlsir_version}}"
 
 setup(
     name="{{ cookiecutter.pypi_name }}",
-    version={{cookiecutter.version}},
+    version="{{cookiecutter.version}}",
     description="{{ cookiecutter.pdk_name }} Hdl21 PDK Package",
     long_description=long_description,
     long_description_content_type="text/markdown",

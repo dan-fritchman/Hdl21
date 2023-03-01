@@ -16,9 +16,6 @@ from pydantic.dataclasses import dataclass
 
 # Hdl21 Imports
 import hdl21 as h
-import hdl21.sim as hs
-import hdl21.pdk as hpdk
-from hdl21.prefix import m, MEGA
 
 PDK_NAME = "{{cookiecutter.pdk_name}}"
 FIXME = None  # FIXME: Replace with real values!
@@ -28,7 +25,7 @@ modules = SimpleNamespace()
 
 
 @dataclass
-class Install(h.PdkInstallation):
+class Install(h.pdk.PdkInstallation):
     """# Pdk Installation Data
     External data provided by site-specific installations"""
 
