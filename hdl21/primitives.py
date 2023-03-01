@@ -211,18 +211,28 @@ Mos Transistor Section
 
 
 class MosType(Enum):
-    """NMOS/PMOS Type Enumeration"""
+    """# MOS Type (NMOS/ PMOS) Enumeration"""
 
     NMOS = "NMOS"
     PMOS = "PMOS"
 
 
 class MosVth(Enum):
-    """MOS Threshold Enumeration"""
+    """# MOS Threshold Enumeration"""
 
     STD = "STD"
     LOW = "LOW"
     HIGH = "HIGH"
+    ULTRA_LOW = "ULTRA_LOW"
+
+
+class MosFamily(Enum):
+    """# MOS Family Enumeration"""
+
+    NONE = "NONE"
+    IO = "IO"
+    LP = "LP"
+    HP = "HP"
 
 
 @paramclass
@@ -234,6 +244,7 @@ class MosParams:
     npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
+    family = Param(dtype=MosFamily, desc="Device family", default=MosFamily.NONE)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     # FIXME: whether to include `model`
 
