@@ -532,6 +532,17 @@ def _bundle_ref(self: Union[BundleRef, BundleInstance], key: str) -> BundleRef:
     return bundle_ref
 
 
+def flippable(b: Bundle) -> bool:
+    """
+    # Boolean indication of whether a Bundle is flippable.
+    Requires that all Signals in the Bundle,
+    and all Signals in all its sub-bundles, have port-visibility.
+    """
+    return all([s.vis == Visibility.PORT for s in b.signals.values()]) and all(
+        [flippable(bi.of) for bi in b.bundles.values()]
+    )
+
+
 def flipped(bi: BundleInstance) -> BundleInstance:
     """# Create a flipped copy of a BundleInstance"""
     cp = copy(bi)

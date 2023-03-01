@@ -43,6 +43,14 @@ class PortDir(Enum):
     INOUT = "INOUT"
     NONE = "NONE"  # No direction or unspecified
 
+    def flipped(self) -> "PortDir":
+        """# Flip the direction of a port"""
+        if self == PortDir.INPUT:
+            return PortDir.OUTPUT
+        if self == PortDir.OUTPUT:
+            return PortDir.INPUT
+        return self  # INOUT or NONE
+
 
 class Usage(Enum):
     """# Signal Usage"""
