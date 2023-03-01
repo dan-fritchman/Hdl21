@@ -20,14 +20,9 @@ class Role:
 
     def __rmul__(self, num: int) -> List["Role"]:
         """# Right multiplication. Creates `num` copies of this Role."""
-
         if not isinstance(num, int):
             return NotImplemented
-
-        # Create an `num`-length list of new copies of ourself
-        rv = list()
-        [rv.append(copy(self)) for _ in range(num)]
-        return rv
+        return [copy(self) for _ in range(num)]
 
     # def __call__(self, *args, **kwargs) -> "BundleInstance":
     #     if self._parent_bundle is None:

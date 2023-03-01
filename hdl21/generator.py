@@ -39,7 +39,7 @@ class Generator:
 
     def __eq__(self, other) -> bool:
         # Identity is equality
-        return id(self) == id(other)
+        return other is self
 
     def __hash__(self) -> bool:
         # Identity is equality

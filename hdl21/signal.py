@@ -95,8 +95,16 @@ class Signal:
     usage: Usage = field(repr=False, default=Usage.SIGNAL)  # Signal usage
     props: Properties = field(repr=False, default_factory=Properties)  # Properties
     desc: Optional[str] = None  # Description
-    src: Optional[Role] = field(repr=False, default=None)
-    dest: Optional[Role] = field(repr=False, default=None)
+    src: Optional[Role] = field(repr=False, default=None)  # Source Role
+    dest: Optional[Role] = field(repr=False, default=None)  # Destination Role
+
+    # Related signals
+    related_clk: Optional["Signal"] = field(repr=False, default=None)
+    # Related clock signal
+    related_pwr: Optional["Signal"] = field(repr=False, default=None)
+    # Related power signal
+    related_gnd: Optional["Signal"] = field(repr=False, default=None)
+    # Related ground signal
 
     def __post_init_post_parse__(self):
         if self.width < 1:
@@ -106,9 +114,23 @@ class Signal:
         self._concats: Set["Concat"] = set()
         self._connected_ports: Set["PortRef"] = set()
 
+        # Back-references to related signals
+        self._related_clk_of: Set["Signal"] = set()
+        self._related_pwr_of: Set["Signal"] = set()
+        self._related_gnd_of: Set["Signal"] = set()
+
+        # Add those back-references to signals *we* relate to.
+        # Note this only happens at construction-time.
+        if self.related_clk is not None:
+            self.related_clk._related_clk_of.add(self)
+        if self.related_pwr is not None:
+            self.related_pwr._related_pwr_of.add(self)
+        if self.related_gnd is not None:
+            self.related_gnd._related_gnd_of.add(self)
+
     def __eq__(self, other) -> bool:
         # Identity is equality
-        return id(self) == id(other)
+        return other is self
 
     def __hash__(self) -> bool:
         # Identity is equality
@@ -134,6 +156,12 @@ class Signal:
         """Signal "deep" copies"""
         # The same as shallow ones; there is no "deep" data being copied.
         return self.__copy__()
+
+    def __rmul__(self, num: int) -> List["Signal"]:
+        """# Right multiplication. Creates `num` copies of this Signal."""
+        if not isinstance(num, int):
+            return NotImplemented
+        return [copy(self) for _ in range(num)]
 
 
 """
@@ -199,10 +227,7 @@ def _pluralize(fn: Callable):
     """Inner helper method for creating "plural" versions of `Signal` constructors."""
 
     def _plural(num: int, **kwargs) -> List[Signal]:
-        rv = list()
-        for _ in range(num):
-            rv.append(fn(**kwargs))
-        return rv
+        return [fn(**kwargs) for _ in range(num)]
 
     # Give the wrapper a plural name, e.g. "Signals" or "Clocks"
     _plural.__name__ = fn.__name__ + "s"

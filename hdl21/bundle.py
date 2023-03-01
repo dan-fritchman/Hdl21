@@ -118,6 +118,12 @@ class BundleInstance:
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
 
+    def __rmul__(self, num: int) -> List["Self"]:
+        """# Right multiplication. Creates `num` copies of ourselves."""
+        if not isinstance(num, int):
+            return NotImplemented
+        return [copy(self) for _ in range(num)]
+
 
 # Type-alias for HDL objects storable as `Module` attributes
 BundleAttr = Union[Signal, BundleInstance]
