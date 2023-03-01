@@ -26,6 +26,7 @@ from dataclasses import field
 from typing import Callable, Optional, List, Set
 
 # Local imports
+from .role import Role
 from .datatype import datatype
 from .visibility import Visibility
 from .connect import connectable
@@ -86,8 +87,8 @@ class Signal:
     usage: Usage = field(repr=False, default=Usage.SIGNAL)  # Signal usage
     props: Properties = field(repr=False, default_factory=Properties)  # Properties
     desc: Optional[str] = None  # Description
-    src: Optional[Enum] = field(repr=False, default=None)
-    dest: Optional[Enum] = field(repr=False, default=None)
+    src: Optional[Role] = field(repr=False, default=None)
+    dest: Optional[Role] = field(repr=False, default=None)
 
     def __post_init_post_parse__(self):
         if self.width < 1:

@@ -29,6 +29,8 @@ from .generator import *
 from .generators import *
 from .primitives import *
 from .bundle import *
+from .role import *
+
 from .netlist import *
 from .elab import *
 from .walker import HierarchyWalker

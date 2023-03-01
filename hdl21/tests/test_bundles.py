@@ -4,7 +4,7 @@
 Not necessarily exclusive to `Bundle`s, but focusing on them.
 """
 import copy, pytest
-from enum import Enum, EnumMeta, auto
+from enum import Enum, auto
 
 import hdl21 as h
 
@@ -116,6 +116,8 @@ def test_bundle4():
             HOST = auto()
             DEVICE = auto()
 
+        Roles = h.RoleSet.from_enum(Roles)
+
         # Create signals going in either direction
         tx = h.Signal(src=Roles.HOST, dest=Roles.DEVICE)
         rx = h.Signal(src=Roles.DEVICE, dest=Roles.HOST)
@@ -126,8 +128,8 @@ def test_bundle4():
 
     hr = HasRoles()
     assert isinstance(HasRoles, h.Bundle)
-    assert isinstance(HasRoles.roles, EnumMeta)
-    assert isinstance(HasRoles.Roles, EnumMeta)
+    assert isinstance(HasRoles.roles, h.RoleSet)
+    assert isinstance(HasRoles.Roles, h.RoleSet)
     assert isinstance(hr, h.BundleInstance)
     assert isinstance(HasRoles.tx, h.Signal)
     assert isinstance(HasRoles.rx, h.Signal)
@@ -180,6 +182,8 @@ def test_bigger_bundles():
         HOST = auto()
         DEVICE = auto()
 
+    HostDevice = h.RoleSet.from_enum(HostDevice)
+
     @h.bundle
     class Jtag:
         # Jtag Bundle
@@ -197,6 +201,8 @@ def test_bigger_bundles():
             # except for interconnect which swaps between the two.
             ME = auto()
             YOU = auto()
+
+        Roles = h.RoleSet.from_enum(Roles)
 
         tx = h.Signal(src=Roles.ME, dest=Roles.YOU)
         rx = h.Signal(src=Roles.YOU, dest=Roles.ME)
@@ -690,3 +696,88 @@ def test_bundle_noconns():
     assert Top.bot2.conns["c_s1"] is Top.bot2_c_s1
     assert Top.bot2.conns["c_s2"] is Top.bot2_c_s2
     assert Top.bot2.conns["c_s3"] is Top.bot2_c_s3
+
+
+def test_structured_roles():
+    """Test creating structured Bundle Roles"""
+
+    @h.bundle
+    class MyBundle:
+        Host, Device = 2 * h.Role()
+
+    class HostDeviceEnum(Enum):
+        Host = auto()
+        Device = auto()
+
+    HostDevice = h.RoleSet.from_enum(HostDeviceEnum)
+
+    @h.module
+    class HostModule:
+        mb = MyBundle(role=HostDevice.Host, port=True)
+        # FIXME: not this part, at least not yet
+        # mb = MyBundle.Host()
+
+    @h.module
+    class DeviceModule:
+        mb = MyBundle(role=HostDevice.Device, port=True)
+        # FIXME: not this part, at least not yet
+        # mb = MyBundle.Host()
+
+    @h.module
+    class Top:
+        host = HostModule()
+        device = DeviceModule(mb=host.mb)
+
+    h.elaborate(Top)
+
+    @h.bundle
+    class AnotherBundle:
+        roles = HostDevice
+
+    @h.bundle
+    class YetAnotherBundle:
+        Roles = HostDevice  # Capital R also works
+
+    assert AnotherBundle.roles is HostDevice
+    assert AnotherBundle.Roles is HostDevice
+    assert YetAnotherBundle.roles is HostDevice
+    assert YetAnotherBundle.Roles is HostDevice
+
+
+@pytest.mark.xfail(reason="#68")
+def test_flipped():
+    """Test bundles with directed ports, and direction-flips thereof"""
+
+    @h.bundle
+    class B:
+        i = h.Input()
+        o = h.Output()
+        io = h.Inout()
+        p = h.Port()
+
+    @h.module
+    class M:
+        b = B(port=True)
+
+    @h.module
+    class F:
+        b = B(port=True, flipped=True)
+
+    @h.module
+    class Top:
+        m = M()
+        f = F(b=m.b)
+
+    h.elaborate(Top)
+
+    assert M.b_i.direction == h.PortDir.INPUT
+    assert M.b_o.direction == h.PortDir.OUTPUT
+    assert M.b_io.direction == h.PortDir.INOUT
+    assert M.b_p.direction == h.PortDir.NONE
+
+    assert F.b_i.direction == h.PortDir.OUTPUT
+    assert F.b_o.direction == h.PortDir.INPUT
+    assert F.b_io.direction == h.PortDir.INOUT
+    assert F.b_p.direction == h.PortDir.NONE
+
+    assert Top.m_b_i.direction == h.PortDir.INPUT  # FIXME! maybe?
