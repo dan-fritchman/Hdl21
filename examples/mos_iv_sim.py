@@ -38,6 +38,9 @@ class MosIvSim:
 
 def main():
     """Run the `MosIvSim` simulation, and print its results"""
+    print(f"Spectre {vsp.spectre.available()}")
+    print(f"Xyce {vsp.xyce.available()}")
+    print(f"Ngspice {vsp.ngspice.available()}")
 
     # First check which simulators are available.
     # DC parameter sweeps such as this one are supported by Xyce and Spectre.

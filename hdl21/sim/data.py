@@ -2,9 +2,8 @@
 Spice-Class Simulation Interface 
 """
 
-from decimal import Decimal
 from enum import Enum
-from typing import Union, Any, Optional, List, Sequence, Awaitable
+from typing import Union, Any, Optional, List, Awaitable
 from pathlib import Path
 from dataclasses import field
 
@@ -39,7 +38,7 @@ def tb(name: str) -> Module:
 
 
 def is_tb(i: Instantiable) -> bool:
-    """Boolean indication of whether Module `m` meets the test-bench interface."""
+    """Boolean indication of whether Instantiable `m` meets the test-bench interface."""
     if isinstance(i, (Module, ExternalModuleCall)):
         m = i
     elif isinstance(i, GeneratorCall):
@@ -377,7 +376,7 @@ class Sim:
         Returns the inserted attributes, either as a list or a single `SimAttr`."""
         for attr in attrs:
             if not is_simattr(attr):
-                raise TypeError
+                raise TypeError(f"Invalid Sim attribute: {attr} being added to {self}")
             self.attrs.append(attr)
         if len(attrs) == 1:
             return attrs[0]
@@ -392,6 +391,12 @@ class Sim:
     ) -> Awaitable[vsp.SimResultUnion]:
         """Invoke simulation via `vlsirtools.spice`."""
         return run_async(self, opts=opts)
+
+    @property
+    def Tb(self) -> "Module":
+        """Get our testbench Module, with a class-style accessor name."""
+        # Many testbenches "look like" classes, so we provide a class-name-style accessor
+        return self.tb
 
 
 def run(
@@ -478,8 +483,11 @@ def sim(cls: type) -> Sim:
     Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
     such as the `a_path` field in the example aboe.
 
-    Classes decoratated by `sim` a single special required field:
-    a `tb` attribute which sets the simulation testbench.
+    Classes decoratated by `sim` a single special required field,
+    named either `tb` or `Tb`, which sets the simulation testbench.
+    Valid testbenches must adhere to "the testbench IO interface":
+    a single, width-one port, nominally named "VSS", and expected to be connected from "simulator ground" to the DUT's ground.
+    Testbench attributes which fail to adhere to this interface will cause a `RuntimeError`.
 
     Several other names are disallowed in `sim` class-definitions,
     generally corresponding to the names of the `Sim` class's fields and methods.
@@ -489,7 +497,7 @@ def sim(cls: type) -> Sim:
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.sim inheriting from {cls.__bases__}")
 
-    protected_names = ["attrs", "add", "run", "namespace"]
+    protected_names = ["attrs", "add", "run", "run_async", "namespace"]
 
     # Initialize the content of the eventual `Sim`.
     # Note we largely can't create it now because the `tb` field is required at construction time.
@@ -506,7 +514,7 @@ def sim(cls: type) -> Sim:
     for key, val in cls.__dict__.items():
         if key in protected_names:
             raise RuntimeError(f"Invalid field name {key} in Sim {cls}")
-        elif key == "tb":  # Set the test-bench attribute
+        elif key in ("tb", "Tb"):  # Set the test-bench attribute
             tb = val
         elif key == "name":  # Set the sim-name attribute
             name = val
@@ -520,8 +528,11 @@ def sim(cls: type) -> Sim:
         else:  # Add to the forget-list
             forgetme.append(val)
 
+    # Validate the testbench module
     if tb is None:
         raise RuntimeError(f"No `tb` defined in Sim {cls}")
+    if not is_tb(tb):
+        raise RuntimeError(f"Invalid testbench {tb} in Sim {cls}")
 
     # Create the `Sim` object
     name = name or cls.__name__
