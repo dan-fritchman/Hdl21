@@ -9,16 +9,22 @@ from enum import Enum, auto
 from .signal import Signals
 from .instance import InstanceBundleType
 from .bundle import bundle, AnonymousBundle
+from .role import RoleSet
+
+
+class SourceSink(Enum):
+    SOURCE = auto()
+    SINK = auto()
+
+
+SourceSink = RoleSet.from_enum(SourceSink)
 
 
 @bundle
 class Diff:
-    """Differential Bundle"""
+    """# Differential Bundle"""
 
-    class Roles(Enum):
-        SOURCE = auto()
-        SINK = auto()
-
+    Roles = SourceSink
     p, n = Signals(2, src=Roles.SOURCE, dest=Roles.SINK)
 
 

@@ -186,23 +186,6 @@ class BundleFlattener(Elaborator):
                 segments=[bundle_inst.name, pathstr.to_name()],
                 avoid=module.namespace,
             )
-            # Sort out the new Signal's visibility and direction
-            if bundle_inst.port:
-                vis_ = Visibility.PORT
-                if bundle_inst.role is None:
-                    dir_ = PortDir.NONE
-                elif bundle_inst.role == sig.src:
-                    dir_ = PortDir.OUTPUT
-                elif bundle_inst.role == sig.dest:
-                    dir_ = PortDir.INPUT
-                else:
-                    dir_ = PortDir.NONE
-            else:
-                vis_ = Visibility.INTERNAL
-                dir_ = PortDir.NONE
-            # Apply all these attributes to our new Signal
-            sig.vis = vis_
-            sig.direction = dir_
             # And add it to the Module namespace
             module.add(sig)
 
@@ -303,6 +286,25 @@ class BundleFlattener(Elaborator):
     def flatten_bundle_inst(
         self, bundle_inst: BundleInstance, path: Path
     ) -> BundleScope:
+        """# Flatten a bundle instance"""
+        # Kick off recursive flattening
+        return self.flatten_bundle_inst_helper(
+            bundle_inst=bundle_inst,
+            path=path,
+            is_this_top_level=True,
+            is_port=bundle_inst.port,
+            flip_state=bundle_inst.flipped,
+        )
+
+    def flatten_bundle_inst_helper(
+        self,
+        bundle_inst: BundleInstance,
+        path: Path,
+        is_this_top_level: bool,
+        is_port: bool,
+        flip_state: bool,
+    ) -> BundleScope:
+        """Recursive inner implementation of `flatten_bundle_inst`."""
 
         bundle_def = bundle_inst.of
         scope = BundleScope(src=bundle_inst)
@@ -314,12 +316,49 @@ class BundleFlattener(Elaborator):
                 self.fail(f"Doubly defined Signal {sig} in {bundle_inst}")
             newsig = copy.deepcopy(sig)
             newsig.name = signal_path.to_name()
+
+            # Sort out the new Signal's visibility and direction
+            if is_port:  # "Port-ness" applies to the entire top-level bundle instance
+                vis_ = Visibility.PORT
+
+                # If the Signal is declared as a port, look at its direction and our flip state
+                if newsig.vis == Visibility.PORT:
+                    if flip_state:  # Flip direction
+                        dir_ = newsig.direction.flipped()
+                    else:  # Not flipped; leave unchanged
+                        dir_ = newsig.direction
+
+                # If the Signal is not a port, look at its source and dest roles.
+                elif bundle_inst.role is None:
+                    dir_ = PortDir.NONE
+                elif bundle_inst.role == newsig.src:
+                    dir_ = PortDir.OUTPUT
+                elif bundle_inst.role == newsig.dest:
+                    dir_ = PortDir.INPUT
+                else:  # Some other Role
+                    dir_ = PortDir.NONE
+            else:
+                vis_ = Visibility.INTERNAL
+                dir_ = PortDir.NONE
+
+            # Apply all these attributes to our new Signal
+            newsig.vis = vis_
+            newsig.direction = dir_
             scope.signals[signal_path] = newsig
 
         # And recursively do this to all sub-bundle instances, adding them to `scopes` along the way.
         for sub_bundle_inst in bundle_def.bundles.values():
             subpath = path.append(Path([sub_bundle_inst.name]))
-            subscope = self.flatten_bundle_inst(sub_bundle_inst, subpath)
+            sub_flip_state = (
+                flip_state if not sub_bundle_inst.flipped else not flip_state
+            )
+            subscope = self.flatten_bundle_inst_helper(
+                bundle_inst=sub_bundle_inst,
+                path=subpath,
+                is_this_top_level=False,
+                is_port=is_port,  # Port-ness is defined from the top-level BundleInstance
+                flip_state=sub_flip_state,  # Flip-state can be inverted at each level
+            )
             scope.add_subscope(name=sub_bundle_inst.name, scope=subscope)
 
         return scope

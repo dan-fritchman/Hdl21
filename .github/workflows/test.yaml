@@ -4,8 +4,10 @@
 name: test
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:
@@ -43,6 +45,7 @@ jobs:
         uses: psf/black@stable
         with:
           version: "22.6"
+          options: "--check --diff --verbose --exclude pdks/PdkTemplate"
 
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3

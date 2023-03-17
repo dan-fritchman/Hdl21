@@ -54,7 +54,7 @@ class Scalar(BaseModel):
             try:  # Try to convert to a Prefixed, which internally converts to a Decimal
                 inner = Prefixed(number=v)
             except Exception:  # Catch all exceptions
-                inner = Literal(txt=v)
+                inner = Literal(text=v)
             return Scalar(inner=inner)
 
         # Everything else - notably including `int` and `float` - must be convertible to `Prefixed`, or fails in its validation.
@@ -153,7 +153,7 @@ class Scalar(BaseModel):
 
     Both operate directly on `inner` values. 
     This has some possibility to go haywire someday, if for example we enable `Literal` vs `Prefixed` equality tests, 
-    or otherwise allow them to drop through to one another, e.g. `Prefixed.number == Decimal(str(Literal.txt))`, or similar. 
+    or otherwise allow them to drop through to one another, e.g. `Prefixed.number == Decimal(str(Literal.text))`, or similar. 
     As-is hashing and equality testing the `inner` fields works. But these two methods require a look each time we edit them. 
     """
 

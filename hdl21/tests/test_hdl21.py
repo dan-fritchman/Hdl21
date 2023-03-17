@@ -1319,3 +1319,140 @@ def test_multi_portref_conns():
     assert list(O.signals.keys()) == ["i3_a", "i3_b"]
     assert O.i1.conns["a"] is O.i2.conns["a"] is O.i3.conns["a"] is O.i3_a
     assert O.i1.conns["b"] is O.i2.conns["b"] is O.i3.conns["b"] is O.i3_b
+
+
+def test_signal_usage():
+    """Test that the `usage` property of `Signal`s is set correctly."""
+
+    s = h.Signal()
+    assert s.usage == h.Usage.SIGNAL
+    p = h.Power()
+    assert p.usage == h.Usage.POWER
+    g = h.Ground()
+    assert g.usage == h.Usage.GROUND
+    c = h.Clock()
+    assert c.usage == h.Usage.CLOCK
+
+    s = h.Signals(2)
+    assert all(s.usage == h.Usage.SIGNAL for s in s)
+    p = h.Powers(3)
+    assert all(p.usage == h.Usage.POWER for p in p)
+    g = h.Grounds(4)
+    assert all(g.usage == h.Usage.GROUND for g in g)
+    c = h.Clocks(5)
+    assert all(c.usage == h.Usage.CLOCK for c in c)
+
+
+def test_properties():
+    """Test adding `Properties` to signals, modules, instances, and the like."""
+
+    s = h.Signal()
+
+    s.props.set("foo", "bar")
+    assert s.props.get("foo") == "bar"
+    assert s.props["foo"] == "bar"
+
+    s.props.set("foo", 4)
+    assert s.props.get("foo") == 4
+    assert s.props["foo"] == 4
+
+    with pytest.raises(TypeError):
+        s.props[3] = 4
+
+    with pytest.raises(TypeError):
+        s.props[TabError] = 11
+
+    with pytest.raises(TypeError):
+        s.props.set(key=None, val=5)
+
+    with pytest.raises(TypeError):
+        s.props.set(None, None)
+
+    with pytest.raises(TypeError):
+        s.props.get(None)
+
+    m = h.Module(name="m")
+    m.props["my_favorite_number"] = 42
+    assert m.props["my_favorite_number"] == 42
+
+    @h.module
+    class M:
+        ...
+
+    M.props["your_favorite_number"] = 11
+    assert M.props["your_favorite_number"] == 11
+
+    mi = M()
+    mi.props["abc"] = 123
+    assert mi.props["abc"] == 123
+
+    @h.bundle
+    class B:
+        ...
+
+    B.props["their_favorite_number"] = 3
+    assert B.props["their_favorite_number"] == 3
+
+    bi = B()
+    bi.props["xyz"] = None
+    assert bi.props["xyz"] is None
+
+
+def test_module_literals():
+    """Test adding `Literal`s to modules."""
+
+    @h.module
+    class HasLit:
+        l1 = h.Literal("mother")
+        l2 = h.Literal("father")
+
+    HasLit.l3 = h.Literal("child")
+
+    assert HasLit.l1.text == "mother"
+    assert HasLit.l2.text == "father"
+    assert HasLit.l3.text == "child"
+
+
+def test_signal_mult():
+    """# Test using the multiplication operator to create multiple `Signal`s."""
+
+    @h.module
+    class M:
+        a, b, c = 3 * h.Signal()
+        i1, i2 = 2 * h.Input()
+        o1, o2 = 2 * h.Output()
+        io1, io2 = 2 * h.Inout()
+        p1, p2, p3 = 3 * h.Port()
+
+    assert M.a is not M.b
+    assert M.a is not M.c
+    assert M.b is not M.c
+    assert M.i1 is not M.i2
+    assert M.o1 is not M.o2
+    assert M.io1 is not M.io2
+    assert M.p1 is not M.p2
+
+    assert len(M.ports) == 9
+    assert len(M.signals) == 3
+
+
+def test_bundle_mult():
+    """# Test using the multiplication operator to create multiple `BundleInstance`s."""
+
+    @h.bundle
+    class B:
+        i, q = 2 * h.Signal()
+
+    @h.module
+    class M:
+        b1, b2 = 2 * B()  # <= here's the test!
+
+    assert isinstance(M.b1, h.BundleInstance)
+    assert isinstance(M.b2, h.BundleInstance)
+    assert M.b1 is not M.b2
+
+    h.elaborate(M)
+
+    assert len(M.signals) == 4
+    assert M.b1_i is not M.b2_i
+    assert M.b1_q is not M.b2_q

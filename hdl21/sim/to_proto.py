@@ -357,7 +357,7 @@ def export_param(param: data.Param) -> vlsir.Param:
 
 def export_literal(literal: data.Literal) -> str:
     """Export a simulation literal, as its text value"""
-    return literal.txt
+    return literal.text
 
 
 def export_float(num: Union[float, int, Decimal, Prefixed, Scalar]) -> float:
