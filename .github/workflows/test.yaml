@@ -4,8 +4,10 @@
 name: test
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:
