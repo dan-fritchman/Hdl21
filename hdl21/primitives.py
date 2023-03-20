@@ -36,6 +36,7 @@ Summary of the content of the primitive library:
 | IdealCapacitor                 | Ideal Capacitor                   | IDEAL    | C, Cap, Capacitor, IdealC, IdealCap   | p, n         |
 | PhysicalCapacitor              | Physical Capacitor                | PHYSICAL | PhyC, PhyCap, CapPhy, PhyCapacitor    | p, n         |
 | ThreeTerminalCapacitor         | Three Terminal Capacitor          | PHYSICAL | Cap3, PhyCap3, CapPhy3, PhyCapacitor3 | p, n, b      |
+| ShieldedCapacitor              | Shielded Capacitor                | PHYSICAL | ShCap, ShieldCap, ShieldCapacitor     | p, n, s, t   |
 | IdealInductor                  | Ideal Inductor                    | IDEAL    | L, Ind, Inductor, IdealL, IdealInd    | p, n         |
 | PhysicalInductor               | Physical Inductor                 | PHYSICAL | PhyL, PhyInd, IndPhy, PhyInductor     | p, n         |
 | ThreeTerminalInductor          | Three Terminal Inductor           | PHYSICAL | Ind3, PhyInd3, IndPhy3, PhyInductor3  | p, n, b      |
@@ -374,7 +375,10 @@ _add(
 
 @paramclass
 class PhysicalCapacitorParams:
-    c = Param(dtype=Scalar, desc="Capacitance (F)")
+    c = Param(dtype=Scalar, desc="Capacitance (F)", default=None)
+    w = Param(dtype=Scalar, desc="Width in resolution units", default=None)
+    l = Param(dtype=Scalar, desc="Length in resolution units", default=None)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
 _add(
@@ -398,6 +402,25 @@ _add(
         primtype=PrimitiveType.PHYSICAL,
     ),
     aliases=["Cap3", "PhyCap3", "CapPhy3", "PhyCapacitor3"],
+)
+
+# For the 4 terminal components, we have
+ShieldedCapacitorPorts = [
+    Port(name="p"),
+    Port(name="n"),
+    Port(name="s"),
+    Port(name="t"),
+]
+
+_add(
+    prim=Primitive(
+        name="ShieldedCapacitor",
+        desc="Shielded Capacitor",
+        port_list=copy.deepcopy(ShieldedCapacitorPorts),
+        paramtype=PhysicalCapacitorParams,
+        primtype=PrimitiveType.PHYSICAL,
+    ),
+    aliases=["ShCap", "ShieldCap", "ShieldCapacitor"],
 )
 
 
@@ -508,7 +531,7 @@ class PulseVoltageSourceParams:
     width = Param(dtype=Optional[Scalar], default=None, desc="Pulse width (s)")
 
 
-_add(
+PulseVoltageSource = _add(
     prim=Primitive(
         name="PulseVoltageSource",
         desc="Pulse Voltage Source",
@@ -518,6 +541,9 @@ _add(
     ),
     aliases=["Vpu", "Vpulse"],
 )
+
+Vpu = PulseVoltageSource
+Vpulse = PulseVoltageSource
 
 
 @paramclass
@@ -531,7 +557,7 @@ class SineVoltageSourceParams:
     phase = Param(dtype=Optional[Scalar], default=None, desc="Phase at td (degrees)")
 
 
-_add(
+SineVoltageSource = _add(
     prim=Primitive(
         name="SineVoltageSource",
         desc="Sine Voltage Source",
@@ -640,6 +666,7 @@ class BipolarParams:
     tp = Param(
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
     def __post_init_post_parse__(self):
         """Value Checks"""

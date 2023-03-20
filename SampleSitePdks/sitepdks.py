@@ -28,10 +28,10 @@ from pathlib import Path
 import sky130
 
 sky130.install = sky130.Install(
-    model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice"
+    model_lib=Path("/usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice")
 )
 
 # ASAP7
 import asap7
 
-asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")
+# asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")
