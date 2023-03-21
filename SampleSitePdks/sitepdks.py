@@ -28,10 +28,17 @@ from pathlib import Path
 import sky130
 
 sky130.install = sky130.Install(
-    model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice"
+    model_lib=Path("/usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice")
+)
+
+# GF180MCU
+import gf180
+
+gf180.install = gf180.Install(
+    model_lib=Path("/usr/local/share/pdk/gf180mcuC/libs.tech/ngspice/sm141064.ngspice")
 )
 
 # ASAP7
-import asap7
+#import asap7
 
-asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")
+# asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")
