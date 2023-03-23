@@ -36,7 +36,7 @@ from pydantic.dataclasses import dataclass
 
 # Hdl21 Imports
 import hdl21 as h
-from hdl21.prefix import MEGA, MILLI
+from hdl21.prefix import MILLI, TERA, MEGA
 from hdl21.pdk import PdkInstallation, Corner, CmosCorner
 from hdl21.primitives import (
     Mos,
@@ -61,9 +61,6 @@ from hdl21.primitives import (
 FIXME = None  # FIXME: Replace with real values!
 PDK_NAME = "sky130"
 
-# Introduce an empty paramclass for predetermined cells
-Sky130DeviceParams = h.HasNoParams
-
 
 @h.paramclass
 class MosParams:
@@ -85,6 +82,7 @@ class Sky130GenResParams:
 
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1000 * MILLI)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1000 * MILLI)
+    m = h.Param(dtype=h.Scalar, desc="Multiplicity", default=1)
 
 
 @h.paramclass
@@ -92,15 +90,44 @@ class Sky130PrecResParams:
     """# Sky130 Precision Resistor Parameters"""
 
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1000 * MILLI)
+    mult = h.Param(dtype=h.Scalar, desc="Multiplicity", default=1)
+    m = h.Param(dtype=h.Scalar, desc="Multiplicity", default=1)
 
 
 @h.paramclass
-class Sky130CapParams:
-    """# Sky130 Capacitor Parameters"""
+class Sky130MimParams:
+    """# Sky130 MiM Capacitor Parameters"""
 
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1000 * MILLI)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1000 * MILLI)
+    mf = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
+
+@h.paramclass
+class Sky130VarParams:
+    """# Sky130 Varactor Parameters"""
+    w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1000 * MILLI)
+    l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1000 * MILLI)
+    vm = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
+
+@h.paramclass
+class Sky130VPPParams:
+    """# Sky130 VPP Capacitor Parameters"""
+    w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1000 * MILLI)
+    l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1000 * MILLI)
     mult = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
+    m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
+
+@h.paramclass
+class Sky130DiodeParams:
+
+    # FIXME: What are these junk units supposed to be for?
+    a = h.Param(dtype=h.Scalar, desc="Area in PDK Units for Diodes (pm²)", default=1 * TERA)
+    pj = h.Param(dtype=h.Scalar, desc="Periphery junction capacitance in aF (?)", default=4 * MEGA)
+
+@h.paramclass
+class Sky130BipolarParams:
+    """Default Sky130 Parameters for Bipolar Transistors"""
+    m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
 
 def _xtor_module(modname: str) -> h.ExternalModule:
@@ -141,7 +168,7 @@ def _diode_module(modname: str) -> h.ExternalModule:
         name=modname,
         desc=f"{PDK_NAME} PDK Diode {modname}",
         port_list=deepcopy(Diode.port_list),
-        paramtype=Sky130DeviceParams,
+        paramtype=Sky130DiodeParams,
     )
 
     return mod
@@ -154,7 +181,7 @@ def _bjt_module(modname: str) -> h.ExternalModule:
         name=modname,
         desc=f"{PDK_NAME} PDK BJT {modname}",
         port_list=deepcopy(Bipolar.port_list),
-        paramtype=Sky130DeviceParams,
+        paramtype=Sky130BipolarParams,
     )
 
     return mod
@@ -351,94 +378,93 @@ bjts: Dict[BjtKey, h.ExternalModule] = {
 
 caps: Dict[str, h.ExternalModule] = {
     # List all MiM capacitors
-    "MIM_M3": _cap_module("sky130_fd_pr__cap_mim_m3__base", 2, Sky130CapParams),
-    "MIM_M4": _cap_module("sky130_fd_pr__cap_mim_m4__base", 2, Sky130CapParams),
-    # List available Varactors
-    "VAR_LVT": _cap_module("sky130_fd_pr__cap_var_lvt", 3, Sky130CapParams),
-    "VAR_HVT": _cap_module("sky130_fd_pr__cap_var_hvt", 3, Sky130CapParams),
-}
+    "MIM_M3": _cap_module("sky130_fd_pr__cap_mim_m3__base", 2, Sky130MimParams),
+    "MIM_M4": _cap_module("sky130_fd_pr__cap_mim_m4__base", 2, Sky130MimParams),
 
-cap_devices: Dict[str, h.ExternalModule] = {
+    # List available Varactors
+    "VAR_LVT": _cap_module("sky130_fd_pr__cap_var_lvt", 3, Sky130VarParams),
+    "VAR_HVT": _cap_module("sky130_fd_pr__cap_var_hvt", 3, Sky130VarParams),
+
     # List Parallel VPP capacitors
-    "cap_vpp_04p4x04p6_m1m2_noshield_o2": _cap_module(
-        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield_o2", 3, Sky130DeviceParams
+    "VPP_PARA_1": _cap_module(
+        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield_o2", 3, Sky130VPPParams
     ),
-    "cap_vpp_02p4x04p6_m1m2_noshield": _cap_module(
-        "sky130_fd_pr__cap_vpp_02p4x04p6_m1m2_noshield", 3, Sky130DeviceParams
+    "VPP_PARA_2": _cap_module(
+        "sky130_fd_pr__cap_vpp_02p4x04p6_m1m2_noshield", 3, Sky130VPPParams
     ),
-    "cap_vpp_08p6x07p8_m1m2_noshield": _cap_module(
-        "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2_noshield", 3, Sky130DeviceParams
+    "VPP_PARA_3": _cap_module(
+        "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2_noshield", 3, Sky130VPPParams
     ),
-    "cap_vpp_04p4x04p6_m1m2_noshield": _cap_module(
-        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield", 3, Sky130DeviceParams
+    "VPP_PARA_4": _cap_module(
+        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield", 3, Sky130VPPParams
     ),
-    "cap_vpp_11p5x11p7_m1m2_noshield": _cap_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2_noshield", 3, Sky130DeviceParams
+    "VPP_PARA_5": _cap_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2_noshield", 3, Sky130VPPParams
     ),
-    "cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield": _cap_module(
-        "sky130_fd_pr__cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield", 3, Sky130DeviceParams
+    "VPP_PARA_6": _cap_module(
+        "sky130_fd_pr__cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield", 3, Sky130VPPParams
     ),
-    "cap_vpp_02p7x06p1_m1m2m3m4_shieldl1_fingercap": _cap_module(
+    "VPP_PARA_7": _cap_module(
         "sky130_fd_pr__cap_vpp_02p7x06p1_m1m2m3m4_shieldl1_fingercap",
         3,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_02p9x06p1_m1m2m3m4_shieldl1_fingercap2": _cap_module(
+    "VPP_PARA_8": _cap_module(
         "sky130_fd_pr__cap_vpp_02p9x06p1_m1m2m3m4_shieldl1_fingercap2",
         3,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_02p7x11p1_m1m2m3m4_shieldl1_fingercap": _cap_module(
+    "VPP_PARA_9": _cap_module(
         "sky130_fd_pr__cap_vpp_02p7x11p1_m1m2m3m4_shieldl1_fingercap",
         3,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_02p7x21p1_m1m2m3m4_shieldl1_fingercap": _cap_module(
+    "VPP_PARA_10": _cap_module(
         "sky130_fd_pr__cap_vpp_02p7x21p1_m1m2m3m4_shieldl1_fingercap",
         3,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_02p7x41p1_m1m2m3m4_shieldl1_fingercap": _cap_module(
+    "VPP_PARA_11": _cap_module(
         "sky130_fd_pr__cap_vpp_02p7x41p1_m1m2m3m4_shieldl1_fingercap",
         3,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
     # List Perpendicular VPP capacitors
-    "cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5": _cap_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5", 4, Sky130DeviceParams
+    "VPP_PERP_1": _cap_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5", 4, Sky130VPPParams
     ),
-    "cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5": _cap_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5", 4, Sky130DeviceParams
+    "VPP_PERP_2": _cap_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5", 4, Sky130VPPParams
     ),
-    "cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5": _cap_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5", 4, Sky130DeviceParams
+    "VPP_PERP_3": _cap_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5", 4, Sky130VPPParams
     ),
-    "cap_vpp_04p4x04p6_m1m2m3_shieldl1m5_floatm4": _cap_module(
+    "VPP_PERP_4": _cap_module(
         "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2m3_shieldl1m5_floatm4",
         4,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_08p6x07p8_m1m2m3_shieldl1m5_floatm4": _cap_module(
+    "VPP_PERP_5": _cap_module(
         "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2m3_shieldl1m5_floatm4",
         4,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_11p5x11p7_m1m2m3_shieldl1m5_floatm4": _cap_module(
+    "VPP_PERP_6": _cap_module(
         "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3_shieldl1m5_floatm4",
         4,
-        Sky130DeviceParams,
+        Sky130VPPParams,
     ),
-    "cap_vpp_11p5x11p7_l1m1m2m3_shieldm4": _cap_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3_shieldm4", 4, Sky130DeviceParams
+    "VPP_PERP_7": _cap_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3_shieldm4", 4, Sky130VPPParams
     ),
-    "cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4": _cap_module(
-        "sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4", 4, Sky130DeviceParams
+    "VPP_PERP_8": _cap_module(
+        "sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4", 4, Sky130VPPParams
     ),
-    "cap_vpp_06p8x06p1_m1m2m3_shieldl1m4": _cap_module(
-        "sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4", 4, Sky130DeviceParams
+    "VPP_PERP_9": _cap_module(
+        "sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4", 4, Sky130VPPParams
     ),
-    "cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5": _cap_module(
-        "sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5", 4, Sky130DeviceParams
+    "VPP_PERP_10": _cap_module(
+        "sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5", 4, Sky130VPPParams
     ),
 }
 
@@ -450,8 +476,6 @@ for mod in xtors.values():
 for mod in ress.values():
     setattr(modules, mod.name, mod)
 for mod in caps.values():
-    setattr(modules, mod.name, mod)
-for mod in cap_devices.values():
     setattr(modules, mod.name, mod)
 for mod in diodes.values():
     setattr(modules, mod.name, mod)
@@ -480,6 +504,67 @@ class Cache:
 
 CACHE = Cache()
 
+# Default param dicts
+default_xtor_size = {
+    "sky130_fd_pr__nfet_01v8": (h.Scalar(inner=0.420), h.Scalar(inner=0.150)),
+    "sky130_fd_pr__nfet_01v8_lvt": (h.Scalar(inner=0.420), h.Scalar(inner=0.150)),
+    "sky130_fd_pr__pfet_01v8": (h.Scalar(inner=0.550), h.Scalar(inner=0.150)),
+    "sky130_fd_pr__pfet_01v8_hvt": (h.Scalar(inner=0.550), h.Scalar(inner=0.150)),
+    "sky130_fd_pr__pfet_01v8_lvt": (h.Scalar(inner=0.550), h.Scalar(inner=0.350)),
+    "sky130_fd_pr__pfet_g5v0d10v5": (h.Scalar(inner=0.420), h.Scalar(inner=0.500)),
+    "sky130_fd_pr__nfet_g5v0d10v5": (h.Scalar(inner=0.420), h.Scalar(inner=0.500)),
+    "sky130_fd_pr__pfet_g5v0d16v0": (h.Scalar(inner=5.000), h.Scalar(inner=0.660)),
+    "sky130_fd_pr__nfet_20v0": (h.Scalar(inner=29.410), h.Scalar(inner=2.950)),
+    "sky130_fd_pr__nfet_20v0_zvt": (h.Scalar(inner=30.000), h.Scalar(inner=1.500)),
+    "sky130_fd_pr__nfet_20v0_iso": (h.Scalar(inner=30.000), h.Scalar(inner=1.500)),
+    "sky130_fd_pr__pfet_20v0": (h.Scalar(inner=30.000), h.Scalar(inner=1.000)),
+    "sky130_fd_pr__nfet_03v3_nvt": (h.Scalar(inner=0.700), h.Scalar(inner=0.500)),
+    "sky130_fd_pr__nfet_05v0_nvt": (h.Scalar(inner=0.700), h.Scalar(inner=0.900)),
+    "sky130_fd_pr__nfet_20v0_nvt": (h.Scalar(inner=30.000), h.Scalar(inner=1.000)),
+    "sky130_fd_pr__esd_nfet_01v8": (h.Scalar(inner=20.350), h.Scalar(inner=0.165)),
+    "sky130_fd_pr__esd_nfet_g5v0d10v5": (h.Scalar(inner=14.500), h.Scalar(inner=0.550)),
+    "sky130_fd_pr__esd_nfet_g5v0d10v5_nvt": (
+        h.Scalar(inner=10.000),
+        h.Scalar(inner=0.900),
+    ),
+    "sky130_fd_pr__esd_pfet_g5v0d10v5": (h.Scalar(inner=14.500), h.Scalar(inner=0.550)),
+}
+
+default_gen_res_size = {
+    "sky130_fd_pr__res_generic_po": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_l1": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_m1": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_m2": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_m3": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_m4": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_m5": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
+    "sky130_fd_pr__res_generic_nd": (h.Scalar(inner=0.150), h.Scalar(inner=0.270)),
+    "sky130_fd_pr__res_generic_pd": (h.Scalar(inner=0.150), h.Scalar(inner=0.270)),
+    # FIXME: This value is lifted from xschem but can't be found in documentation
+    "sky130_fd_pr__res_iso_pw": (h.Scalar(inner=2.650), h.Scalar(inner=2.650)),
+}
+
+default_prec_res_L = {
+    "sky130_fd_pr__res_high_po_0p35": h.Scalar(inner=0.350),
+    "sky130_fd_pr__res_high_po_0p69": h.Scalar(inner=0.690),
+    "sky130_fd_pr__res_high_po_1p41": h.Scalar(inner=1.410),
+    "sky130_fd_pr__res_high_po_2p85": h.Scalar(inner=2.850),
+    "sky130_fd_pr__res_high_po_5p3": h.Scalar(inner=5.300),
+    "sky130_fd_pr__res_xhigh_po_0p35": h.Scalar(inner=0.350),
+    "sky130_fd_pr__res_xhigh_po_0p69": h.Scalar(inner=0.690),
+    "sky130_fd_pr__res_xhigh_po_1p41": h.Scalar(inner=1.410),
+    "sky130_fd_pr__res_xhigh_po_2p85": h.Scalar(inner=2.850),
+    "sky130_fd_pr__res_xhigh_po_5p3": h.Scalar(inner=5.300),
+}
+
+default_cap_sizes = {
+    # FIXME: Using documentation minimum sizing not sure of correct answer
+    "sky130_fd_pr__cap_mim_m3__base": (h.Scalar(inner=2.000), h.Scalar(inner=2.000)),
+    "sky130_fd_pr__cap_mim_m4__base": (h.Scalar(inner=2.000), h.Scalar(inner=2.000)),
+    "sky130_fd_pr__cap_var_lvt": (h.Scalar(inner=0.180), h.Scalar(inner=0.180)),
+    "sky130_fd_pr__cap_var_hvt": (h.Scalar(inner=0.180), h.Scalar(inner=0.180)),
+}
+
 
 class Sky130Walker(h.HierarchyWalker):
     """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
@@ -490,6 +575,8 @@ class Sky130Walker(h.HierarchyWalker):
         self.mos_modcalls = dict()
         self.res_modcalls = dict()
         self.cap_modcalls = dict()
+        self.diode_modcalls = dict()
+        self.bjt_modcalls = dict()
 
     def visit_primitive_call(self, call: h.PrimitiveCall) -> h.Instantiable:
         """Replace instances of `h.primitive.Mos` with our `ExternalModule`s"""
@@ -539,13 +626,7 @@ class Sky130Walker(h.HierarchyWalker):
         # First retrieve the `ExternalModule`.
         mod = self.mos_module(params)
 
-        # Convert to `mod`s parameter-space
-        # Note this silly PDK keeps parameter-values in *microns* rather than SI meters.
-        w = self.scale_param(
-            params.w, 1000 * MILLI
-        )  # FIXME: not quite a fix, but just insist users read documentation
-        # precise sizing requires additional data to be done correcly
-        l = self.scale_param(params.l, 1000 * MILLI)
+        w, l = self.use_defaults(params, mod.name, default_xtor_size)
 
         modparams = Sky130MosParams(
             w=w,
@@ -579,15 +660,26 @@ class Sky130Walker(h.HierarchyWalker):
 
         if mod.paramtype == Sky130GenResParams:
 
-            w = self.scale_param(params.w, 1000 * MILLI)
-            l = self.scale_param(params.l, 1000 * MILLI)
+            w, l = self.use_defaults(params, mod.name, default_gen_res_size)
 
             modparams = Sky130GenResParams(w=w, l=l)
 
         elif mod.paramtype == Sky130PrecResParams:
 
-            l = self.scale_param(params.l, 1000 * MILLI)
+            if params.l is None:
 
+                l = self.scale_param(default_prec_res_L[mod.name], 1000 * MILLI)
+
+            elif params.l >= default_prec_res_L[mod.name]:
+
+                l = self.scale_param(params.l, 1000 * MILLI)
+
+            else:
+
+                raise ValueError(
+                    f"Length {params.l} is below minimum for {mod.name} model"
+                )
+            
             modparams = Sky130PrecResParams(l=l)
 
         modcall = mod(modparams)
@@ -596,7 +688,7 @@ class Sky130Walker(h.HierarchyWalker):
 
     def cap_module(self, params: Any):
         """Retrieve or create an `ExternalModule` for a Capacitor of parameters `params`."""
-        mod = caps.get((params.model), None) or cap_devices.get((params.model), None)
+        mod = caps.get((params.model), None)
 
         if mod is None:
             msg = f"No Capacitor module for model {params.model}"
@@ -606,21 +698,35 @@ class Sky130Walker(h.HierarchyWalker):
 
     def cap_module_call(self, params: PhysicalCapacitorParams):
 
+        if params in CACHE.cap_modcalls:
+            return CACHE.cap_modcalls[params]
+
         mod = self.cap_module(params)
 
-        w = self.scale_param(params.w, 1000 * MILLI)
-        l = self.scale_param(params.l, 1000 * MILLI)
+        m = 1
 
-        if mod.paramtype == Sky130CapParams:
+        if params.mult is not None:
 
-            w = self.scale_param(params.w, 1000 * MILLI)
-            l = self.scale_param(params.l, 1000 * MILLI)
+            m = int(params.mult)
+        
 
-            modparams = Sky130CapParams(w=w, l=l)
+        if mod.paramtype == Sky130MimParams:            
 
-        elif mod.paramtype == Sky130DeviceParams:
+            w, l = self.use_defaults(params, mod.name, default_cap_sizes)
+            modparams = Sky130MimParams(w=w, l=l, mf=m)
 
-            modparams = Sky130DeviceParams()
+        elif mod.paramtype == Sky130VarParams:
+
+            w, l = self.use_defaults(params, mod.name, default_cap_sizes)
+            modparams = Sky130VarParams(w=w, l=l, vm=m)
+
+        elif mod.paramtype == Sky130VPPParams:
+
+            w, l = params.w, params.l
+            if w is not None and l is not None:
+                modparams = Sky130VPPParams(w=w, l=l, mult=m)
+            else:
+                modparams = Sky130VPPParams(mult=m)
 
         modcall = mod(modparams)
         CACHE.cap_modcalls[params] = modcall
@@ -638,9 +744,19 @@ class Sky130Walker(h.HierarchyWalker):
 
     def diode_module_call(self, params: DiodeParams):
 
+        if params in CACHE.diode_modcalls:
+            return CACHE.diode_modcalls[params]
+
         mod = self.diode_module(params)
 
-        modparams = Sky130DeviceParams()
+        if params.a is not None:
+
+            a = params.a * 1 * TERA
+            modparams = Sky130DiodeParams(a=a)
+
+        else:
+
+            modparams = Sky130DiodeParams()
 
         modcall = mod(modparams)
         CACHE.diode_modcalls[params] = modcall
@@ -658,9 +774,17 @@ class Sky130Walker(h.HierarchyWalker):
 
     def bjt_module_call(self, params: BipolarParams):
 
+        if params in CACHE.bjt_modcalls:
+            return CACHE.bjt_modcalls[params]
+
         mod = self.bjt_module(params)
 
-        modparams = Sky130DeviceParams()
+        if params.mult is not None:
+            mult = int(params.mult)
+        else:
+            mult = 1
+
+        modparams = Sky130BipolarParams(m=mult)
 
         modcall = mod(modparams)
         CACHE.bjt_modcalls[params] = modcall
@@ -675,10 +799,44 @@ class Sky130Walker(h.HierarchyWalker):
             raise TypeError(f"Invalid Scalar parameter {orig}")
         inner = orig.inner
         if isinstance(inner, h.Prefixed):
-            return h.Scalar(inner=inner * MEGA)
+            return h.Scalar(inner=inner)
         if isinstance(inner, h.Literal):
             return h.Scalar(inner=h.Literal(f"({inner} * 1e6)"))
         raise TypeError(f"Param Value {inner}")
+
+    def use_defaults(self, params: h.paramclass, modname: str, defaults: dict):
+
+        w, l = None, None
+
+        if params.w is None:
+
+            w = defaults[modname][0]
+        
+        elif params.w >= defaults[modname][0]:
+
+            w = params.w
+
+        else:
+
+            raise ValueError(f"Width {params.w} is below minimum for {modname} model")
+
+        if params.l is None:
+
+            l = defaults[modname][1]
+
+        elif params.l >= defaults[modname][1]:
+
+            l = params.l
+
+        else:
+
+            raise ValueError(f"Length {params.l} is below minimum for {modname} model")
+            
+
+        w = self.scale_param(w, 1000 * MILLI)
+        l = self.scale_param(l, 1000 * MILLI)
+
+        return w, l
 
 
 def compile(src: h.Elaboratables) -> None:

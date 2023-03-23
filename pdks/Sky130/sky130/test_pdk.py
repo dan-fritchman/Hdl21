@@ -183,7 +183,7 @@ def bjt_primitives_module():
     return BjtPrimitives
 
 
-def gencap_primitives_module():
+def mimcap_primitives_module():
     @h.module
     class CapacitorPrimitives:
         """Module with all the generic capacitor primitives supported by the PDK package"""
@@ -192,13 +192,22 @@ def gencap_primitives_module():
 
         MIM_M3 = h.PhysicalCapacitor(model="MIM_M3")(p=z, n=z)
         MIM_M4 = h.PhysicalCapacitor(model="MIM_M4")(p=z, n=z)
+
+    return CapacitorPrimitives
+
+def varcap_primitives_module():
+        
+    @h.module
+    class CapacitorPrimitives:
+    
+        z = h.Signal(desc="Sole signal connected to everything")
+
         VAR_LVT = h.ThreeTerminalCapacitor(model="VAR_LVT")(p=z, n=z, b=z)
         VAR_HVT = h.ThreeTerminalCapacitor(model="VAR_HVT")(p=z, n=z, b=z)
 
     return CapacitorPrimitives
 
-
-def devcap_primitives_module():
+def vppcap_primitives_module():
     @h.module
     class CapacitorPrimitives:
         """Module with all the device capacitor primitives supported by the PDK package"""
@@ -207,68 +216,68 @@ def devcap_primitives_module():
 
         # Parallel VPP capacitors
         cap_vpp_1 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_04p4x04p6_m1m2_noshield_o2"
+            model="VPP_PARA_1"
         )(p=z, n=z, b=z)
-        cap_vpp_2 = h.ThreeTerminalCapacitor(model="cap_vpp_02p4x04p6_m1m2_noshield")(
+        cap_vpp_2 = h.ThreeTerminalCapacitor(model="VPP_PARA_2")(
             p=z, n=z, b=z
         )
-        cap_vpp_3 = h.ThreeTerminalCapacitor(model="cap_vpp_08p6x07p8_m1m2_noshield")(
+        cap_vpp_3 = h.ThreeTerminalCapacitor(model="VPP_PARA_3")(
             p=z, n=z, b=z
         )
-        cap_vpp_4 = h.ThreeTerminalCapacitor(model="cap_vpp_04p4x04p6_m1m2_noshield")(
+        cap_vpp_4 = h.ThreeTerminalCapacitor(model="VPP_PARA_4")(
             p=z, n=z, b=z
         )
-        cap_vpp_5 = h.ThreeTerminalCapacitor(model="cap_vpp_11p5x11p7_m1m2_noshield")(
+        cap_vpp_5 = h.ThreeTerminalCapacitor(model="VPP_PARA_5")(
             p=z, n=z, b=z
         )
         cap_vpp_6 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield"
+            model="VPP_PARA_6"
         )(p=z, n=z, b=z)
         cap_vpp_7 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_02p7x06p1_m1m2m3m4_shieldl1_fingercap"
+            model="VPP_PARA_7"
         )(p=z, n=z, b=z)
         cap_vpp_8 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_02p9x06p1_m1m2m3m4_shieldl1_fingercap2"
+            model="VPP_PARA_8"
         )(p=z, n=z, b=z)
         cap_vpp_9 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_02p7x11p1_m1m2m3m4_shieldl1_fingercap"
+            model="VPP_PARA_9"
         )(p=z, n=z, b=z)
         cap_vpp_10 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_02p7x21p1_m1m2m3m4_shieldl1_fingercap"
+            model="VPP_PARA_10"
         )(p=z, n=z, b=z)
         cap_vpp_11 = h.ThreeTerminalCapacitor(
-            model="cap_vpp_02p7x41p1_m1m2m3m4_shieldl1_fingercap"
+            model="VPP_PARA_11"
         )(p=z, n=z, b=z)
 
         # Perpendicular VPP capacitors
-        cap_vpp_12 = h.ShieldedCapacitor(model="cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5")(
+        cap_vpp_12 = h.ShieldedCapacitor(model="VPP_PERP_1")(
             p=z, n=z, s=z, t=z
         )
         cap_vpp_13 = h.ShieldedCapacitor(
-            model="cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5"
+            model="VPP_PERP_2"
         )(p=z, n=z, s=z, t=z)
-        cap_vpp_14 = h.ShieldedCapacitor(model="cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5")(
+        cap_vpp_14 = h.ShieldedCapacitor(model="VPP_PERP_3")(
             p=z, n=z, s=z, t=z
         )
         cap_vpp_15 = h.ShieldedCapacitor(
-            model="cap_vpp_04p4x04p6_m1m2m3_shieldl1m5_floatm4"
+            model="VPP_PERP_4"
         )(p=z, n=z, s=z, t=z)
         cap_vpp_16 = h.ShieldedCapacitor(
-            model="cap_vpp_08p6x07p8_m1m2m3_shieldl1m5_floatm4"
+            model="VPP_PERP_5"
         )(p=z, n=z, s=z, t=z)
         cap_vpp_17 = h.ShieldedCapacitor(
-            model="cap_vpp_11p5x11p7_m1m2m3_shieldl1m5_floatm4"
+            model="VPP_PERP_6"
         )(p=z, n=z, s=z, t=z)
-        cap_vpp_18 = h.ShieldedCapacitor(model="cap_vpp_11p5x11p7_l1m1m2m3_shieldm4")(
+        cap_vpp_18 = h.ShieldedCapacitor(model="VPP_PERP_7")(
             p=z, n=z, s=z, t=z
         )
-        cap_vpp_19 = h.ShieldedCapacitor(model="cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4")(
+        cap_vpp_19 = h.ShieldedCapacitor(model="VPP_PERP_8")(
             p=z, n=z, s=z, t=z
         )
-        cap_vpp_20 = h.ShieldedCapacitor(model="cap_vpp_06p8x06p1_m1m2m3_shieldl1m4")(
+        cap_vpp_20 = h.ShieldedCapacitor(model="VPP_PERP_9")(
             p=z, n=z, s=z, t=z
         )
-        cap_vpp_21 = h.ShieldedCapacitor(model="cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5")(
+        cap_vpp_21 = h.ShieldedCapacitor(model="VPP_PERP_10")(
             p=z, n=z, s=z, t=z
         )
 
@@ -278,7 +287,7 @@ def devcap_primitives_module():
 # FIXME: How do I make this test less attrocious?
 
 
-def _compile_and_test(prims: h.Module, paramtype: h.Param):
+def _compile_and_test(prims: h.Module, paramtype: h.paramclass):
 
     # Compile
     sky130.compile(prims)
@@ -297,10 +306,11 @@ def test_compile():
     _compile_and_test(mos_primitives_module(), sky130.Sky130MosParams)
     _compile_and_test(genres_primitives_module(), sky130.Sky130GenResParams)
     _compile_and_test(precres_primitives_module(), sky130.Sky130PrecResParams)
-    _compile_and_test(diode_primitives_module(), sky130.Sky130DeviceParams)
+    _compile_and_test(diode_primitives_module(), sky130.Sky130DiodeParams)
     _compile_and_test(bjt_primitives_module(), sky130.Sky130DeviceParams)
-    _compile_and_test(gencap_primitives_module(), sky130.Sky130CapParams)
-    _compile_and_test(devcap_primitives_module(), sky130.Sky130DeviceParams)
+    _compile_and_test(mimcap_primitives_module(), sky130.Sky130MimParams)
+    _compile_and_test(varcap_primitives_module(), sky130.Sky130VarParams)
+    _compile_and_test(vppcap_primitives_module(), sky130.Sky130VPPParams)
 
 
 def _netlist(prims):
@@ -319,8 +329,9 @@ def test_netlist():
     _netlist(precres_primitives_module())
     _netlist(diode_primitives_module())
     _netlist(bjt_primitives_module())
-    _netlist(gencap_primitives_module())
-    _netlist(devcap_primitives_module())
+    _netlist(mimcap_primitives_module())
+    _netlist(varcap_primitives_module())
+    _netlist(vppcap_primitives_module())
 
 
 def test_mos_module():
@@ -388,7 +399,7 @@ def test_precres_module():
 
 def test_diode_module():
 
-    p = sky130.Sky130DeviceParams()
+    p = sky130.Sky130DiodeParams()
 
     @h.module
     class HasDiodes:
@@ -421,20 +432,21 @@ def test_bjt_module():
 
 def test_gencap_module():
 
-    p = sky130.Sky130CapParams()
+    p = sky130.Sky130MimParams()
+    q = sky130.Sky130VarParams()
 
     @h.module
     class HasGenCaps:
 
         MIM_M3 = s.sky130_fd_pr__cap_mim_m3__base(p)()
         MIM_M4 = s.sky130_fd_pr__cap_mim_m4__base(p)()
-        VAR_LVT = s.sky130_fd_pr__cap_var_lvt(p)()
-        VAR_HVT = s.sky130_fd_pr__cap_var_hvt(p)()
+        VAR_LVT = s.sky130_fd_pr__cap_var_lvt(q)()
+        VAR_HVT = s.sky130_fd_pr__cap_var_hvt(q)()
 
 
 def test_devcap_module():
 
-    p = sky130.Sky130DeviceParams()
+    p = sky130.Sky130VPPParams()
 
     @h.module
     class HasDevCaps:
@@ -460,7 +472,6 @@ def test_devcap_module():
         cap_vpp_19 = s.sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4(p)()
         cap_vpp_20 = s.sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4(p)()
         cap_vpp_21 = s.sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5(p)()
-
 
 def test_walker_contents():
     from hdl21.tests.content import walker_test_content

@@ -379,6 +379,7 @@ class PhysicalCapacitorParams:
     w = Param(dtype=Scalar, desc="Width in resolution units", default=None)
     l = Param(dtype=Scalar, desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[str], desc="Multiplier", default=None)
 
 
 _add(
@@ -408,8 +409,8 @@ _add(
 ShieldedCapacitorPorts = [
     Port(name="p"),
     Port(name="n"),
-    Port(name="s"),
     Port(name="t"),
+    Port(name="s"),
 ]
 
 _add(
@@ -667,6 +668,7 @@ class BipolarParams:
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[Scalar], desc="Multiplier", default=None)
 
     def __post_init_post_parse__(self):
         """Value Checks"""
@@ -713,6 +715,7 @@ Diodes
 class DiodeParams:
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
+    a = Param(dtype=Optional[Scalar], desc="Area in resolution units squared", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 

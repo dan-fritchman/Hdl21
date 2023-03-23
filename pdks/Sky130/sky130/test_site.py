@@ -94,8 +94,8 @@ def test_sim_inv():
     assert vs > 0.5
     assert vs < 0.55
 
-def test_sim_components():
 
+def test_sim_components():
     @h.sim.sim
     class Sim:
         @h.module
@@ -107,23 +107,24 @@ def test_sim_components():
 
             for idx, val in enumerate(vars(s).values()):
 
-                exec("comp_"+str(idx)+"=val()")
-            
+                exec("comp_" + str(idx) + "=val()")
+
                 for jdx, p in enumerate(val().ports):
                     if jdx == 0:
-                        exec("comp_"+str(idx)+"."+p+"=vdd")
+                        exec("comp_" + str(idx) + "." + p + "=vdd")
                     else:
-                        exec("comp_"+str(idx)+"."+p+"=VSS")
+                        exec("comp_" + str(idx) + "." + p + "=VSS")
 
             # Simulation Controls
+
         op = h.sim.Op()
         inc = h.sim.Lib(path=sky130.install.model_lib, section="tt")
 
     opts = vsp.SimOptions(
-            simulator=vsp.SupportedSimulators.NGSPICE,
-            fmt=vsp.ResultFormat.SIM_DATA,
-            rundir="./scratch",
-        )
+        simulator=vsp.SupportedSimulators.NGSPICE,
+        fmt=vsp.ResultFormat.SIM_DATA,
+        rundir="./scratch",
+    )
 
     rv = Sim.run(opts)
     assert isinstance(rv, vsp.sim_data.SimResult)
