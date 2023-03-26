@@ -36,7 +36,7 @@ from pydantic.dataclasses import dataclass
 
 # Hdl21 Imports
 import hdl21 as h
-from hdl21.prefix import MILLI, TERA, MEGA
+from hdl21.prefix import  µ, MILLI, TERA, MEGA
 from hdl21.pdk import PdkInstallation, Corner, CmosCorner
 from hdl21.primitives import (
     Mos,
@@ -112,6 +112,9 @@ class Sky130VarParams:
     vm = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
 
+# FIXME: These params will not autoscale arguments, it doesn't really matter that they don't
+# defaults are all that is really valid, but it'd be nice if an error could be thrown with
+# parameters being provided or some kind of scaling in the class.
 @h.paramclass
 class Sky130VPPParams:
     """# Sky130 VPP Capacitor Parameters"""
@@ -243,7 +246,7 @@ def _vpp_module(modname: str, num_terminals: int) -> h.ExternalModule:
             domain=PDK_NAME,
             name=modname,
             desc=f"{PDK_NAME} PDK Perpendicular VPP {modname}",
-            port_list=deepcopy(h.primitives.ThreeTerminalPorts),
+            port_list=deepcopy(PerpVPPPorts),
             paramtype=Sky130VPPParams,
         )
 
@@ -497,44 +500,45 @@ CACHE = Cache()
 
 # Default param dicts
 default_xtor_size = {
-    "sky130_fd_pr__nfet_01v8": (h.Scalar(inner=0.420), h.Scalar(inner=0.150)),
-    "sky130_fd_pr__nfet_01v8_lvt": (h.Scalar(inner=0.420), h.Scalar(inner=0.150)),
-    "sky130_fd_pr__pfet_01v8": (h.Scalar(inner=0.550), h.Scalar(inner=0.150)),
-    "sky130_fd_pr__pfet_01v8_hvt": (h.Scalar(inner=0.550), h.Scalar(inner=0.150)),
-    "sky130_fd_pr__pfet_01v8_lvt": (h.Scalar(inner=0.550), h.Scalar(inner=0.350)),
-    "sky130_fd_pr__pfet_g5v0d10v5": (h.Scalar(inner=0.420), h.Scalar(inner=0.500)),
-    "sky130_fd_pr__nfet_g5v0d10v5": (h.Scalar(inner=0.420), h.Scalar(inner=0.500)),
-    "sky130_fd_pr__pfet_g5v0d16v0": (h.Scalar(inner=5.000), h.Scalar(inner=0.660)),
-    "sky130_fd_pr__nfet_20v0": (h.Scalar(inner=29.410), h.Scalar(inner=2.950)),
-    "sky130_fd_pr__nfet_20v0_zvt": (h.Scalar(inner=30.000), h.Scalar(inner=1.500)),
-    "sky130_fd_pr__nfet_20v0_iso": (h.Scalar(inner=30.000), h.Scalar(inner=1.500)),
-    "sky130_fd_pr__pfet_20v0": (h.Scalar(inner=30.000), h.Scalar(inner=1.000)),
-    "sky130_fd_pr__nfet_03v3_nvt": (h.Scalar(inner=0.700), h.Scalar(inner=0.500)),
-    "sky130_fd_pr__nfet_05v0_nvt": (h.Scalar(inner=0.700), h.Scalar(inner=0.900)),
-    "sky130_fd_pr__nfet_20v0_nvt": (h.Scalar(inner=30.000), h.Scalar(inner=1.000)),
-    "sky130_fd_pr__esd_nfet_01v8": (h.Scalar(inner=20.350), h.Scalar(inner=0.165)),
-    "sky130_fd_pr__esd_nfet_g5v0d10v5": (h.Scalar(inner=14.500), h.Scalar(inner=0.550)),
+    "sky130_fd_pr__nfet_01v8": (h.Scalar(inner=0.420 * µ), h.Scalar(inner=0.150 * µ)),
+    "sky130_fd_pr__nfet_01v8_lvt": (h.Scalar(inner=0.420 * µ), h.Scalar(inner=0.150 * µ)),
+    "sky130_fd_pr__pfet_01v8": (h.Scalar(inner=0.550 * µ), h.Scalar(inner=0.150 * µ)),
+    "sky130_fd_pr__pfet_01v8_hvt": (h.Scalar(inner=0.550 * µ), h.Scalar(inner=0.150 * µ)),
+    "sky130_fd_pr__pfet_01v8_lvt": (h.Scalar(inner=0.550 * µ), h.Scalar(inner=0.350 * µ)),
+    "sky130_fd_pr__pfet_g5v0d10v5": (h.Scalar(inner=0.420 * µ), h.Scalar(inner=0.500 * µ)),
+    "sky130_fd_pr__nfet_g5v0d10v5": (h.Scalar(inner=0.420 * µ), h.Scalar(inner=0.500 * µ)),
+    "sky130_fd_pr__pfet_g5v0d16v0": (h.Scalar(inner=5.000 * µ), h.Scalar(inner=0.660 * µ)),
+    "sky130_fd_pr__nfet_20v0": (h.Scalar(inner=29.410 * µ), h.Scalar(inner=2.950 * µ)),
+    "sky130_fd_pr__nfet_20v0_zvt": (h.Scalar(inner=30.000 * µ), h.Scalar(inner=1.500 * µ)),
+    "sky130_fd_pr__nfet_20v0_iso": (h.Scalar(inner=30.000 * µ), h.Scalar(inner=1.500 * µ)),
+    "sky130_fd_pr__pfet_20v0": (h.Scalar(inner=30.000 * µ), h.Scalar(inner=1.000 * µ)),
+    "sky130_fd_pr__nfet_03v3_nvt": (h.Scalar(inner=0.700 * µ), h.Scalar(inner=0.500 * µ)),
+    "sky130_fd_pr__nfet_05v0_nvt": (h.Scalar(inner=0.700 * µ), h.Scalar(inner=0.900 * µ)),
+    "sky130_fd_pr__nfet_20v0_nvt": (h.Scalar(inner=30.000 * µ), h.Scalar(inner=1.000 * µ)),
+    "sky130_fd_pr__esd_nfet_01v8": (h.Scalar(inner=20.350 * µ), h.Scalar(inner=0.165 * µ)),
+    "sky130_fd_pr__esd_nfet_g5v0d10v5": (h.Scalar(inner=14.500 * µ), h.Scalar(inner=0.550 * µ)),
     "sky130_fd_pr__esd_nfet_g5v0d10v5_nvt": (
-        h.Scalar(inner=10.000),
-        h.Scalar(inner=0.900),
+        h.Scalar(inner=10.000 * µ),
+        h.Scalar(inner=0.900 * µ),
     ),
-    "sky130_fd_pr__esd_pfet_g5v0d10v5": (h.Scalar(inner=14.500), h.Scalar(inner=0.550)),
+    "sky130_fd_pr__esd_pfet_g5v0d10v5": (h.Scalar(inner=14.500 * µ), h.Scalar(inner=0.550 * µ)),
 }
 
 default_gen_res_size = {
-    "sky130_fd_pr__res_generic_po": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_l1": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_m1": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_m2": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_m3": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_m4": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_m5": (h.Scalar(inner=0.720), h.Scalar(inner=0.290)),
-    "sky130_fd_pr__res_generic_nd": (h.Scalar(inner=0.150), h.Scalar(inner=0.270)),
-    "sky130_fd_pr__res_generic_pd": (h.Scalar(inner=0.150), h.Scalar(inner=0.270)),
+    "sky130_fd_pr__res_generic_po": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_l1": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_m1": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_m2": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_m3": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_m4": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_m5": (h.Scalar(inner=0.720 * µ), h.Scalar(inner=0.290 * µ)),
+    "sky130_fd_pr__res_generic_nd": (h.Scalar(inner=0.150 * µ), h.Scalar(inner=0.270 * µ)),
+    "sky130_fd_pr__res_generic_pd": (h.Scalar(inner=0.150 * µ), h.Scalar(inner=0.270 * µ)),
     # FIXME: This value is lifted from xschem but can't be found in documentation
-    "sky130_fd_pr__res_iso_pw": (h.Scalar(inner=2.650), h.Scalar(inner=2.650)),
+    "sky130_fd_pr__res_iso_pw": (h.Scalar(inner=2.650 * µ), h.Scalar(inner=2.650 * µ)),
 }
 
+"These have to be left in microns for parsing reasons"
 default_prec_res_L = {
     "sky130_fd_pr__res_high_po_0p35": h.Scalar(inner=0.350),
     "sky130_fd_pr__res_high_po_0p69": h.Scalar(inner=0.690),
@@ -550,10 +554,10 @@ default_prec_res_L = {
 
 default_cap_sizes = {
     # FIXME: Using documentation minimum sizing not sure of correct answer
-    "sky130_fd_pr__cap_mim_m3__base": (h.Scalar(inner=2.000), h.Scalar(inner=2.000)),
-    "sky130_fd_pr__cap_mim_m4__base": (h.Scalar(inner=2.000), h.Scalar(inner=2.000)),
-    "sky130_fd_pr__cap_var_lvt": (h.Scalar(inner=0.180), h.Scalar(inner=0.180)),
-    "sky130_fd_pr__cap_var_hvt": (h.Scalar(inner=0.180), h.Scalar(inner=0.180)),
+    "sky130_fd_pr__cap_mim_m3__base": (h.Scalar(inner=2.000 * µ), h.Scalar(inner=2.000 * µ)),
+    "sky130_fd_pr__cap_mim_m4__base": (h.Scalar(inner=2.000 * µ), h.Scalar(inner=2.000 * µ)),
+    "sky130_fd_pr__cap_var_lvt": (h.Scalar(inner=0.180 * µ), h.Scalar(inner=0.180 * µ)),
+    "sky130_fd_pr__cap_var_hvt": (h.Scalar(inner=0.180 * µ), h.Scalar(inner=0.180 * µ)),
 }
 
 
@@ -679,19 +683,7 @@ class Sky130Walker(h.HierarchyWalker):
 
         elif mod.paramtype == Sky130PrecResParams:
 
-            if params.l is None:
-
-                l = self.scale_param(default_prec_res_L[mod.name], 1000 * MILLI)
-
-            elif params.l >= default_prec_res_L[mod.name]:
-
-                l = self.scale_param(params.l, 1000 * MILLI)
-
-            else:
-
-                raise ValueError(
-                    f"Length {params.l} is below minimum for {mod.name} model"
-                )
+            l = default_prec_res_L[mod.name]
 
             modparams = Sky130PrecResParams(l=l)
 
@@ -757,7 +749,8 @@ class Sky130Walker(h.HierarchyWalker):
 
             # This scaling is a quirk of SKY130
             a = params.w * params.l * 1 * TERA
-            modparams = Sky130DiodeParams(a=a)
+            pj = 2 * (params.w + params.l) * MEGA
+            modparams = Sky130DiodeParams(a=a,pj=pj)
 
         else:
 
@@ -804,7 +797,7 @@ class Sky130Walker(h.HierarchyWalker):
             raise TypeError(f"Invalid Scalar parameter {orig}")
         inner = orig.inner
         if isinstance(inner, h.Prefixed):
-            return h.Scalar(inner=inner)
+            return h.Scalar(inner=inner * MEGA)
         if isinstance(inner, h.Literal):
             return h.Scalar(inner=h.Literal(f"({inner} * 1e6)"))
         raise TypeError(f"Param Value {inner}")
@@ -817,25 +810,17 @@ class Sky130Walker(h.HierarchyWalker):
 
             w = defaults[modname][0]
 
-        elif params.w >= defaults[modname][0]:
-
-            w = params.w
-
         else:
 
-            raise ValueError(f"Width {params.w} is below minimum for {modname} model")
+            w = params.w
 
         if params.l is None:
 
             l = defaults[modname][1]
 
-        elif params.l >= defaults[modname][1]:
-
-            l = params.l
-
         else:
 
-            raise ValueError(f"Length {params.l} is below minimum for {modname} model")
+            l = params.l
 
         w = self.scale_param(w, 1000 * MILLI)
         l = self.scale_param(l, 1000 * MILLI)

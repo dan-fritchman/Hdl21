@@ -12,8 +12,8 @@ to ensure that the generated files have the following properties:
 from io import StringIO
 
 import hdl21 as h
-import sky130
-
+from hdl21.prefix import µ
+import sky130# No weird or illegal parameters...
 
 def test_xtor_netlists():
     """
@@ -35,7 +35,7 @@ def test_xtor_netlists():
     for x in sky130.xtors.keys():
 
         # Relevant params
-        p = h.MosParams(model=x[0], tp=x[1], vth=x[2], w=30, l=30)
+        p = h.MosParams(model=x[0], tp=x[1], vth=x[2], w=30 * µ, l=30 * µ)
 
         # Generate & Compile
         mod = h.elaborate(GenXtor(p))
@@ -76,7 +76,7 @@ def test_2_term_res_netlists():
         if len(sky130.ress[x].port_list) == 2:
 
             # Relevant params
-            p = h.PhysicalResistorParams(model=x, w=10, l=10)
+            p = h.PhysicalResistorParams(model=x, w=10 * µ, l=10 * µ)
 
             # Generate & Compile
             mod = h.elaborate(GenRes(p))
@@ -116,7 +116,7 @@ def test_3_term_res_netlists():
         if len(sky130.ress[x].port_list) == 3:
 
             # Relevant params
-            p = h.PhysicalResistorParams(model=x, l=10)
+            p = h.PhysicalResistorParams(model=x, w=10 * µ, l=10 * µ)
 
             # Generate & Compile
             mod = h.elaborate(GenRes(p))
@@ -127,23 +127,25 @@ def test_3_term_res_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue().split("\n")
 
+            name = sky130.ress[x].name
+
             # Are you a generic resistor??
             if x.startswith("GEN"):
-
-                name = sky130.ress[x].name
-                w = float(sky130.default_gen_res_size[name][0])
+              
                 assert s[9] == "+ x y z "  # Correctly maps ports to their places
                 assert s[10] == "+ " + name + " "  # Has correct PDK name
                 assert (
-                    s[11] == f"+ w='{w}' l='10' m='1' "
+                    s[11] == f"+ w='10' l='10' m='1' "
                 )  # No weird or illegal parameters...
 
             else:
+                
+                fixed_length = float(sky130.default_prec_res_L[name].inner)
 
                 assert s[9] == "+ x y z "  # Correctly maps ports to their places
-                assert s[10] == "+ " + sky130.ress[x].name + " "  # Has correct PDK name
+                assert s[10] == "+ " + name + " "  # Has correct PDK name
                 assert (
-                    s[11] == "+ l='10' mult='1' m='1' "
+                    s[11] == f"+ l='{fixed_length}' mult='1' m='1' "
                 )  # No weird or illegal parameters...
 
 
@@ -181,7 +183,7 @@ def test_diode_netlists():
 
         assert s[9] == "+ x y "  # Correctly maps ports to their places...
         assert s[10] == "+ " + sky130.diodes[x].name + " "  # Has correct PDK name...
-        assert s[11] == "+ a='9T' pj='4M' "  # No weird or illegal parameters...
+        assert s[11] == "+ a='9T' pj='12M' "  # No weird or illegal parameters...
 
 
 def test_bjt_netlists():
@@ -230,39 +232,7 @@ def test_mim_cap_netlists():
         if x.startswith("MIM"):
 
             # Relevant params
-            p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
-
-            # Generate and compile
-            mod = h.elaborate(GenMimCap(p))
-            sky130.compile(mod)
-
-            # Netlist and compare
-            s = StringIO()
-            h.netlist(mod, dest=s, fmt="spice")
-            s = s.getvalue().split("\n")
-
-            assert s[9] == "+ x y "  # Correctly maps ports to their places...
-            assert s[10] == "+ " + sky130.caps[x].name + " "  # Has correct PDK name...
-            assert s[11] == "+ w='3' l='3' mf='1' "  # No weird or illegal parameters...
-
-
-def test_mim_cap_netlists():
-    @h.generator
-    def GenMimCap(params: h.PhysicalCapacitorParams) -> h.Module:
-        @h.module
-        class SingleCap:
-
-            x, y = 2 * h.Signal()
-            genCap = h.PhysicalCapacitor(params)(p=x, n=y)
-
-        return SingleCap
-
-    for x in sky130.caps.keys():
-
-        if x.startswith("MIM"):
-
-            # Relevant params
-            p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
+            p = h.PhysicalCapacitorParams(model=x, w=3 * µ, l=3 * µ)
 
             # Generate and compile
             mod = h.elaborate(GenMimCap(p))
@@ -280,6 +250,39 @@ def test_mim_cap_netlists():
 
 def test_var_cap_netlists():
     @h.generator
+    def GenMimCap(params: h.PhysicalCapacitorParams) -> h.Module:
+        @h.module
+        class SingleCap:
+
+            x, y, z = 3 * h.Signal()
+            genCap = h.ThreeTerminalCapacitor(params)(p=x, n=y, b=z)
+
+        return SingleCap
+
+    for x in sky130.caps.keys():
+
+        if x.startswith("VAR"):
+
+            # Relevant params
+            p = h.PhysicalCapacitorParams(model=x, w=3 * µ, l=3 * µ)
+
+            # Generate and compile
+            mod = h.elaborate(GenMimCap(p))
+            sky130.compile(mod)
+
+            # Netlist and compare
+            s = StringIO()
+            h.netlist(mod, dest=s, fmt="spice")
+            s = s.getvalue().split("\n")
+
+            assert s[9] == "+ x y z "  # Correctly maps ports to their places...
+            assert s[10] == "+ " + sky130.caps[x].name + " "  # Has correct PDK name...
+            assert s[11] == "+ w='3' l='3' vm='1' "  # No weird or illegal parameters...
+
+
+def test_vpp_cap_netlists():
+
+    @h.generator
     def T3VPPCap(params: h.PhysicalCapacitorParams) -> h.Module:
         @h.module
         class SingleCap:
@@ -289,55 +292,57 @@ def test_var_cap_netlists():
 
         return SingleCap
 
-    @h.generator
-    def T4VPPCap(params: h.PhysicalCapacitorParams) -> h.Module:
-        @h.module
-        class SingleCap:
+    for x in sky130.vpps.keys():
 
-            w, x, y, z = 4 * h.Signal()
-            genCap = h.ShieldedCapacitor(params)(p=w, n=x, t=y, s=z)
+        if x.startswith("VPP_PARA"):
 
-        return SingleCap
+            p = sky130.Sky130VPPParams(w=3,l=3)
 
-    for x in sky130.caps.keys():
+            @h.module
+            class SingleCap:
 
-        if not (x.startswith("MIM") or x.startswith("VAR")):
+                a, b, c = 3 * h.Signal()
+                exec(f"genCap = sky130.modules.{x}")
+                Cap = genCap(p)(p=a,n=b,b=c)
 
-            if x.startswith("VPP_PARA"):
-                # Relevant params
-                p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
+            # Generate
+            mod = SingleCap
+            sky130.compile(mod)
 
-                # Generate and compile
-                mod = h.elaborate(T3VPPCap(p))
-                sky130.compile(mod)
 
-                # Netlist and compare
-                s = StringIO()
-                h.netlist(mod, dest=s, fmt="spice")
-                s = s.getvalue().split("\n")
+            # Netlist and compare
+            s = StringIO()
+            h.netlist(mod, dest=s, fmt="spice")
+            s = s.getvalue().split("\n")
 
-                assert s[9] == "+ x y z "  # Correctly maps ports to their places...
-                assert (
-                    s[10] == "+ " + sky130.caps[x].name + " "
-                )  # Has correct PDK name...
-                assert s[11] == "+ w='3' l='3' mult='1' m='1' "
+            assert s[9] == "+ a b c "  # Correctly maps ports to their places...
+            assert (
+                s[10] == "+ " + sky130.vpps[x].name + " "
+            )  # Has correct PDK name...
+            assert s[11] == "+ w='3' l='3' mult='1' m='1' "
 
-            if x.startswith("VPP_PERP"):
+        if x.startswith("VPP_PERP"):
 
-                # Relevant params
-                p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
+            p = sky130.Sky130VPPParams(w=3,l=3)
 
-                # Generate and compile
-                mod = h.elaborate(T4VPPCap(p))
-                sky130.compile(mod)
+            @h.module
+            class SingleCap:
 
-                # Netlist and compare
-                s = StringIO()
-                h.netlist(mod, dest=s, fmt="spice")
-                s = s.getvalue().split("\n")
+                a, b, c, d = 4 * h.Signal()
+                exec(f"genCap = sky130.modules.{x}")
+                Cap = genCap(p)(p=a,n=b,t=c,b=d)
 
-                assert s[9] == "+ w x y z "  # Correctly maps ports to their places...
-                assert (
-                    s[10] == "+ " + sky130.caps[x].name + " "
-                )  # Has correct PDK name...
-                assert s[11] == "+ w='3' l='3' mult='1' m='1' "
+            # Generate
+            mod = SingleCap
+            sky130.compile(mod)
+
+            # Netlist and compare
+            s = StringIO()
+            h.netlist(mod, dest=s, fmt="spice")
+            s = s.getvalue().split("\n")
+
+            assert s[9] == "+ a b c d "  # Correctly maps ports to their places...
+            assert (
+                s[10] == "+ " + sky130.vpps[x].name + " "
+            )  # Has correct PDK name...
+            assert s[11] == "+ w='3' l='3' mult='1' m='1' "
