@@ -18,15 +18,15 @@ def mos_primitives_module():
         z = h.Signal(desc="Sole signal connected to everything")
 
         # Add all generic transistors
-        nfet_03v3 = h.Nmos(h.MosParams(model="3.3V"))(d=z, g=z, s=z, b=z)
-        pfet_03v3 = h.Pmos(h.MosParams(model="3.3V"))(d=z, g=z, s=z, b=z)
-        nfet_06v0 = h.Nmos(h.MosParams(model="6.0V"))(d=z, g=z, s=z, b=z)
-        pfet_06v0 = h.Pmos(h.MosParams(model="6.0V"))(d=z, g=z, s=z, b=z)
-        nfet_03v3_dss = h.Nmos(h.MosParams(model="3.3V_DSS"))(d=z, g=z, s=z, b=z)
-        pfet_03v3_dss = h.Pmos(h.MosParams(model="3.3V_DSS"))(d=z, g=z, s=z, b=z)
-        nfet_06v0_dss = h.Nmos(h.MosParams(model="6.0V_DSS"))(d=z, g=z, s=z, b=z)
-        pfet_06v0_dss = h.Pmos(h.MosParams(model="6.0V_DSS"))(d=z, g=z, s=z, b=z)
-        nfet_06v0_nvt = h.Nmos(h.MosParams(model="NAT_6.0V"))(d=z, g=z, s=z, b=z)
+        nfet_03v3 = h.Mos(model="PFET_3p3V")(d=z, g=z, s=z, b=z)
+        pfet_03v3 = h.Mos(model="NFET_3p3V")(d=z, g=z, s=z, b=z)
+        nfet_06v0 = h.Mos(model="NFET_6p0V")(d=z, g=z, s=z, b=z)
+        pfet_06v0 = h.Mos(model="PFET_6p0V")(d=z, g=z, s=z, b=z)
+        nfet_03v3_dss = h.Mos(model="NFET_3p3V_DSS")(d=z, g=z, s=z, b=z)
+        pfet_03v3_dss = h.Mos(model="PFET_3p3V_DSS")(d=z, g=z, s=z, b=z)
+        nfet_06v0_dss = h.Mos(model="NFET_6p0V_DSS")(d=z, g=z, s=z, b=z)
+        pfet_06v0_dss = h.Mos(model="PFET_6p0V_DSS")(d=z, g=z, s=z, b=z)
+        nfet_06v0_nvt = h.Mos(model="NFET_6p0V_NAT")(d=z, g=z, s=z, b=z)
 
     return MosPrimitives
 
@@ -76,12 +76,12 @@ def diode_primitives_module():
         z = h.Signal(desc="Sole signal connected to everything")
 
         # Diodes
-        res_nd2ps_33v = h.Diode(model="ND2PS_3.3V")(p=z, n=z)
-        res_pd2nw_33v = h.Diode(model="PD2NW_3.3V")(p=z, n=z)
-        res_nd2ps_60v = h.Diode(model="ND2PS_6.0V")(p=z, n=z)
-        res_pd2nw_60v = h.Diode(model="PD2NW_6.0V")(p=z, n=z)
-        res_nw2ps_33v = h.Diode(model="NW2PS_3.3V")(p=z, n=z)
-        res_nw2ps_60v = h.Diode(model="NW2PS_6.0V")(p=z, n=z)
+        res_nd2ps_33v = h.Diode(model="ND2PS_3p3V")(p=z, n=z)
+        res_pd2nw_33v = h.Diode(model="PD2NW_3p3V")(p=z, n=z)
+        res_nd2ps_60v = h.Diode(model="ND2PS_6p0V")(p=z, n=z)
+        res_pd2nw_60v = h.Diode(model="PD2NW_6p0V")(p=z, n=z)
+        res_nw2ps_33v = h.Diode(model="NW2PS_3p3V")(p=z, n=z)
+        res_nw2ps_60v = h.Diode(model="NW2PS_6p0V")(p=z, n=z)
         res_pw2dw = h.Diode(model="PW2DW")(p=z, n=z)
         res_dw2ps = h.Diode(model="DW2PS")(p=z, n=z)
         res_schottky = h.Diode(model="Schottky")(p=z, n=z)
@@ -96,16 +96,10 @@ def bjt_primitives_module():
         z = h.Signal(desc="Sole signal connected to everything")
 
         # Bipolar transistors
-        pnp_10x042 = h.Pnp(model="10.0x0.42")
-        pnp_5x042 = h.Pnp(model="5.0x0.42")
-        pnp_10x100 = h.Pnp(model="10.0x10.0")
-        pnp_5x50 = h.Pnp(model="5.0x5.0")
-        npn_10x100 = h.FourTerminalBipolar(model="10.0x10.0", tp=BipolarType.NPN)
-        npn_5x50 = h.FourTerminalBipolar(model="5.0x5.0", tp=BipolarType.NPN)
-        npn_054x160 = h.FourTerminalBipolar(model="0.54x16.0", tp=BipolarType.NPN)
-        npn_054x80 = h.FourTerminalBipolar(model="0.54x8.0", tp=BipolarType.NPN)
-        npn_054x40 = h.FourTerminalBipolar(model="0.54x4.0", tp=BipolarType.NPN)
-        npn_054x20 = h.FourTerminalBipolar(model="0.54x2.0", tp=BipolarType.NPN)
+        pnp_10x042 = h.Pnp(model="PNP_10p0x0p42")
+        pnp_5x042 = h.Pnp(model="PNP_5p0x0p42")
+        pnp_10x100 = h.Pnp(model="PNP_10p0x10p0")
+        pnp_5x50 = h.Pnp(model="PNP_5p0x5p0")
 
     return BjtPrimitives
 
@@ -117,25 +111,25 @@ def cap_primitives_module():
         z = h.Signal(desc="Sole signal connected to everything")
 
         # Capacitors
-        cap_15fF_MIM = h.PhysicalCapacitor(model="1.5fF_MIM")(p=z, n=z)
-        cap_10fF_MIM = h.PhysicalCapacitor(model="1.0fF_MIM")(p=z, n=z)
-        cap_20fF_MIM = h.PhysicalCapacitor(model="2.0fF_MIM")(p=z, n=z)
+        cap_15fF_MIM = h.PhysicalCapacitor(model="MIM_1p5fF")(p=z, n=z)
+        cap_10fF_MIM = h.PhysicalCapacitor(model="MIM_1p0fF")(p=z, n=z)
+        cap_20fF_MIM = h.PhysicalCapacitor(model="MIM_2p0fF")(p=z, n=z)
 
         # Three-terminal capacitors
-        cap_33V_NMOS = h.ThreeTerminalCapacitor(model="3.3V_NMOS")(p=z, n=z, b=z)
-        cap_33V_PMOS = h.ThreeTerminalCapacitor(model="3.3V_PMOS")(p=z, n=z, b=z)
-        cap_60V_NMOS = h.ThreeTerminalCapacitor(model="6.0V_NMOS")(p=z, n=z, b=z)
-        cap_60V_PMOS = h.ThreeTerminalCapacitor(model="6.0V_PMOS")(p=z, n=z, b=z)
-        cap_33V_NMOS_Nwell = h.ThreeTerminalCapacitor(model="3.3V_NMOS_Nwell")(
+        cap_33V_NMOS = h.ThreeTerminalCapacitor(model="NMOS_3p3V")(p=z, n=z, b=z)
+        cap_33V_PMOS = h.ThreeTerminalCapacitor(model="PMOS_3p3V")(p=z, n=z, b=z)
+        cap_60V_NMOS = h.ThreeTerminalCapacitor(model="NMOS_6p0V")(p=z, n=z, b=z)
+        cap_60V_PMOS = h.ThreeTerminalCapacitor(model="PMOS_6p0V")(p=z, n=z, b=z)
+        cap_33V_NMOS_Nwell = h.ThreeTerminalCapacitor(model="NMOS_Nwell_3p3V")(
             p=z, n=z, b=z
         )
-        cap_33V_PMOS_Pwell = h.ThreeTerminalCapacitor(model="3.3V_PMOS_Pwell")(
+        cap_33V_PMOS_Pwell = h.ThreeTerminalCapacitor(model="PMOS_Pwell_3p3V")(
             p=z, n=z, b=z
         )
-        cap_60V_NMOS_Nwell = h.ThreeTerminalCapacitor(model="6.0V_NMOS_Nwell")(
+        cap_60V_NMOS_Nwell = h.ThreeTerminalCapacitor(model="NMOS_Nwell_6p0V")(
             p=z, n=z, b=z
         )
-        cap_60V_PMOS_Pwell = h.ThreeTerminalCapacitor(model="6.0V_PMOS_Pwell")(
+        cap_60V_PMOS_Pwell = h.ThreeTerminalCapacitor(model="PMOS_Pwell_6p0V")(
             p=z, n=z, b=z
         )
 
@@ -190,15 +184,15 @@ def test_mos_module():
     @h.module
     class HasMos:
 
-        nfet_03v3 = g.nfet_03v3(p)()
-        pfet_03v3 = g.pfet_03v3(p)()
-        nfet_06v0 = g.nfet_06v0(p)()
-        pfet_06v0 = g.pfet_06v0(p)()
-        nfet_03v3_dss = g.nfet_03v3_dss(p)()
-        pfet_03v3_dss = g.pfet_03v3_dss(p)()
-        nfet_06v0_dss = g.nfet_06v0_dss(p)()
-        pfet_06v0_dss = g.pfet_06v0_dss(p)()
-        nfet_06v0_nvt = g.nfet_06v0_nvt(p)()
+        nfet_03v3 = g.PFET_3p3V(p)()
+        pfet_03v3 = g.NFET_3p3V(p)()
+        nfet_06v0 = g.NFET_6p0V(p)()
+        pfet_06v0 = g.PFET_6p0V(p)()
+        nfet_03v3_dss = g.NFET_3p3V_DSS(p)()
+        pfet_03v3_dss = g.PFET_3p3V_DSS(p)()
+        nfet_06v0_dss = g.NFET_6p0V_DSS(p)()
+        pfet_06v0_dss = g.PFET_6p0V_DSS(p)()
+        nfet_06v0_nvt = g.NFET_6p0V_NAT(p)()
 
 
 def test_res_module():
@@ -208,27 +202,27 @@ def test_res_module():
     @h.module
     class HasRes:
 
-        nplus_u = g.nplus_u(p)()
-        pplus_u = g.pplus_u(p)()
-        nplus_s = g.nplus_s(p)()
-        pplus_s = g.pplus_s(p)()
-        nwell = g.nwell(p)()
-        npolyf_u = g.npolyf_u(p)()
-        ppolyf_u = g.ppolyf_u(p)()
-        npolyf_s = g.npolyf_s(p)()
-        ppolyf_s = g.ppolyf_s(p)()
-        ppolyf_u_1k = g.ppolyf_u_1k(p)()
-        ppolyf_u_2k = g.ppolyf_u_2k(p)()
-        ppolyf_u_1k_6p0 = g.ppolyf_u_1k_6p0(p)()
-        ppolyf_u_2k_6p0 = g.ppolyf_u_2k_6p0(p)()
-        ppolyf_u_3k = g.ppolyf_u_3k(p)()
-        rm1 = g.rm1(p)()
-        rm2 = g.rm2(p)()
-        rm3 = g.rm3(p)()
-        tm6k = g.tm6k(p)()
-        tm9k = g.tm9k(p)()
-        tm11k = g.tm11k(p)()
-        tm30k = g.tm30k(p)()
+        nplus_u = g.NPLUS_U(p)()
+        pplus_u = g.PPLUS_U(p)()
+        nplus_s = g.NPLUS_S(p)()
+        pplus_s = g.PPLUS_S(p)()
+        nwell = g.NWELL(p)()
+        npolyf_u = g.NPOLYF_U(p)()
+        ppolyf_u = g.PPOLYF_U(p)()
+        npolyf_s = g.NPOLYF_S(p)()
+        ppolyf_s = g.PPOLYF_S(p)()
+        ppolyf_u_1k = g.PPOLYF_U_1K(p)()
+        ppolyf_u_2k = g.PPOLYF_U_2K(p)()
+        ppolyf_u_1k_6p0 = g.PPOLYF_U_1K_6P0(p)()
+        ppolyf_u_2k_6p0 = g.PPOLYF_U_2K_6P0(p)()
+        ppolyf_u_3k = g.PPOLYF_U_3K(p)()
+        rm1 = g.RM1(p)()
+        rm2 = g.RM2(p)()
+        rm3 = g.RM3(p)()
+        tm6k = g.TM6K(p)()
+        tm9k = g.TM9K(p)()
+        tm11k = g.TM11K(p)()
+        tm30k = g.TM30K(p)()
 
 
 def test_cap_module():
@@ -238,54 +232,54 @@ def test_cap_module():
     @h.module
     class HasCap:
 
-        cap_mim_1f5fF = g.cap_mim_1f5fF(p)()
-        cap_mim_1f0fF = g.cap_mim_1f0fF(p)()
-        cap_mim_2f0fF = g.cap_mim_2f0fF(p)()
-        cap_nmos_03v3 = g.cap_nmos_03v3(p)()
-        cap_pmos_03v3 = g.cap_pmos_03v3(p)()
-        cap_nmos_06v0 = g.cap_nmos_06v0(p)()
-        cap_pmos_06v0 = g.cap_pmos_06v0(p)()
-        cap_nmos_03v3_b = g.cap_nmos_03v3_b(p)()
-        cap_pmos_03v3_b = g.cap_pmos_03v3_b(p)()
-        cap_nmos_06v0_b = g.cap_nmos_06v0_b(p)()
-        cap_pmos_06v0_b = g.cap_pmos_06v0_b(p)()
+        cap_mim_1f5fF = g.MIM_1p5fF(p)()
+        cap_mim_1f0fF = g.MIM_1p0fF(p)()
+        cap_mim_2f0fF = g.MIM_2p0fF(p)()
+        cap_nmos_03v3 = g.NMOS_3p3V(p)()
+        cap_pmos_03v3 = g.PMOS_3p3V(p)()
+        cap_nmos_06v0 = g.NMOS_6p0V(p)()
+        cap_pmos_06v0 = g.PMOS_6p0V(p)()
+        cap_nmos_03v3_b = g.NMOS_Nwell_3p3V(p)()
+        cap_pmos_03v3_b = g.PMOS_Pwell_3p3V(p)()
+        cap_nmos_06v0_b = g.NMOS_Nwell_6p0V(p)()
+        cap_pmos_06v0_b = g.PMOS_Pwell_6p0V(p)()
 
 
 def test_diodes_module():
 
-    p = gf180.GF180DeviceParams()
+    p = gf180.GF180DiodeParams()
 
     @h.module
     class HasDiode:
 
-        diode_nd2ps_03v3 = g.diode_nd2ps_03v3(p)()
-        diode_pd2nw_03v3 = g.diode_pd2nw_03v3(p)()
-        diode_nd2ps_06v0 = g.diode_nd2ps_06v0(p)()
-        diode_pd2nw_06v0 = g.diode_pd2nw_06v0(p)()
-        diode_nw2ps_03v3 = g.diode_nw2ps_03v3(p)()
-        diode_nw2ps_06v0 = g.diode_nw2ps_06v0(p)()
-        diode_pw2dw = g.diode_pw2dw(p)()
-        diode_dw2ps = g.diode_dw2ps(p)()
-        sc_diode = g.sc_diode(p)()
+        diode_nd2ps_03v3 = g.ND2PS_3p3V(p)()
+        diode_pd2nw_03v3 = g.PD2NW_3p3V(p)()
+        diode_nd2ps_06v0 = g.ND2PS_6p0V(p)()
+        diode_pd2nw_06v0 = g.PD2NW_6p0V(p)()
+        diode_nw2ps_03v3 = g.NW2PS_3p3V(p)()
+        diode_nw2ps_06v0 = g.NW2PS_6p0V(p)()
+        diode_pw2dw = g.PW2DW(p)()
+        diode_dw2ps = g.DW2PS(p)()
+        sc_diode = g.Schottky(p)()
 
 
 def test_bjt_module():
 
-    p = gf180.GF180DeviceParams()
+    p = gf180.GF180BipolarParams()
 
     @h.module
     class HasBJT:
 
-        pnp_10p00x00p42 = g.pnp_10p00x00p42(p)()
-        pnp_05p00x00p42 = g.pnp_05p00x00p42(p)()
-        pnp_10p00x10p00 = g.pnp_10p00x10p00(p)()
-        pnp_05p00x05p00 = g.pnp_05p00x05p00(p)()
-        npn_10p00x10p00 = g.npn_10p00x10p00(p)()
-        npn_05p00x05p00 = g.npn_05p00x05p00(p)()
-        npn_00p54x16p00 = g.npn_00p54x16p00(p)()
-        npn_00p54x08p00 = g.npn_00p54x08p00(p)()
-        npn_00p54x04p00 = g.npn_00p54x04p00(p)()
-        npn_00p54x02p00 = g.npn_00p54x02p00(p)()
+        pnp_10p00x00p42 = g.PNP_10p0x0p42(p)()
+        pnp_05p00x00p42 = g.PNP_5p0x0p42(p)()
+        pnp_10p00x10p00 = g.PNP_10p0x10p0(p)()
+        pnp_05p00x05p00 = g.PNP_5p0x5p0(p)()
+        npn_10p00x10p00 = g.NPN_10p0x10p0(p)()
+        npn_05p00x05p00 = g.NPN_5p0x5p0(p)()
+        npn_00p54x16p00 = g.NPN_0p54x16p0(p)()
+        npn_00p54x08p00 = g.NPN_0p54x8p0(p)()
+        npn_00p54x04p00 = g.NPN_0p54x4p0(p)()
+        npn_00p54x02p00 = g.NPN_0p54x2p0(p)()
 
 def test_walker_contents():
     from hdl21.tests.content import walker_test_content

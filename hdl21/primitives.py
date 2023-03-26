@@ -36,7 +36,6 @@ Summary of the content of the primitive library:
 | IdealCapacitor                 | Ideal Capacitor                   | IDEAL    | C, Cap, Capacitor, IdealC, IdealCap   | p, n         |
 | PhysicalCapacitor              | Physical Capacitor                | PHYSICAL | PhyC, PhyCap, CapPhy, PhyCapacitor    | p, n         |
 | ThreeTerminalCapacitor         | Three Terminal Capacitor          | PHYSICAL | Cap3, PhyCap3, CapPhy3, PhyCapacitor3 | p, n, b      |
-| ShieldedCapacitor              | Shielded Capacitor                | PHYSICAL | ShCap, ShieldCap, ShieldCapacitor     | p, n, s, t   |
 | IdealInductor                  | Ideal Inductor                    | IDEAL    | L, Ind, Inductor, IdealL, IdealInd    | p, n         |
 | PhysicalInductor               | Physical Inductor                 | PHYSICAL | PhyL, PhyInd, IndPhy, PhyInductor     | p, n         |
 | ThreeTerminalInductor          | Three Terminal Inductor           | PHYSICAL | Ind3, PhyInd3, IndPhy3, PhyInductor3  | p, n, b      |
@@ -49,7 +48,6 @@ Summary of the content of the primitive library:
 | VoltageControlledCurrentSource | Voltage Controlled Current Source | IDEAL    | Vccs, VCCS                            | p, n, cp, cn |
 | CurrentControlledCurrentSource | Current Controlled Current Source | IDEAL    | Cccs, CCCS                            | p, n, cp, cn |
 | Bipolar                        | Bipolar Transistor                | PHYSICAL | Bjt, BJT                              | c, b, e      |
-| FourTerminalBipolar            | Four Terminal Bipolar Transistor  | PHYSICAL | 4TBjt, 4TBJT                          | c, b, e, s   |
 | Diode                          | Diode                             | PHYSICAL | D                                     | p, n         |
 
 """
@@ -226,16 +224,18 @@ class MosVth(Enum):
     LOW = "LOW"
     HIGH = "HIGH"
     ULTRA_LOW = "ULTRA_LOW"
+    ZERO = "ZERO"
+    NATIVE = "NATIVE"
 
 
 class MosFamily(Enum):
     """# MOS Family Enumeration"""
 
     NONE = "NONE"
+    CORE = "CORE"
     IO = "IO"
     LP = "LP"
     HP = "HP"
-
 
 @paramclass
 class MosParams:
@@ -668,6 +668,7 @@ class BipolarParams:
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[int], desc="Parallel Multiplier", default=1)
 
     def __post_init_post_parse__(self):
         """Value Checks"""
@@ -689,25 +690,6 @@ Bipolar = _add(
     ),
     aliases=["Bjt", "BJT"],
 )
-
-FourTerminalBipolarPorts = [
-    Port(name="c"),
-    Port(name="b"),
-    Port(name="e"),
-    Port(name="s"),
-]
-
-FourTerminalBipolar = _add(
-    prim=Primitive(
-        name="FourTerminalBipolar",
-        desc="Four Terminal Bipolar Transistor",
-        port_list=copy.deepcopy(FourTerminalBipolarPorts),
-        paramtype=BipolarParams,
-        primtype=PrimitiveType.PHYSICAL,
-    ),
-    aliases=["4TBjt", "4TBJT"],
-)
-
 
 def Npn(arg: Any = Default, **kwargs) -> Primitive:
     """Npn Constructor. A thin wrapper around `hdl21.primitives.Bipolar`"""
