@@ -3,26 +3,11 @@
 ## In-line Test Suite
 
 Generally runs the main function of each example "script". 
-Check for errors where we can, but largely just check for exceptions.
+Check for errors where we can, but largely just check whether they generate exceptions. 
+Importing these functions with names that begin with `test_` gets them picked up by pytest. 
 """
 
-from .ro import main as ro_main
-from .rdac import main as rdac_main
-from .encoder import main as encoder_main
-from .mos_iv_sim import main as mos_iv_sim_main
-
-
-def test_ro_example():
-    ro_main()
-
-
-def test_rdac_example():
-    rdac_main()
-
-
-def test_encoder_example():
-    encoder_main()
-
-
-def test_mos_iv_sim():
-    mos_iv_sim_main()
+from .ro import main as test_ro
+from .rdac import main as test_rdac
+from .encoder import main as test_encoder
+from .mos_sim import main as test_mos_sim

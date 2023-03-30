@@ -63,7 +63,7 @@ Summary of the content of the primitive library:
 import copy
 from enum import Enum
 from dataclasses import replace
-from typing import Optional, Any, List, Type, Dict, Union
+from typing import Optional, Any, List, Type, Dict
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
@@ -126,7 +126,7 @@ class Primitive:
 
     def __eq__(self, other) -> bool:
         # Identity is equality
-        return id(self) == id(other)
+        return other is self
 
     def __hash__(self) -> bool:
         # Identity is equality
@@ -211,41 +211,56 @@ Mos Transistor Section
 
 
 class MosType(Enum):
-    """NMOS/PMOS Type Enumeration"""
+    """# MOS Type (NMOS/ PMOS) Enumeration"""
 
     NMOS = "NMOS"
     PMOS = "PMOS"
 
 
 class MosVth(Enum):
-    """MOS Threshold Enumeration"""
+    """# MOS Threshold Enumeration"""
 
     STD = "STD"
     LOW = "LOW"
     HIGH = "HIGH"
+    ULTRA_LOW = "ULTRA_LOW"
+
+
+class MosFamily(Enum):
+    """# MOS Family Enumeration"""
+
+    NONE = "NONE"
+    IO = "IO"
+    LP = "LP"
+    HP = "HP"
 
 
 @paramclass
 class MosParams:
-    """MOS Transistor Parameters"""
+    """# MOS Transistor Parameters"""
 
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
+    npar = Param(
+        dtype=Scalar, desc="Number of parallel fingers", default=1
+    )  # FIXME: rename
+    mult = Param(dtype=Scalar, desc="Multiplier", default=1)
+
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
+    family = Param(dtype=MosFamily, desc="Device family", default=MosFamily.NONE)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
-    # FIXME: whether to include `model`
 
-    def __post_init_post_parse__(self):
-        """Value Checks"""
-        if self.w <= 0:
-            raise ValueError(f"MosParams with invalid width {self.w}")
-        if self.l <= 0:
-            raise ValueError(f"MosParams with invalid length {self.l}")
-        if self.npar <= 0:
-            msg = f"MosParams with invalid number parallel fingers {self.npar}"
-            raise ValueError(msg)
+    # def __post_init_post_parse__(self):
+    #     """Value Checks"""
+    #     # FIXME: re-introduce these, for the case in which the parameters are `Prefixed` and not `Literal` values.
+    #     if self.w <= 0:
+    #         raise ValueError(f"MosParams with invalid width {self.w}")
+    #     if self.l <= 0:
+    #         raise ValueError(f"MosParams with invalid length {self.l}")
+    #     if self.npar <= 0:
+    #         msg = f"MosParams with invalid number parallel fingers {self.npar}"
+    #         raise ValueError(msg)
 
 
 # Mos Transistor Ports, in SPICE Conventional Order
@@ -434,7 +449,7 @@ _add(
 
 @paramclass
 class PhysicalShortParams:
-    layer = Param(dtype=Optional[Union[int, str]], desc="Metal layer", default=None)
+    layer = Param(dtype=Optional[Scalar], desc="Metal layer", default=None)
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
 
@@ -672,7 +687,6 @@ class DiodeParams:
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
-    # FIXME: whether to include `model`
 
 
 _add(

@@ -3,4 +3,5 @@ repos:
     rev: 22.6.0
     hooks:
       - id: black
+        exclude: pdks/PdkTemplate/
         language_version: "python3.10"

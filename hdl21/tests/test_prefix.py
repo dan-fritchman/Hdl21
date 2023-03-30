@@ -408,7 +408,7 @@ def test_prefixed_and_scalar_conversions():
     # Test with an expression-literal for the `Scalar`
     p = P(x=11.11, y="m*x+b")
     assert p.x == h.Prefixed(number=11.11)
-    assert p.y == h.Scalar(inner=h.Literal(txt="m*x+b"))
+    assert p.y == h.Scalar(inner=h.Literal(text="m*x+b"))
 
     # Test some invalid types
     with pt.raises(ValidationError):

@@ -13,6 +13,7 @@ BaseModel.Config.arbitrary_types_allowed = True
 
 # Internal (python) module aliases, overridden by names such as the `module` decorator function.
 from . import module as _module_module
+from . import bundle as _bundle_module
 from . import external_module as _external_module_module
 from . import instance as _instance_module
 from . import generator as _generator_module
@@ -29,11 +30,14 @@ from .generator import *
 from .generators import *
 from .primitives import *
 from .bundle import *
+from .role import *
+
 from .netlist import *
 from .elab import *
 from .walker import HierarchyWalker
 from .instantiable import *
 from .diff_pair import *
+from .props import Properties
 from . import prefix
 from .prefix import Prefix, Prefixed
 from .scalar import Scalar

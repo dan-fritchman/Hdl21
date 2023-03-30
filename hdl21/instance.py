@@ -13,6 +13,7 @@ from textwrap import dedent
 from .source_info import source_info, SourceInfo
 from .attrmagic import init
 from .connect import Connectable, is_connectable
+from .props import Properties
 
 T = TypeVar("T")
 
@@ -35,6 +36,7 @@ class _Instance:
         self.name: Optional[str] = name
         self.of: "Instantiable" = of
         self.conns: Dict[str, "Connectable"] = dict()
+        self.props: Properties = Properties()
 
         # References we give out, either for refering to ports or entries in out own `conns`
         self._refs = Refs()
@@ -369,6 +371,7 @@ def calls_instantiate(cls: Type[T]) -> Type[T]:
 Selected star-exports 
 Notably excludes the base class, and module-level functions
 """
+
 __all__ = [
     "Instance",
     "InstanceArray",

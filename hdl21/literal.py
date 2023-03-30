@@ -9,5 +9,5 @@ class Literal:
     A thin wrapper around a string, generally to be used outside Hdl21, e.g. in external netlists.
     """
 
-    txt: str  # String literal text
+    text: str  # String literal text
     name: Optional[str] = None  # Attribute name, when used in a class

@@ -4,10 +4,10 @@
 Writes the markdown-format table of primitives used in documentation.
 """
 
-import sys
-from typing import IO
+# import sys
+# from typing import IO
 from pydantic.dataclasses import dataclass
-from hdl21.primitives import _primitives, Primitive, PrimLibEntry
+from hdl21.primitives import _primitives, PrimLibEntry
 
 
 @dataclass
