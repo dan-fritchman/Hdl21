@@ -17,6 +17,7 @@ if not hasattr(sitepdks, "sky130"):
 import sky130
 import hdl21 as h
 import vlsirtools.spice as vsp
+from .pdk import modules as s
 
 
 def test_installed():
@@ -36,7 +37,7 @@ def test_sim():
             VSS = h.Port()
             vdd = h.Signal()
             v = h.Vdc(dc=1)(p=vdd, n=VSS)
-            n = sky130.modules.sky130_fd_pr__nfet_01v8()(d=vdd, g=vdd, s=VSS, b=VSS)
+            n = sky130.modules.NMOS_1p8V_STD()(d=vdd, g=vdd, s=VSS, b=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
@@ -63,8 +64,8 @@ def test_sim_inv():
     @h.module
     class Inv:  # Default-sized inverter
         i, o, VDD, VSS = 4 * h.Port()
-        n = sky130.modules.sky130_fd_pr__nfet_01v8()(d=o, g=i, s=VSS, b=VSS)
-        p = sky130.modules.sky130_fd_pr__pfet_01v8()(d=o, g=i, s=VDD, b=VDD)
+        n = sky130.modules.NMOS_1p8V_STD()(d=o, g=i, s=VSS, b=VSS)
+        p = sky130.modules.PMOS_1p8V_STD()(d=o, g=i, s=VDD, b=VDD)
 
     @h.sim.sim
     class Sim:
@@ -94,3 +95,41 @@ def test_sim_inv():
     vs = op.data["v(xtop.s)"]
     assert vs > 0.5
     assert vs < 0.55
+
+
+def test_sim_components():
+    @h.sim.sim
+    class Sim:
+        @h.module
+        class Tb:
+
+            VSS = h.Port()
+            vdd = h.Signal()
+            v = h.Vdc(dc=1)(p=vdd, n=VSS)
+
+            for idx, val in enumerate(vars(s).values()):
+
+                exec("comp_" + str(idx) + "=val()")
+
+                for jdx, p in enumerate(val().ports):
+                    if jdx == 0:
+                        exec("comp_" + str(idx) + "." + p + "=vdd")
+                    else:
+                        exec("comp_" + str(idx) + "." + p + "=VSS")
+
+            # Simulation Controls
+
+        op = h.sim.Op()
+        inc = h.sim.Lib(path=sky130.install.model_lib, section="tt")
+
+    opts = vsp.SimOptions(
+        simulator=vsp.SupportedSimulators.NGSPICE,
+        fmt=vsp.ResultFormat.SIM_DATA,
+        rundir="./scratch",
+    )
+
+    rv = Sim.run(opts)
+    assert isinstance(rv, vsp.sim_data.SimResult)
+
+    op = rv[vsp.sim_data.AnalysisType.OP]
+    assert isinstance(op, vsp.sim_data.OpResult)

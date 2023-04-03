@@ -224,12 +224,15 @@ class MosVth(Enum):
     LOW = "LOW"
     HIGH = "HIGH"
     ULTRA_LOW = "ULTRA_LOW"
+    ZERO = "ZERO"
+    NATIVE = "NATIVE"
 
 
 class MosFamily(Enum):
     """# MOS Family Enumeration"""
 
     NONE = "NONE"
+    CORE = "CORE"
     IO = "IO"
     LP = "LP"
     HP = "HP"
@@ -312,7 +315,7 @@ class ResistorParams:
     r = Param(dtype=Scalar, desc="Resistance (ohms)")
 
 
-_add(
+IdealResistor = _add(
     prim=Primitive(
         name="IdealResistor",
         desc="Ideal Resistor",
@@ -331,7 +334,7 @@ class PhysicalResistorParams:
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
-_add(
+PhysicalResistor = _add(
     prim=Primitive(
         name="PhysicalResistor",
         desc="Physical Resistor",
@@ -343,7 +346,7 @@ _add(
 )
 
 
-_add(
+ThreeTerminalResistor = _add(
     prim=Primitive(
         name="ThreeTerminalResistor",
         desc="Three Terminal Resistor",
@@ -360,7 +363,7 @@ class IdealCapacitorParams:
     c = Param(dtype=Scalar, desc="Capacitance (F)")
 
 
-_add(
+IdealCapacitor = _add(
     prim=Primitive(
         name="IdealCapacitor",
         desc="Ideal Capacitor",
@@ -374,10 +377,14 @@ _add(
 
 @paramclass
 class PhysicalCapacitorParams:
-    c = Param(dtype=Scalar, desc="Capacitance (F)")
+    c = Param(dtype=Scalar, desc="Capacitance (F)", default=None)
+    w = Param(dtype=Scalar, desc="Width in resolution units", default=None)
+    l = Param(dtype=Scalar, desc="Length in resolution units", default=None)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[str], desc="Multiplier", default=None)
 
 
-_add(
+PhysicalCapacitor = _add(
     prim=Primitive(
         name="PhysicalCapacitor",
         desc="Physical Capacitor",
@@ -389,7 +396,7 @@ _add(
 )
 
 
-_add(
+ThreeTerminalCapacitor = _add(
     prim=Primitive(
         name="ThreeTerminalCapacitor",
         desc="Three Terminal Capacitor",
@@ -400,13 +407,12 @@ _add(
     aliases=["Cap3", "PhyCap3", "CapPhy3", "PhyCapacitor3"],
 )
 
-
 @paramclass
 class IdealInductorParams:
     l = Param(dtype=Scalar, desc="Inductance (H)")
 
 
-_add(
+IdealInductor = _add(
     prim=Primitive(
         name="IdealInductor",
         desc="Ideal Inductor",
@@ -423,7 +429,7 @@ class PhysicalInductorParams:
     l = Param(dtype=Scalar, desc="Inductance (H)")
 
 
-_add(
+PhysicalInductor = _add(
     Primitive(
         name="PhysicalInductor",
         desc="Physical Inductor",
@@ -435,7 +441,7 @@ _add(
 )
 
 
-_add(
+ThreeTerminalInductor = _add(
     prim=Primitive(
         name="ThreeTerminalInductor",
         desc="Three Terminal Inductor",
@@ -454,7 +460,7 @@ class PhysicalShortParams:
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
 
 
-_add(
+PhysicalShort = _add(
     prim=Primitive(
         name="PhysicalShort",
         desc="Short-Circuit/ Net-Tie",
@@ -479,7 +485,7 @@ class DcVoltageSourceParams:
     ac = Param(dtype=Optional[Scalar], default=None, desc="AC Amplitude (V)")
 
 
-_add(
+DcVoltageSource = _add(
     prim=Primitive(
         name="DcVoltageSource",
         desc="DC Voltage Source",
@@ -508,7 +514,7 @@ class PulseVoltageSourceParams:
     width = Param(dtype=Optional[Scalar], default=None, desc="Pulse width (s)")
 
 
-_add(
+PulseVoltageSource = _add(
     prim=Primitive(
         name="PulseVoltageSource",
         desc="Pulse Voltage Source",
@@ -518,6 +524,9 @@ _add(
     ),
     aliases=["Vpu", "Vpulse"],
 )
+
+Vpu = PulseVoltageSource
+Vpulse = PulseVoltageSource
 
 
 @paramclass
@@ -531,7 +540,7 @@ class SineVoltageSourceParams:
     phase = Param(dtype=Optional[Scalar], default=None, desc="Phase at td (degrees)")
 
 
-_add(
+SineVoltageSource = _add(
     prim=Primitive(
         name="SineVoltageSource",
         desc="Sine Voltage Source",
@@ -548,7 +557,7 @@ class CurrentSourceParams:
     dc = Param(dtype=Optional[Scalar], default=0, desc="DC Value (A)")
 
 
-_add(
+CurrentSource = _add(
     Primitive(
         name="CurrentSource",
         desc="Ideal DC Current Source",
@@ -578,7 +587,7 @@ ControlledSourcePorts = [
     Port(name="cn", desc="Control, Negative"),
 ]
 
-_add(
+VoltageControlledVoltageSource = _add(
     prim=Primitive(
         name="VoltageControlledVoltageSource",
         desc="Voltage Controlled Voltage Source",
@@ -588,7 +597,7 @@ _add(
     ),
     aliases=["Vcvs", "VCVS"],
 )
-_add(
+CurrentControlledVoltageSource = _add(
     prim=Primitive(
         name="CurrentControlledVoltageSource",
         desc="Current Controlled Voltage Source",
@@ -598,7 +607,7 @@ _add(
     ),
     aliases=["Ccvs", "CCVS"],
 )
-_add(
+VoltageControlledCurrentSource = _add(
     prim=Primitive(
         name="VoltageControlledCurrentSource",
         desc="Voltage Controlled Current Source",
@@ -608,7 +617,7 @@ _add(
     ),
     aliases=["Vccs", "VCCS"],
 )
-_add(
+CurrentControlledCurrentSource = _add(
     prim=Primitive(
         name="CurrentControlledCurrentSource",
         desc="Current Controlled Current Source",
@@ -640,6 +649,8 @@ class BipolarParams:
     tp = Param(
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[Scalar], desc="Multiplier", default=None)
 
     def __post_init_post_parse__(self):
         """Value Checks"""
@@ -689,7 +700,7 @@ class DiodeParams:
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
-_add(
+Diode = _add(
     prim=Primitive(
         name="Diode",
         desc="Diode",
