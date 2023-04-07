@@ -15,7 +15,7 @@ from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
 from .qualname import qualname_magic_methods
-
+from vlsirtools.netlist.base import SpicePrefix
 
 @dataclass
 @qualname_magic_methods
@@ -39,6 +39,7 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
+    prefix: Optional[str] = None # Prefix that overrides default netlist naming
 
     @property
     def ports(self) -> dict:

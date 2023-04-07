@@ -402,7 +402,7 @@ def test_netlist_fmts():
     nl = nl.getvalue()
     assert ".SUBCKT Bot \n+ s_2 s_1 s_0 p" in nl
     assert ".SUBCKT Top \n+ p" in nl
-    assert "xb \n+ s_2 s_1 s_0 p \n+ Bot" in nl
+    assert "x_b \n+ s_2 s_1 s_0 p \n+ Bot" in nl
 
 
 def test_spice_netlister():
@@ -423,13 +423,13 @@ def test_spice_netlister():
     nl = nl.getvalue()
     assert ".SUBCKT DUT" in nl
     assert "+ a_4 a_3 a_2 a_1 a_0 b_4 b_3 b_2 b_1 b_0" in nl
-    assert "rres" in nl
+    assert "r_res" in nl
     assert "+ a_0 b_0" in nl
     assert "+ 10K" in nl
-    assert "ccap" in nl
+    assert "c_cap" in nl
     assert "+ a_1 b_1" in nl
     assert "+ 10p" in nl
-    assert "lind" in nl
+    assert "l_ind" in nl
     assert "+ a_2 b_2" in nl
     assert "+ 10n" in nl
 

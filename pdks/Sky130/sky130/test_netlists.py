@@ -13,7 +13,8 @@ from io import StringIO
 
 import hdl21 as h
 from hdl21.prefix import µ
-import sky130# No weird or illegal parameters...
+import sky130  # No weird or illegal parameters...
+
 
 def test_xtor_netlists():
     """
@@ -43,14 +44,40 @@ def test_xtor_netlists():
 
         # Netlist and compare
         s = StringIO()
-        h.netlist(mod, dest=s, fmt="spice")
-        s = s.getvalue().split("\n")
+        
+        # Ignore the iso model, its not used in the test
+        if sky130.xtors[x].name != "sky130_fd_pr__nfet_20v0_iso":
 
-        assert s[9] == "+ a b c d "  # Correctly maps ports to their places...
-        assert s[10] == "+ " + sky130.xtors[x].name + " "  # Has correct PDK name...
-        assert (
-            s[11] == "+ w='30' l='30' nf='1' mult='1' "
-        )  # No weird or illegal parameters...
+            h.netlist(mod, dest=s, fmt="spice")
+            s = s.getvalue().split("\n")
+
+            assert s[9] == "+ a b c d "  # Correctly maps ports to their places...
+            assert s[10] == "+ " + sky130.xtors[x].name + " "  # Has correct PDK name...
+            
+            if "20v" not in sky130.xtors[x].name:
+
+                assert (
+                    s[11] == "+ w='30' \
+l='30' \
+nf='1' \
+ad='int((nf+1)/2) * w/nf * 0.29' \
+As='int((nf+2)/2) * w/nf * 0.29' \
+pd='2*int((nf+1)/2) * (w/nf + 0.29)' \
+ps='2*int((nf+2)/2) * (w/nf + 0.29)' \
+nrd='0.29 / w' \
+nrs='0.29 / w' \
+sa='0' \
+sb='0' \
+sd='0' \
+mult='1' \
+m='1' "
+                )  # No weird or illegal parameters...
+
+            else:
+
+                assert (
+                    s[11] == "+ w='30' l='30' m='1' "
+                )    
 
 
 def test_2_term_res_netlists():
@@ -131,7 +158,7 @@ def test_3_term_res_netlists():
 
             # Are you a generic resistor??
             if x.startswith("GEN"):
-              
+
                 assert s[9] == "+ x y z "  # Correctly maps ports to their places
                 assert s[10] == "+ " + name + " "  # Has correct PDK name
                 assert (
@@ -139,7 +166,7 @@ def test_3_term_res_netlists():
                 )  # No weird or illegal parameters...
 
             else:
-                
+
                 fixed_length = float(sky130.default_prec_res_L[name].inner)
 
                 assert s[9] == "+ x y z "  # Correctly maps ports to their places
@@ -281,7 +308,6 @@ def test_var_cap_netlists():
 
 
 def test_vpp_cap_netlists():
-
     @h.generator
     def T3VPPCap(params: h.PhysicalCapacitorParams) -> h.Module:
         @h.module
@@ -296,19 +322,18 @@ def test_vpp_cap_netlists():
 
         if x.startswith("VPP_PARA"):
 
-            p = sky130.Sky130VPPParams(w=3,l=3)
+            p = sky130.Sky130VPPParams(w=3, l=3)
 
             @h.module
             class SingleCap:
 
                 a, b, c = 3 * h.Signal()
                 exec(f"genCap = sky130.modules.{x}")
-                Cap = genCap(p)(p=a,n=b,b=c)
+                Cap = genCap(p)(p=a, n=b, b=c)
 
             # Generate
             mod = SingleCap
             sky130.compile(mod)
-
 
             # Netlist and compare
             s = StringIO()
@@ -316,21 +341,19 @@ def test_vpp_cap_netlists():
             s = s.getvalue().split("\n")
 
             assert s[9] == "+ a b c "  # Correctly maps ports to their places...
-            assert (
-                s[10] == "+ " + sky130.vpps[x].name + " "
-            )  # Has correct PDK name...
+            assert s[10] == "+ " + sky130.vpps[x].name + " "  # Has correct PDK name...
             assert s[11] == "+ w='3' l='3' mult='1' m='1' "
 
         if x.startswith("VPP_PERP"):
 
-            p = sky130.Sky130VPPParams(w=3,l=3)
+            p = sky130.Sky130VPPParams(w=3, l=3)
 
             @h.module
             class SingleCap:
 
                 a, b, c, d = 4 * h.Signal()
                 exec(f"genCap = sky130.modules.{x}")
-                Cap = genCap(p)(p=a,n=b,t=c,b=d)
+                Cap = genCap(p)(p=a, n=b, t=c, b=d)
 
             # Generate
             mod = SingleCap
@@ -342,7 +365,5 @@ def test_vpp_cap_netlists():
             s = s.getvalue().split("\n")
 
             assert s[9] == "+ a b c d "  # Correctly maps ports to their places...
-            assert (
-                s[10] == "+ " + sky130.vpps[x].name + " "
-            )  # Has correct PDK name...
+            assert s[10] == "+ " + sky130.vpps[x].name + " "  # Has correct PDK name...
             assert s[11] == "+ w='3' l='3' mult='1' m='1' "

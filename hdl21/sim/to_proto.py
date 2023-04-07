@@ -19,7 +19,6 @@ from ..scalar import Scalar
 from ..signal import Signal
 from ..connect import is_connectable
 
-
 def to_proto(inp: OneOrMore[data.Sim]) -> OneOrMore[vsp.SimInput]:
     """Convert a `Sim` to a VLSIR `SimInput`"""
     from ..proto import to_proto as module_to_proto
@@ -274,13 +273,10 @@ class SimProtoExporter:
 
 def export_options(options: data.Options) -> vsp.SimOptions:
     """Export simulation options"""
-    return vsp.SimOptions(
-        temp=options.temper,
-        tnom=options.tnom,
-        gmin=options.gmin,
-        iabstol=options.iabstol,
-        reltol=options.reltol,
-    )
+    sim_options = vsp.SimOptions()
+    sim_options.opts.update(options.opts)
+
+    return sim_options
 
 
 def export_control(ctrl: data.Control) -> vsp.Control:

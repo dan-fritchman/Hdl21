@@ -3,7 +3,7 @@ Spice-Class Simulation Interface
 """
 
 from enum import Enum
-from typing import Union, Any, Optional, List, Awaitable
+from typing import Union, Any, Optional, List, Awaitable, Dict
 from pathlib import Path
 from dataclasses import field
 
@@ -332,18 +332,11 @@ def is_control(val: Any) -> bool:
 
 
 @simattr
-@datatype
 class Options:
     """Simulation Options"""
-
-    temper: Optional[int] = None  # Temperature
-    tnom: Optional[int] = None  # Nominal temperature
-    # FIXME NOTE: these three will in short order become `Scalar`s!
-    gmin: Optional[float] = None
-    reltol: Optional[float] = None
-    iabstol: Optional[float] = None
-
-    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
+    def __init__(self, **kwargs):
+        self.opts = {}
+        self.opts.update(kwargs)
 
 
 # Spice-Sim Attribute-Union
