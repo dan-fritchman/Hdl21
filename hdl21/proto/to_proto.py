@@ -228,6 +228,18 @@ class ProtoExporter:
                 pinst.module.external.name = call.module.name
                 params = dictify_params(call.params)
 
+                # Add a null parameter corresponding SpicePrefix enum in VlsirTools
+                extm_map = {
+                    None : "x",
+                    "IdealResistor" : "r",
+                    "IdealCapacitor" : "c",
+                    "IdealInductor" : "l",
+                    "Mos" : "m",
+                    "Diode" : "d",
+                    "Bipolar" : "q",
+                }
+                params.update({"devicetype": extm_map[call.module.devicetype]})
+
             else:
                 msg = f"Un-exportable Instance {inst} resolves to invalid type {inst._resolved}"
                 raise TypeError(msg)

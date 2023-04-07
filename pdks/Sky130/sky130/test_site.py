@@ -298,12 +298,12 @@ def test_sim_genres():
             # FIXME: These models will only simulate in ngspice
             # with a name starting with "R" (why? why not!)
 
-            # res_gen_l1 = s.GEN_L1(p)(p=VSS,n=vdd)
-            # res_gen_m1 = s.GEN_M1(p)(p=VSS,n=vdd)
-            # res_gen_m2 = s.GEN_M2(p)(p=VSS,n=vdd)
-            # res_gen_m3 = s.GEN_M3(p)(p=VSS,n=vdd)
-            # res_gen_m4 = s.GEN_M4(p)(p=VSS,n=vdd)
-            # res_gen_m5 = s.GEN_M5(p)(p=VSS,n=vdd)
+            res_gen_l1 = s.GEN_L1(p)(p=VSS,n=vdd)
+            res_gen_m1 = s.GEN_M1(p)(p=VSS,n=vdd)
+            res_gen_m2 = s.GEN_M2(p)(p=VSS,n=vdd)
+            res_gen_m3 = s.GEN_M3(p)(p=VSS,n=vdd)
+            res_gen_m4 = s.GEN_M4(p)(p=VSS,n=vdd)
+            res_gen_m5 = s.GEN_M5(p)(p=VSS,n=vdd)
 
             res_gen_nd = s.GEN_ND(p)(p=VSS,n=vdd,b=VSS)
             res_gen_pd = s.GEN_PD(p)(p=VSS,n=vdd,b=VSS)
@@ -352,12 +352,12 @@ def test_auto_genres():
 
             # forced naming conventions, how helpful!
             
-            # res_gen_l1 = s.GEN_L1(p)(p=VSS,n=vdd)
-            # res_gen_m1 = s.GEN_M1(p)(p=VSS,n=vdd)
-            # res_gen_m2 = s.GEN_M2(p)(p=VSS,n=vdd)
-            # res_gen_m3 = s.GEN_M3(p)(p=VSS,n=vdd)
-            # res_gen_m4 = s.GEN_M4(p)(p=VSS,n=vdd)
-            # res_gen_m5 = s.GEN_M5(p)(p=VSS,n=vdd)
+            res_gen_l1 = s.GEN_L1(p)(p=VSS,n=vdd)
+            res_gen_m1 = s.GEN_M1(p)(p=VSS,n=vdd)
+            res_gen_m2 = s.GEN_M2(p)(p=VSS,n=vdd)
+            res_gen_m3 = s.GEN_M3(p)(p=VSS,n=vdd)
+            res_gen_m4 = s.GEN_M4(p)(p=VSS,n=vdd)
+            res_gen_m5 = s.GEN_M5(p)(p=VSS,n=vdd)
 
             res_gen_nd = s.GEN_ND(p)(p=VSS,n=vdd,b=VSS)
             res_gen_pd = s.GEN_PD(p)(p=VSS,n=vdd,b=VSS)
@@ -487,17 +487,17 @@ def test_sim_diode():
 
             # All require a name starting with D
 
-            # pwnd_55v = s.PWND_5p5V(p)(p=vdd, n=VSS)
-            # pwnd_110v = s.PWND_11p0V(p)(p=vdd, n=VSS)
-            # nat_pwnd_55v = s.PWND_5p5V_NAT(p)(p=vdd, n=VSS)
-            # lvt_pwnd_55v = s.PWND_5p5V_LVT(p)(p=vdd, n=VSS)
-            # pdnw_55v = s.PDNW_5p5V(p)(p=vdd, n=VSS)
-            # pdnw_110v = s.PDNW_11p0V(p)(p=vdd, n=VSS)
-            # hvt_pdnw_55v = s.PDNW_5p5V_HVT(p)(p=vdd, n=VSS)
-            # lvt_pdnw_55v = s.PDNW_5p5V_LVT(p)(p=vdd, n=VSS)
-            # px_pwdn = s.PX_PWDN(p)(p=vdd, n=VSS)
-            # px_psdn = s.PX_PSDN(p)(p=vdd, n=VSS)
-            # px_psnw = s.PX_PSNW(p)(p=vdd, n=VSS)
+            pwnd_55v = s.PWND_5p5V(p)(p=vdd, n=VSS)
+            pwnd_110v = s.PWND_11p0V(p)(p=vdd, n=VSS)
+            nat_pwnd_55v = s.PWND_5p5V_NAT(p)(p=vdd, n=VSS)
+            lvt_pwnd_55v = s.PWND_5p5V_LVT(p)(p=vdd, n=VSS)
+            pdnw_55v = s.PDNW_5p5V(p)(p=vdd, n=VSS)
+            pdnw_110v = s.PDNW_11p0V(p)(p=vdd, n=VSS)
+            hvt_pdnw_55v = s.PDNW_5p5V_HVT(p)(p=vdd, n=VSS)
+            lvt_pdnw_55v = s.PDNW_5p5V_LVT(p)(p=vdd, n=VSS)
+            px_pwdn = s.PX_PWDN(p)(p=vdd, n=VSS)
+            px_psdn = s.PX_PSDN(p)(p=vdd, n=VSS)
+            px_psnw = s.PX_PSNW(p)(p=vdd, n=VSS)
 
             # RF diodes are just strange 
 

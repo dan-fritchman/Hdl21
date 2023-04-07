@@ -318,7 +318,7 @@ class Sky130Walker(h.HierarchyWalker):
             # This scaling is a quirk of SKY130
             a = params.w * params.l * 1 * TERA
             pj = 2 * (params.w + params.l) * MEGA
-            modparams = Sky130DiodeParams(a=a, pj=pj)
+            modparams = Sky130DiodeParams(area=a, pj=pj)
 
         else:
 
