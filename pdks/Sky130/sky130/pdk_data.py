@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import field
 from typing import Dict, Tuple
 from types import SimpleNamespace
+from pathlib import Path
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
@@ -32,8 +33,9 @@ from hdl21.primitives import (
     BipolarParams,
 )
 from hdl21.pdk import Corner, CmosCorner
-
 from hdl21.props import Properties
+
+# Vlsirtool Types to ease downstream parsing
 from vlsirtools.netlist.base import SpicePrefix
 
 FIXME = None  # FIXME: Replace with real values!
@@ -53,6 +55,7 @@ parameters of devices in the Sky130 Open PDK. It contains params:
 - Sky130DiodeParams - parameters for diodes
 - Sky130BipolarParams - parameters for bipolar devices
 """
+
 
 @h.paramclass
 class MosParams:
@@ -85,23 +88,57 @@ class MosParams:
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=650 * MILLI)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=150 * MILLI)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
-    ad = h.Param(dtype=h.Literal, desc="Drain Area", default=h.Literal('int((nf+1)/2) * w/nf * 0.29'))
+    ad = h.Param(
+        dtype=h.Literal,
+        desc="Drain Area",
+        default=h.Literal("int((nf+1)/2) * w/nf * 0.29"),
+    )
 
     # This unfortunate naming is to prevent conflicts with base python.
-    As = h.Param(dtype=h.Literal, desc="Source Area", default=h.Literal('int((nf+2)/2) * w/nf * 0.29'))
+    As = h.Param(
+        dtype=h.Literal,
+        desc="Source Area",
+        default=h.Literal("int((nf+2)/2) * w/nf * 0.29"),
+    )
 
-    pd = h.Param(dtype=h.Literal, desc="Drain Perimeter", default=h.Literal('2*int((nf+1)/2) * (w/nf + 0.29)'))
-    ps = h.Param(dtype=h.Literal, desc="Source Perimeter", default=h.Literal('2*int((nf+2)/2) * (w/nf + 0.29)'))
-    nrd = h.Param(dtype=h.Literal, desc="Drain Resistive Value", default=h.Literal('0.29 / w'))
-    nrs = h.Param(dtype=h.Literal, desc="Source Resistive Value", default=h.Literal('0.29 / w'))
-    sa = h.Param(dtype=h.Scalar, desc="Spacing between Adjacent Gate to Drain", default=h.Literal(0))
-    sb = h.Param(dtype=h.Scalar, desc="Spacing between Adjacent Gate to Source", default=h.Literal(0))
-    sd = h.Param(dtype=h.Scalar, desc="Spacing between Adjacent Drain to Source", default=h.Literal(0))
+    pd = h.Param(
+        dtype=h.Literal,
+        desc="Drain Perimeter",
+        default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.29)"),
+    )
+    ps = h.Param(
+        dtype=h.Literal,
+        desc="Source Perimeter",
+        default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
+    )
+    nrd = h.Param(
+        dtype=h.Literal, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
+    )
+    nrs = h.Param(
+        dtype=h.Literal, desc="Source Resistive Value", default=h.Literal("0.29 / w")
+    )
+    sa = h.Param(
+        dtype=h.Scalar,
+        desc="Spacing between Adjacent Gate to Drain",
+        default=h.Literal(0),
+    )
+    sb = h.Param(
+        dtype=h.Scalar,
+        desc="Spacing between Adjacent Gate to Source",
+        default=h.Literal(0),
+    )
+    sd = h.Param(
+        dtype=h.Scalar,
+        desc="Spacing between Adjacent Drain to Source",
+        default=h.Literal(0),
+    )
     mult = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
+
 # FIXME: keep this alias as prior versions may have used it
 Sky130MosParams = MosParams
+
 
 @h.paramclass
 class Sky130Mos20VParams:
@@ -114,9 +151,11 @@ class Sky130Mos20VParams:
     l (h.Scalar): Length of the MOSFET in PDK Units (µm). Default is 1.
     m (h.Scalar): Multiplier for the MOSFET. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=30)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
+
 
 @h.paramclass
 class Sky130GenResParams:
@@ -227,6 +266,7 @@ class Sky130DiodeParams:
         default=4 * MEGA,
     )
 
+
 @h.paramclass
 class Sky130BipolarParams:
     """
@@ -237,6 +277,7 @@ class Sky130BipolarParams:
     """
 
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
+
 
 """
 This subsection of code defines a set of module creator functions for various electronic components in the Sky130 technology.
@@ -253,21 +294,28 @@ Mos5TPortList = [
     h.Port(name="d", desc="Drain"),
     h.Port(name="s", desc="Source"),
     h.Port(name="b", desc="Bulk"),
-    h.Port(name="sub", desc="Substrate")
+    h.Port(name="sub", desc="Substrate"),
 ]
 
-def _xtor_module(modname: str,
-                 params : h.Param = Sky130MosParams,
-                 num_terminals : int = 4, 
-                 props : Dict = {"ngspice": SpicePrefix.SUBCKT,
-                                      "xyce": SpicePrefix.SUBCKT,
-                                      "spectre": NotImplemented}
-                )-> h.ExternalModule:
-    
+
+def _xtor_module(
+    modname: str,
+    params: h.Param = Sky130MosParams,
+    num_terminals: int = 4,
+    props: Dict = {
+        "ngspice": SpicePrefix.SUBCKT,
+        "xyce": SpicePrefix.SUBCKT,
+        "spectre": NotImplemented,
+        "rel_path": None,
+    },
+    rel_path: Path = None,
+) -> h.ExternalModule:
+
     """Transistor module creator, with module-name `name`.
     If `MoKey` `key` is provided, adds an entry in the `xtors` dictionary."""
 
     num2device = {4: h.Mos.port_list, 5: Mos5TPortList}
+    props["rel_path"] = rel_path
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -275,23 +323,29 @@ def _xtor_module(modname: str,
         desc=f"{PDK_NAME} PDK Mos {modname}",
         port_list=deepcopy(num2device[num_terminals]),
         paramtype=params,
-        props=Properties(props)
+        props=Properties(props),
     )
 
     return mod
 
 
-def _res_module(modname: str,
-                numterminals: int,
-                params : h.Param,
-                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
-                                      "xyce": SpicePrefix.SUBCKT,
-                                      "spectre": NotImplemented}
-                ) -> h.ExternalModule:
-    
+def _res_module(
+    modname: str,
+    numterminals: int,
+    params: h.Param,
+    props: Dict = {
+        "ngspice": SpicePrefix.SUBCKT,
+        "xyce": SpicePrefix.SUBCKT,
+        "spectre": NotImplemented,
+        "rel_path": None,
+    },
+    rel_path: Path = None,
+) -> h.ExternalModule:
+
     """Resistor Module creator"""
 
     num2device = {2: PhysicalResistor, 3: ThreeTerminalResistor}
+    props["rel_path"] = rel_path
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -299,17 +353,24 @@ def _res_module(modname: str,
         desc=f"{PDK_NAME} PDK Res{numterminals} {modname}",
         port_list=deepcopy(num2device[numterminals].port_list),
         paramtype=params,
-        props=Properties(props)
+        props=Properties(props),
     )
 
     return mod
 
 
-def _diode_module(modname: str,
-                  props : Dict = {"ngspice": SpicePrefix.DIODE,
-                                      "xyce": SpicePrefix.DIODE,
-                                      "spectre": NotImplemented}
-                    ) -> h.ExternalModule:
+def _diode_module(
+    modname: str,
+    props: Dict = {
+        "ngspice": SpicePrefix.DIODE,
+        "xyce": SpicePrefix.DIODE,
+        "spectre": NotImplemented,
+        "rel_path": None,
+    },
+    rel_path: Path = None,
+) -> h.ExternalModule:
+
+    props["rel_path"] = rel_path
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -317,39 +378,62 @@ def _diode_module(modname: str,
         desc=f"{PDK_NAME} PDK Diode {modname}",
         port_list=deepcopy(Diode.port_list),
         paramtype=Sky130DiodeParams,
-        props=Properties(props)
+        props=Properties(props),
     )
 
     return mod
 
 
-def _bjt_module(modname: str,
-                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
-                                      "xyce": SpicePrefix.SUBCKT,
-                                      "spectre": NotImplemented}
-                ) -> h.ExternalModule:
+BJT4TPortList = [
+    h.Port(name="c", desc="Collector"),
+    h.Port(name="b", desc="Base"),
+    h.Port(name="e", desc="Emitter"),
+    h.Port(name="s", desc="Substrate"),
+]
+
+
+def _bjt_module(
+    modname: str,
+    numterminals: int = 3,
+    props: Dict = {
+        "ngspice": SpicePrefix.SUBCKT,
+        "xyce": SpicePrefix.SUBCKT,
+        "spectre": NotImplemented,
+        "rel_path": None,
+    },
+    rel_path: Path = None,
+) -> h.ExternalModule:
+
+    num2device = {3: Bipolar.port_list, 4: BJT4TPortList}
+    props["rel_path"] = rel_path
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,
         desc=f"{PDK_NAME} PDK BJT {modname}",
-        port_list=deepcopy(Bipolar.port_list),
+        port_list=deepcopy(num2device[numterminals]),
         paramtype=Sky130BipolarParams,
-        props=Properties(props)
+        props=Properties(props),
     )
 
     return mod
 
 
-def _cap_module(modname: str,
-                numterminals: int,
-                params: h.Param,
-                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
-                                "xyce": SpicePrefix.SUBCKT,
-                                "spectre": NotImplemented}
-                )-> h.ExternalModule:
+def _cap_module(
+    modname: str,
+    numterminals: int,
+    params: h.Param,
+    props: Dict = {
+        "ngspice": SpicePrefix.SUBCKT,
+        "xyce": SpicePrefix.SUBCKT,
+        "spectre": NotImplemented,
+        "rel_path": None,
+    },
+    rel_path: Path = None,
+) -> h.ExternalModule:
 
     num2device = {2: PhysicalCapacitor, 3: ThreeTerminalCapacitor}
+    props["rel_path"] = rel_path
 
     """Capacitor Module creator"""
     mod = h.ExternalModule(
@@ -358,10 +442,11 @@ def _cap_module(modname: str,
         desc=f"{PDK_NAME} PDK Cap{numterminals} {modname}",
         port_list=deepcopy(num2device[numterminals].port_list),
         paramtype=params,
-        props=Properties(props)
+        props=Properties(props),
     )
 
     return mod
+
 
 PerpVPPPorts = [
     h.Port(name="p"),
@@ -370,13 +455,21 @@ PerpVPPPorts = [
     h.Port(name="b", desc="Bottom Shield"),
 ]
 
-def _vpp_module(modname: str,
-                num_terminals: int,
-                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
-                                      "xyce": SpicePrefix.SUBCKT,
-                                      "spectre": NotImplemented}
-                ) -> h.ExternalModule:
+
+def _vpp_module(
+    modname: str,
+    num_terminals: int,
+    props: Dict = {
+        "ngspice": SpicePrefix.SUBCKT,
+        "xyce": SpicePrefix.SUBCKT,
+        "spectre": NotImplemented,
+        "rel_path": None,
+    },
+    rel_path: Path = None,
+) -> h.ExternalModule:
     """VPP Creator module"""
+
+    props["rel_path"] = rel_path
 
     if num_terminals == 3:
 
@@ -386,7 +479,7 @@ def _vpp_module(modname: str,
             desc=f"{PDK_NAME} PDK Parallel VPP {num_terminals} {modname}",
             port_list=deepcopy(h.primitives.ThreeTerminalPorts),
             paramtype=Sky130VPPParams,
-            props=Properties(props)
+            props=Properties(props),
         )
 
     elif num_terminals == 4:
@@ -397,10 +490,11 @@ def _vpp_module(modname: str,
             desc=f"{PDK_NAME} PDK Perpendicular VPP {modname}",
             port_list=deepcopy(PerpVPPPorts),
             paramtype=Sky130VPPParams,
-            props=Properties(props)
+            props=Properties(props),
         )
 
     return mod
+
 
 # Individuate component types
 MosKey = Tuple[str, MosType, MosVth, MosFamily]
@@ -455,16 +549,16 @@ xtors: Dict[MosKey, h.ExternalModule] = {
         "sky130_fd_pr__pfet_g5v0d16v0"
     ),
     ("NMOS_20p0V_STD", MosType.NMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__nfet_20v0", params = Sky130Mos20VParams
+        "sky130_fd_pr__nfet_20v0", params=Sky130Mos20VParams
     ),
     ("NMOS_20p0V_LOW", MosType.NMOS, MosVth.ZERO, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__nfet_20v0_zvt", params = Sky130Mos20VParams
+        "sky130_fd_pr__nfet_20v0_zvt", params=Sky130Mos20VParams
     ),
     ("NMOS_ISO_20p0V", MosType.NMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__nfet_20v0_iso", params = Sky130Mos20VParams, num_terminals=5
+        "sky130_fd_pr__nfet_20v0_iso", params=Sky130Mos20VParams, num_terminals=5
     ),
     ("PMOS_20p0V", MosType.PMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__pfet_20v0", params = Sky130Mos20VParams
+        "sky130_fd_pr__pfet_20v0", params=Sky130Mos20VParams
     ),
     # Note there are no NMOS HVT!
     # Add Native FET entries
@@ -475,7 +569,7 @@ xtors: Dict[MosKey, h.ExternalModule] = {
         "sky130_fd_pr__nfet_05v0_nvt"
     ),
     ("NMOS_20p0V_NAT", MosType.NMOS, MosVth.NATIVE, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__nfet_20v0_nvt", params = Sky130Mos20VParams
+        "sky130_fd_pr__nfet_20v0_nvt", params=Sky130Mos20VParams
     ),
     # Add ESD FET entries
     ("ESD_NMOS_1p8V", MosType.NMOS, MosVth.STD, MosFamily.CORE): _xtor_module(
@@ -493,20 +587,50 @@ xtors: Dict[MosKey, h.ExternalModule] = {
 }
 
 metal_resistor_props = {
-    "ngspice" : SpicePrefix.RESISTOR,
-    "xyce" : SpicePrefix.RESISTOR,
-    "spectre" : NotImplemented,
+    "ngspice": SpicePrefix.RESISTOR,
+    "xyce": SpicePrefix.RESISTOR,
+    "spectre": NotImplemented,
 }
 
 ress: Dict[str, h.ExternalModule] = {
     # 2-terminal generic resistors
     "GEN_PO": _res_module("sky130_fd_pr__res_generic_po", 2, Sky130GenResParams),
-    "GEN_L1": _res_module("sky130_fd_pr__res_generic_l1", 2, Sky130GenResParams, props=metal_resistor_props),
-    "GEN_M1": _res_module("sky130_fd_pr__res_generic_m1", 2, Sky130GenResParams, props=metal_resistor_props),
-    "GEN_M2": _res_module("sky130_fd_pr__res_generic_m2", 2, Sky130GenResParams, props=metal_resistor_props),
-    "GEN_M3": _res_module("sky130_fd_pr__res_generic_m3", 2, Sky130GenResParams, props=metal_resistor_props),
-    "GEN_M4": _res_module("sky130_fd_pr__res_generic_m4", 2, Sky130GenResParams, props=metal_resistor_props),
-    "GEN_M5": _res_module("sky130_fd_pr__res_generic_m5", 2, Sky130GenResParams, props=metal_resistor_props),
+    "GEN_L1": _res_module(
+        "sky130_fd_pr__res_generic_l1",
+        2,
+        Sky130GenResParams,
+        props=metal_resistor_props,
+    ),
+    "GEN_M1": _res_module(
+        "sky130_fd_pr__res_generic_m1",
+        2,
+        Sky130GenResParams,
+        props=metal_resistor_props,
+    ),
+    "GEN_M2": _res_module(
+        "sky130_fd_pr__res_generic_m2",
+        2,
+        Sky130GenResParams,
+        props=metal_resistor_props,
+    ),
+    "GEN_M3": _res_module(
+        "sky130_fd_pr__res_generic_m3",
+        2,
+        Sky130GenResParams,
+        props=metal_resistor_props,
+    ),
+    "GEN_M4": _res_module(
+        "sky130_fd_pr__res_generic_m4",
+        2,
+        Sky130GenResParams,
+        props=metal_resistor_props,
+    ),
+    "GEN_M5": _res_module(
+        "sky130_fd_pr__res_generic_m5",
+        2,
+        Sky130GenResParams,
+        props=metal_resistor_props,
+    ),
     # 3-terminal generic resistors
     "GEN_ND": _res_module("sky130_fd_pr__res_generic_nd", 3, Sky130GenResParams),
     "GEN_PD": _res_module("sky130_fd_pr__res_generic_pd", 3, Sky130GenResParams),
@@ -561,67 +685,194 @@ diodes: Dict[str, h.ExternalModule] = {
     "PX_PSNW": _diode_module("sky130_fd_pr__model__parasitic__diode_ps2nw"),
 }
 
+"""
+BJTs in this PDK are all subcircuits but are distributed in a way that is quite unusual
+and can make it particularly difficult to access them without a PR to the PDK itself.
+
+As noted here there is no functional difference between rf and non-rf BJTs in SKY130:
+
+https://open-source-silicon.slack.com/archives/C016HUV935L/p1650549447460139?thread_ts=1650545374.248099&cid=C016HUV935L
+"""
 bjts: Dict[str, h.ExternalModule] = {
     # Add BJTs
-    "NPN_5p0V": _bjt_module("sky130_fd_pr__npn_05v5"),
-    "NPN_11p0V": _bjt_module("sky130_fd_pr__npn_11v0"),
-    "PNP_5p0V": _bjt_module("sky130_fd_pr__pnp_05v5"),
+    "NPN_5p0V_1x2": _bjt_module(
+        "sky130_fd_pr__npn_05v5_W1p00L2p00",
+        numterminals=4,
+        rel_path=Path("sky130_fd_pr__npn_05v5_W1p00L2p00.model.spice"),
+    ),
+    "NPN_11p0V_1x1": _bjt_module(
+        "sky130_fd_pr__npn_11v0_W1p00L1p00",
+        numterminals=4,
+        rel_path=Path("sky130_fd_pr__npn_11v0_W1p00L1p00.model.spice"),
+    ),
+    "NPN_5p0V_1x1": _bjt_module(
+        "sky130_fd_pr__npn_05v5_W1p00L1p00",
+        numterminals=4,
+        rel_path=Path("sky130_fd_pr__npn_05v5_W1p00L1p00.model.spice"),
+    ),
+    "PNP_5p0V_0p68x0p68": _bjt_module(
+        "sky130_fd_pr__pnp_05v5_W0p68L0p68",
+        rel_path=Path("sky130_fd_pr__pnp_05v5_W0p68L0p68.model.spice"),
+    ),
+    "PNP_5p0V_3p40x3p40": _bjt_module(
+        "sky130_fd_pr__pnp_05v5_W3p40L3p40",
+        rel_path=Path("sky130_fd_pr__pnp_05v5_W3p40L3p40.model.spice"),
+    ),
 }
 
 caps: Dict[str, h.ExternalModule] = {
     # List all MiM capacitors
-    "MIM_M3": _cap_module("sky130_fd_pr__cap_mim_m3__base", 2, Sky130MimParams),
-    "MIM_M4": _cap_module("sky130_fd_pr__cap_mim_m4__base", 2, Sky130MimParams),
+    # https://open-source-silicon.slack.com/archives/C016HUV935L/p1618923323152300?thread_ts=1618887703.151600&cid=C016HUV935L
+    "MIM_M3": _cap_module(
+        "sky130_fd_pr__cap_mim_m3_1",
+        2,
+        Sky130MimParams,
+        rel_path=Path("sky130_fd_pr__cap_mim_m3_1.model.spice"),
+    ),
+    "MIM_M4": _cap_module(
+        "sky130_fd_pr__cap_mim_m3_2",
+        2,
+        Sky130MimParams,
+        rel_path=Path("sky130_fd_pr__cap_mim_m3_2.model.spice"),
+    ),
     # List available Varactors
-    "VAR_LVT": _cap_module("sky130_fd_pr__cap_var_lvt", 3, Sky130VarParams),
-    "VAR_HVT": _cap_module("sky130_fd_pr__cap_var_hvt", 3, Sky130VarParams),
+    "VAR_LVT": _cap_module(
+        "sky130_fd_pr__cap_var_lvt",
+        3,
+        Sky130VarParams,
+        rel_path=Path("sky130_fd_pr__cap_var_lvt.model.spice"),
+    ),
+    "VAR_HVT": _cap_module(
+        "sky130_fd_pr__cap_var_hvt",
+        3,
+        Sky130VarParams,
+        rel_path=Path("sky130_fd_pr__cap_var_hvt.model.spice"),
+    ),
 }
 
 vpps: Dict[str, h.ExternalModule] = {
     # List Parallel VPP capacitors
-    "VPP_PARA_1": _vpp_module("sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield_o2", 3),
-    "VPP_PARA_2": _vpp_module("sky130_fd_pr__cap_vpp_02p4x04p6_m1m2_noshield", 3),
-    "VPP_PARA_3": _vpp_module("sky130_fd_pr__cap_vpp_08p6x07p8_m1m2_noshield", 3),
-    "VPP_PARA_4": _vpp_module("sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield", 3),
-    "VPP_PARA_5": _vpp_module("sky130_fd_pr__cap_vpp_11p5x11p7_m1m2_noshield", 3),
+    "VPP_PARA_1": _vpp_module(
+        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield_o2",
+        3,
+        rel_path=Path("sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield_o2.spice"),
+    ),
+    "VPP_PARA_2": _vpp_module(
+        "sky130_fd_pr__cap_vpp_02p4x04p6_m1m2_noshield",
+        3,
+        rel_path=Path("sky130_fd_pr__cap_vpp_02p4x04p6_m1m2_noshield.spice"),
+    ),
+    "VPP_PARA_3": _vpp_module(
+        "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2_noshield",
+        3,
+        rel_path=Path("sky130_fd_pr__cap_vpp_08p6x07p8_m1m2_noshield.spice"),
+    ),
+    "VPP_PARA_4": _vpp_module(
+        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield",
+        3,
+        rel_path=Path("sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield.spice"),
+    ),
+    "VPP_PARA_5": _vpp_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2_noshield",
+        3,
+        rel_path=Path("sky130_fd_pr__cap_vpp_11p5x11p7_m1m2_noshield.spice"),
+    ),
     "VPP_PARA_6": _vpp_module(
-        "sky130_fd_pr__cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield", 3
+        "sky130_fd_pr__cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield",
+        3,
+        rel_path=Path("sky130_fd_pr__cap_vpp_44p7x23p1_pol1m1m2m3m4m5_noshield.spice"),
     ),
     "VPP_PARA_7": _vpp_module(
-        "sky130_fd_pr__cap_vpp_02p7x06p1_m1m2m3m4_shieldl1_fingercap", 3
+        "sky130_fd_pr__cap_vpp_02p7x06p1_m1m2m3m4_shieldl1_fingercap",
+        3,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_02p7x06p1_m1m2m3m4_shieldl1_fingercap.spice"
+        ),
     ),
     "VPP_PARA_8": _vpp_module(
-        "sky130_fd_pr__cap_vpp_02p9x06p1_m1m2m3m4_shieldl1_fingercap2", 3
+        "sky130_fd_pr__cap_vpp_02p9x06p1_m1m2m3m4_shieldl1_fingercap2",
+        3,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_02p9x06p1_m1m2m3m4_shieldl1_fingercap2.spice"
+        ),
     ),
     "VPP_PARA_9": _vpp_module(
-        "sky130_fd_pr__cap_vpp_02p7x11p1_m1m2m3m4_shieldl1_fingercap", 3
+        "sky130_fd_pr__cap_vpp_02p7x11p1_m1m2m3m4_shieldl1_fingercap",
+        3,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_02p7x11p1_m1m2m3m4_shieldl1_fingercap.spice"
+        ),
     ),
     "VPP_PARA_10": _vpp_module(
-        "sky130_fd_pr__cap_vpp_02p7x21p1_m1m2m3m4_shieldl1_fingercap", 3
+        "sky130_fd_pr__cap_vpp_02p7x21p1_m1m2m3m4_shieldl1_fingercap",
+        3,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_02p7x21p1_m1m2m3m4_shieldl1_fingercap.spice"
+        ),
     ),
     "VPP_PARA_11": _vpp_module(
-        "sky130_fd_pr__cap_vpp_02p7x41p1_m1m2m3m4_shieldl1_fingercap", 3
+        "sky130_fd_pr__cap_vpp_02p7x41p1_m1m2m3m4_shieldl1_fingercap",
+        3,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_02p7x41p1_m1m2m3m4_shieldl1_fingercap.spice"
+        ),
     ),
     # List Perpendicular VPP capacitors
-    "VPP_PERP_1": _vpp_module("sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5", 4),
-    "VPP_PERP_2": _vpp_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5", 4
+    "VPP_PERP_1": _vpp_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldm5.spice"),
     ),
-    "VPP_PERP_3": _vpp_module("sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5", 4),
+    "VPP_PERP_2": _vpp_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3m4_shieldpom5.spice"),
+    ),
+    "VPP_PERP_3": _vpp_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3m4_shieldl1m5.spice"),
+    ),
     "VPP_PERP_4": _vpp_module(
-        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2m3_shieldl1m5_floatm4", 4
+        "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2m3_shieldl1m5_floatm4",
+        4,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_04p4x04p6_m1m2m3_shieldl1m5_floatm4.spice"
+        ),
     ),
     "VPP_PERP_5": _vpp_module(
-        "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2m3_shieldl1m5_floatm4", 4
+        "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2m3_shieldl1m5_floatm4",
+        4,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_08p6x07p8_m1m2m3_shieldl1m5_floatm4.spice"
+        ),
     ),
     "VPP_PERP_6": _vpp_module(
-        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3_shieldl1m5_floatm4", 4
+        "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3_shieldl1m5_floatm4",
+        4,
+        rel_path=Path(
+            "sky130_fd_pr__cap_vpp_11p5x11p7_m1m2m3_shieldl1m5_floatm4.spice"
+        ),
     ),
-    "VPP_PERP_7": _vpp_module("sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3_shieldm4", 4),
-    "VPP_PERP_8": _vpp_module("sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4", 4),
-    "VPP_PERP_9": _vpp_module("sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4", 4),
+    "VPP_PERP_7": _vpp_module(
+        "sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3_shieldm4",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_11p5x11p7_l1m1m2m3_shieldm4.spice"),
+    ),
+    "VPP_PERP_8": _vpp_module(
+        "sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4.spice"),
+    ),
+    "VPP_PERP_9": _vpp_module(
+        "sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4.spice"),
+    ),
     "VPP_PERP_10": _vpp_module(
-        "sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5", 4
+        "sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5_nhv",
+        4,
+        rel_path=Path("sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5_nhv.model.spice"),
     ),
 }
 

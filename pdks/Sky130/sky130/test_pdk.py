@@ -45,8 +45,8 @@ def mos_primitives_module():
 
     return Primitives
 
-def mos20v_primitives_module():
 
+def mos20v_primitives_module():
     @h.module
     class Primitives:
         """Module with all the 20v FETs supported by the PDK package"""
@@ -60,6 +60,7 @@ def mos20v_primitives_module():
         nfet_20v0_nvt = h.Mos(model="NMOS_20p0V_NAT")(d=z, g=z, s=z, b=z)
 
     return Primitives
+
 
 def genres_primitives_module():
     @h.module
@@ -146,9 +147,12 @@ def bjt_primitives_module():
 
         z = h.Signal(desc="Sole signal connected to everything")
 
-        npn_50v = h.Npn(model="NPN_5p0V")(e=z, b=z, c=z)
-        npn_110v = h.Npn(model="NPN_11p0V")(e=z, b=z, c=z)
-        pnp_50v = h.Pnp(model="PNP_5p0V")(e=z, b=z, c=z)
+        # No compilation support for these yet
+        # npn_5_1x2  = h.Npn(model = "NPN_5p0V_1x2")(e=z, b=z, c=z, s=z)
+        # npn_11_1x1 = h.Npn(model = "NPN_11p0V_1x1")(e=z, b=z, c=z, s=z)
+        # npn_5_1x1  = h.Npn(model = "NPN_5p0V_1x1")(e=z, b=z, c=z, s=z)
+        pnp_5_1x1 = h.Pnp(model="PNP_5p0V_0p68x0p68")(e=z, b=z, c=z)
+        pnp_5_3x3 = h.Pnp(model="PNP_5p0V_3p40x3p40")(e=z, b=z, c=z)
 
     return BjtPrimitives
 
@@ -254,6 +258,7 @@ def test_mos_module():
         esd_nfet_g5v0d10v5_nvt = s.ESD_NMOS_5p5V_NAT(p)()
         esd_pfet_g5v0d10v5 = s.ESD_PMOS_5p5V(p)()
 
+
 def test_genres_module():
 
     p = sky130.Sky130GenResParams()
@@ -318,9 +323,11 @@ def test_bjt_module():
     @h.module
     class HasBJTs:
 
-        npn_50v = s.NPN_5p0V(p)()
-        npn_110v = s.NPN_11p0V(p)()
-        pnp_50v = s.PNP_5p0V(p)()
+        npn_5_1x2 = s.NPN_5p0V_1x2(p)()
+        npn_11_1x1 = s.NPN_11p0V_1x1(p)()
+        npn_5_1x1 = s.NPN_5p0V_1x1(p)()
+        pnp_5_1x1 = s.PNP_5p0V_0p68x0p68(p)()
+        pnp_5_3x3 = s.PNP_5p0V_3p40x3p40(p)()
 
 
 def test_gencap_module():

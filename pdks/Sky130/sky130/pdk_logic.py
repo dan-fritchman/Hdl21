@@ -53,6 +53,7 @@ from hdl21.primitives import (
 # Import relevant data from the PDK's data module
 from .pdk_data import *
 
+
 @dataclass
 class Install(PdkInstallation):
     """
@@ -205,11 +206,7 @@ class Sky130Walker(h.HierarchyWalker):
         # Select appropriate parameters for 20V/ESD-G5V0D10V5 mosfets
         if "20v" in mod.name:
 
-            modparams = Sky130Mos20VParams(
-                w=w,
-                l=l,
-                m=params.mult
-            )
+            modparams = Sky130Mos20VParams(w=w, l=l, m=params.mult)
 
         else:
 
@@ -333,7 +330,7 @@ class Sky130Walker(h.HierarchyWalker):
         mod = bjts.get(params.model, None)
 
         if mod is None:
-            msg = f"No Bipolar module for model {params.mparamsodel}"
+            msg = f"No Bipolar module for model {params.model}"
             raise RuntimeError(msg)
 
         return mod
@@ -419,6 +416,7 @@ def compile(src: h.Elaboratables) -> None:
 
 DEP_CACHE = []
 
+
 class Sky130DepWalker(h.HierarchyWalker):
     def visit_external_module_call(self, call: h.ExternalModuleCall) -> h.Instantiable:
 
@@ -429,20 +427,27 @@ class Sky130DepWalker(h.HierarchyWalker):
 
         return call
 
+
 def _remove_duplicates(input_list):
     # Use a set to keep track of the unique elements
     # Order-preserving unique elements are returned
     seen = set()
     return [x for x in input_list if not (x in seen or seen.add(x))]
 
+
 def _get_file_names(path: Path, substring: str) -> list[str]:
     # Use the glob method to match all files in the given directory
-    files = path.glob('*')
+    files = path.glob("*")
 
     # Convert the matched Path objects to strings if they are files and contain the substring
-    file_names = [str(file).split("/spice/")[-1] for file in files if file.is_file() and substring in file.name]
+    file_names = [
+        str(file).split("/spice/")[-1]
+        for file in files
+        if file.is_file() and substring in file.name
+    ]
 
     return file_names
+
 
 def _find_lines_with_string(file_path: str, search_string: str) -> list:
     # Convert the file_path to a string if it's a Path object
@@ -460,8 +465,10 @@ def _find_lines_with_string(file_path: str, search_string: str) -> list:
     for line in lines:
         if search_string in line:
             matching_lines.append(
-                line.strip().split("/spice/")[-1]
-                .split(".include")[-1].replace('"', "")
+                line.strip()
+                .split("/spice/")[-1]
+                .split(".include")[-1]
+                .replace('"', "")
                 .strip()
             )  # Append the line (with leading/trailing whitespace removed) to the matching lines list
 
@@ -491,17 +498,17 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
 
     # Initialize the section_map dictionary
     section_map = {
-                    "tt": ["typical","typical"],
-                    "sf": ["typical","typical"],
-                    "ff": ["typical","typical"],
-                    "sf": ["typical","typical"],
-                    "fs": ["typical","typical"],
-                    "hh": ["high","high"],
-                    "hl": ["high","low"],
-                    "lh": ["low","high"],
-                    "ll": ["low","low"],
-                }
-    
+        "tt": ["typical", "typical"],
+        "sf": ["typical", "typical"],
+        "ff": ["typical", "typical"],
+        "sf": ["typical", "typical"],
+        "fs": ["typical", "typical"],
+        "hh": ["high", "high"],
+        "hl": ["high", "low"],
+        "lh": ["low", "high"],
+        "ll": ["low", "low"],
+    }
+
     if section[0] != "h" or section[0] != "l":
         fet_section = section
     else:
@@ -534,7 +541,7 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
         IS_PR = True
     else:
         src.attrs.append(h.sim.Param(0, name="mc_pr_switch"))
-    
+
     src.attrs.append(
         h.sim.Include(
             install.pdk_path / install.lib_path.parent / "parameters/lod.spice"
@@ -543,11 +550,11 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
 
     if DEP_CACHE == []:
         raise RuntimeError("No dependencies found in testbench.")
-    
+
     full_incs = []
     incs = []
 
-    #full_incs.append(f"/usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/{section}/specialized_cells.spice")
+    # full_incs.append(f"/usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/{section}/specialized_cells.spice")
 
     # Iterate over the collected dependencies
     for dep in DEP_CACHE:
@@ -556,7 +563,7 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
 
             # For the exceptional cases, add the appropriate spice file
             if "20v0" in dep:
-                
+
                 # No iso or zvt corner files for 20v0
                 if "iso" in dep or "zvt" in dep:
                     d = dep[:-4]
@@ -570,7 +577,9 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
                 incs.append("sky130_fd_pr__pfet_g5v0d16v0__subcircuit.pm3.spice")
                 incs.append("sky130_fd_pr__pfet_g5v0d16v0.pm3.spice")
                 incs.append(f"sky130_fd_pr__pfet_g5v0d16v0__{fet_section}.corner.spice")
-                incs.append("sky130_fd_pr__pfet_g5v0d16v0__parasitic__diode_pw2dn.model.spice")
+                incs.append(
+                    "sky130_fd_pr__pfet_g5v0d16v0__parasitic__diode_pw2dn.model.spice"
+                )
 
             else:
 
@@ -583,27 +592,51 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
                 ):
                     incs.append(f)
 
-            full_incs.append(str(install.pdk_path / install.lib_path.parent / f"corners/{fet_section}/nonfet.spice"))
+            full_incs.append(
+                str(
+                    install.pdk_path
+                    / install.lib_path.parent
+                    / f"corners/{fet_section}/nonfet.spice"
+                )
+            )
 
         elif "parasitic" in dep:
 
             # Iterate over lines found in the corner spice file
             for f in _find_lines_with_string(
-                install.pdk_path
-                / install.lib_path.parent
-                / Path("all.spice"),
+                install.pdk_path / install.lib_path.parent / Path("all.spice"),
                 dep,
             ):
                 full_incs.append(str(install.pdk_path / install.lib_path.parent / f))
-                
+
         elif "res" in dep or "cap" in dep or "diode_pw2" in dep:
 
             r = section_map[section[:2]][0]
-            c = section_map[section[:2]][1] 
+            c = section_map[section[:2]][1]
 
-            full_incs.append(str(install.pdk_path / install.lib_path.parent / "r+c/" / f"res_{r}__cap_{c}.spice"))
-            full_incs.append(str(install.pdk_path / install.lib_path.parent / "r+c/" / f"res_{r}__cap_{c}__lin.spice"))
-            full_incs.append(str(install.pdk_path / install.lib_path.parent / "sky130_fd_pr__model__r+c.model.spice"))
+            full_incs.append(
+                str(
+                    install.pdk_path
+                    / install.lib_path.parent
+                    / "r+c/"
+                    / f"res_{r}__cap_{c}.spice"
+                )
+            )
+            full_incs.append(
+                str(
+                    install.pdk_path
+                    / install.lib_path.parent
+                    / "r+c/"
+                    / f"res_{r}__cap_{c}__lin.spice"
+                )
+            )
+            full_incs.append(
+                str(
+                    install.pdk_path
+                    / install.lib_path.parent
+                    / "sky130_fd_pr__model__r+c.model.spice"
+                )
+            )
 
             # Iterate over lines found in the all.spice file
             for f in _find_lines_with_string(
@@ -612,7 +645,9 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
             ):
                 incs.append(f)
 
-    full_incs.append(str(install.pdk_path / install.lib_path.parent / "parameters/invariant.spice"))
+    full_incs.append(
+        str(install.pdk_path / install.lib_path.parent / "parameters/invariant.spice")
+    )
 
     # Include critical.spice and montecarlo.spice files if Process variation Monte Carlo is enabled
     if IS_PR:
@@ -632,6 +667,6 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
     # Add Include objects to the src.attrs list with the appropriate file paths
     for inc in full_incs:
         src.attrs.append(h.sim.Include(inc))
-    
+
     for inc in incs:
         src.attrs.append(h.sim.Include(install.pdk_path / install.model_ref / inc))

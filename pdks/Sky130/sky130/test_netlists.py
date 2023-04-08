@@ -44,7 +44,7 @@ def test_xtor_netlists():
 
         # Netlist and compare
         s = StringIO()
-        
+
         # Ignore the iso model, its not used in the test
         if sky130.xtors[x].name != "sky130_fd_pr__nfet_20v0_iso":
 
@@ -53,11 +53,12 @@ def test_xtor_netlists():
 
             assert s[9] == "+ a b c d "  # Correctly maps ports to their places...
             assert s[10] == "+ " + sky130.xtors[x].name + " "  # Has correct PDK name...
-            
+
             if "20v" not in sky130.xtors[x].name:
 
                 assert (
-                    s[11] == "+ w='30' \
+                    s[11]
+                    == "+ w='30' \
 l='30' \
 nf='1' \
 ad='int((nf+1)/2) * w/nf * 0.29' \
@@ -75,9 +76,7 @@ m='1' "
 
             else:
 
-                assert (
-                    s[11] == "+ w='30' l='30' m='1' "
-                )    
+                assert s[11] == "+ w='30' l='30' m='1' "
 
 
 def test_2_term_res_netlists():

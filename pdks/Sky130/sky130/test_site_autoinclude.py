@@ -17,6 +17,7 @@ import hdl21 as h
 import vlsirtools.spice as vsp
 from sky130 import modules as s
 
+
 def test_sim_inv_auto():
     """
     Test the DC operating point simulation of a default-sized inverter with auto-included PDK models.
@@ -63,8 +64,8 @@ def test_sim_inv_auto():
     assert vs > 0.5
     assert vs < 0.55
 
-def test_auto_mosfet():
 
+def test_auto_mosfet():
     @h.sim.sim
     class Sim:
         @h.module
@@ -77,27 +78,53 @@ def test_auto_mosfet():
             p = sky130.Sky130MosParams
             q = sky130.Sky130Mos20VParams
 
-            nfet_01v8 = s.NMOS_1p8V_STD(p(w = 0.420, l = 0.150))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_01v8_lvt = s.NMOS_1p8V_LOW(p(w = 0.420, l = 0.150))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_01v8 = s.PMOS_1p8V_STD(p(w = 0.550, l = 0.150))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_01v8_hvt = s.PMOS_1p8V_HIGH(p(w = 0.550, l = 0.150))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_01v8_lvt = s.PMOS_1p8V_LOW(p(w = 0.550, l = 0.350))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_g5v0d10v5 = s.PMOS_5p5V_D10_STD(p(w = 0.420, l = 0.500))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_g5v0d10v5 = s.NMOS_5p5V_D10_STD(p(w = 0.420, l = 0.500))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_g5v0d16v0 = s.PMOS_5p5V_D16_STD(p(w = 5.000, l = 0.660))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_01v8 = s.NMOS_1p8V_STD(p(w=0.420, l=0.150))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_01v8_lvt = s.NMOS_1p8V_LOW(p(w=0.420, l=0.150))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_01v8 = s.PMOS_1p8V_STD(p(w=0.550, l=0.150))(d=vdd, g=vdd, s=VSS, b=VSS)
+            pfet_01v8_hvt = s.PMOS_1p8V_HIGH(p(w=0.550, l=0.150))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_01v8_lvt = s.PMOS_1p8V_LOW(p(w=0.550, l=0.350))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_g5v0d10v5 = s.PMOS_5p5V_D10_STD(p(w=0.420, l=0.500))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_g5v0d10v5 = s.NMOS_5p5V_D10_STD(p(w=0.420, l=0.500))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_g5v0d16v0 = s.PMOS_5p5V_D16_STD(p(w=5.000, l=0.660))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
             # This weirdo needs 5 terminals
-            nfet_20v0_iso = s.NMOS_ISO_20p0V(q(w = 30.000, l = 1.500))(d=vdd, g=vdd, s=VSS, b=VSS, sub=VSS)
+            nfet_20v0_iso = s.NMOS_ISO_20p0V(q(w=30.000, l=1.500))(
+                d=vdd, g=vdd, s=VSS, b=VSS, sub=VSS
+            )
 
             # 20V series only accepts W/L/m
-            pfet_20v0 = s.PMOS_20p0V(q(w=30,l=1,m=1))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_20v0_zvt = s.NMOS_20p0V_LOW(q(w = 30.000, l = 1.500))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_20v0 = s.NMOS_20p0V_STD(q(w = 29.410, l = 2.950))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_20v0_nvt = s.NMOS_20p0V_NAT(q(w = 30.000, l = 1.000))(d=vdd, g=vdd, s=VSS, b=VSS)
+            pfet_20v0 = s.PMOS_20p0V(q(w=30, l=1, m=1))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_20v0_zvt = s.NMOS_20p0V_LOW(q(w=30.000, l=1.500))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_20v0 = s.NMOS_20p0V_STD(q(w=29.410, l=2.950))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_20v0_nvt = s.NMOS_20p0V_NAT(q(w=30.000, l=1.000))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
-            nfet_03v3_nvt = s.NMOS_3p3V_NAT(p(w = 0.700, l = 0.500))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_05v0_nvt = s.NMOS_5p0V_NAT(p(w = 0.700, l = 0.900))(d=vdd, g=vdd, s=VSS, b=VSS)
-            esd_nfet_01v8 = s.ESD_NMOS_1p8V(p(w = 20.350, l = 0.165))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_03v3_nvt = s.NMOS_3p3V_NAT(p(w=0.700, l=0.500))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_05v0_nvt = s.NMOS_5p0V_NAT(p(w=0.700, l=0.900))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            esd_nfet_01v8 = s.ESD_NMOS_1p8V(p(w=20.350, l=0.165))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
             # ESD G5V0D10V5's are simply unavailable in the high-level SPICE libraries in the PDK!
             # esd_nfet_g5v0d10v5_nvt = s.ESD_NMOS_5p5V_NAT(p(w = 10.000, l = 0.900))(d=vdd, g=vdd, s=VSS, b=VSS)
@@ -106,7 +133,7 @@ def test_auto_mosfet():
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     sky130.auto_includes(Sim)
 
     opts = vsp.SimOptions(
@@ -120,8 +147,8 @@ def test_auto_mosfet():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
-def test_auto_genres():
 
+def test_auto_genres():
     @h.sim.sim
     class Sim:
         @h.module
@@ -133,27 +160,27 @@ def test_auto_genres():
 
             p = sky130.Sky130GenResParams()
 
-            res_gen_po = s.GEN_PO(p)(p=VSS,n=vdd)
+            res_gen_po = s.GEN_PO(p)(p=VSS, n=vdd)
 
             # FIXME: These models will only simulate in ngspice
-            # with a name starting with "R" 
+            # with a name starting with "R"
 
             # forced naming conventions, how helpful!
-            
-            res_gen_l1 = s.GEN_L1(p)(p=VSS,n=vdd)
-            res_gen_m1 = s.GEN_M1(p)(p=VSS,n=vdd)
-            res_gen_m2 = s.GEN_M2(p)(p=VSS,n=vdd)
-            res_gen_m3 = s.GEN_M3(p)(p=VSS,n=vdd)
-            res_gen_m4 = s.GEN_M4(p)(p=VSS,n=vdd)
-            res_gen_m5 = s.GEN_M5(p)(p=VSS,n=vdd)
 
-            res_gen_nd = s.GEN_ND(p)(p=VSS,n=vdd,b=VSS)
-            res_gen_pd = s.GEN_PD(p)(p=VSS,n=vdd,b=VSS)
-            res_gen_iso_pw = s.GEN_ISO_PW(p)(p=VSS,n=vdd,b=VSS)
+            res_gen_l1 = s.GEN_L1(p)(p=VSS, n=vdd)
+            res_gen_m1 = s.GEN_M1(p)(p=VSS, n=vdd)
+            res_gen_m2 = s.GEN_M2(p)(p=VSS, n=vdd)
+            res_gen_m3 = s.GEN_M3(p)(p=VSS, n=vdd)
+            res_gen_m4 = s.GEN_M4(p)(p=VSS, n=vdd)
+            res_gen_m5 = s.GEN_M5(p)(p=VSS, n=vdd)
+
+            res_gen_nd = s.GEN_ND(p)(p=VSS, n=vdd, b=VSS)
+            res_gen_pd = s.GEN_PD(p)(p=VSS, n=vdd, b=VSS)
+            res_gen_iso_pw = s.GEN_ISO_PW(p)(p=VSS, n=vdd, b=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     # Test auto-inclusion of PDK models
     sky130.auto_includes(Sim)
 
@@ -169,8 +196,8 @@ def test_auto_genres():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
-def test_auto_precres():
 
+def test_auto_precres():
     @h.sim.sim
     class Sim:
         @h.module
@@ -182,20 +209,20 @@ def test_auto_precres():
 
             p = sky130.Sky130PrecResParams()
 
-            res_p_prec_035 = s.PP_PREC_0p35(p)(p=VSS,n=vdd,b=VSS)
-            res_p_prec_069 = s.PP_PREC_0p69(p)(p=VSS,n=vdd,b=VSS)
-            res_p_prec_141 = s.PP_PREC_1p41(p)(p=VSS,n=vdd,b=VSS)
-            res_p_prec_285 = s.PP_PREC_2p85(p)(p=VSS,n=vdd,b=VSS)
-            res_p_prec_573 = s.PP_PREC_5p73(p)(p=VSS,n=vdd,b=VSS)
-            res_p_minus_prec_035 = s.PM_PREC_0p35(p)(p=VSS,n=vdd,b=VSS)
-            res_p_minus_prec_069 = s.PM_PREC_0p69(p)(p=VSS,n=vdd,b=VSS)
-            res_p_minus_prec_141 = s.PM_PREC_1p41(p)(p=VSS,n=vdd,b=VSS)
-            res_p_minus_prec_285 = s.PM_PREC_2p85(p)(p=VSS,n=vdd,b=VSS)
-            res_p_minus_prec_573 = s.PM_PREC_5p73(p)(p=VSS,n=vdd,b=VSS)
+            res_p_prec_035 = s.PP_PREC_0p35(p)(p=VSS, n=vdd, b=VSS)
+            res_p_prec_069 = s.PP_PREC_0p69(p)(p=VSS, n=vdd, b=VSS)
+            res_p_prec_141 = s.PP_PREC_1p41(p)(p=VSS, n=vdd, b=VSS)
+            res_p_prec_285 = s.PP_PREC_2p85(p)(p=VSS, n=vdd, b=VSS)
+            res_p_prec_573 = s.PP_PREC_5p73(p)(p=VSS, n=vdd, b=VSS)
+            res_p_minus_prec_035 = s.PM_PREC_0p35(p)(p=VSS, n=vdd, b=VSS)
+            res_p_minus_prec_069 = s.PM_PREC_0p69(p)(p=VSS, n=vdd, b=VSS)
+            res_p_minus_prec_141 = s.PM_PREC_1p41(p)(p=VSS, n=vdd, b=VSS)
+            res_p_minus_prec_285 = s.PM_PREC_2p85(p)(p=VSS, n=vdd, b=VSS)
+            res_p_minus_prec_573 = s.PM_PREC_5p73(p)(p=VSS, n=vdd, b=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     # Test auto-inclusion of PDK models
     sky130.auto_includes(Sim)
 
@@ -210,8 +237,9 @@ def test_auto_precres():
 
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
-def test_auto_diode():
 
+
+def test_auto_diode():
     @h.sim.sim
     class Sim:
         @h.module
@@ -239,17 +267,17 @@ def test_auto_diode():
             # px_psdn = s.PX_PSDN(p)(p=vdd, n=VSS)
             # px_psnw = s.PX_PSNW(p)(p=vdd, n=VSS)
 
-            # RF diodes are just strange 
+            # RF diodes are just strange
 
             # px_rf_psnw = s.PX_RF_PSNW(p)(p=vdd, n=VSS)
             # px_rf_pwdn = s.PX_RF_PWDN(p)(p=vdd, n=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     # Test auto-inclusion of PDK models
     sky130.auto_includes(Sim)
-    
+
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
@@ -262,8 +290,8 @@ def test_auto_diode():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
-def test_auto_bjt():
 
+def test_auto_bjt():
     @h.sim.sim
     class Sim:
         @h.module
@@ -284,10 +312,10 @@ def test_auto_bjt():
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     # Test auto-inclusion of PDK models
     sky130.auto_includes(Sim)
-    
+
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
@@ -300,8 +328,8 @@ def test_auto_bjt():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
-def test_auto_gencap():
 
+def test_auto_gencap():
     @h.sim.sim
     class Sim:
         @h.module
@@ -314,19 +342,17 @@ def test_auto_gencap():
             p = sky130.Sky130MimParams()
             q = sky130.Sky130VarParams()
 
-            # Once again, shitty docs.
-            
-            # MIM_M3 = s.MIM_M3(p)(p=vdd, n=VSS)
-            # MIM_M4 = s.MIM_M4(p)(p=vdd, n=VSS)
+            MIM_M3 = s.MIM_M3(p)(p=vdd, n=VSS)
+            MIM_M4 = s.MIM_M4(p)(p=vdd, n=VSS)
             VAR_LVT = s.VAR_LVT(q)(p=vdd, n=VSS, b=VSS)
             VAR_HVT = s.VAR_HVT(q)(p=vdd, n=VSS, b=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     # Test auto-inclusion of PDK models
     sky130.auto_includes(Sim)
-    
+
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
@@ -339,8 +365,8 @@ def test_auto_gencap():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
-def test_auto_devcap():
 
+def test_auto_devcap():
     @h.sim.sim
     class Sim:
         @h.module
@@ -376,10 +402,10 @@ def test_auto_devcap():
 
         # Simulation Controls
         op = h.sim.Op()
-    
+
     # Test auto-inclusion of PDK models
     sky130.auto_includes(Sim)
-    
+
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
