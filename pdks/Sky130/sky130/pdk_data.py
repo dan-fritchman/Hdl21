@@ -33,6 +33,9 @@ from hdl21.primitives import (
 )
 from hdl21.pdk import Corner, CmosCorner
 
+from hdl21.props import Properties
+from vlsirtools.netlist.base import SpicePrefix
+
 FIXME = None  # FIXME: Replace with real values!
 PDK_NAME = "sky130"
 
@@ -55,7 +58,7 @@ parameters of devices in the Sky130 Open PDK. It contains params:
 class MosParams:
     """
     A parameter class representing the MOSFET parameters for the Sky130 technology.
-    These parameters include various geometrical and electrical properties of the MOSFET device,
+    These parameters include various geometrical and electrical props of the MOSFET device,
     such as width, length, number of fingers, drain and source areas, drain and source perimeters,
     resistive values, spacings, and multipliers.
 
@@ -65,7 +68,8 @@ class MosParams:
     nf (h.Scalar): Number of fingers in the MOSFET. Default is 1.
     m (h.Scalar): Multiplier for the MOSFET (alias for mult). Default is 1.
 
-    #! CAUTION: These parameters are not recommended for design use.
+    #! CAUTION: The following parameters are not recommended for design use.
+
     ad (h.Literal): Drain area of the MOSFET. Default is 'int((nf+1)/2) * w/nf * 0.29'.
     As (h.Literal): Source area of the MOSFET. Default is 'int((nf+2)/2) * w/nf * 0.29'.
     pd (h.Literal): Drain perimeter of the MOSFET. Default is '2int((nf+1)/2) * (w/nf + 0.29)'.
@@ -236,8 +240,12 @@ class Sky130BipolarParams:
 
 """
 This subsection of code defines a set of module creator functions for various electronic components in the Sky130 technology.
-Each function is designed to create instances of external modules with the appropriate properties and parameter types
+Each function is designed to create instances of external modules with the appropriate props and parameter types
 for the specified component.
+
+#! An important note is that `ExternalModule` props is used here to specify the spice prefix for the component used in
+#! in different simulators. The introduction of props into the `ExternalModule` class is more generic than this, but this
+#! is how we are using it for now. Future work will likely expand on this to make it more general.
 """
 
 Mos5TPortList = [
@@ -248,7 +256,14 @@ Mos5TPortList = [
     h.Port(name="sub", desc="Substrate")
 ]
 
-def _xtor_module(modname: str, params : h.Param = Sky130MosParams, num_terminals : int = 4,  devicetype : str = None) -> h.ExternalModule:
+def _xtor_module(modname: str,
+                 params : h.Param = Sky130MosParams,
+                 num_terminals : int = 4, 
+                 props : Dict = {"ngspice": SpicePrefix.SUBCKT,
+                                      "xyce": SpicePrefix.SUBCKT,
+                                      "spectre": NotImplemented}
+                )-> h.ExternalModule:
+    
     """Transistor module creator, with module-name `name`.
     If `MoKey` `key` is provided, adds an entry in the `xtors` dictionary."""
 
@@ -260,13 +275,20 @@ def _xtor_module(modname: str, params : h.Param = Sky130MosParams, num_terminals
         desc=f"{PDK_NAME} PDK Mos {modname}",
         port_list=deepcopy(num2device[num_terminals]),
         paramtype=params,
-        devicetype=devicetype,
+        props=Properties(props)
     )
 
     return mod
 
 
-def _res_module(modname: str, numterminals: int, params : h.Param, devicetype : str = None) -> h.ExternalModule:
+def _res_module(modname: str,
+                numterminals: int,
+                params : h.Param,
+                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
+                                      "xyce": SpicePrefix.SUBCKT,
+                                      "spectre": NotImplemented}
+                ) -> h.ExternalModule:
+    
     """Resistor Module creator"""
 
     num2device = {2: PhysicalResistor, 3: ThreeTerminalResistor}
@@ -277,13 +299,17 @@ def _res_module(modname: str, numterminals: int, params : h.Param, devicetype : 
         desc=f"{PDK_NAME} PDK Res{numterminals} {modname}",
         port_list=deepcopy(num2device[numterminals].port_list),
         paramtype=params,
-        devicetype=devicetype,
+        props=Properties(props)
     )
 
     return mod
 
 
-def _diode_module(modname: str, devicetype : str = None) -> h.ExternalModule:
+def _diode_module(modname: str,
+                  props : Dict = {"ngspice": SpicePrefix.DIODE,
+                                      "xyce": SpicePrefix.DIODE,
+                                      "spectre": NotImplemented}
+                    ) -> h.ExternalModule:
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -291,13 +317,17 @@ def _diode_module(modname: str, devicetype : str = None) -> h.ExternalModule:
         desc=f"{PDK_NAME} PDK Diode {modname}",
         port_list=deepcopy(Diode.port_list),
         paramtype=Sky130DiodeParams,
-        devicetype=devicetype,
+        props=Properties(props)
     )
 
     return mod
 
 
-def _bjt_module(modname: str, devicetype : str = None) -> h.ExternalModule:
+def _bjt_module(modname: str,
+                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
+                                      "xyce": SpicePrefix.SUBCKT,
+                                      "spectre": NotImplemented}
+                ) -> h.ExternalModule:
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -305,13 +335,19 @@ def _bjt_module(modname: str, devicetype : str = None) -> h.ExternalModule:
         desc=f"{PDK_NAME} PDK BJT {modname}",
         port_list=deepcopy(Bipolar.port_list),
         paramtype=Sky130BipolarParams,
-        devicetype=devicetype,
+        props=Properties(props)
     )
 
     return mod
 
 
-def _cap_module(modname: str, numterminals: int, params: h.Param, devicetype : str = None) -> h.ExternalModule:
+def _cap_module(modname: str,
+                numterminals: int,
+                params: h.Param,
+                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
+                                "xyce": SpicePrefix.SUBCKT,
+                                "spectre": NotImplemented}
+                )-> h.ExternalModule:
 
     num2device = {2: PhysicalCapacitor, 3: ThreeTerminalCapacitor}
 
@@ -322,7 +358,7 @@ def _cap_module(modname: str, numterminals: int, params: h.Param, devicetype : s
         desc=f"{PDK_NAME} PDK Cap{numterminals} {modname}",
         port_list=deepcopy(num2device[numterminals].port_list),
         paramtype=params,
-        devicetype=devicetype,
+        props=Properties(props)
     )
 
     return mod
@@ -334,7 +370,12 @@ PerpVPPPorts = [
     h.Port(name="b", desc="Bottom Shield"),
 ]
 
-def _vpp_module(modname: str, num_terminals: int, devicetype : str = None) -> h.ExternalModule:
+def _vpp_module(modname: str,
+                num_terminals: int,
+                props : Dict = {"ngspice": SpicePrefix.SUBCKT,
+                                      "xyce": SpicePrefix.SUBCKT,
+                                      "spectre": NotImplemented}
+                ) -> h.ExternalModule:
     """VPP Creator module"""
 
     if num_terminals == 3:
@@ -345,7 +386,7 @@ def _vpp_module(modname: str, num_terminals: int, devicetype : str = None) -> h.
             desc=f"{PDK_NAME} PDK Parallel VPP {num_terminals} {modname}",
             port_list=deepcopy(h.primitives.ThreeTerminalPorts),
             paramtype=Sky130VPPParams,
-            devicetype=devicetype,
+            props=Properties(props)
         )
 
     elif num_terminals == 4:
@@ -356,7 +397,7 @@ def _vpp_module(modname: str, num_terminals: int, devicetype : str = None) -> h.
             desc=f"{PDK_NAME} PDK Perpendicular VPP {modname}",
             port_list=deepcopy(PerpVPPPorts),
             paramtype=Sky130VPPParams,
-            devicetype=devicetype,
+            props=Properties(props)
         )
 
     return mod
@@ -451,15 +492,21 @@ xtors: Dict[MosKey, h.ExternalModule] = {
     ),
 }
 
+metal_resistor_props = {
+    "ngspice" : SpicePrefix.RESISTOR,
+    "xyce" : SpicePrefix.RESISTOR,
+    "spectre" : NotImplemented,
+}
+
 ress: Dict[str, h.ExternalModule] = {
     # 2-terminal generic resistors
     "GEN_PO": _res_module("sky130_fd_pr__res_generic_po", 2, Sky130GenResParams),
-    "GEN_L1": _res_module("sky130_fd_pr__res_generic_l1", 2, Sky130GenResParams, devicetype="IdealResistor"),
-    "GEN_M1": _res_module("sky130_fd_pr__res_generic_m1", 2, Sky130GenResParams, devicetype="IdealResistor"),
-    "GEN_M2": _res_module("sky130_fd_pr__res_generic_m2", 2, Sky130GenResParams, devicetype="IdealResistor"),
-    "GEN_M3": _res_module("sky130_fd_pr__res_generic_m3", 2, Sky130GenResParams, devicetype="IdealResistor"),
-    "GEN_M4": _res_module("sky130_fd_pr__res_generic_m4", 2, Sky130GenResParams, devicetype="IdealResistor"),
-    "GEN_M5": _res_module("sky130_fd_pr__res_generic_m5", 2, Sky130GenResParams, devicetype="IdealResistor"),
+    "GEN_L1": _res_module("sky130_fd_pr__res_generic_l1", 2, Sky130GenResParams, props=metal_resistor_props),
+    "GEN_M1": _res_module("sky130_fd_pr__res_generic_m1", 2, Sky130GenResParams, props=metal_resistor_props),
+    "GEN_M2": _res_module("sky130_fd_pr__res_generic_m2", 2, Sky130GenResParams, props=metal_resistor_props),
+    "GEN_M3": _res_module("sky130_fd_pr__res_generic_m3", 2, Sky130GenResParams, props=metal_resistor_props),
+    "GEN_M4": _res_module("sky130_fd_pr__res_generic_m4", 2, Sky130GenResParams, props=metal_resistor_props),
+    "GEN_M5": _res_module("sky130_fd_pr__res_generic_m5", 2, Sky130GenResParams, props=metal_resistor_props),
     # 3-terminal generic resistors
     "GEN_ND": _res_module("sky130_fd_pr__res_generic_nd", 3, Sky130GenResParams),
     "GEN_PD": _res_module("sky130_fd_pr__res_generic_pd", 3, Sky130GenResParams),
@@ -499,19 +546,19 @@ ress: Dict[str, h.ExternalModule] = {
 
 diodes: Dict[str, h.ExternalModule] = {
     # Add diodes
-    "PWND_5p5V": _diode_module("sky130_fd_pr__diode_pw2nd_05v5", devicetype="Diode"),
-    "PWND_11p0V": _diode_module("sky130_fd_pr__diode_pw2nd_11v0", devicetype="Diode"),
-    "PWND_5p5V_NAT": _diode_module("sky130_fd_pr__diode_pw2nd_05v5_nvt", devicetype="Diode"),
-    "PWND_5p5V_LVT": _diode_module("sky130_fd_pr__diode_pw2nd_05v5_lvt", devicetype="Diode"),
-    "PDNW_5p5V": _diode_module("sky130_fd_pr__diode_pd2nw_05v5", devicetype="Diode"),
-    "PDNW_11p0V": _diode_module("sky130_fd_pr__diode_pd2nw_11v0", devicetype="Diode"),
-    "PDNW_5p5V_HVT": _diode_module("sky130_fd_pr__diode_pd2nw_05v5_hvt", devicetype="Diode"),
-    "PDNW_5p5V_LVT": _diode_module("sky130_fd_pr__diode_pd2nw_05v5_lvt", devicetype="Diode"),
-    "PX_RF_PSNW": _diode_module("sky130_fd_pr__model__parasitic__rf_diode_ps2nw", devicetype="Diode"),
-    "PX_RF_PWDN": _diode_module("sky130_fd_pr__model__parasitic__rf_diode_pw2dn", devicetype="Diode"),
-    "PX_PWDN": _diode_module("sky130_fd_pr__model__parasitic__diode_pw2dn", devicetype="Diode"),
-    "PX_PSDN": _diode_module("sky130_fd_pr__model__parasitic__diode_ps2dn", devicetype="Diode"),
-    "PX_PSNW": _diode_module("sky130_fd_pr__model__parasitic__diode_ps2nw", devicetype="Diode"),
+    "PWND_5p5V": _diode_module("sky130_fd_pr__diode_pw2nd_05v5"),
+    "PWND_11p0V": _diode_module("sky130_fd_pr__diode_pw2nd_11v0"),
+    "PWND_5p5V_NAT": _diode_module("sky130_fd_pr__diode_pw2nd_05v5_nvt"),
+    "PWND_5p5V_LVT": _diode_module("sky130_fd_pr__diode_pw2nd_05v5_lvt"),
+    "PDNW_5p5V": _diode_module("sky130_fd_pr__diode_pd2nw_05v5"),
+    "PDNW_11p0V": _diode_module("sky130_fd_pr__diode_pd2nw_11v0"),
+    "PDNW_5p5V_HVT": _diode_module("sky130_fd_pr__diode_pd2nw_05v5_hvt"),
+    "PDNW_5p5V_LVT": _diode_module("sky130_fd_pr__diode_pd2nw_05v5_lvt"),
+    "PX_RF_PSNW": _diode_module("sky130_fd_pr__model__parasitic__rf_diode_ps2nw"),
+    "PX_RF_PWDN": _diode_module("sky130_fd_pr__model__parasitic__rf_diode_pw2dn"),
+    "PX_PWDN": _diode_module("sky130_fd_pr__model__parasitic__diode_pw2dn"),
+    "PX_PSDN": _diode_module("sky130_fd_pr__model__parasitic__diode_ps2dn"),
+    "PX_PSNW": _diode_module("sky130_fd_pr__model__parasitic__diode_ps2nw"),
 }
 
 bjts: Dict[str, h.ExternalModule] = {

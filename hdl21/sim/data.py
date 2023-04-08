@@ -399,6 +399,8 @@ def run(
 
     from .to_proto import to_proto
 
+    inp.Tb.props.set("simulator", opts.simulator.value)
+
     return vsp.sim(inp=to_proto(inp), opts=opts)
 
 

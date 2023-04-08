@@ -23,6 +23,7 @@ from pydantic.dataclasses import dataclass
 # Proto-definitions
 import vlsir
 import vlsir.circuit_pb2 as vckt
+from vlsirtools.netlist.base import SpicePrefix
 
 # HDL
 from ..params import isparamclass
@@ -144,7 +145,7 @@ class ProtoExporter:
             if not inst._resolved:
                 msg = f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
                 raise RuntimeError(msg)
-            pinst = self.export_instance(inst)
+            pinst = self.export_instance(module,inst)
             pmod.instances.append(pinst)
 
         # Store references to the result, and return it
@@ -174,7 +175,7 @@ class ProtoExporter:
         self.pkg.ext_modules.append(pmod)
         return pmod
 
-    def export_instance(self, inst: Instance) -> vckt.Instance:
+    def export_instance(self, module: Module, inst: Instance) -> vckt.Instance:
         """Convert an hdl21.Instance into a Proto-Instance
         Depth-first retrieves a Module definition first,
         using its generated `name` field as the Instance's `module` pointer."""
@@ -228,17 +229,19 @@ class ProtoExporter:
                 pinst.module.external.name = call.module.name
                 params = dictify_params(call.params)
 
-                # Add a null parameter corresponding SpicePrefix enum in VlsirTools
-                extm_map = {
-                    None : "x",
-                    "IdealResistor" : "r",
-                    "IdealCapacitor" : "c",
-                    "IdealInductor" : "l",
-                    "Mos" : "m",
-                    "Diode" : "d",
-                    "Bipolar" : "q",
-                }
-                params.update({"devicetype": extm_map[call.module.devicetype]})
+                # Add appropriate SpicePrefix as param if a simulator has been selected.
+                simulator = module.props.get("simulator")
+                if simulator in call.module.props:
+
+                    if call.module.props[simulator] is NotImplemented:
+                        msg = f"{call.module} can not be simulated in {simulator} simulator"
+                        raise NotImplementedError(msg)
+                    
+                    params.update({"devicetype": call.module.props[simulator].value})
+
+                else:
+
+                    params.update({"devicetype": SpicePrefix.SUBCKT.value})
 
             else:
                 msg = f"Un-exportable Instance {inst} resolves to invalid type {inst._resolved}"
