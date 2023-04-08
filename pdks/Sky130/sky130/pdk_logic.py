@@ -420,10 +420,10 @@ DEP_CACHE = []
 class Sky130DepWalker(h.HierarchyWalker):
     def visit_external_module_call(self, call: h.ExternalModuleCall) -> h.Instantiable:
 
-        name = call.module.name
+        deps = call.module.props["deps"]
 
         if name not in DEP_CACHE:
-            DEP_CACHE.append(call.module.name)
+            DEP_CACHE.append(deps)
 
         return call
 
@@ -435,54 +435,41 @@ def _remove_duplicates(input_list):
     return [x for x in input_list if not (x in seen or seen.add(x))]
 
 
-def _get_file_names(path: Path, substring: str) -> list[str]:
-    # Use the glob method to match all files in the given directory
-    files = path.glob("*")
-
-    # Convert the matched Path objects to strings if they are files and contain the substring
-    file_names = [
-        str(file).split("/spice/")[-1]
-        for file in files
-        if file.is_file() and substring in file.name
-    ]
-
-    return file_names
-
-
-def _find_lines_with_string(file_path: str, search_string: str) -> list:
-    # Convert the file_path to a string if it's a Path object
-    if isinstance(file_path, Path):
-        file_path = str(file_path)
-
-    with open(file_path, "r") as f:
-        # Read the file contents and split into lines
-        lines = f.readlines()
-
-    # Create a list to store the lines that contain the search string
-    matching_lines = []
-
-    # Iterate over each line and check if it contains the search string
-    for line in lines:
-        if search_string in line:
-            matching_lines.append(
-                line.strip()
-                .split("/spice/")[-1]
-                .split(".include")[-1]
-                .replace('"', "")
-                .strip()
-            )  # Append the line (with leading/trailing whitespace removed) to the matching lines list
-
-    return matching_lines
+mos_corners: Dict[CmosCorner, str] = {
+    CmosCorner.TT: "tt",
+    CmosCorner.FF: "ff",
+    CmosCorner.SS: "ss",
+    CmosCorner.SF: "sf",
+    CmosCorner.FS: "fs",
+}
+res_corners: Dict[Corner, str] = {
+    Corner.TYP: "typical",
+    Corner.FAST: "low",
+    Corner.SLOW: "high",
+}
+cap_corners: Dict[Corner, str] = {
+    Corner.TYP: "typical",
+    Corner.FAST: "low",
+    Corner.SLOW: "high",
+}
 
 
-def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
+def auto_includes(
+    src: h.sim.Sim,
+    fet_section: CmosCorner = CmosCorner.TT,
+    res_section: Corner = Corner.TYP,
+    cap_section: Corner = Corner.TYP,
+    mismatch_montecarlo: bool = False,
+    process_variation_montecarlo: bool = False,
+) -> None:
+
     """
     Automatically add dependencies to the given `src` based on modules present in the testbench.
 
     This function updates the `src` object in-place by adding h.sim.Include attributes to it. It first
     walks through the testbench using the Sky130DepWalker class, which populates the DEP_CACHE with
-    dependencies. Then, for each dependency, it searches for the appropriate include file and adds
-    the corresponding h.sim.Include attribute to the `src` h.sim.Sim object.
+    dependencies. These dependencies are then sanitized and organized into the correct Controls needed
+    for the simulation to run.
 
     Args:
         src (h.sim.Sim): The object representing the simulation to which the dependencies will be added.
@@ -496,30 +483,13 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
         RuntimeError: If no dependencies are found in the testbench.
     """
 
-    # Initialize the section_map dictionary
-    section_map = {
-        "tt": ["typical", "typical"],
-        "sf": ["typical", "typical"],
-        "ff": ["typical", "typical"],
-        "sf": ["typical", "typical"],
-        "fs": ["typical", "typical"],
-        "hh": ["high", "high"],
-        "hl": ["high", "low"],
-        "lh": ["low", "high"],
-        "ll": ["low", "low"],
-    }
+    # Find all required dependencies
+    Sky130DepWalker().walk(src.Tb)
 
-    if section[0] != "h" or section[0] != "l":
-        fet_section = section
-    else:
-        fet_section = "tt"
+    # Obtain the singleton instance of the Install class
+    install = Install.instance()
 
-    install = Install.instance()  # Obtain the singleton instance of the Install class
-
-    Sky130DepWalker().walk(
-        src.Tb
-    )  # Walk through the Testbench hierarchy to collect dependencies
-
+    # Default simulation controls
     src.attrs.append(h.sim.Literal(".control"))
     src.attrs.append(h.sim.Literal("set ng_nomodcheck"))
     src.attrs.append(h.sim.Literal("set ngbehavior=hsa"))
@@ -528,145 +498,64 @@ def auto_includes(src: h.sim.Sim, section: str = "tt") -> None:
     # Boilerplate Spice includes to make sure the simulation runs
     src.attrs.append(h.sim.Options(scale=1e-6))
 
-    # Check if Mismatch Monte Carlo is required
-    if section[:-2] == "mm":
-        src.attrs.append(h.sim.Param(1, name="mc_mm_switch"))
-    else:
-        src.attrs.append(h.sim.Param(0, name="mc_mm_switch"))
+    # Organize dependencies into duplicate-free lists
+    ref_includes = []
+    tech_includes = [
+        "parameters/lod.spice",
+        "corners/<fet_section>/nonfet.spice",
+        "parameters/invariant.spice",
+    ]
 
-    # Check if Process variation Monte Carlo is required
-    IS_PR = False
-    if section == "mc":
-        src.attrs.append(h.sim.Param(1, name="mc_pr_switch"))
-        IS_PR = True
-    else:
-        src.attrs.append(h.sim.Param(0, name="mc_pr_switch"))
+    # These parameters are always required
+    params = [
+        h.sim.Param(int(process_variation_montecarlo), name="mc_pr_switch"),
+        h.sim.Param(int(mismatch_montecarlo), name="mc_mm_switch"),
+    ]
 
-    src.attrs.append(
-        h.sim.Include(
-            install.pdk_path / install.lib_path.parent / "parameters/lod.spice"
-        )
-    )
+    # Special case for process variation montecarlo
+    if process_variation_montecarlo:
+        tech_includes += ["parameters/critical.spice", "parameters/montecarlo.spice"]
 
-    if DEP_CACHE == []:
-        raise RuntimeError("No dependencies found in testbench.")
-
-    full_incs = []
-    incs = []
-
-    # full_incs.append(f"/usr/local/share/pdk/sky130A/libs.tech/ngspice/corners/{section}/specialized_cells.spice")
-
-    # Iterate over the collected dependencies
     for dep in DEP_CACHE:
+        ref_includes.extend(dep.get("ref_includes", []))
+        tech_includes.extend(dep.get("tech_includes", []))
+        params.extend(dep.get("params", []))
 
-        if "fet" in dep:
+    if ref_includes == [] and tech_includes == []:
+        msg = "No dependencies found in testbench"
+        raise RuntimeError(msg)
 
-            # For the exceptional cases, add the appropriate spice file
-            if "20v0" in dep:
+    # Remove duplicates
+    ref_includes = _remove_duplicates(ref_includes)
+    tech_includes = _remove_duplicates(tech_includes)
 
-                # No iso or zvt corner files for 20v0
-                if "iso" in dep or "zvt" in dep:
-                    d = dep[:-4]
-                else:
-                    d = dep
+    # FIXME: Find method to remove duplicates from params
+    # params = _remove_duplicates(params)
 
-                incs.append(f"{d}__{fet_section}_discrete.corner.spice")
-                incs.append("sky130_fd_pr__diode_pw2nd_05v5.model.spice")
+    # Replace all tags with appropriate section names
+    pref_includes = []
+    ptech_includes = []
 
-            elif "pfet_g5v0d16v0" in dep:
-                incs.append("sky130_fd_pr__pfet_g5v0d16v0__subcircuit.pm3.spice")
-                incs.append("sky130_fd_pr__pfet_g5v0d16v0.pm3.spice")
-                incs.append(f"sky130_fd_pr__pfet_g5v0d16v0__{fet_section}.corner.spice")
-                incs.append(
-                    "sky130_fd_pr__pfet_g5v0d16v0__parasitic__diode_pw2dn.model.spice"
-                )
+    for ref in ref_includes:
+        ref = ref.replace("<fet_section>", mos_corners[fet_section])
+        ref = ref.replace("<res_section>", res_corners[res_section])
+        ref = ref.replace("<cap_section>", cap_corners[cap_section])
+        pref_includes.append(ref)
 
-            else:
+    for tech in tech_includes:
+        tech = tech.replace("<fet_section>", mos_corners[fet_section])
+        tech = tech.replace("<res_section>", res_corners[res_section])
+        tech = tech.replace("<cap_section>", cap_corners[cap_section])
+        ptech_includes.append(tech)
 
-                # Iterate over lines found in the corner spice file
-                for f in _find_lines_with_string(
-                    install.pdk_path
-                    / install.lib_path.parent
-                    / Path(f"corners/{section}.spice"),
-                    dep + "__",
-                ):
-                    incs.append(f)
+    # Parse into h.sim.Include objects
+    ref_dir = install.pdk_path / install.model_ref
+    ref_includes = [h.sim.Include(ref_dir / ref) for ref in pref_includes]
 
-            full_incs.append(
-                str(
-                    install.pdk_path
-                    / install.lib_path.parent
-                    / f"corners/{fet_section}/nonfet.spice"
-                )
-            )
+    tech_dir = install.pdk_path / install.lib_path.parent
+    tech_includes = [h.sim.Include(tech_dir / tech) for tech in ptech_includes]
 
-        elif "parasitic" in dep:
+    # Add all controls to the simulation
+    src.attrs.extend(params + tech_includes + ref_includes)
 
-            # Iterate over lines found in the corner spice file
-            for f in _find_lines_with_string(
-                install.pdk_path / install.lib_path.parent / Path("all.spice"),
-                dep,
-            ):
-                full_incs.append(str(install.pdk_path / install.lib_path.parent / f))
-
-        elif "res" in dep or "cap" in dep or "diode_pw2" in dep:
-
-            r = section_map[section[:2]][0]
-            c = section_map[section[:2]][1]
-
-            full_incs.append(
-                str(
-                    install.pdk_path
-                    / install.lib_path.parent
-                    / "r+c/"
-                    / f"res_{r}__cap_{c}.spice"
-                )
-            )
-            full_incs.append(
-                str(
-                    install.pdk_path
-                    / install.lib_path.parent
-                    / "r+c/"
-                    / f"res_{r}__cap_{c}__lin.spice"
-                )
-            )
-            full_incs.append(
-                str(
-                    install.pdk_path
-                    / install.lib_path.parent
-                    / "sky130_fd_pr__model__r+c.model.spice"
-                )
-            )
-
-            # Iterate over lines found in the all.spice file
-            for f in _find_lines_with_string(
-                install.pdk_path / install.lib_path.parent / Path("all.spice"),
-                dep,
-            ):
-                incs.append(f)
-
-    full_incs.append(
-        str(install.pdk_path / install.lib_path.parent / "parameters/invariant.spice")
-    )
-
-    # Include critical.spice and montecarlo.spice files if Process variation Monte Carlo is enabled
-    if IS_PR:
-        src.attrs.append(
-            h.sim.Include(install.pdk_path / install.lib_path.parent / "critical.spice")
-        )
-        src.attrs.append(
-            h.sim.Include(
-                install.pdk_path / install.lib_path.parent / "montecarlo.spice"
-            )
-        )
-
-    # Reduce to only unique elements
-    incs = _remove_duplicates(incs)
-    full_incs = _remove_duplicates(full_incs)
-
-    # Add Include objects to the src.attrs list with the appropriate file paths
-    for inc in full_incs:
-        src.attrs.append(h.sim.Include(inc))
-
-    for inc in incs:
-        src.attrs.append(h.sim.Include(install.pdk_path / install.model_ref / inc))
+    return None

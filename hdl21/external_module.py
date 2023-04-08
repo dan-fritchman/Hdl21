@@ -17,6 +17,7 @@ from .instance import calls_instantiate
 from .qualname import qualname_magic_methods
 from .props import Properties
 
+
 @dataclass
 @qualname_magic_methods
 class ExternalModule:
@@ -39,7 +40,7 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
-    props: Properties = Properties() # Additional properties, for use by the user.
+    props: Properties = Properties()  # Additional properties, for use by the user.
 
     @property
     def ports(self) -> dict:

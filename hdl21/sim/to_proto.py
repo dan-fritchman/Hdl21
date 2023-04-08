@@ -19,6 +19,7 @@ from ..scalar import Scalar
 from ..signal import Signal
 from ..connect import is_connectable
 
+
 def to_proto(inp: OneOrMore[data.Sim]) -> OneOrMore[vsp.SimInput]:
     """Convert a `Sim` to a VLSIR `SimInput`"""
     from ..proto import to_proto as module_to_proto

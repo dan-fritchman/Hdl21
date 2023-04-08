@@ -153,10 +153,16 @@ def test_sim_mosfets():
             )
 
             # 20V series only accepts W/L/m
-            pfet_20v0 = s.PMOS_20p0V(q(w=30,l=1,m=1))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_20v0_zvt = s.NMOS_20p0V_LOW(q(w = 30.000, l = 1.500))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_20v0 = s.NMOS_20p0V_STD(q(w = 29.410, l = 2.950))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_20v0_nvt = s.NMOS_20p0V_NAT(q(w = 30.000, l = 1.000))(d=vdd, g=vdd, s=VSS, b=VSS)
+            pfet_20v0 = s.PMOS_20p0V(q(w=30, l=1, m=1))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_20v0_zvt = s.NMOS_20p0V_LOW(q(w=30.000, l=1.500))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_20v0 = s.NMOS_20p0V_STD(q(w=29.410, l=2.950))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_20v0_nvt = s.NMOS_20p0V_NAT(q(w=30.000, l=1.000))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
             nfet_03v3_nvt = s.NMOS_3p3V_NAT(p(w=0.700, l=0.500))(
                 d=vdd, g=vdd, s=VSS, b=VSS
@@ -567,26 +573,26 @@ def test_sim_devcap():
             # the first 5 which parameterize all the others
 
             cap_vpp_1 = s.VPP_PARA_1(p)(p=vdd, n=VSS, b=VSS)
-            cap_vpp_2 = s.VPP_PARA_2(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_3 = s.VPP_PARA_3(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_4 = s.VPP_PARA_4(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_5 = s.VPP_PARA_5(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_6 = s.VPP_PARA_6(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_7 = s.VPP_PARA_7(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_8 = s.VPP_PARA_8(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_9 = s.VPP_PARA_9(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_10 = s.VPP_PARA_10(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_11 = s.VPP_PARA_11(p)(p=vdd, n=VSS,b=VSS)
-            cap_vpp_12 = s.VPP_PERP_1(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_13 = s.VPP_PERP_2(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_14 = s.VPP_PERP_3(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_15 = s.VPP_PERP_4(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_16 = s.VPP_PERP_5(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_17 = s.VPP_PERP_6(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_18 = s.VPP_PERP_7(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_19 = s.VPP_PERP_8(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_20 = s.VPP_PERP_9(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            cap_vpp_21 = s.VPP_PERP_10(p)(p=vdd, n=VSS,b=VSS,t=VSS)
+            cap_vpp_2 = s.VPP_PARA_2(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_3 = s.VPP_PARA_3(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_4 = s.VPP_PARA_4(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_5 = s.VPP_PARA_5(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_6 = s.VPP_PARA_6(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_7 = s.VPP_PARA_7(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_8 = s.VPP_PARA_8(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_9 = s.VPP_PARA_9(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_10 = s.VPP_PARA_10(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_11 = s.VPP_PARA_11(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_12 = s.VPP_PERP_1(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_13 = s.VPP_PERP_2(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_14 = s.VPP_PERP_3(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_15 = s.VPP_PERP_4(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_16 = s.VPP_PERP_5(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_17 = s.VPP_PERP_6(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_18 = s.VPP_PERP_7(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_19 = s.VPP_PERP_8(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_20 = s.VPP_PERP_9(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            # cap_vpp_21 = s.VPP_PERP_10(p)(p=vdd, n=VSS, b=VSS, t=VSS)
 
         # Simulation Controls
         op = h.sim.Op()

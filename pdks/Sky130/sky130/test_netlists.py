@@ -212,7 +212,7 @@ def test_diode_netlists():
         assert s[11] == "+ area='9T' pj='12M' "  # No weird or illegal parameters...
 
 
-def test_bjt_netlists():
+def test_pnp_netlists():
     @h.generator
     def GenBipolar(params: h.BipolarParams) -> h.Module:
         @h.module
@@ -225,21 +225,55 @@ def test_bjt_netlists():
 
     for x in sky130.bjts.keys():
 
-        # Relevant param
-        p = h.BipolarParams(model=x)
+        if x.startswith("PNP"):
+            # Relevant param
+            p = h.BipolarParams(model=x)
 
-        # Generate and compile
-        mod = h.elaborate(GenBipolar(p))
-        sky130.compile(mod)
+            # Generate and compile
+            mod = h.elaborate(GenBipolar(p))
+            sky130.compile(mod)
 
-        # Netlist and compare
-        s = StringIO()
-        h.netlist(mod, dest=s, fmt="spice")
-        s = s.getvalue().split("\n")
+            # Netlist and compare
+            s = StringIO()
+            h.netlist(mod, dest=s, fmt="spice")
+            s = s.getvalue().split("\n")
 
-        assert s[9] == "+ x y z "  # Correctly maps ports to their places...
-        assert s[10] == "+ " + sky130.bjts[x].name + " "  # Has correct PDK name...
-        assert s[11] == "+ m='1' "  # No weird or illegal parameters...
+            assert s[9] == "+ x y z "  # Correctly maps ports to their places...
+            assert s[10] == "+ " + sky130.bjts[x].name + " "  # Has correct PDK name...
+            assert s[11] == "+ m='1' "  # No weird or illegal parameters...
+
+
+def test_npn_netlists():
+
+    p = sky130.Sky130BipolarParams()
+
+    @h.module
+    class Bipolar1:
+
+        w, x, y, z = 4 * h.Signal()
+        genBipolar = sky130.modules.NPN_5p0V_1x2(p)(c=w, b=x, e=y, s=z)
+
+    @h.module
+    class Bipolar2:
+
+        w, x, y, z = 4 * h.Signal()
+        genBipolar = sky130.modules.NPN_5p0V_1x1(p)(c=w, b=x, e=y, s=z)
+
+    s = StringIO()
+    h.netlist(Bipolar1, dest=s, fmt="spice")
+    s = s.getvalue().split("\n")
+
+    assert s[9] == "+ w x y z "  # Correctly maps ports to their places...
+    assert s[10] == "+ sky130_fd_pr__npn_05v5_W1p00L2p00 "  # Has correct PDK name...
+    assert s[11] == "+ m='1' "  # No weird or illegal parameters...
+
+    s = StringIO()
+    h.netlist(Bipolar2, dest=s, fmt="spice")
+    s = s.getvalue().split("\n")
+
+    assert s[9] == "+ w x y z "  # Correctly maps ports to their places...
+    assert s[10] == "+ sky130_fd_pr__npn_05v5_W1p00L1p00 "  # Has correct PDK name...
+    assert s[11] == "+ m='1' "  # No weird or illegal parameters...
 
 
 def test_mim_cap_netlists():

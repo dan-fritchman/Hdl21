@@ -334,6 +334,7 @@ def is_control(val: Any) -> bool:
 @simattr
 class Options:
     """Simulation Options"""
+
     def __init__(self, **kwargs):
         self.opts = {}
         self.opts.update(kwargs)

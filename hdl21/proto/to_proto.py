@@ -145,7 +145,7 @@ class ProtoExporter:
             if not inst._resolved:
                 msg = f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
                 raise RuntimeError(msg)
-            pinst = self.export_instance(module,inst)
+            pinst = self.export_instance(module, inst)
             pmod.instances.append(pinst)
 
         # Store references to the result, and return it
@@ -236,7 +236,7 @@ class ProtoExporter:
                     if call.module.props[simulator] is NotImplemented:
                         msg = f"{call.module} can not be simulated in {simulator} simulator"
                         raise NotImplementedError(msg)
-                    
+
                     params.update({"devicetype": call.module.props[simulator].value})
 
                 else:

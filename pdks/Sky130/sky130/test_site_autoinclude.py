@@ -161,12 +161,6 @@ def test_auto_genres():
             p = sky130.Sky130GenResParams()
 
             res_gen_po = s.GEN_PO(p)(p=VSS, n=vdd)
-
-            # FIXME: These models will only simulate in ngspice
-            # with a name starting with "R"
-
-            # forced naming conventions, how helpful!
-
             res_gen_l1 = s.GEN_L1(p)(p=VSS, n=vdd)
             res_gen_m1 = s.GEN_M1(p)(p=VSS, n=vdd)
             res_gen_m2 = s.GEN_M2(p)(p=VSS, n=vdd)
@@ -214,11 +208,11 @@ def test_auto_precres():
             res_p_prec_141 = s.PP_PREC_1p41(p)(p=VSS, n=vdd, b=VSS)
             res_p_prec_285 = s.PP_PREC_2p85(p)(p=VSS, n=vdd, b=VSS)
             res_p_prec_573 = s.PP_PREC_5p73(p)(p=VSS, n=vdd, b=VSS)
-            res_p_minus_prec_035 = s.PM_PREC_0p35(p)(p=VSS, n=vdd, b=VSS)
-            res_p_minus_prec_069 = s.PM_PREC_0p69(p)(p=VSS, n=vdd, b=VSS)
-            res_p_minus_prec_141 = s.PM_PREC_1p41(p)(p=VSS, n=vdd, b=VSS)
-            res_p_minus_prec_285 = s.PM_PREC_2p85(p)(p=VSS, n=vdd, b=VSS)
-            res_p_minus_prec_573 = s.PM_PREC_5p73(p)(p=VSS, n=vdd, b=VSS)
+            # res_p_minus_prec_035 = s.PM_PREC_0p35(p)(p=VSS, n=vdd, b=VSS)
+            # res_p_minus_prec_069 = s.PM_PREC_0p69(p)(p=VSS, n=vdd, b=VSS)
+            # res_p_minus_prec_141 = s.PM_PREC_1p41(p)(p=VSS, n=vdd, b=VSS)
+            # res_p_minus_prec_285 = s.PM_PREC_2p85(p)(p=VSS, n=vdd, b=VSS)
+            # res_p_minus_prec_573 = s.PM_PREC_5p73(p)(p=VSS, n=vdd, b=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
@@ -301,14 +295,16 @@ def test_auto_bjt():
             vdd = h.Signal()
             v = h.Vdc(dc=1)(p=vdd, n=VSS)
 
-            p = sky130.Sky130DiodeParams()
+            p = sky130.Sky130BipolarParams()
 
-            # FIXME: Device Documentation could use some serious work here
-            # Aspirational Bipolar layout goes here, lololol
+            # FIXME: NPN Transistors currently require a hack
+            npn_5_1x2 = s.NPN_5p0V_1x2(p)(c=VSS, b=vdd, e=VSS, s=VSS)
+            # npn_11_1x1 = s.NPN_11p0V_1x1(p)(c=VSS,b=vdd,e=VSS,s=VSS) # This one just won't work...
+            npn_5_1x1 = s.NPN_5p0V_1x1(p)(c=VSS, b=vdd, e=VSS, s=VSS)
 
-            # npn_50v = s.NPN_5p0V(p)(e=vdd, b=VSS, c=VSS)
-            # npn_110v = s.NPN_11p0V(p)(e=vdd, b=VSS, c=VSS)
-            # pnp_50v = s.PNP_5p0V(p)(e=vdd, b=VSS, c=VSS)
+            # These function without the hack below
+            pnp_5_1x1 = s.PNP_5p0V_0p68x0p68(p)(c=VSS, b=vdd, e=VSS)
+            pnp_5_3x3 = s.PNP_5p0V_3p40x3p40(p)(c=VSS, b=vdd, e=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
@@ -378,26 +374,26 @@ def test_auto_devcap():
 
             p = sky130.Sky130VPPParams()
 
-            # cap_vpp_1 = s.VPP_PARA_1(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_2 = s.VPP_PARA_2(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_3 = s.VPP_PARA_3(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_4 = s.VPP_PARA_4(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_5 = s.VPP_PARA_5(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_6 = s.VPP_PARA_6(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_7 = s.VPP_PARA_7(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_8 = s.VPP_PARA_8(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_9 = s.VPP_PARA_9(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_10 = s.VPP_PARA_10(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_11 = s.VPP_PARA_11(p)(p=vdd, n=VSS,b=VSS)
-            # cap_vpp_12 = s.VPP_PERP_1(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_13 = s.VPP_PERP_2(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_14 = s.VPP_PERP_3(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_15 = s.VPP_PERP_4(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_16 = s.VPP_PERP_5(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_17 = s.VPP_PERP_6(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_18 = s.VPP_PERP_7(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_19 = s.VPP_PERP_8(p)(p=vdd, n=VSS,b=VSS,t=VSS)
-            # cap_vpp_20 = s.VPP_PERP_9(p)(p=vdd, n=VSS,b=VSS,t=VSS)
+            cap_vpp_1 = s.VPP_PARA_1(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_2 = s.VPP_PARA_2(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_3 = s.VPP_PARA_3(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_4 = s.VPP_PARA_4(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_5 = s.VPP_PARA_5(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_6 = s.VPP_PARA_6(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_7 = s.VPP_PARA_7(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_8 = s.VPP_PARA_8(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_9 = s.VPP_PARA_9(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_10 = s.VPP_PARA_10(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_11 = s.VPP_PARA_11(p)(p=vdd, n=VSS, b=VSS)
+            cap_vpp_12 = s.VPP_PERP_1(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_13 = s.VPP_PERP_2(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_14 = s.VPP_PERP_3(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_15 = s.VPP_PERP_4(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_16 = s.VPP_PERP_5(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_17 = s.VPP_PERP_6(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_18 = s.VPP_PERP_7(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_19 = s.VPP_PERP_8(p)(p=vdd, n=VSS, b=VSS, t=VSS)
+            cap_vpp_20 = s.VPP_PERP_9(p)(p=vdd, n=VSS, b=VSS, t=VSS)
             # cap_vpp_21 = s.VPP_PERP_10(p)(p=vdd, n=VSS,b=VSS,t=VSS)
 
         # Simulation Controls
