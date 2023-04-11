@@ -1065,11 +1065,11 @@ default_prec_res_L = {
 
 default_cap_sizes = {
     # FIXME: Using documentation minimum sizing not sure of correct answer
-    "sky130_fd_pr__cap_mim_m3__base": (
+    "sky130_fd_pr__cap_mim_m3_1": (
         h.Scalar(inner=2.000 * µ),
         h.Scalar(inner=2.000 * µ),
     ),
-    "sky130_fd_pr__cap_mim_m4__base": (
+    "sky130_fd_pr__cap_mim_m3_2": (
         h.Scalar(inner=2.000 * µ),
         h.Scalar(inner=2.000 * µ),
     ),

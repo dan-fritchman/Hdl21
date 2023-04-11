@@ -330,14 +330,20 @@ Control = Union[Include, Lib, Save, Meas, Param, Literal]
 def is_control(val: Any) -> bool:
     return isinstance(val, Control.__args__)
 
-
+# Define all available option types below
+OptionTypes = Union[
+    bool,
+    Scalar,
+    str,
+    Literal,
+]
 @simattr
+@datatype
 class Options:
     """Simulation Options"""
 
-    def __init__(self, **kwargs):
-        self.opts = {}
-        self.opts.update(kwargs)
+    value: OptionTypes
+    name: str
 
 
 # Spice-Sim Attribute-Union

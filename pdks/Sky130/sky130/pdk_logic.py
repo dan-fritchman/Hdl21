@@ -496,7 +496,7 @@ def auto_includes(
     src.attrs.append(h.sim.Literal(".endc"))
 
     # Boilerplate Spice includes to make sure the simulation runs
-    src.attrs.append(h.sim.Options(scale=1e-6))
+    src.attrs.append(h.sim.Options(1e-6,name="scale"))
 
     # Organize dependencies into duplicate-free lists
     ref_includes = []

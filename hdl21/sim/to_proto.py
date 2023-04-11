@@ -274,11 +274,8 @@ class SimProtoExporter:
 
 def export_options(options: data.Options) -> vsp.SimOptions:
     """Export simulation options"""
-    sim_options = vsp.SimOptions()
-    sim_options.opts.update(options.opts)
-
-    return sim_options
-
+    from ..proto.to_proto import export_param_value
+    return vsp.SimOptions(name=options.name, value=export_param_value(options.value))
 
 def export_control(ctrl: data.Control) -> vsp.Control:
     """Export a `Control` element"""
