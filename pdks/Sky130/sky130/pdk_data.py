@@ -36,7 +36,7 @@ from hdl21.pdk import Corner, CmosCorner
 from hdl21.props import Properties
 
 # Vlsirtool Types to ease downstream parsing
-from vlsirtools.netlist.base import SpicePrefix
+from vlsir.circuit_pb2 import SpiceType
 
 FIXME = None  # FIXME: Replace with real values!
 PDK_NAME = "sky130"
@@ -302,13 +302,6 @@ def _xtor_module(
     modname: str,
     params: h.Param = Sky130MosParams,
     num_terminals: int = 4,
-    props: Dict = {
-        "ngspice": SpicePrefix.SUBCKT,
-        "xyce": SpicePrefix.SUBCKT,
-        "spectre": NotImplemented,
-        "deps": {},
-    },
-    deps: Dict = {},
 ) -> h.ExternalModule:
 
     """Transistor module creator, with module-name `name`.
@@ -316,35 +309,13 @@ def _xtor_module(
 
     num2device = {4: h.Mos.port_list, 5: Mos5TPortList}
 
-    if params == Sky130MosParams:
-        props["deps"] = {
-            "ref_includes": [
-                f"{modname}__<fet_section>.corner.spice",
-                f"{modname}__mismatch.corner.spice",
-            ]
-        }
-    elif params == Sky130Mos20VParams:
-        props["deps"] = {
-            # FIXME: This just includes all 20V models - there is a better way to do this
-            "ref_includes": [
-                f"sky130_fd_pr__nfet_20v0__<fet_section>_discrete.corner.spice",
-                f"sky130_fd_pr__diode_pw2nd_05v5.model.spice",
-            ]
-        }
-    else:
-        msg = f"{params} is not a valid parameter class for a MOSFET"
-        ValueError(msg)
-
-    # Any custom arguments that need to be added.
-    props["deps"].update(deps)
-
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,
         desc=f"{PDK_NAME} PDK Mos {modname}",
         port_list=deepcopy(num2device[num_terminals]),
         paramtype=params,
-        props=Properties(props),
+        spicetype=SpiceType.SUBCKT
     )
 
     return mod
@@ -354,47 +325,13 @@ def _res_module(
     modname: str,
     numterminals: int,
     params: h.Param,
-    props: Dict = {
-        "ngspice": SpicePrefix.SUBCKT,
-        "xyce": SpicePrefix.SUBCKT,
-        "spectre": NotImplemented,
-        "deps": Dict,
-    },
-    deps: Dict = {},
+    spicetype=SpiceType.SUBCKT,
 ) -> h.ExternalModule:
 
     """Resistor Module creator"""
 
     num2device = {2: PhysicalResistor, 3: ThreeTerminalResistor}
 
-    if params == Sky130GenResParams:
-        props["deps"] = {
-            "ref_includes": [
-                "sky130_fd_pr__diode_pw2nd_05v5.model.spice",
-            ],
-            "tech_includes": [
-                "r+c/res_<res_section>__cap_<cap_section>.spice",
-                "r+c/res_<res_section>__cap_<cap_section>__lin.spice",
-                "parasitics/sky130_fd_pr__model__parasitic__diode_ps2nw.model.spice",
-                "sky130_fd_pr__model__linear.model.spice",
-            ],
-        }
-    elif params == Sky130PrecResParams:
-        props["deps"] = {
-            # "ref_includes" : [
-            #     f"{modname}.model.spice"
-            # ],
-            "tech_includes": [
-                "r+c/res_<res_section>__cap_<cap_section>.spice",
-                "r+c/res_<res_section>__cap_<cap_section>__lin.spice",
-                "sky130_fd_pr__model__linear.model.spice",
-            ]
-        }
-    else:
-        msg = f"{params} is not a valid parameter class for a resistor"
-        ValueError(msg)
-
-    props["deps"].update(deps)
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -402,7 +339,7 @@ def _res_module(
         desc=f"{PDK_NAME} PDK Res{numterminals} {modname}",
         port_list=deepcopy(num2device[numterminals].port_list),
         paramtype=params,
-        props=Properties(props),
+        spicetype=spicetype,
     )
 
     return mod
@@ -410,23 +347,9 @@ def _res_module(
 
 def _diode_module(
     modname: str,
-    props: Dict = {
-        "ngspice": SpicePrefix.DIODE,
-        "xyce": SpicePrefix.DIODE,
-        "spectre": NotImplemented,
-        "deps": Dict,
-    },
-    deps: Dict = {},
 ) -> h.ExternalModule:
 
     """Diode Module creator"""
-
-    props["deps"] = {
-        "ref_includes": [
-            f"{modname}.model.spice",
-        ]
-    }
-    props["deps"].update(deps)
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -434,7 +357,7 @@ def _diode_module(
         desc=f"{PDK_NAME} PDK Diode {modname}",
         port_list=deepcopy(Diode.port_list),
         paramtype=Sky130DiodeParams,
-        props=Properties(props),
+        spicetype=SpiceType.DIODE,
     )
 
     return mod
@@ -451,32 +374,9 @@ BJT4TPortList = [
 def _bjt_module(
     modname: str,
     numterminals: int = 3,
-    props: Dict = {
-        "ngspice": SpicePrefix.SUBCKT,
-        "xyce": SpicePrefix.SUBCKT,
-        "spectre": NotImplemented,
-        "deps": Dict,
-    },
-    deps: Dict = {},
 ) -> h.ExternalModule:
 
     num2device = {3: Bipolar.port_list, 4: BJT4TPortList}
-
-    props["deps"] = {
-        "ref_includes": [
-            f"{modname}.model.spice",
-            "sky130_fd_pr__pfet_01v8__<fet_section>.corner.spice",
-        ],
-        "params": [
-            h.sim.Param(8.7913e-01, name="dkisnpn1x1"),
-            h.sim.Param(9.8501e-01, name="dkbfnpn1x1"),
-            h.sim.Param(9.0950e-01, name="dkisnpn1x2"),
-            h.sim.Param(9.6759e-01, name="dkbfnpn1x2"),
-            h.sim.Param(1.0, name="dkisnpnpolyhv"),
-            h.sim.Param(1.0, name="dkbfnpnpolyhv"),
-        ],
-    }
-    props["deps"].update(deps)
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -484,7 +384,6 @@ def _bjt_module(
         desc=f"{PDK_NAME} PDK BJT {modname}",
         port_list=deepcopy(num2device[numterminals]),
         paramtype=Sky130BipolarParams,
-        props=Properties(props),
     )
 
     return mod
@@ -494,27 +393,9 @@ def _cap_module(
     modname: str,
     numterminals: int,
     params: h.Param,
-    props: Dict = {
-        "ngspice": SpicePrefix.SUBCKT,
-        "xyce": SpicePrefix.SUBCKT,
-        "spectre": NotImplemented,
-        "deps": Dict,
-    },
-    deps: Dict = {},
 ) -> h.ExternalModule:
 
     num2device = {2: PhysicalCapacitor, 3: ThreeTerminalCapacitor}
-
-    props["deps"] = {
-        "ref_includes": [
-            f"{modname}.model.spice",
-        ],
-        "tech_includes": [
-            "r+c/res_<res_section>__cap_<cap_section>.spice",
-            "r+c/res_<res_section>__cap_<cap_section>__lin.spice",
-        ],
-    }
-    props["deps"].update(deps)
 
     """Capacitor Module creator"""
     mod = h.ExternalModule(
@@ -523,7 +404,6 @@ def _cap_module(
         desc=f"{PDK_NAME} PDK Cap{numterminals} {modname}",
         port_list=deepcopy(num2device[numterminals].port_list),
         paramtype=params,
-        props=Properties(props),
     )
 
     return mod
@@ -540,27 +420,8 @@ PerpVPPPorts = [
 def _vpp_module(
     modname: str,
     num_terminals: int,
-    props: Dict = {
-        "ngspice": SpicePrefix.SUBCKT,
-        "xyce": SpicePrefix.SUBCKT,
-        "spectre": NotImplemented,
-        "deps": Dict,
-    },
-    deps: Dict = {},
 ) -> h.ExternalModule:
     """VPP Creator module"""
-
-    props["deps"] = {
-        "ref_includes": [
-            f"{modname}.spice",
-        ],
-        # "tech_includes" : [
-        #     "r+c/res_<res_section>__cap_<cap_section>.spice",
-        #     "r+c/res_<res_section>__cap_<cap_section>__lin.spice",
-        #     "sky130_fd_pr__model__linear.model.spice"
-        # ]
-    }
-    props["deps"].update(deps)
 
     if num_terminals == 3:
 
@@ -570,7 +431,6 @@ def _vpp_module(
             desc=f"{PDK_NAME} PDK Parallel VPP {num_terminals} {modname}",
             port_list=deepcopy(h.primitives.ThreeTerminalPorts),
             paramtype=Sky130VPPParams,
-            props=Properties(props),
         )
 
     elif num_terminals == 4:
@@ -581,7 +441,6 @@ def _vpp_module(
             desc=f"{PDK_NAME} PDK Perpendicular VPP {modname}",
             port_list=deepcopy(PerpVPPPorts),
             paramtype=Sky130VPPParams,
-            props=Properties(props),
         )
 
     return mod
@@ -600,14 +459,7 @@ to find and determine the correct internal device to use.
 xtors: Dict[MosKey, h.ExternalModule] = {
     # Add all generic transistors
     ("NMOS_1p8V_STD", MosType.NMOS, MosVth.STD, MosFamily.CORE): _xtor_module(
-        "sky130_fd_pr__nfet_01v8",
-        deps={
-            "ref_include": [
-                "sky130_fd_pr__nfet_01v8__<fet_section>.spice",
-                "sky130_fd_pr__nfet_01v8__mismatch.corner.spice",
-            ]
-        },
-    ),
+        "sky130_fd_pr__nfet_01v8"),
     ("NMOS_1p8V_LOW", MosType.NMOS, MosVth.LOW, MosFamily.CORE): _xtor_module(
         "sky130_fd_pr__nfet_01v8_lvt"
     ),
@@ -627,16 +479,7 @@ xtors: Dict[MosKey, h.ExternalModule] = {
         "sky130_fd_pr__nfet_g5v0d10v5"
     ),
     ("PMOS_5p5V_D16_STD", MosType.PMOS, MosVth.STD, MosFamily.IO): _xtor_module(
-        "sky130_fd_pr__pfet_g5v0d16v0",
-        deps={
-            "ref_includes": [
-                "sky130_fd_pr__pfet_g5v0d16v0__subcircuit.pm3.spice",
-                "sky130_fd_pr__pfet_g5v0d16v0.pm3.spice",
-                "sky130_fd_pr__pfet_g5v0d16v0__<fet_section>.corner.spice",
-                "sky130_fd_pr__pfet_g5v0d16v0__parasitic__diode_pw2dn.model.spice",
-            ]
-        },
-    ),
+        "sky130_fd_pr__pfet_g5v0d16v0"),
     ("NMOS_20p0V_STD", MosType.NMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
         "sky130_fd_pr__nfet_20v0", params=Sky130Mos20VParams
     ),
@@ -648,13 +491,7 @@ xtors: Dict[MosKey, h.ExternalModule] = {
     ),
     ("PMOS_20p0V", MosType.PMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
         "sky130_fd_pr__pfet_20v0",
-        params=Sky130Mos20VParams,
-        deps={
-            "ref_includes": [
-                f"sky130_fd_pr__pfet_20v0__<fet_section>_discrete.corner.spice",
-                f"sky130_fd_pr__diode_pw2nd_05v5.model.spice",
-            ]
-        },
+        params=Sky130Mos20VParams
     ),
     # Note there are no NMOS HVT!
     # Add Native FET entries
@@ -666,20 +503,11 @@ xtors: Dict[MosKey, h.ExternalModule] = {
     ),
     ("NMOS_20p0V_NAT", MosType.NMOS, MosVth.NATIVE, MosFamily.NONE): _xtor_module(
         "sky130_fd_pr__nfet_20v0_nvt",
-        params=Sky130Mos20VParams,
-        deps={
-            "ref_includes": [
-                f"sky130_fd_pr__nfet_20v0_nvt__<fet_section>_discrete.corner.spice",
-                f"sky130_fd_pr__diode_pw2nd_05v5.model.spice",
-            ]
-        },
+        params=Sky130Mos20VParams
     ),
     # Add ESD FET entries
     ("ESD_NMOS_1p8V", MosType.NMOS, MosVth.STD, MosFamily.CORE): _xtor_module(
-        "sky130_fd_pr__esd_nfet_01v8",
-        deps={
-            "ref_includes": ["sky130_fd_pr__esd_nfet_01v8__<fet_section>.corner.spice"]
-        },
+        "sky130_fd_pr__esd_nfet_01v8"
     ),
     ("ESD_NMOS_5p5V_D10", MosType.NMOS, MosVth.STD, MosFamily.IO): _xtor_module(
         "sky130_fd_pr__esd_nfet_g5v0d10v5"
@@ -692,51 +520,40 @@ xtors: Dict[MosKey, h.ExternalModule] = {
     ),
 }
 
-metal_resistor_props = {
-    "ngspice": SpicePrefix.RESISTOR,
-    "xyce": SpicePrefix.RESISTOR,
-    "spectre": NotImplemented,
-}
-
 ress: Dict[str, h.ExternalModule] = {
     # 2-terminal generic resistors
-    "GEN_PO": _res_module("sky130_fd_pr__res_generic_po", 2, Sky130GenResParams),
+    "GEN_PO": _res_module("sky130_fd_pr__res_generic_po", 2, Sky130GenResParams,
+    spicetype=SpiceType.RESISTOR),
     "GEN_L1": _res_module(
         "sky130_fd_pr__res_generic_l1",
         2,
         Sky130GenResParams,
-        props=metal_resistor_props,
-    ),
+        spicetype=SpiceType.RESISTOR),
     "GEN_M1": _res_module(
         "sky130_fd_pr__res_generic_m1",
         2,
         Sky130GenResParams,
-        props=metal_resistor_props,
-    ),
+        spicetype=SpiceType.RESISTOR),
     "GEN_M2": _res_module(
         "sky130_fd_pr__res_generic_m2",
         2,
         Sky130GenResParams,
-        props=metal_resistor_props,
-    ),
+        spicetype=SpiceType.RESISTOR),
     "GEN_M3": _res_module(
         "sky130_fd_pr__res_generic_m3",
         2,
         Sky130GenResParams,
-        props=metal_resistor_props,
-    ),
+        spicetype=SpiceType.RESISTOR),
     "GEN_M4": _res_module(
         "sky130_fd_pr__res_generic_m4",
         2,
         Sky130GenResParams,
-        props=metal_resistor_props,
-    ),
+        spicetype=SpiceType.RESISTOR),
     "GEN_M5": _res_module(
         "sky130_fd_pr__res_generic_m5",
         2,
         Sky130GenResParams,
-        props=metal_resistor_props,
-    ),
+        spicetype=SpiceType.RESISTOR),
     # 3-terminal generic resistors
     "GEN_ND": _res_module("sky130_fd_pr__res_generic_nd", 3, Sky130GenResParams),
     "GEN_PD": _res_module("sky130_fd_pr__res_generic_pd", 3, Sky130GenResParams),
@@ -744,12 +561,6 @@ ress: Dict[str, h.ExternalModule] = {
         "sky130_fd_pr__res_iso_pw",
         3,
         Sky130GenResParams,
-        deps={
-            "ref_includes": [
-                "sky130_fd_pr__diode_pw2nd_05v5.model.spice",
-                "sky130_fd_pr__res_iso_pw.model.spice",
-            ]
-        },
     ),
     # 3-terminal precision resistors
     "PP_PREC_0p35": _res_module(

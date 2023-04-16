@@ -15,8 +15,10 @@ from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
 from .qualname import qualname_magic_methods
-from .props import Properties
 
+# VLSIR Imports
+from vlsir.circuit_pb2 import SpiceType
+from google.protobuf.internal.enum_type_wrapper import EnumTypeWrapper
 
 @dataclass
 @qualname_magic_methods
@@ -40,7 +42,7 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
-    props: Properties = Properties()  # Additional properties, for use by the user.
+    spicetype: Optional[int] = SpiceType.SUBCKT # Spice type, for SPICE export
 
     @property
     def ports(self) -> dict:
