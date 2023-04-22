@@ -37,3 +37,8 @@ sky130.install = sky130.Install(
 import asap7
 
 # asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")
+
+# GF180
+import gf180
+
+gf180.install = gf180.Install(model_lib=Path("/usr/local/share/pdk/gf180mcuC/libs.tech/ngspice/sm141064.ngspice"))
