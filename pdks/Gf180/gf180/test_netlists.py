@@ -48,7 +48,7 @@ def test_xtor_netlists():
         assert s[9] == "+ a b c d "  # Correctly maps ports to their places...
         assert s[10] == "+ " + gf180.xtors[x].name + " "  # Has correct PDK name...
         assert (
-            s[11] == "+ w='30' l='30' nf='1' m='1' "
+            s[11] == "+ w='30' l='30' nf='1' As='int((nf+2)/2) * w/nf * 0.18u' pd='2*int((nf+1)/2) * (w/nf + 0.18u)' ps='2*int((nf+2)/2) * (w/nf + 0.18u)' nrd='0.18u / w' nrs='0.18u / w' sa='0' sb='0' sd='0' mult='1' m='1' "
         )  # No weird or illegal parameters...
 
 
@@ -89,7 +89,7 @@ def test_2_term_res_netlists():
             assert s[9] == "+ a b "  # Correctly maps ports to their places...
             assert s[10] == "+ " + gf180.ress[x].name + " "  # Has correct PDK name...
             assert (
-                s[11] == "+ w='10' l='10' m='1' "
+                s[11] == "+ r_width='10' r_length='10' m='1' "
             )  # No weird or illegal parameters...
 
 
@@ -130,7 +130,7 @@ def test_3_term_res_netlists():
             assert s[9] == "+ x y z "  # Correctly maps ports to their places
             assert s[10] == "+ " + name + " "  # Has correct PDK name
             assert (
-                s[11] == f"+ w='10' l='10' m='1' "
+                s[11] == f"+ r_width='10' r_length='10' m='1' "
             )  # No weird or illegal parameters...
 
 def test_diode_netlists():
@@ -230,7 +230,7 @@ def test_4T_bjt_netlists():
             assert s[10] == "+ " + gf180.bjts[x].name + " "  # Has correct PDK name...
             assert s[11] == "+ m='1' "  # N
 
-def test_2T_cap_netlists():
+def test_cap_netlists():
     @h.generator
     def GenMimCap(params: h.PhysicalCapacitorParams) -> h.Module:
         @h.module
@@ -243,52 +243,18 @@ def test_2T_cap_netlists():
 
     for x in gf180.caps.keys():
 
-        if x.startswith("M"):
+        # Relevant params
+        p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
 
-            # Relevant params
-            p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
+        # Generate and compile
+        mod = h.elaborate(GenMimCap(p))
+        gf180.compile(mod)
 
-            # Generate and compile
-            mod = h.elaborate(GenMimCap(p))
-            gf180.compile(mod)
+        # Netlist and compare
+        s = StringIO()
+        h.netlist(mod, dest=s, fmt="spice")
+        s = s.getvalue().split("\n")
 
-            # Netlist and compare
-            s = StringIO()
-            h.netlist(mod, dest=s, fmt="spice")
-            s = s.getvalue().split("\n")
-
-            assert s[9] == "+ x y "  # Correctly maps ports to their places...
-            assert s[10] == "+ " + gf180.caps[x].name + " "  # Has correct PDK name...
-            assert s[11] == "+ w='3' l='3' m='1' "  # No weird or illegal parameters...
-
-
-def test_3T_cap_netlists():
-    @h.generator
-    def GenMimCap(params: h.PhysicalCapacitorParams) -> h.Module:
-        @h.module
-        class SingleCap:
-
-            x, y, z = 3 * h.Signal()
-            genCap = h.ThreeTerminalCapacitor(params)(p=x, n=y, b=z)
-
-        return SingleCap
-
-    for x in gf180.caps.keys():
-
-        if x.startswith("P") or x.startswith("N"):
-
-            # Relevant params
-            p = h.PhysicalCapacitorParams(model=x, w=3, l=3)
-
-            # Generate and compile
-            mod = h.elaborate(GenMimCap(p))
-            gf180.compile(mod)
-
-            # Netlist and compare
-            s = StringIO()
-            h.netlist(mod, dest=s, fmt="spice")
-            s = s.getvalue().split("\n")
-
-            assert s[9] == "+ x y z "  # Correctly maps ports to their places...
-            assert s[10] == "+ " + gf180.caps[x].name + " "  # Has correct PDK name...
-            assert s[11] == "+ w='3' l='3' m='1' "  # No weird or illegal parameters...
+        assert s[9] == "+ x y "  # Correctly maps ports to their places...
+        assert s[10] == "+ " + gf180.caps[x].name + " "  # Has correct PDK name...
+        assert s[11] == "+ c_width='3' c_length='3' m='1' "  # No weird or illegal parameters...

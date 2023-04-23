@@ -114,15 +114,6 @@ class GF180ResParams:
     m = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1)
 
 @h.paramclass
-class GF180MimCapParams:
-    """# GF180 MIM Capacitor Parameters"""
-
-    c_width = h.Param(dtype=h.Scalar, desc="Width in PDK Units (m)", default=1 * µ)
-    c_length = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1 * µ)
-    dtemp = h.Param(dtype=h.Scalar, desc="Device Temperature in Celsius", default=0)
-    par = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
-
-@h.paramclass
 class GF180CapParams:
     """# GF180 Capacitor Parameters"""
 
@@ -290,9 +281,9 @@ bjts: Dict[BjtKey, h.ExternalModule] = {
 }
 
 caps: Dict[str, h.ExternalModule] = {
-    "MIM_1p5fF": _cap_module("cap_mim_1f5fF", GF180MimCapParams),
-    "MIM_1p0fF": _cap_module("cap_mim_1f0fF", GF180MimCapParams),
-    "MIM_2p0fF": _cap_module("cap_mim_2f0fF", GF180MimCapParams),
+    "MIM_1p5fF": _cap_module("cap_mim_1f5fF", GF180CapParams),
+    "MIM_1p0fF": _cap_module("cap_mim_1f0fF", GF180CapParams),
+    "MIM_2p0fF": _cap_module("cap_mim_2f0fF", GF180CapParams),
     "PMOS_3p3V": _cap_module("cap_pmos_03v3", GF180CapParams),
     "NMOS_6p0V": _cap_module("cap_nmos_06v0", GF180CapParams),
     "PMOS_6p0V": _cap_module("cap_pmos_06v0", GF180CapParams),

@@ -140,12 +140,11 @@ def test_sim_capacitors():
             v = h.Vdc(dc=1)(p=vdd, n=VSS)
 
             p = gf180.GF180CapParams
-            q = gf180.GF180MimCapParams
 
             # FIXME: Need to add the following capacitors
-            # cap_mim_1f5fF = g.MIM_1p5fF(q(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            # cap_mim_1f0fF = g.MIM_1p0fF(q(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            # cap_mim_2f0fF = g.MIM_2p0fF(q(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
+            cap_mim_1f5fF = g.MIM_1p5fF(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
+            cap_mim_1f0fF = g.MIM_1p0fF(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
+            cap_mim_2f0fF = g.MIM_2p0fF(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
             
             cap_nmos_03v3 = g.NMOS_3p3V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
             cap_pmos_03v3 = g.PMOS_3p3V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
@@ -161,6 +160,8 @@ def test_sim_capacitors():
 
         d1 = gf180.install.include_design()
         i1 = gf180.install.include_mos(Corner.TYP)
+        #! Very important that this is included!
+        i11 = h.sim.Lib(gf180.install.model_lib,"cap_mim")
         i2 = gf180.install.include_resistors(Corner.TYP)
         i3 = gf180.install.include_moscaps(Corner.TYP)
         i4 = gf180.install.include_mimcaps(Corner.TYP)

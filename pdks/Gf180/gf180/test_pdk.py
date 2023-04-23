@@ -233,9 +233,9 @@ def test_cap_module():
     class HasCap:
 
         # FIXME: MiM Caps don't work, I don't know why.
-        # cap_mim_1f5fF = g.MIM_1p5fF(p)()
-        # cap_mim_1f0fF = g.MIM_1p0fF(p)()
-        # cap_mim_2f0fF = g.MIM_2p0fF(p)()
+        cap_mim_1f5fF = g.MIM_1p5fF(p)()
+        cap_mim_1f0fF = g.MIM_1p0fF(p)()
+        cap_mim_2f0fF = g.MIM_2p0fF(p)()
         cap_nmos_03v3 = g.NMOS_3p3V(p)()
         cap_pmos_03v3 = g.PMOS_3p3V(p)()
         cap_nmos_06v0 = g.NMOS_6p0V(p)()
