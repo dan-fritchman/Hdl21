@@ -9,6 +9,8 @@ import pytest
 
 # Import the site PDKs, or skip all these tests if not available.
 sitepdks = pytest.importorskip("sitepdks")
+if not hasattr(sitepdks, "sky130"):
+    pytest.skip("No sky130 PDK install configured", allow_module_level=True)
 
 # If that succeeded, import the PDK we want to test.
 # It should have a valid `install` attribute.
