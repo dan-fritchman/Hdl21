@@ -162,7 +162,7 @@ class ProtoExporter:
 
         # Create the Proto-ExternalModule
         qname = vlsir.utils.QualifiedName(name=emod.name, domain=emod.domain)
-        pmod = vckt.ExternalModule(name=qname, spicetype = emod.spicetype)
+        pmod = vckt.ExternalModule(name=qname, spicetype=emod.spicetype)
 
         # Create its Port-objects, which also require Vlsir Signal objects
         for port in emod.port_list:
@@ -224,7 +224,7 @@ class ProtoExporter:
                     raise ValueError(f"Invalid PrimitiveType {call.prim.primtype}")
 
             elif isinstance(inst._resolved, ExternalModuleCall):
-                
+
                 self.export_external_module(call.module)
                 pinst.module.external.domain = call.module.domain or ""
                 pinst.module.external.name = call.module.name

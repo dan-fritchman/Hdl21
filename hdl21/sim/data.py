@@ -330,6 +330,7 @@ Control = Union[Include, Lib, Save, Meas, Param, Literal]
 def is_control(val: Any) -> bool:
     return isinstance(val, Control.__args__)
 
+
 # Define all available option types below
 OptionTypes = Union[
     bool,
@@ -337,6 +338,8 @@ OptionTypes = Union[
     str,
     Literal,
 ]
+
+
 @simattr
 @datatype
 class Options:

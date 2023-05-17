@@ -53,6 +53,7 @@ from hdl21.primitives import (
 # Import relevant data from the PDK's data module
 from .pdk_data import *
 
+
 @dataclass
 class Install(PdkInstallation):
     """
@@ -180,15 +181,15 @@ class Sky130Walker(h.HierarchyWalker):
 
         # Find all the xtors that match the args
         subset = {}
-        for k,v in xtors.items():
-            
+        for k, v in xtors.items():
+
             match = False
             for a in args:
                 if a not in k:
                     break
             else:
                 match = True
-            
+
             if match:
                 subset[k] = v
 

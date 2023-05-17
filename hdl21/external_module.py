@@ -20,6 +20,7 @@ from .qualname import qualname_magic_methods
 from vlsir.circuit_pb2 import SpiceType
 from google.protobuf.internal.enum_type_wrapper import EnumTypeWrapper
 
+
 @dataclass
 @qualname_magic_methods
 class ExternalModule:
@@ -42,7 +43,7 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
-    spicetype: Optional[int] = SpiceType.SUBCKT # Spice type, for SPICE export
+    spicetype: Optional[int] = SpiceType.SUBCKT  # Spice type, for SPICE export
 
     @property
     def ports(self) -> dict:

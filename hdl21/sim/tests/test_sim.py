@@ -56,7 +56,7 @@ def test_sim2():
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
-            Options(1e-9,name="reltol"),
+            Options(1e-9, name="reltol"),
         ],
     )
     to_proto(s)
@@ -90,8 +90,7 @@ def test_simattrs():
     s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
     s.include("/home/models")
     s.lib(path="/home/models", section="fast")
-    s.options(1e-9,name="reltol")
-
+    s.options(1e-9, name="reltol")
 
     to_proto(s)
 
@@ -125,7 +124,7 @@ def test_sim_decorator():
             npts=11,
         )
         a_delay = Meas(analysis=mytran, expr="trig_targ_something")
-        opts = Options(1e-9,name="reltol")
+        opts = Options(1e-9, name="reltol")
 
         # Attributes whose names don't really matter can be called anything,
         # but must be *assigned* into the class, not just constructed.
@@ -184,7 +183,7 @@ def test_proto1():
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
-            Options(1e-9,name="reltol"),
+            Options(1e-9, name="reltol"),
         ],
     )
 

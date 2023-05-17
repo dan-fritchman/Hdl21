@@ -315,7 +315,7 @@ def _xtor_module(
         desc=f"{PDK_NAME} PDK Mos {modname}",
         port_list=deepcopy(num2device[num_terminals]),
         paramtype=params,
-        spicetype=SpiceType.SUBCKT
+        spicetype=SpiceType.SUBCKT,
     )
 
     return mod
@@ -331,7 +331,6 @@ def _res_module(
     """Resistor Module creator"""
 
     num2device = {2: PhysicalResistor, 3: ThreeTerminalResistor}
-
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -459,7 +458,8 @@ to find and determine the correct internal device to use.
 xtors: Dict[MosKey, h.ExternalModule] = {
     # Add all generic transistors
     ("NMOS_1p8V_STD", MosType.NMOS, MosVth.STD, MosFamily.CORE): _xtor_module(
-        "sky130_fd_pr__nfet_01v8"),
+        "sky130_fd_pr__nfet_01v8"
+    ),
     ("NMOS_1p8V_LOW", MosType.NMOS, MosVth.LOW, MosFamily.CORE): _xtor_module(
         "sky130_fd_pr__nfet_01v8_lvt"
     ),
@@ -479,7 +479,8 @@ xtors: Dict[MosKey, h.ExternalModule] = {
         "sky130_fd_pr__nfet_g5v0d10v5"
     ),
     ("PMOS_5p5V_D16_STD", MosType.PMOS, MosVth.STD, MosFamily.IO): _xtor_module(
-        "sky130_fd_pr__pfet_g5v0d16v0"),
+        "sky130_fd_pr__pfet_g5v0d16v0"
+    ),
     ("NMOS_20p0V_STD", MosType.NMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
         "sky130_fd_pr__nfet_20v0", params=Sky130Mos20VParams
     ),
@@ -490,8 +491,7 @@ xtors: Dict[MosKey, h.ExternalModule] = {
         "sky130_fd_pr__nfet_20v0_iso", params=Sky130Mos20VParams, num_terminals=5
     ),
     ("PMOS_20p0V", MosType.PMOS, MosVth.STD, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__pfet_20v0",
-        params=Sky130Mos20VParams
+        "sky130_fd_pr__pfet_20v0", params=Sky130Mos20VParams
     ),
     # Note there are no NMOS HVT!
     # Add Native FET entries
@@ -502,8 +502,7 @@ xtors: Dict[MosKey, h.ExternalModule] = {
         "sky130_fd_pr__nfet_05v0_nvt"
     ),
     ("NMOS_20p0V_NAT", MosType.NMOS, MosVth.NATIVE, MosFamily.NONE): _xtor_module(
-        "sky130_fd_pr__nfet_20v0_nvt",
-        params=Sky130Mos20VParams
+        "sky130_fd_pr__nfet_20v0_nvt", params=Sky130Mos20VParams
     ),
     # Add ESD FET entries
     ("ESD_NMOS_1p8V", MosType.NMOS, MosVth.STD, MosFamily.CORE): _xtor_module(
@@ -522,38 +521,48 @@ xtors: Dict[MosKey, h.ExternalModule] = {
 
 ress: Dict[str, h.ExternalModule] = {
     # 2-terminal generic resistors
-    "GEN_PO": _res_module("sky130_fd_pr__res_generic_po", 2, Sky130GenResParams,
-    spicetype=SpiceType.RESISTOR),
+    "GEN_PO": _res_module(
+        "sky130_fd_pr__res_generic_po",
+        2,
+        Sky130GenResParams,
+        spicetype=SpiceType.RESISTOR,
+    ),
     "GEN_L1": _res_module(
         "sky130_fd_pr__res_generic_l1",
         2,
         Sky130GenResParams,
-        spicetype=SpiceType.RESISTOR),
+        spicetype=SpiceType.RESISTOR,
+    ),
     "GEN_M1": _res_module(
         "sky130_fd_pr__res_generic_m1",
         2,
         Sky130GenResParams,
-        spicetype=SpiceType.RESISTOR),
+        spicetype=SpiceType.RESISTOR,
+    ),
     "GEN_M2": _res_module(
         "sky130_fd_pr__res_generic_m2",
         2,
         Sky130GenResParams,
-        spicetype=SpiceType.RESISTOR),
+        spicetype=SpiceType.RESISTOR,
+    ),
     "GEN_M3": _res_module(
         "sky130_fd_pr__res_generic_m3",
         2,
         Sky130GenResParams,
-        spicetype=SpiceType.RESISTOR),
+        spicetype=SpiceType.RESISTOR,
+    ),
     "GEN_M4": _res_module(
         "sky130_fd_pr__res_generic_m4",
         2,
         Sky130GenResParams,
-        spicetype=SpiceType.RESISTOR),
+        spicetype=SpiceType.RESISTOR,
+    ),
     "GEN_M5": _res_module(
         "sky130_fd_pr__res_generic_m5",
         2,
         Sky130GenResParams,
-        spicetype=SpiceType.RESISTOR),
+        spicetype=SpiceType.RESISTOR,
+    ),
     # 3-terminal generic resistors
     "GEN_ND": _res_module("sky130_fd_pr__res_generic_nd", 3, Sky130GenResParams),
     "GEN_PD": _res_module("sky130_fd_pr__res_generic_pd", 3, Sky130GenResParams),
