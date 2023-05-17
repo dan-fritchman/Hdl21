@@ -407,6 +407,7 @@ ThreeTerminalCapacitor = _add(
     aliases=["Cap3", "PhyCap3", "CapPhy3", "PhyCapacitor3"],
 )
 
+
 @paramclass
 class IdealInductorParams:
     l = Param(dtype=Scalar, desc="Inductance (H)")

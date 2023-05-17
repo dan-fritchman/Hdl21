@@ -28,7 +28,9 @@ from pathlib import Path
 import sky130
 
 sky130.install = sky130.Install(
-    model_lib=Path("/usr/local/share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice")
+    pdk_path=Path("/usr/local/share/pdk/sky130A"),
+    lib_path=Path("libs.tech/ngspice/sky130.lib.spice"),
+    model_ref=Path("libs.ref/sky130_fd_pr/spice"),
 )
 
 # ASAP7
