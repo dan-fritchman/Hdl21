@@ -12,6 +12,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container: hpretl/iic-osic-tools
 
     # Notes on this matrix, particularly the dependencies part:
     # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub.
