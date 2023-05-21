@@ -12,4 +12,5 @@ cd ../../VlsirTools
 pip install -e .
 cd ../../Hdl21
 pip install -e ".[dev]"
+pip install pre-commit
 pre-commit install
