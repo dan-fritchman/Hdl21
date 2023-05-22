@@ -467,7 +467,7 @@ def _logic_module(
         domain=PDK_NAME,
         name=modname,
         desc=f"{family} {modname} Logic Circuit",
-        portlist=[h.Port(name=i) for i in terminals],
+        port_list=[h.Port(name=i) for i in terminals],
         paramtype=Sky130LogicParams,
     )
 
@@ -741,7 +741,7 @@ vpps: Dict[str, h.ExternalModule] = {
     ),
 }
 
-hd: Dict[str : h.ExternalModule] = {
+hd: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_hd__a2bb2o_1": _logic_module(
         "sky130_fd_sc_hd__a2bb2o_1",
         "High Density",
@@ -2913,7 +2913,7 @@ hd: Dict[str : h.ExternalModule] = {
     ),
 }
 
-hdll: Dict[str : h.ExternalModule] = {
+hdll: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_hdll__a2bb2o_1": _logic_module(
         "sky130_fd_sc_hdll__a2bb2o_1",
         "High Density Low Leakage",
@@ -4577,7 +4577,7 @@ hdll: Dict[str : h.ExternalModule] = {
     ),
 }
 
-hs: Dict[str : h.ExternalModule] = {
+hs: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_hs__a2bb2o_1": _logic_module(
         "sky130_fd_sc_hs__a2bb2o_1",
         "High Speed",
@@ -6496,7 +6496,7 @@ hs: Dict[str : h.ExternalModule] = {
     ),
 }
 
-hvl: Dict[str : h.ExternalModule] = {
+hvl: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_hvl__a21o_1": _logic_module(
         "sky130_fd_sc_hvl__a21o_1",
         "High Voltage",
@@ -6832,7 +6832,7 @@ hvl: Dict[str : h.ExternalModule] = {
     ),
 }
 
-lp: Dict[str : h.ExternalModule] = {
+lp: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_lp__a2bb2o_0": _logic_module(
         "sky130_fd_sc_lp__a2bb2o_0",
         "Low Power",
@@ -10469,7 +10469,7 @@ lp: Dict[str : h.ExternalModule] = {
     ),
 }
 
-ls: Dict[str : h.ExternalModule] = {
+ls: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_ls__a2bb2o_1": _logic_module(
         "sky130_fd_sc_ls__a2bb2o_1",
         "Low Speed",
@@ -12409,7 +12409,7 @@ ls: Dict[str : h.ExternalModule] = {
     ),
 }
 
-ms: Dict[str : h.ExternalModule] = {
+ms: Dict[str , h.ExternalModule] = {
     "sky130_fd_sc_ms__a2bb2o_1": _logic_module(
         "sky130_fd_sc_ms__a2bb2o_1",
         "Medium Speed",
