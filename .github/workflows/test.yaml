@@ -12,7 +12,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: tpluck95/vlsir-test-container
 
     # Notes on this matrix, particularly the dependencies part:
     # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub.
