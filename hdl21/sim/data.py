@@ -2,6 +2,8 @@
 Spice-Class Simulation Interface 
 """
 
+from textwrap import dedent
+from warnings import warn
 from enum import Enum
 from typing import Union, Any, Optional, List, Awaitable, Dict
 from pathlib import Path
@@ -421,6 +423,18 @@ async def run_async(
 ) -> Awaitable[OneOrMore[vsp.SimResultUnion]]:
     """Invoke simulation via `vlsirtools.spice`."""
     from .to_proto import to_proto
+
+    # FIXME: go through with deprecation
+    warn(
+        PendingDeprecationWarning(
+            dedent(
+                """\
+        Async `hdl21.Sim` invocation will be deprecated and `run_async` will be removed with the next major version.
+        Use `run` instead, which now parallelizes across simulation processes internally.
+    """
+            )
+        )
+    )
 
     return await vsp.sim_async(inp=to_proto(inp), opts=opts)
 

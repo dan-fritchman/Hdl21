@@ -315,6 +315,10 @@ def test_empty_sim2():
     assert not len(r.an)  # No analysis inputs, no analysis results
 
 
+@pytest.mark.skipif(
+    vlsirtools.spice.default() is None,
+    reason="No simulator available",
+)
 def test_sim_async_caller():
     """# Test invoking simulation from an async caller"""
 
