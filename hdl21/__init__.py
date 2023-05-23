@@ -43,6 +43,7 @@ from .prefix import Prefix, Prefixed
 from .scalar import Scalar
 from .literal import Literal
 from . import sim
+from . import pdk
 from . import proto
 from .proto import to_proto, from_proto
 
