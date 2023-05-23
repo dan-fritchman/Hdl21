@@ -7,6 +7,9 @@ Wrapper for circuits defined outside Hdl21.
 from typing import Any, Optional, List, Type, Dict
 from pydantic.dataclasses import dataclass
 
+# VLSIR Imports
+from vlsirtools import SpiceType
+
 # Local imports
 from .default import Default
 from .call import param_call
@@ -39,6 +42,7 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
+    spicetype: SpiceType = SpiceType.SUBCKT  # Spice type, for SPICE export
 
     @property
     def ports(self) -> dict:
