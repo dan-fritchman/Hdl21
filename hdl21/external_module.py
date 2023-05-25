@@ -7,6 +7,9 @@ Wrapper for circuits defined outside Hdl21.
 from typing import Any, Optional, List, Type, Dict
 from pydantic.dataclasses import dataclass
 
+# VLSIR Imports
+from vlsirtools import SpiceType
+
 # Local imports
 from .default import Default
 from .call import param_call
@@ -15,10 +18,6 @@ from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
 from .qualname import qualname_magic_methods
-
-# VLSIR Imports
-from vlsir.circuit_pb2 import SpiceType
-from google.protobuf.internal.enum_type_wrapper import EnumTypeWrapper
 
 
 @dataclass
@@ -43,7 +42,7 @@ class ExternalModule:
     paramtype: Type = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
-    spicetype: Optional[int] = SpiceType.SUBCKT  # Spice type, for SPICE export
+    spicetype: SpiceType = SpiceType.SUBCKT  # Spice type, for SPICE export
 
     @property
     def ports(self) -> dict:
