@@ -11,7 +11,6 @@ from hdl21.flatten import flatten, is_flat, walk
 @h.module
 class Inverter:
     vdd, vss, vin, vout = h.Ports(4)
-
     pmos = h.Pmos()(d=vout, g=vin, s=vdd, b=vdd)
     nmos = h.Nmos()(d=vout, g=vin, s=vss, b=vss)
 
