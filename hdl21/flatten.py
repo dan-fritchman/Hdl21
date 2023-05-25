@@ -1,4 +1,7 @@
 """
+Flatten a module by moving all nested instances, ports and signals to the root level.
+
+See function `flatten()` for details.
 """
 
 import copy
@@ -97,7 +100,7 @@ def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
 
 def flatten(m: h.Module) -> h.Module:
     r"""Flatten a module by moving all nested instances, ports and signals to the root level.
-    
+
     For example, if we have a buffer module with two inverters, `inv_1` and `inv_2`, each with
     two transistors, `pmos` and `nmos`, the module hierarchy looks like this:
     All signals and ports will be moved to the root level too.
@@ -111,9 +114,9 @@ def flatten(m: h.Module) -> h.Module:
         ├── pmos
         └── nmos
     ```
-    
+
     This function will flatten the module to the following structure:
-    
+
     ```
     buffer_flat
     ├── inv_1:pmos
@@ -121,17 +124,17 @@ def flatten(m: h.Module) -> h.Module:
     ├── inv_2:pmos
     └── inv_2:nmos
     ```
-    
+
     Nested signals and ports will be renamed and moved to the root level as well. For example, say a
     module with two buffers, `buffer_1` and `buffer_2`, each with two inverters. On the top level,
     the original ports `vdd`, `vss`, `vin` and `vout` are preserved. Nested signals and ports such
     the connection between two buffers, the internal signal between two inverters in buffer 1 will
     be renamed and moved to the root level as `buffer_1_vout`, `buffer_1:inv_1_vout`,
     `buffer_2:inv_1_vout`.
-    
+
     See tests/test_flatten.py for more examples.
     """
-    
+
     m = h.elaborate(m)
     if is_flat(m):
         return m
