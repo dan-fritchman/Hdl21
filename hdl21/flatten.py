@@ -1,5 +1,9 @@
+"""
+"""
+
+import copy
 from dataclasses import dataclass, field, replace
-from typing import Generator, Union, Tuple, Dict
+from typing import Dict, Generator, Tuple, Union
 
 import hdl21 as h
 
@@ -40,14 +44,11 @@ def walk(
     if not conns:
         conns = {**m.signals, **m.ports}
     for inst in m.instances.values():
-        # logger.debug(f"walk: {m.name} / {inst.name}")
         new_conns = {}
         new_parents = parents + (inst,)
         for src_port_name, sig in inst.conns.items():
             if isinstance(sig, h.Signal):
                 key = sig.name
-            elif isinstance(sig, h.PortRef):
-                key = sig.portname
             else:
                 raise ValueError(f"unexpected signal type: {type(sig)}")
 
@@ -68,14 +69,15 @@ def walk(
             yield from walk(inst.of, new_parents, new_conns)
 
 
-def _find_signal(m: h.Module, name: str) -> h.Signal:
-    for port_name in m.ports:
-        if port_name == name:
-            return m.ports[port_name]
-    for sig_name in m.signals:
-        if sig_name == name:
-            return m.signals[sig_name]
-    raise ValueError(f"Signal {name} not found in module {m.name}")
+def _find_signal_or_port(m: h.Module, name: str) -> h.Signal:
+    """Find a signal or port by name"""
+
+    if (port := m.ports.get(name, None)) is not None:
+        return port
+    elif (sig := m.signals.get(name, None)) is not None:
+        return sig
+    else:
+        raise ValueError(f"Signal {name} not found in module {m.name}")
 
 
 def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
@@ -85,7 +87,10 @@ def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
         return True
     elif isinstance(m, h.Module):
         insts = m.instances.values()
-        return all(isinstance(inst.of, h.PrimitiveCall) for inst in insts)
+        return all(
+            isinstance(inst.of, (h.PrimitiveCall, h.ExternalModuleCall))
+            for inst in insts
+        )
     else:
         raise ValueError(f"Unexpected type {type(m)}")
 
@@ -100,22 +105,22 @@ def flatten(m: h.Module) -> h.Module:
 
     # NOTE: should we rename the module here?
     new_module = h.Module((m.name or "module") + "_flat")
-    for port_name in m.ports:
-        new_module.add(h.Port(name=port_name))
+    for port in m.ports.values():
+        new_module.add(copy.copy(port))
 
     # add all signals to the root level
     for n in nodes:
         for sig in n.conns.values():
             sig_name = sig.name
             if sig_name not in new_module.ports:
-                new_module.add(h.Signal(name=sig_name))
+                new_module.add(copy.copy(sig))
 
     # add all connections to the root level with names resolved
     for n in nodes:
         new_inst = new_module.add(n.inst.of(), name=n.make_name())
 
         for src_port_name, sig in n.conns.items():
-            matching_sig = _find_signal(new_module, sig.name)
+            matching_sig = _find_signal_or_port(new_module, sig.name)
             new_inst.connect(src_port_name, matching_sig)
 
     return new_module
