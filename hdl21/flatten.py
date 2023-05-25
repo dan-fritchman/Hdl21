@@ -75,12 +75,15 @@ def walk(
 def _find_signal_or_port(m: h.Module, name: str) -> h.Signal:
     """Find a signal or port by name"""
 
-    if (port := m.ports.get(name, None)) is not None:
+    port = m.ports.get(name, None)
+    if port is not None:
         return port
-    elif (sig := m.signals.get(name, None)) is not None:
+
+    sig = m.signals.get(name, None)
+    if sig is not None:
         return sig
-    else:
-        raise ValueError(f"Signal {name} not found in module {m.name}")
+
+    raise ValueError(f"Signal {name} not found in module {m.name}")
 
 
 def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
