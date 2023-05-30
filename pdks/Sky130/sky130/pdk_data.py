@@ -3,7 +3,6 @@ from copy import deepcopy
 from dataclasses import field
 from typing import Dict, Tuple, List
 from types import SimpleNamespace
-from pathlib import Path
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
@@ -32,11 +31,9 @@ from hdl21.primitives import (
     DiodeParams,
     BipolarParams,
 )
-from hdl21.pdk import Corner, CmosCorner
-from hdl21.props import Properties
 
 # Vlsirtool Types to ease downstream parsing
-from vlsir.circuit_pb2 import SpiceType
+from vlsirtools import SpiceType
 
 FIXME = None  # FIXME: Replace with real values!
 PDK_NAME = "sky130"
@@ -741,7 +738,7 @@ vpps: Dict[str, h.ExternalModule] = {
     ),
 }
 
-hd: Dict[str , h.ExternalModule] = {
+hd: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_hd__a2bb2o_1": _logic_module(
         "sky130_fd_sc_hd__a2bb2o_1",
         "High Density",
@@ -2913,7 +2910,7 @@ hd: Dict[str , h.ExternalModule] = {
     ),
 }
 
-hdll: Dict[str , h.ExternalModule] = {
+hdll: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_hdll__a2bb2o_1": _logic_module(
         "sky130_fd_sc_hdll__a2bb2o_1",
         "High Density Low Leakage",
@@ -4577,7 +4574,7 @@ hdll: Dict[str , h.ExternalModule] = {
     ),
 }
 
-hs: Dict[str , h.ExternalModule] = {
+hs: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_hs__a2bb2o_1": _logic_module(
         "sky130_fd_sc_hs__a2bb2o_1",
         "High Speed",
@@ -6496,7 +6493,7 @@ hs: Dict[str , h.ExternalModule] = {
     ),
 }
 
-hvl: Dict[str , h.ExternalModule] = {
+hvl: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_hvl__a21o_1": _logic_module(
         "sky130_fd_sc_hvl__a21o_1",
         "High Voltage",
@@ -6832,7 +6829,7 @@ hvl: Dict[str , h.ExternalModule] = {
     ),
 }
 
-lp: Dict[str , h.ExternalModule] = {
+lp: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_lp__a2bb2o_0": _logic_module(
         "sky130_fd_sc_lp__a2bb2o_0",
         "Low Power",
@@ -10469,7 +10466,7 @@ lp: Dict[str , h.ExternalModule] = {
     ),
 }
 
-ls: Dict[str , h.ExternalModule] = {
+ls: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_ls__a2bb2o_1": _logic_module(
         "sky130_fd_sc_ls__a2bb2o_1",
         "Low Speed",
@@ -12409,7 +12406,7 @@ ls: Dict[str , h.ExternalModule] = {
     ),
 }
 
-ms: Dict[str , h.ExternalModule] = {
+ms: Dict[str, h.ExternalModule] = {
     "sky130_fd_sc_ms__a2bb2o_1": _logic_module(
         "sky130_fd_sc_ms__a2bb2o_1",
         "Medium Speed",

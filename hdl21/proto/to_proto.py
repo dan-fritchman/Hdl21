@@ -12,7 +12,6 @@ free-standing functions to enable use elsewhere.
 """
 
 from decimal import Decimal
-from textwrap import dedent
 from dataclasses import fields
 from enum import Enum
 from typing import Optional, List, Union, Dict, Any
@@ -23,7 +22,6 @@ from pydantic.dataclasses import dataclass
 # Proto-definitions
 import vlsir
 import vlsir.circuit_pb2 as vckt
-from vlsirtools.netlist.base import SpicePrefix
 
 # HDL
 from ..params import isparamclass
@@ -162,7 +160,7 @@ class ProtoExporter:
 
         # Create the Proto-ExternalModule
         qname = vlsir.utils.QualifiedName(name=emod.name, domain=emod.domain)
-        pmod = vckt.ExternalModule(name=qname, spicetype=emod.spicetype)
+        pmod = vckt.ExternalModule(name=qname, spicetype=emod.spicetype.to_schema())
 
         # Create its Port-objects, which also require Vlsir Signal objects
         for port in emod.port_list:
