@@ -23,15 +23,18 @@ the ASAP7 academic predictive kit, and the Skywater 130nm open-source PDK.
 """
 
 from pathlib import Path
+import os
 
 # Sky 130
 import sky130
 
 sky130.install = sky130.Install(
-    model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice"
+    pdk_path=Path(os.environ["PDK_ROOT"] + "/" + os.environ["PDK"]),
+    lib_path=Path("libs.tech/ngspice/sky130.lib.spice"),
+    model_ref=Path("libs.ref/sky130_fd_pr/spice"),
 )
 
 # ASAP7
 import asap7
 
-asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")
+# asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "7nm_TT.pm")

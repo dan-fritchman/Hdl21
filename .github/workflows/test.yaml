@@ -12,6 +12,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container: tpluck95/vlsir-test-container
 
     # Notes on this matrix, particularly the dependencies part:
     # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub.
@@ -27,25 +28,24 @@ jobs:
     continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: bash scripts/install-${{ matrix.dep-installer }}.sh
-
-      - name: Test with pytest
         run: |
-          pytest -sv --cov=./ --cov-report=xml
+          apt-get install -y python${{ matrix.python-version }}
+          apt-get install -y python${{ matrix.python-version }}-dev
+          apt-get install -y python${{ matrix.python-version }}-venv
+          apt-get install -y python${{ matrix.python-version }}-distutils
+          python${{ matrix.python-version }} -m pip install pytest
+          python${{ matrix.python-version }} -m pip install -Iv black==22.6
 
-      - name: Black Formatting Check
-        uses: psf/black@stable
-        with:
-          version: "22.6"
-          options: "--check --diff --verbose --exclude pdks/PdkTemplate"
+      - name: pytest `HDL21`
+        run: |
+          python${{ matrix.python-version }} -m venv ./venv
+          . ./venv/bin/activate
+          bash scripts/install-${{ matrix.dep-installer }}.sh
+          python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
 
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
@@ -56,3 +56,19 @@ jobs:
           fail_ci_if_error: true
           path_to_write_report: ./coverage/codecov_report.txt
           verbose: true
+
+  # Seperate job for black, to remove all of the venv noise that we've created above
+  black:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Black Formatting Check
+        uses: psf/black@stable
+        with:
+          version: "22.6"
+          options: "--check --diff --verbose --exclude pdks/PdkTemplate"
