@@ -28,21 +28,20 @@ jobs:
     continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        run: |
-          apt-get install -y python${{ matrix.python-version }}
-          apt-get install -y python${{ matrix.python-version }}-dev
-          apt-get install -y python${{ matrix.python-version }}-venv
-          apt-get install -y python${{ matrix.python-version }}-distutils
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-      - name: pytest `HDL21`
+      - name: Install dependencies
+        run: bash scripts/install-${{ matrix.dep-installer }}.sh
+
+      - name: Test with pytest
         run: |
-          bash scripts/install-${{ matrix.dep-installer }}.sh
-          python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
-      
+          pytest -sv --cov=./ --cov-report=xml
+
       - name: Black Formatting Check
         uses: psf/black@stable
         with:
