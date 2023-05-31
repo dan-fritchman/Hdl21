@@ -38,14 +38,9 @@ jobs:
           apt-get install -y python${{ matrix.python-version }}-venv
           apt-get install -y python${{ matrix.python-version }}-distutils
 
-      #! The bizarre insanity of ". ./venv/..." is an Ubuntu sh translation of
-      #! "source venv/..." seen in most Python documentation
-
-      - name: update `pip`
-        run: bash scripts/install-${{ matrix.dep-installer }}.sh
-
       - name: pytest `HDL21`
         run: |
+          bash scripts/install-${{ matrix.dep-installer }}.sh
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
       
       - name: Black Formatting Check
