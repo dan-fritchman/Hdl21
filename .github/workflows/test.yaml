@@ -25,8 +25,8 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
         dep-installer: ["dev", "pypi"]
-      continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
-      
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
+
     steps:
       - name: Checkout VLSIR Repo
         uses: actions/checkout@v3
