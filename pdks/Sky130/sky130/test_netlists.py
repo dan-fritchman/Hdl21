@@ -51,7 +51,7 @@ def test_xtor_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
 
 
 def test_2_term_res_netlists():
@@ -88,7 +88,7 @@ def test_2_term_res_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
 
 
 def test_3_term_res_netlists():
@@ -124,7 +124,8 @@ def test_3_term_res_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
+
 
 def test_diode_netlists():
 
@@ -158,7 +159,7 @@ def test_diode_netlists():
         h.netlist(mod, dest=s, fmt="spice")
         s = s.getvalue()
 
-        assert not s.isspace() # Not empty
+        assert not s.isspace()  # Not empty
 
 
 def test_pnp_netlists():
@@ -187,7 +188,7 @@ def test_pnp_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
 
 
 def test_npn_netlists():
@@ -210,13 +211,14 @@ def test_npn_netlists():
     h.netlist(Bipolar1, dest=s, fmt="spice")
     s = s.getvalue()
 
-    assert not s.isspace() # Not empty
+    assert not s.isspace()  # Not empty
 
     s = StringIO()
     h.netlist(Bipolar2, dest=s, fmt="spice")
     s = s.getvalue()
 
-    assert not s.isspace() # Not empty
+    assert not s.isspace()  # Not empty
+
 
 def test_mim_cap_netlists():
     @h.generator
@@ -245,7 +247,7 @@ def test_mim_cap_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
 
 
 def test_var_cap_netlists():
@@ -275,4 +277,4 @@ def test_var_cap_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
