@@ -38,10 +38,13 @@ jobs:
           apt-get install -y python${{ matrix.python-version }}-venv
           apt-get install -y python${{ matrix.python-version }}-distutils
 
-      - name: pytest `HDL21`
+      - name: Install Dependencies
         run: |
           bash scripts/install-${{ matrix.dep-installer }}.sh
-          python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
+
+      - name: pytest
+        run: |
+          pytest -sv --cov=./ --cov-report=xml
       
       - name: Black Formatting Check
         uses: psf/black@stable
