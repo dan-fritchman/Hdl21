@@ -49,7 +49,7 @@ jobs:
       
       - name: Black Formatting Check
         run: |
-          black . --check --diff --verbose --exclude pdks/PdkTemplate
+          black . --check --diff --verbose --exclude pdks/PdkTemplate venv
 
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
