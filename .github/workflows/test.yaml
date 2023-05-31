@@ -45,6 +45,7 @@ jobs:
           . ./venv/bin/activate
           bash scripts/install-${{ matrix.dep-installer }}.sh
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
+          deactivate
       
       - name: Black Formatting Check
         uses: psf/black@stable
