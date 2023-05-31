@@ -46,7 +46,6 @@ jobs:
 
       - name: pytest `HDL21`
         run: |
-          python${{ matrix.python-version }} -m pip install -e ".[dev]"
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
       
       - name: Black Formatting Check
