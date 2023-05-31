@@ -28,29 +28,20 @@ jobs:
     continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
-      - name: Checkout VLSIR Repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: bash scripts/install-${{ matrix.dep-installer }}.sh
+
+      - name: Test with pytest
         run: |
-          apt-get install -y python${{ matrix.python-version }}
-          apt-get install -y python${{ matrix.python-version }}-dev
-          apt-get install -y python${{ matrix.python-version }}-venv
-          apt-get install -y python${{ matrix.python-version }}-distutils
+          pytest -sv --cov=./ --cov-report=xml
 
-      #! The bizarre insanity of ". ./venv/..." is an Ubuntu sh translation of
-      #! "source venv/..." seen in most Python documentation
-
-      - name: update `pip`
-        run: python${{ matrix.python-version }} -m pip install --upgrade pip
-
-      - name: pytest `HDL21`
-        run: |
-          python${{ matrix.python-version }} -m venv ./venv
-          . ./venv/bin/activate
-          python${{ matrix.python-version }} -m pip install -e ".[dev]"
-          python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
-      
       - name: Black Formatting Check
         uses: psf/black@stable
         with:
