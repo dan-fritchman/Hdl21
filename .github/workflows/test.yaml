@@ -47,9 +47,9 @@ jobs:
           bash scripts/install-${{ matrix.dep-installer }}.sh
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
       
-      # - name: Black Formatting Check
-      #   run: |
-      #     black --check --diff --verbose --exclude pdks/PdkTemplate ./
+      - name: Black Formatting Check
+        run: |
+          black . --check --diff --verbose --exclude pdks/PdkTemplate
 
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
