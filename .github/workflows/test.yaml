@@ -24,6 +24,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
+        dep-installer: ["dev", "pypi"]
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
       - name: Checkout VLSIR Repo
@@ -40,12 +42,10 @@ jobs:
       #! "source venv/..." seen in most Python documentation
 
       - name: update `pip`
-        run: python${{ matrix.python-version }} -m pip install --upgrade pip
+        run: bash scripts/install-${{ matrix.dep-installer }}.sh
 
       - name: pytest `HDL21`
         run: |
-          python${{ matrix.python-version }} -m venv ./venv
-          . ./venv/bin/activate
           python${{ matrix.python-version }} -m pip install -e ".[dev]"
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
       
