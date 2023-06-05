@@ -14,6 +14,7 @@ import vlsir.spice_pb2 as vsp
 # Local Imports
 from ..one_or_more import OneOrMore
 from . import data
+from ..literal import Literal
 from ..prefix import Prefixed
 from ..scalar import Scalar
 from ..signal import Signal
@@ -281,6 +282,8 @@ def export_options(options: data.Options) -> vsp.SimOptions:
 
 def export_control(ctrl: data.Control) -> vsp.Control:
     """Export a `Control` element"""
+    from ..proto.to_proto import export_literal
+
     if isinstance(ctrl, data.Include):
         return vsp.Control(include=export_include(ctrl))
     if isinstance(ctrl, data.Lib):
@@ -291,7 +294,7 @@ def export_control(ctrl: data.Control) -> vsp.Control:
         return vsp.Control(meas=export_meas(ctrl))
     if isinstance(ctrl, data.Param):
         return vsp.Control(param=export_param(ctrl))
-    if isinstance(ctrl, data.Literal):
+    if isinstance(ctrl, Literal):
         return vsp.Control(literal=export_literal(ctrl))
     raise TypeError(f"Invalid Sim Control {ctrl}")
 
@@ -349,11 +352,6 @@ def export_param(param: data.Param) -> vlsir.Param:
     from ..proto.to_proto import export_param_value
 
     return vlsir.Param(name=param.name, value=export_param_value(param.val))
-
-
-def export_literal(literal: data.Literal) -> str:
-    """Export a simulation literal, as its text value"""
-    return literal.text
 
 
 def export_float(num: Union[float, int, Decimal, Prefixed, Scalar]) -> float:

@@ -9,7 +9,6 @@
 import sys, pytest
 from io import StringIO
 from types import SimpleNamespace
-from textwrap import dedent
 
 # Import the PUT (package under test)
 import hdl21 as h
@@ -292,7 +291,6 @@ def test_proto_roundtrip():
 
 
 def test_proto_roundtrip2():
-
     # Create a child/leaf Module
     M1 = h.Module(name="M1")
     M1.i = h.Input()
@@ -505,7 +503,7 @@ def test_generator_recall():
     assert isinstance(getattr(ns, "CallMeTwice"), h.Module)
 
 
-def test_rountrip_external_module():
+def test_roundtrip_external_module():
     """Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto"""
 
     @h.paramclass
@@ -527,3 +525,42 @@ def test_rountrip_external_module():
 def test_module_with_no_python_module():
     # Issue #48 https://github.com/dan-fritchman/Hdl21/issues/48
     exec("import hdl21 as h; h.to_proto(h.Module(name='not_in_a_pymodule'))")
+
+
+def test_module_with_literals():
+    """# Test exporting modules with literals"""
+
+    @h.module
+    class HasLit:
+        a, b, c = h.Ports(3)
+
+    # Add the literals
+    HasLit.literals.extend(
+        [
+            h.Literal("generate some_terrible_verilog_code"),
+            h.Literal(".some_spice_attribute what=ever"),
+            h.Literal("PRAGMA: some_pragma"),
+        ]
+    )
+
+    # Test converting
+    pkg = h.to_proto(HasLit)
+    print(pkg)
+    pmod = pkg.modules[0]
+    assert isinstance(pmod, vlsir.circuit.Module)
+    assert pmod.name == "hdl21.tests.test_exports.HasLit"
+    assert len(pmod.ports) == 3
+    assert len(pmod.signals) == 3
+
+    assert pmod.literals == [l.text for l in HasLit.literals]
+    assert pmod.literals == [
+        "generate some_terrible_verilog_code",
+        ".some_spice_attribute what=ever",
+        "PRAGMA: some_pragma",
+    ]
+
+    dest = StringIO()
+    h.netlist(HasLit, dest)
+    assert "generate some_terrible_verilog_code" in dest.getvalue()
+    assert ".some_spice_attribute what=ever" in dest.getvalue()
+    assert "PRAGMA: some_pragma" in dest.getvalue()

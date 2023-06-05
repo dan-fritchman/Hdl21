@@ -26,9 +26,9 @@ from .props import Properties
 from .literal import Literal
 
 # Type-alias for HDL objects storable as `Module` attributes
-ModuleAttr = Union[
-    Signal, Instance, InstanceArray, InstanceBundle, BundleInstance, Literal
-]
+ModuleAttr = Union[Signal, Instance, InstanceArray, InstanceBundle, BundleInstance]
+# And "other things" that are also storable as `Module` attributes
+ModuleOther = Union[Literal, Properties]
 
 
 @qualname_magic_methods
@@ -72,15 +72,15 @@ class Module:
             raise TypeError(msg)
         self.name = name
 
-        self.ports = dict()
-        self.signals = dict()
-        self.instances = dict()
-        self.instarrays = dict()
-        self.instbundles = dict()
-        self.bundles = dict()
-        self.literals = dict()
-        self.namespace = dict()  # Combination of all these
+        self.ports: Dict[str, Signal] = dict()
+        self.signals: Dict[str, Signal] = dict()
+        self.instances: Dict[str, Instance] = dict()
+        self.instarrays: Dict[str, InstanceArray] = dict()
+        self.instbundles: Dict[str, InstanceBundle] = dict()
+        self.bundles: Dict[str, BundleInstance] = dict()
+        self.namespace: Dict[str, ModuleAttr] = dict()  # Combination of all these
 
+        self.literals: List[Literal] = list()
         self.props: Properties = Properties()
 
         # Elaborated version of this module.
@@ -201,7 +201,8 @@ class Module:
 
     def __delattr__(self, __name: str) -> None:
         """Disable attribute deletion.
-        This may be enabled some day, but until unwinding any dependencies is not allowed."""
+        This may be enabled some day, but until unwinding any dependencies is not allowed.
+        """
         msg = f"Cannot delete Module attribute {__name} of {self}"
         raise RuntimeError(msg)
 
@@ -303,8 +304,8 @@ _banned = [
     "instbundles",
     "bundles",
     "literals",
-    "namespace",
     "props",
+    "namespace",
     "add",
     "get",
 ]
@@ -313,7 +314,8 @@ _banned = [
 def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
     """Internal `Module.add` and `Module.__setattr__` implementation.
     Primarily sort `val` into one of our type-based containers.
-    Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
+    Layers above `_add` must ensure that `val` has its `name` attribute before calling this method.
+    """
 
     if module._elaborated is not None:
         raise RuntimeError(f"Cannot add {val} to {module} after elaboration.")
@@ -332,8 +334,6 @@ def _add(module: Module, val: ModuleAttr) -> ModuleAttr:
         type_ctr = module.instbundles
     elif isinstance(val, BundleInstance):
         type_ctr = module.bundles
-    elif isinstance(val, Literal):
-        type_ctr = module.literals
     else:
         # The next line *should* never be reached, as outer layers should have checked `_is_module_attr`.
         # Nonetheless gotta raise an error if we get here, somehow.
