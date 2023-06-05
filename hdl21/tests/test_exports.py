@@ -543,9 +543,8 @@ def test_module_with_literals():
         ]
     )
 
-    # Test converting
+    # Test converting to proto
     pkg = h.to_proto(HasLit)
-    print(pkg)
     pmod = pkg.modules[0]
     assert isinstance(pmod, vlsir.circuit.Module)
     assert pmod.name == "hdl21.tests.test_exports.HasLit"
@@ -564,3 +563,13 @@ def test_module_with_literals():
     assert "generate some_terrible_verilog_code" in dest.getvalue()
     assert ".some_spice_attribute what=ever" in dest.getvalue()
     assert "PRAGMA: some_pragma" in dest.getvalue()
+
+    # Test round-tripping
+    ns = h.from_proto(pkg)
+    assert isinstance(ns, SimpleNamespace)
+    ns = ns.hdl21.tests.test_exports
+    assert isinstance(ns, SimpleNamespace)
+    HasLitRoundTripped = ns.HasLit
+    assert isinstance(HasLitRoundTripped, h.Module)
+    assert len(HasLitRoundTripped.literals) == 3
+    assert HasLitRoundTripped.literals == HasLit.literals

@@ -129,8 +129,7 @@ class ProtoImporter:
 
         # Import any literal content
         for plit in pmod.literals:
-            lit = Literal(text=plit.text, name=plit.name)
-            module.add(lit)
+            module.literals.append(Literal(text=plit))
 
         # Add the Module to our cache and return-namespace, and return it
         self.modules[pmod.name] = module
