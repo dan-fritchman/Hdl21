@@ -389,7 +389,6 @@ class Sim:
 
     def run(self, opts: Optional[vsp.SimOptions] = None) -> vsp.SimResultUnion:
         """Invoke simulation via `vlsirtools.spice`."""
-        print("WTF HERE MAN")
         return run(self, opts=opts)
 
     async def run_async(
