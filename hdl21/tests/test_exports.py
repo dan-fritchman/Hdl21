@@ -9,7 +9,7 @@
 import sys, pytest
 from io import StringIO
 from types import SimpleNamespace
-from textwrap import dedent
+from copy import deepcopy
 
 # Import the PUT (package under test)
 import hdl21 as h
@@ -527,3 +527,26 @@ def test_rountrip_external_module():
 def test_module_with_no_python_module():
     # Issue #48 https://github.com/dan-fritchman/Hdl21/issues/48
     exec("import hdl21 as h; h.to_proto(h.Module(name='not_in_a_pymodule'))")
+
+
+def test_netlist_spicetypes():
+    """# Test netlisting `ExternalModule`s with `SpiceType`s"""
+    from hdl21.external_module import SpiceType
+    from vlsirtools.netlist import NetlistFormat
+
+    NmosModel = h.ExternalModule(
+        name="NmosModel",
+        port_list=deepcopy(h.Mos.port_list),
+        paramtype=h.HasNoParams,
+        spicetype=SpiceType.MOS,
+    )
+
+    @h.module
+    class HasSpiceTypes:
+        x = h.Signal()
+        m = NmosModel()(d=x, g=x, s=x, b=x)
+
+    h.netlist(HasSpiceTypes, sys.stdout, fmt=NetlistFormat.SPICE)
+    h.netlist(HasSpiceTypes, sys.stdout, fmt=NetlistFormat.XYCE)
+    h.netlist(HasSpiceTypes, sys.stdout, fmt=NetlistFormat.NGSPICE)
+    h.netlist(HasSpiceTypes, sys.stdout, fmt=NetlistFormat.SPECTRE)
