@@ -68,6 +68,14 @@ Note the conda-based installation supports simulation solely with [ngspice](http
 
 It is important to emphasize that all PDK units are written in microns (μm). We recommend consulting the [SKY130 Device Detail Documentation](https://skywater-pdk.readthedocs.io/en/main/rules/device-details.html) which can provide additional information on these additional components.
 
+1. [MOSFETs](#mosfets)
+2. [Generic Resistors](#generic-resistors)
+3. [Precision Resistors](#precision-resistors)
+4. [Diodes](#diodes)
+5. [Bipolar Junction Transistors](#bipolar-junction-transistors)
+6. [Capacitors](#capacitors)
+7. [Digital Cells](#digital-cells)
+
 ### MOSFETs
 
 MOSFETs can be defined using either width (W), length (L) and number of fingers (NF), the SKY130-HDL21 PDK module offers the following components, all with the junction terminals (d,g,s,b) with the exception of NMOS_ISO_20p0V
@@ -190,6 +198,22 @@ Capacitors in SKY130 come in 4 flavours, the MiM capacitor, the Varactor, the Ve
 | VPP_PERP_8     | sky130_fd_pr__cap_vpp_06p8x06p1_l1m1m2m3_shieldpom4    | 4 (p,n,t,b)                   | VPP (Perpendicular)| VPP perpendicular capacitor, 6.8x6.1 µm, L1M1M2M3, shield PoM4 |
 | VPP_PERP_9     | sky130_fd_pr__cap_vpp_06p8x06p1_m1m2m3_shieldl1m4      | 4 (p,n,t,b)                   | VPP (Perpendicular)| VPP perpendicular capacitor, 6.8x6.1 µm, M1M2M3, shield L1M4 |
 | VPP_PERP_10    | sky130_fd_pr__cap_vpp_11p3x11p8_l1m1m2m3m4_shieldm5_nhvtop | 4 (p,n,t,b)             | VPP (Perpendicular)| VPP perpendicular capacitor, 11.3x11.8 µm, L1M1M2M3M4, shield M5, NHV top |
+
+### Digital Cells
+
+The full range of SKY130's Standard Cell Libraries also work with the Sky130 PDK, they are far too numerous to name here but excellent resources are available at:  https://diychip.org/sky130/ . The general naming convention of the ExternalModules representing digital cells is:
+
+```python
+sky130_fd_sc_[acronym of desired standard cell library]__[cell name]_[width]
+```
+
+For example, for a 2-input AND gate from the SKY130 High-Density Standard Cell Library with a width of 2, we would use: 
+
+```python
+c = sky130.modules.sky130_fd_sc_hd__and2_2()
+```
+
+The ports of these digital cells match the ports seen in cell documentation with no other parameters, they can now be hooked up and simulated like other PDK ExternalModules.
 
 ## Development 
 
