@@ -148,10 +148,8 @@ class Sky130Walker(h.HierarchyWalker):
             return self.bjt_module_call(call.params)
 
         else:
-            raise RuntimeError(f"{call.prim} is not legitimate primitive")
-
-        # Return everything else as-is
-        return call
+            # Return everything else as-is
+            return call
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
