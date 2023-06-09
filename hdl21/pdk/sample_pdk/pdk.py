@@ -12,8 +12,10 @@ from pydantic.dataclasses import dataclass
 
 # Project Imports
 import hdl21 as h
-from hdl21.primitives import Mos, MosType, MosParams
+from hdl21.prefix import µ
+from hdl21.primitives import Mos, MosType, MosParams as PrimMosParams
 from hdl21.pdk import PdkInstallation
+from vlsirtools import SpiceType
 
 
 @dataclass
@@ -25,9 +27,10 @@ class Install(PdkInstallation):
 class SamplePdkMosParams:
     """Sample PDK MOS Transistor Parameters"""
 
-    w = h.Param(dtype=Optional[int], desc="Width in resolution units", default=None)
-    l = h.Param(dtype=Optional[int], desc="Length in resolution units", default=None)
-    npar = h.Param(dtype=Optional[int], desc="Number of parallel fingers", default=None)
+    w = h.Param(dtype=h.Scalar, desc="Width in resolution units", default=1 * µ)
+    l = h.Param(dtype=h.Scalar, desc="Length in resolution units", default=1 * µ)
+    nf = h.Param(dtype=h.Scalar, desc="Number of parallel fingers", default=1)
+    m = h.Param(dtype=h.Scalar, desc="Number of parallel fingers", default=1)
 
     def __post_init_post_parse__(self):
         """Value Checks"""
@@ -35,8 +38,8 @@ class SamplePdkMosParams:
             raise ValueError(f"MosParams with invalid width {self.w}")
         if self.l <= 0:
             raise ValueError(f"MosParams with invalid length {self.l}")
-        if self.npar <= 0:
-            msg = f"MosParams with invalid number parallel fingers {self.npar}"
+        if self.nf <= 0:
+            msg = f"MosParams with invalid number parallel fingers {self.nf}"
             raise ValueError(msg)
 
 
@@ -56,6 +59,24 @@ Nmos = h.ExternalModule(
     paramtype=SamplePdkMosParams,
 )
 
+# `PmosModel` and `NmosModel` also external modules, referring directly to the SPICE "primitive MOS" M-elements.
+PmosModel = h.ExternalModule(
+    domain="sample_pdk",
+    name="pmos_model",
+    desc=f"Sample PDK Pmos (Model M-Element)",
+    port_list=copy.deepcopy(Mos.port_list),
+    paramtype=SamplePdkMosParams,
+    spicetype=SpiceType.MOS,
+)
+NmosModel = h.ExternalModule(
+    domain="sample_pdk",
+    name="nmos_model",
+    desc=f"Sample PDK Nmos (Model M-Element)",
+    port_list=copy.deepcopy(Mos.port_list),
+    paramtype=SamplePdkMosParams,
+    spicetype=SpiceType.MOS,
+)
+
 
 class SamplePdkWalker(h.HierarchyWalker):
     """Hierarchical Walker, converting `h.Primitive` instances to process-defined `ExternalModule`s."""
@@ -73,17 +94,17 @@ class SamplePdkWalker(h.HierarchyWalker):
         # Return everything else as-is
         return call
 
-    def mos_module(self, params: MosParams) -> h.ExternalModule:
+    def mos_module(self, params: PrimMosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         if params.tp == MosType.PMOS:
             return Pmos
         return Nmos
 
-    def mos_params(self, params: MosParams) -> SamplePdkMosParams:
+    def mos_params(self, params: PrimMosParams) -> SamplePdkMosParams:
         """Convert generic primitive `MosParams` into PDK-specific `SamplePdkMosParams`"""
-        return SamplePdkMosParams(w=params.w, l=params.l, npar=params.npar)
+        return SamplePdkMosParams(w=params.w, l=params.l, m=params.m, nf=params.nf)
 
-    def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
+    def mos_module_call(self, params: PrimMosParams) -> h.ExternalModuleCall:
         """Retrieve or create a `Call` for MOS parameters `params`."""
         # First check our cache
         if params in self.mos_modcalls:

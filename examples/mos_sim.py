@@ -6,7 +6,6 @@ A simple, common spice-class simulation example using the built-in `sample` PDK.
 
 import hdl21 as h
 import hdl21.sim as hs
-from hdl21.prefix import m
 import vlsirtools.spice as vsp
 
 # Import the built-in sample PDK
@@ -22,14 +21,14 @@ class MosDcopSim:
         """# Basic Mos Testbench"""
 
         VSS = h.Port()  # The testbench interface: sole port VSS
-        vdc = h.Vdc(dc=1000 * m)(n=VSS)  # A DC voltage source
-        mos = sample_pdk.Nmos()(
-            d=vdc.p, g=vdc.p, s=VSS, b=VSS
-        )  # The transistor under test
+        vdc = h.Vdc(dc=1)(n=VSS)  # A DC voltage source
+
+        # The transistor under test
+        mos = sample_pdk.Nmos()(d=vdc.p, g=vdc.p, s=VSS, b=VSS)
 
     # Simulation Stimulus
-    op = hs.Op()
-    mod = hs.Include(sample_pdk.install.models)
+    op = hs.Op()  # DC Operating Point Analysis
+    mod = hs.Include(sample_pdk.install.models)  # Include the Models
 
 
 def main():
@@ -50,12 +49,12 @@ def main():
     results = MosDcopSim.run(opts)
 
     # Get the transistor drain current
-    id = abs(results["op"].data["i(v.xtop.vvdc)"])
+    idd = abs(results["op"].data["i(v.xtop.vvdc)"])
 
     # Check that it's in the expected range
     # (There's nothing magic about these numbers; they're just past sim results.)
-    assert id > 115e-6
-    assert id < 117e-6
+    assert idd > 115e-6
+    assert idd < 117e-6
 
 
 if __name__ == "__main__":
