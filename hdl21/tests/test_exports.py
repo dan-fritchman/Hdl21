@@ -6,10 +6,10 @@
 * Importing back from VLSIR
 """
 
-import sys, pytest
+import pytest
 from io import StringIO
 from types import SimpleNamespace
-from textwrap import dedent
+from copy import deepcopy
 
 # Import the PUT (package under test)
 import hdl21 as h
@@ -27,7 +27,7 @@ def test_export_strides():
     p.s = h.Signal(width=20)
     p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
 
-    h.netlist(h.to_proto(p), sys.stdout, fmt="verilog")
+    h.netlist(h.to_proto(p), StringIO(), fmt="verilog")
 
 
 def test_prim_proto1():
@@ -527,3 +527,45 @@ def test_rountrip_external_module():
 def test_module_with_no_python_module():
     # Issue #48 https://github.com/dan-fritchman/Hdl21/issues/48
     exec("import hdl21 as h; h.to_proto(h.Module(name='not_in_a_pymodule'))")
+
+
+def test_netlist_spicetypes():
+    """# Test netlisting `ExternalModule`s with `SpiceType`s"""
+    from hdl21.external_module import SpiceType
+    from vlsirtools.netlist import NetlistFormat
+
+    NmosModel = h.ExternalModule(
+        name="nmos_model",
+        port_list=deepcopy(h.Mos.port_list),
+        paramtype=h.HasNoParams,
+        spicetype=SpiceType.MOS,
+    )
+
+    @h.module
+    class HasSpiceTypes:
+        VSS = h.Signal()
+        the_model_inst = NmosModel()(d=VSS, g=VSS, s=VSS, b=VSS)
+
+    # Test netlisting in a handful of formats
+    # Do some basic checking - mostly against exceptions.
+    # But make sure the model-name got in there at least somewhere.
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.SPICE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.XYCE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.NGSPICE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.SPECTRE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl

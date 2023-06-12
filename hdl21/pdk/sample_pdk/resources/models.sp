@@ -1,19 +1,23 @@
 
 * # Sample PDK Models
 * 
-* Equal to the default BSIM4 models
+* A pair of NMOS and PMOS, equal to the default BSIM4 models. 
+* Each are exposed both as subcircuits ("x-elements") named `nmos` and `pmos`, 
+* and SPICE models ("m-elements") named `nmos_model` and `pmos_model`.
 * 
-* Note these *are not* parametric! 
-* This file is syntactically generic-enough to work in all our favorite simulators; 
-* passing parameters hierarchically would require a different syntax for each simulator.
 
+* The model-based version
+.model nmos_model nmos level=54
 
-.subckt nmos d g s b
-  .model nmos_model nmos level=54
-  mn d g s b nmos_model l=1u w=1u nf=1
+* The subcircuit-based version
+.subckt nmos  d g s b  l='1u' w='1u' nf='1' m='1'
+  mn d g s b nmos_model l='l' w='w' nf='nf' m='m'
 .ends 
 
-.subckt pmos d g s b
-  .model pmos_model pmos level=54
-  mp d g s b pmos_model l=1u w=1u nf=1
+* The model-based version
+.model pmos_model pmos level=54
+
+* The subcircuit-based version
+.subckt pmos  d g s b  l='1u' w='1u' nf='1' m='1'
+  mp d g s b pmos_model l='l' w='w' nf='nf' m='m'
 .ends 
