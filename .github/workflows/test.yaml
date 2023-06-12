@@ -33,10 +33,8 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         run: |
-          apt-get install -y python${{ matrix.python-version }}
-          apt-get install -y python${{ matrix.python-version }}-dev
-          apt-get install -y python${{ matrix.python-version }}-venv
-          apt-get install -y python${{ matrix.python-version }}-distutils
+          apt update -y && apt upgrade -y
+          apt install -y python${{ matrix.python-version }} python${{ matrix.python-version }}-dev python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils
           python${{ matrix.python-version }} -m pip install pytest
           python${{ matrix.python-version }} -m pip install -Iv black==22.6
 
