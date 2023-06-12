@@ -1,11 +1,26 @@
 """ 
 # Hdl21 Sample PDK
+
+A non-physical, 110% made-up process technology, designed solely for demonstrating the `hdl21.pdk` interface. 
+The Hdl21 sample PDK is integrated in the Hdl21 package, and is therefore available to every installation of Hdl21. 
+
+It includes: 
+* Nmos and Pmos transistor `ExternalModule`s
+* Similar transistor modules, defined as SPICE primitive-MOS models
+* Comilation from `hdl21.primitives` to the PDK modules 
+* An `Install` type, demonstrating typical usage of out-of-Python PDK installation data 
+* A built-in model file, compatible with all supported simulators
+
+Note that unlike most Hdl21 PDKs, the content of `sample_pdk.install` - the model file - 
+*is* built into the source tree, and is configured at import-time. 
+For most PDKs in which this data is distributed separately, 
+a site-specific `sitepdks` module customarily configures the `install` variable.
+
 """
 
 # Std-Lib Imports
 import copy
 from pathlib import Path
-from typing import Optional
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
@@ -102,7 +117,13 @@ class SamplePdkWalker(h.HierarchyWalker):
 
     def mos_params(self, params: PrimMosParams) -> SamplePdkMosParams:
         """Convert generic primitive `MosParams` into PDK-specific `SamplePdkMosParams`"""
-        return SamplePdkMosParams(w=params.w, l=params.l, m=params.m, nf=params.nf)
+        # FIXME: pending rename of `primitives.MosParams.npar`
+        # FIXME: map parameters using the `default` field directly; needs debug
+        w = params.w or 1 * µ
+        l = params.l or 1 * µ
+        m = params.mult or 1
+        nf = params.npar or 1
+        return SamplePdkMosParams(w=w, l=l, m=m, nf=nf)
 
     def mos_module_call(self, params: PrimMosParams) -> h.ExternalModuleCall:
         """Retrieve or create a `Call` for MOS parameters `params`."""
