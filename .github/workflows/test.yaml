@@ -28,6 +28,10 @@ jobs:
     continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
+    
+      - name: Update Ubuntu
+        run: apt-get update
+    
       - name: Checkout Repo
         uses: actions/checkout@v3
 
