@@ -148,10 +148,8 @@ class Sky130Walker(h.HierarchyWalker):
             return self.bjt_module_call(call.params)
 
         else:
-            raise RuntimeError(f"{call.prim} is not legitimate primitive")
-
-        # Return everything else as-is
-        return call
+            # Return everything else as-is
+            return call
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
@@ -179,17 +177,27 @@ class Sky130Walker(h.HierarchyWalker):
         mosvth = h.MosVth.STD if params.vth is None else params.vth
         args = (mostype, mosfam, mosvth)
 
-        # Filter the xtors by a dictionary by partial match
-        subset = {
-            key: value for key, value in xtors.items() if any(a in key for a in args)
-        }
+        # Find all the xtors that match the args
+        subset = {}
+        for k, v in xtors.items():
 
-        # More than one answer? You weren't specific enough.
-        if len(subset) != 1:
-            msg = f"Mos module choice not well-defined given parameters {args}"
-            raise RuntimeError(msg)
+            match = False
+            for a in args:
+                if a not in k:
+                    break
+            else:
+                match = True
 
-        return subset.values()[0]
+            if match:
+                subset[k] = v
+
+        # FIXME: Probably should be an error...
+        # if len(subset) > 2:
+        #     msg = f"Mos module choice not well-defined given parameters {args}"
+        #     raise RuntimeError(msg)
+
+        # Return the first one (supported as of 3.7)
+        return next(iter(subset.values()))
 
     def mos_module_call(self, params: MosParams) -> h.ExternalModuleCall:
         """Retrieve or create a `Call` for MOS parameters `params`."""

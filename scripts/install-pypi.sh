@@ -5,4 +5,4 @@
 #
 
 pip install --pre --editable ".[dev]"
-pre-commit install
+# pre-commit install

@@ -2,6 +2,8 @@
 Spice-Class Simulation Interface 
 """
 
+from textwrap import dedent
+from warnings import warn
 from enum import Enum
 from typing import Union, Any, Optional, List, Awaitable, Dict
 from pathlib import Path
@@ -330,6 +332,7 @@ Control = Union[Include, Lib, Save, Meas, Param, Literal]
 def is_control(val: Any) -> bool:
     return isinstance(val, Control.__args__)
 
+
 # Define all available option types below
 OptionTypes = Union[
     bool,
@@ -337,6 +340,8 @@ OptionTypes = Union[
     str,
     Literal,
 ]
+
+
 @simattr
 @datatype
 class Options:
@@ -390,7 +395,7 @@ class Sim:
         self, opts: Optional[vsp.SimOptions] = None
     ) -> Awaitable[vsp.SimResultUnion]:
         """Invoke simulation via `vlsirtools.spice`."""
-        return run_async(self, opts=opts)
+        return await run_async(self, opts=opts)
 
     @property
     def Tb(self) -> "Module":
@@ -406,16 +411,29 @@ def run(
 
     from .to_proto import to_proto
 
-    inp.Tb.props.set("simulator", opts.simulator.value)
+    # FIXME: I don't see anything that relied on this, but whatever it was, has gotta go
+    # inp.Tb.props.set("simulator", opts.simulator.value)
 
     return vsp.sim(inp=to_proto(inp), opts=opts)
 
 
 async def run_async(
     inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
-) -> OneOrMore[Awaitable[vsp.SimResultUnion]]:
+) -> Awaitable[OneOrMore[vsp.SimResultUnion]]:
     """Invoke simulation via `vlsirtools.spice`."""
     from .to_proto import to_proto
+
+    # FIXME: go through with deprecation
+    warn(
+        PendingDeprecationWarning(
+            dedent(
+                """\
+        Async `hdl21.Sim` invocation will be deprecated and `run_async` will be removed with the next major version.
+        Use `run` instead, which now parallelizes across simulation processes internally.
+    """
+            )
+        )
+    )
 
     return await vsp.sim_async(inp=to_proto(inp), opts=opts)
 

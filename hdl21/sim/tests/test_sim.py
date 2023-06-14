@@ -1,9 +1,16 @@
+"""
+# `hdl21.sim` Unit Tests
+"""
+
+import asyncio, pytest
+
 import hdl21 as h
 from hdl21.sim import *
-from hdl21.primitives import Vdc
 from hdl21.prefix import m
+from hdl21.primitives import Vdc
+import vlsir.spice_pb2 as vsp
 import vlsirtools
-import pytest
+from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
 
 
 def test_sim1():
@@ -56,7 +63,7 @@ def test_sim2():
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
-            Options(1e-9,name="reltol"),
+            Options(1e-9, name="reltol"),
         ],
     )
     to_proto(s)
@@ -90,8 +97,7 @@ def test_simattrs():
     s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
     s.include("/home/models")
     s.lib(path="/home/models", section="fast")
-    s.options(1e-9,name="reltol")
-
+    s.options(1e-9, name="reltol")
 
     to_proto(s)
 
@@ -125,7 +131,7 @@ def test_sim_decorator():
             npts=11,
         )
         a_delay = Meas(analysis=mytran, expr="trig_targ_something")
-        opts = Options(1e-9,name="reltol")
+        opts = Options(1e-9, name="reltol")
 
         # Attributes whose names don't really matter can be called anything,
         # but must be *assigned* into the class, not just constructed.
@@ -184,7 +190,7 @@ def test_proto1():
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
-            Options(1e-9,name="reltol"),
+            Options(1e-9, name="reltol"),
         ],
     )
 
@@ -286,10 +292,6 @@ def empty_tb() -> h.Module:
 def test_empty_sim1():
     """Create and run an empty `Sim`, returning a VLSIR_PROTO"""
 
-    from hdl21.sim import Sim, to_proto
-    import vlsir.spice_pb2 as vsp
-    from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
-
     s = Sim(tb=empty_tb(), attrs=[])
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
     assert isinstance(r, vsp.SimResult)
@@ -307,11 +309,23 @@ def test_empty_sim1():
 def test_empty_sim2():
     """Create and run an empty `Sim`, returning SIM_DATA"""
 
-    from hdl21.sim import Sim, to_proto
-    import vlsir.spice_pb2 as vsp
-    from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
-
     s = Sim(tb=empty_tb(), attrs=[])
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.SIM_DATA))
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
+
+
+@pytest.mark.skipif(
+    vlsirtools.spice.default() is None,
+    reason="No simulator available",
+)
+def test_sim_async_caller():
+    """# Test invoking simulation from an async caller"""
+
+    async def caller():
+        """# The asynchronous caller of `sim_async`"""
+        s = Sim(tb=empty_tb(), attrs=[])
+        return await s.run_async(SimOptions(fmt=ResultFormat.SIM_DATA))
+
+    result = asyncio.run(caller())
+    assert isinstance(result, sd.SimResult)
