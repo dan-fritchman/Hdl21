@@ -69,6 +69,12 @@ class MosParams:
         default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
     )
 
+    ad = h.Param(
+        dtype=h.Literal,
+        desc="Source Area",
+        default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
+    )
+
     pd = h.Param(
         dtype=h.Literal,
         desc="Drain Perimeter",
@@ -121,8 +127,8 @@ class GF180ResParams:
 class GF180CapParams:
     """# GF180 Capacitor Parameters"""
 
-    c_width = h.Param(dtype=h.Scalar, desc="Width in PDK Units (m)", default=1 * µ)
-    c_length = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1 * µ)
+    c_width = h.Param(dtype=h.Scalar, desc="Width in PDK Units (m)", default=10 * µ)
+    c_length = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=10 * µ)
     m = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
 
 
@@ -134,6 +140,7 @@ class GF180DiodeParams:
     pj = h.Param(
         dtype=h.Scalar, desc="Junction Perimeter in PDK units (m)", default=4 * µ
     )
+    m = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
 
 
 @h.paramclass

@@ -30,7 +30,7 @@ setup(
     python_requires=">=3.8, <4",
     install_requires=[
         f"sky130-hdl21=={_VLSIR_VERSION}",
-        f"asap7-hdl21=={_VLSIR_VERSION}",
+        # f"asap7-hdl21=={_VLSIR_VERSION}",
     ],
     extras_require={
         "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==22.6", "twine"]

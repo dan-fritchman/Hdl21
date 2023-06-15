@@ -76,15 +76,15 @@ def diode_primitives_module():
         z = h.Signal(desc="Sole signal connected to everything")
 
         # Diodes
-        res_nd2ps_33v = h.Diode(model="ND2PS_3p3V")(p=z, n=z)
-        res_pd2nw_33v = h.Diode(model="PD2NW_3p3V")(p=z, n=z)
-        res_nd2ps_60v = h.Diode(model="ND2PS_6p0V")(p=z, n=z)
-        res_pd2nw_60v = h.Diode(model="PD2NW_6p0V")(p=z, n=z)
-        res_nw2ps_33v = h.Diode(model="NW2PS_3p3V")(p=z, n=z)
-        res_nw2ps_60v = h.Diode(model="NW2PS_6p0V")(p=z, n=z)
-        res_pw2dw = h.Diode(model="PW2DW")(p=z, n=z)
-        res_dw2ps = h.Diode(model="DW2PS")(p=z, n=z)
-        res_schottky = h.Diode(model="Schottky")(p=z, n=z)
+        diode_nd2ps_33v = h.Diode(model="ND2PS_3p3V")(p=z, n=z)
+        diode_pd2nw_33v = h.Diode(model="PD2NW_3p3V")(p=z, n=z)
+        diode_nd2ps_60v = h.Diode(model="ND2PS_6p0V")(p=z, n=z)
+        diode_pd2nw_60v = h.Diode(model="PD2NW_6p0V")(p=z, n=z)
+        diode_nw2ps_33v = h.Diode(model="NW2PS_3p3V")(p=z, n=z)
+        diode_nw2ps_60v = h.Diode(model="NW2PS_6p0V")(p=z, n=z)
+        diode_pw2dw = h.Diode(model="PW2DW")(p=z, n=z)
+        diode_dw2ps = h.Diode(model="DW2PS")(p=z, n=z)
+        diode_schottky = h.Diode(model="Schottky")(p=z, n=z)
 
     return DiodePrimitives
 
