@@ -45,7 +45,7 @@ def test_xtor_netlists():
         h.netlist(mod, dest=s, fmt="spice")
         s = s.getvalue()
 
-        assert not s.isspace() # Not empty
+        assert not s.isspace()  # Not empty
 
 
 def test_2_term_res_netlists():
@@ -82,7 +82,7 @@ def test_2_term_res_netlists():
             h.netlist(mod, dest=s, fmt="spice")
             s = s.getvalue()
 
-            assert not s.isspace() # Not empty
+            assert not s.isspace()  # Not empty
 
 
 def test_3_term_res_netlists():
@@ -120,6 +120,7 @@ def test_3_term_res_netlists():
 
             assert not s.isspace()
 
+
 def test_diode_netlists():
 
     """
@@ -154,6 +155,7 @@ def test_diode_netlists():
 
         assert not s.isspace()
 
+
 def test_3T_bjt_netlists():
     @h.generator
     def GenBipolar(params: h.BipolarParams) -> h.Module:
@@ -183,10 +185,11 @@ def test_3T_bjt_netlists():
 
             assert not s.isspace()
 
+
 def test_4T_bjt_netlists():
 
     p = gf180.GF180BipolarParams()
-    
+
     for x in gf180.bjts.keys():
 
         if len(gf180.bjts[x].port_list) == 4:
@@ -194,11 +197,11 @@ def test_4T_bjt_netlists():
             @h.module
             class TestBjt:
 
-                a,d,f,g = 4 * h.Signal()
+                a, d, f, g = 4 * h.Signal()
 
-                exec("genBipolar = gf180.modules."+x)
+                exec("genBipolar = gf180.modules." + x)
 
-                BJT = genBipolar(p)(c=a,b=d,e=f,s=g)
+                BJT = genBipolar(p)(c=a, b=d, e=f, s=g)
 
             # Generate
             mod = TestBjt
@@ -209,6 +212,7 @@ def test_4T_bjt_netlists():
             s = s.getvalue()
 
             assert not s.isspace()
+
 
 def test_cap_netlists():
     @h.generator
@@ -234,5 +238,5 @@ def test_cap_netlists():
         s = StringIO()
         h.netlist(mod, dest=s, fmt="spice")
         s = s.getvalue()
-        
+
         assert not s.isspace()

@@ -42,4 +42,6 @@ import asap7
 # GF180
 import gf180
 
-gf180.install = gf180.Install(model_lib=Path("/usr/local/share/pdk/gf180mcuC/libs.tech/ngspice/sm141064.ngspice"))
+gf180.install = gf180.Install(
+    model_lib=Path("/usr/local/share/pdk/gf180mcuC/libs.tech/ngspice/sm141064.ngspice")
+)

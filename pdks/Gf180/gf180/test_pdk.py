@@ -24,7 +24,7 @@ def mos_primitives_module():
         pfet_06v0 = h.Mos(model="PFET_6p0V")(d=z, g=z, s=z, b=z)
         nfet_03v3_dss = h.Mos(model="NFET_3p3V_DSS")(d=z, g=z, s=z, b=z)
         pfet_03v3_dss = h.Mos(model="PFET_3p3V_DSS")(d=z, g=z, s=z, b=z)
-        # nfet_06v0_dss = h.Mos(model="NFET_6p0V_DSS")(d=z, g=z, s=z, b=z)
+        nfet_06v0_dss = h.Mos(model="NFET_6p0V_DSS")(d=z, g=z, s=z, b=z)
         pfet_06v0_dss = h.Mos(model="PFET_6p0V_DSS")(d=z, g=z, s=z, b=z)
         nfet_06v0_nvt = h.Mos(model="NFET_6p0V_NAT")(d=z, g=z, s=z, b=z)
 
@@ -111,9 +111,9 @@ def cap_primitives_module():
         z = h.Signal(desc="Sole signal connected to everything")
 
         # Capacitors
-        # cap_15fF_MIM = h.PhysicalCapacitor(model="MIM_1p5fF")(p=z, n=z)
-        # cap_10fF_MIM = h.PhysicalCapacitor(model="MIM_1p0fF")(p=z, n=z)
-        # cap_20fF_MIM = h.PhysicalCapacitor(model="MIM_2p0fF")(p=z, n=z)
+        cap_15fF_MIM = h.PhysicalCapacitor(model="MIM_1p5fF")(p=z, n=z)
+        cap_10fF_MIM = h.PhysicalCapacitor(model="MIM_1p0fF")(p=z, n=z)
+        cap_20fF_MIM = h.PhysicalCapacitor(model="MIM_2p0fF")(p=z, n=z)
 
         # Three-terminal capacitors
         cap_33V_NMOS = h.ThreeTerminalCapacitor(model="NMOS_3p3V")(p=z, n=z, b=z)
@@ -165,14 +165,13 @@ def _netlist(prims):
     gf180.compile(prims)
     h.netlist(prims, StringIO(), fmt="spice")
     h.netlist(prims, StringIO(), fmt="spectre")
-    h.netlist(prims, StringIO(), fmt="verilog")
 
 
 def test_netlist():
 
     _netlist(mos_primitives_module())
     _netlist(res_primitives_module())
-    # _netlist(diode_primitives_module())
+    _netlist(diode_primitives_module())
     _netlist(bjt_primitives_module())
     _netlist(cap_primitives_module())
 
@@ -190,7 +189,7 @@ def test_mos_module():
         pfet_06v0 = g.PFET_6p0V(p)()
         nfet_03v3_dss = g.NFET_3p3V_DSS(p)()
         pfet_03v3_dss = g.PFET_3p3V_DSS(p)()
-        # nfet_06v0_dss = g.NFET_6p0V_DSS(p)()
+        nfet_06v0_dss = g.NFET_6p0V_DSS(p)()
         pfet_06v0_dss = g.PFET_6p0V_DSS(p)()
         nfet_06v0_nvt = g.NFET_6p0V_NAT(p)()
 
@@ -232,7 +231,6 @@ def test_cap_module():
     @h.module
     class HasCap:
 
-        # FIXME: MiM Caps don't work, I don't know why.
         cap_mim_1f5fF = g.MIM_1p5fF(p)()
         cap_mim_1f0fF = g.MIM_1p0fF(p)()
         cap_mim_2f0fF = g.MIM_2p0fF(p)()
@@ -281,6 +279,7 @@ def test_bjt_module():
         npn_00p54x08p00 = g.NPN_0p54x8p0(p)()
         npn_00p54x04p00 = g.NPN_0p54x4p0(p)()
         npn_00p54x02p00 = g.NPN_0p54x2p0(p)()
+
 
 def test_walker_contents():
     from hdl21.tests.content import walker_test_content

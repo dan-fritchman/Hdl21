@@ -22,17 +22,17 @@ from gf180 import modules as g
 
 def test_installed():
     """
-    Test if the PDK is installed and properly configured.
+        Test if the PDK is installed and properly configured.
 
-    This test checks if the PDK `gf180.install` is not None and if its type
-    is `gf180.Install`. If both conditio
-ns are met, the test passes.
+        This test checks if the PDK `gf180.install` is not None and if its type
+        is `gf180.Install`. If both conditio
+    ns are met, the test passes.
     """
     assert gf180.install is not None
     assert isinstance(gf180.install, gf180.Install)
 
-def test_sim_mosfets():
 
+def test_sim_mosfets():
     @h.sim.sim
     class Sim:
         @h.module
@@ -44,17 +44,33 @@ def test_sim_mosfets():
 
             p = gf180.GF180MosParams
 
-            nfet_03v3 = g.NFET_3p3V(p(w = 0.220 * µ,l = 0.280 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_03v3 = g.PFET_3p3V(p(w = 0.220 * µ,l = 0.280 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
-            nfet_06v0 = g.NFET_6p0V(p(w = 0.300 * µ,l = 0.700 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_06v0 = g.PFET_6p0V(p(w = 0.300 * µ,l = 0.500 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_03v3 = g.NFET_3p3V(p(w=0.220 * µ, l=0.280 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_03v3 = g.PFET_3p3V(p(w=0.220 * µ, l=0.280 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            nfet_06v0 = g.NFET_6p0V(p(w=0.300 * µ, l=0.700 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_06v0 = g.PFET_6p0V(p(w=0.300 * µ, l=0.500 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
-            nfet_03v3_dss = g.NFET_3p3V_DSS(p(w = 0.220 * µ,l = 0.280 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_03v3_dss = g.PFET_3p3V_DSS(p(w = 0.220 * µ,l = 0.280 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_03v3_dss = g.NFET_3p3V_DSS(p(w=0.220 * µ, l=0.280 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
+            pfet_03v3_dss = g.PFET_3p3V_DSS(p(w=0.220 * µ, l=0.280 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
             # nfet_06v0_dss = g.NFET_6p0V_DSS(p(w = 0.300 * µ,l = 0.500 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
-            pfet_06v0_dss = g.PFET_6p0V_DSS(p(w = 0.300 * µ,l = 0.500 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
+            pfet_06v0_dss = g.PFET_6p0V_DSS(p(w=0.300 * µ, l=0.500 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
-            nfet_06v0_nvt = g.NFET_6p0V_NAT(p(w = 0.800 * µ,l = 1.800 * µ))(d=vdd, g=vdd, s=VSS, b=VSS)
+            nfet_06v0_nvt = g.NFET_6p0V_NAT(p(w=0.800 * µ, l=1.800 * µ))(
+                d=vdd, g=vdd, s=VSS, b=VSS
+            )
 
         # Simulation Controls
         op = h.sim.Op()
@@ -73,6 +89,7 @@ def test_sim_mosfets():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
+
 def test_sim_resistors():
     @h.sim.sim
     class Sim:
@@ -86,20 +103,20 @@ def test_sim_resistors():
             p = gf180.GF180ResParams()
 
             # Three terminal resistors
-            nplus_u = g.NPLUS_U(p)(p=vdd, n=VSS, b = VSS)
-            pplus_u = g.PPLUS_U(p)(p=vdd, n=VSS, b = VSS)
-            nplus_s = g.NPLUS_S(p)(p=vdd, n=VSS, b = VSS)
-            pplus_s = g.PPLUS_S(p)(p=vdd, n=VSS, b = VSS)
-            nwell = g.NWELL(p)(p=vdd, n=VSS, b = VSS)
-            npolyf_u = g.NPOLYF_U(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_u = g.PPOLYF_U(p)(p=vdd, n=VSS, b = VSS)
-            npolyf_s = g.NPOLYF_S(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_s = g.PPOLYF_S(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_u_1k = g.PPOLYF_U_1K(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_u_2k = g.PPOLYF_U_2K(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_u_1k_6p0 = g.PPOLYF_U_1K_6P0(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_u_2k_6p0 = g.PPOLYF_U_2K_6P0(p)(p=vdd, n=VSS, b = VSS)
-            ppolyf_u_3k = g.PPOLYF_U_3K(p)(p=vdd, n=VSS, b = VSS)
+            nplus_u = g.NPLUS_U(p)(p=vdd, n=VSS, b=VSS)
+            pplus_u = g.PPLUS_U(p)(p=vdd, n=VSS, b=VSS)
+            nplus_s = g.NPLUS_S(p)(p=vdd, n=VSS, b=VSS)
+            pplus_s = g.PPLUS_S(p)(p=vdd, n=VSS, b=VSS)
+            nwell = g.NWELL(p)(p=vdd, n=VSS, b=VSS)
+            npolyf_u = g.NPOLYF_U(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_u = g.PPOLYF_U(p)(p=vdd, n=VSS, b=VSS)
+            npolyf_s = g.NPOLYF_S(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_s = g.PPOLYF_S(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_u_1k = g.PPOLYF_U_1K(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_u_2k = g.PPOLYF_U_2K(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_u_1k_6p0 = g.PPOLYF_U_1K_6P0(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_u_2k_6p0 = g.PPOLYF_U_2K_6P0(p)(p=vdd, n=VSS, b=VSS)
+            ppolyf_u_3k = g.PPOLYF_U_3K(p)(p=vdd, n=VSS, b=VSS)
 
             # Two terminal resistors
             rm1 = g.RM1(p)(p=vdd, n=VSS)
@@ -129,6 +146,7 @@ def test_sim_resistors():
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
 
+
 def test_sim_capacitors():
     @h.sim.sim
     class Sim:
@@ -141,19 +159,40 @@ def test_sim_capacitors():
 
             p = gf180.GF180CapParams
 
-            # FIXME: Need to add the following capacitors
-            cap_mim_1f5fF = g.MIM_1p5fF(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_mim_1f0fF = g.MIM_1p0fF(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_mim_2f0fF = g.MIM_2p0fF(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            
-            cap_nmos_03v3 = g.NMOS_3p3V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_pmos_03v3 = g.PMOS_3p3V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_nmos_06v0 = g.NMOS_6p0V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_pmos_06v0 = g.PMOS_6p0V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_nmos_03v3_b = g.NMOS_Nwell_3p3V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_pmos_03v3_b = g.PMOS_Pwell_3p3V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_nmos_06v0_b = g.NMOS_Nwell_6p0V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
-            cap_pmos_06v0_b = g.PMOS_Pwell_6p0V(p(c_width=10*μ, c_length=10*μ))(p=vdd, n=VSS)
+            cap_mim_1f5fF = g.MIM_1p5fF(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_mim_1f0fF = g.MIM_1p0fF(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_mim_2f0fF = g.MIM_2p0fF(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+
+            cap_nmos_03v3 = g.NMOS_3p3V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_pmos_03v3 = g.PMOS_3p3V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_nmos_06v0 = g.NMOS_6p0V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_pmos_06v0 = g.PMOS_6p0V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_nmos_03v3_b = g.NMOS_Nwell_3p3V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_pmos_03v3_b = g.PMOS_Pwell_3p3V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_nmos_06v0_b = g.NMOS_Nwell_6p0V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
+            cap_pmos_06v0_b = g.PMOS_Pwell_6p0V(p(c_width=10 * μ, c_length=10 * μ))(
+                p=vdd, n=VSS
+            )
 
         # Simulation Controls
         op = h.sim.Op()
@@ -161,7 +200,7 @@ def test_sim_capacitors():
         d1 = gf180.install.include_design()
         i1 = gf180.install.include_mos(Corner.TYP)
         #! Very important that this is included!
-        i11 = h.sim.Lib(gf180.install.model_lib,"cap_mim")
+        i11 = h.sim.Lib(gf180.install.model_lib, "cap_mim")
         i2 = gf180.install.include_resistors(Corner.TYP)
         i3 = gf180.install.include_moscaps(Corner.TYP)
         i4 = gf180.install.include_mimcaps(Corner.TYP)
@@ -177,6 +216,7 @@ def test_sim_capacitors():
 
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
+
 
 def test_sim_diodes():
     @h.sim.sim
@@ -216,6 +256,7 @@ def test_sim_diodes():
 
     op = rv[vsp.sim_data.AnalysisType.OP]
     assert isinstance(op, vsp.sim_data.OpResult)
+
 
 def test_sim_bjt():
     @h.sim.sim

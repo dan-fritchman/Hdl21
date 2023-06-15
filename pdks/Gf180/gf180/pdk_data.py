@@ -54,6 +54,7 @@ PDK_NAME = "gf180"
 # Vlsirtool Types to ease downstream parsing
 from vlsirtools import SpiceType
 
+
 @h.paramclass
 class MosParams:
     """# GF180 Mos Parameters"""
@@ -61,7 +62,7 @@ class MosParams:
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1 * µ)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1 * µ)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
-        # This unfortunate naming is to prevent conflicts with base python.
+    # This unfortunate naming is to prevent conflicts with base python.
     As = h.Param(
         dtype=h.Literal,
         desc="Source Area",
@@ -102,8 +103,10 @@ class MosParams:
     mult = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
+
 # FIXME: keep this alias as prior versions may have used it
 GF180MosParams = MosParams
+
 
 @h.paramclass
 class GF180ResParams:
@@ -113,6 +116,7 @@ class GF180ResParams:
     r_length = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1 * µ)
     m = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1)
 
+
 @h.paramclass
 class GF180CapParams:
     """# GF180 Capacitor Parameters"""
@@ -121,18 +125,23 @@ class GF180CapParams:
     c_length = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1 * µ)
     m = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
 
+
 @h.paramclass
 class GF180DiodeParams:
     """# GF180 Diode Parameters"""
 
     area = h.Param(dtype=h.Scalar, desc="Area in PDK Units (m²)", default=1 * p)
-    pj = h.Param(dtype=h.Scalar, desc="Junction Perimeter in PDK units (m)", default=4 * µ)
+    pj = h.Param(
+        dtype=h.Scalar, desc="Junction Perimeter in PDK units (m)", default=4 * µ
+    )
+
 
 @h.paramclass
 class GF180BipolarParams:
     """# GF180 Bipolar Parameters"""
 
     m = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
+
 
 def _xtor_module(modname: str) -> h.ExternalModule:
     """Transistor module creator, with module-name `name`.
@@ -144,7 +153,7 @@ def _xtor_module(modname: str) -> h.ExternalModule:
         desc=f"{PDK_NAME} PDK Mos {modname}",
         port_list=deepcopy(h.Mos.port_list),
         paramtype=MosParams,
-        spicetype=SpiceType.SUBCKT
+        spicetype=SpiceType.SUBCKT,
     )
 
     return mod
@@ -174,11 +183,10 @@ def _diode_module(modname: str) -> h.ExternalModule:
         desc=f"{PDK_NAME} PDK Diode {modname}",
         port_list=deepcopy(Diode.port_list),
         paramtype=GF180DiodeParams,
-        spicetype=SpiceType.DIODE
+        spicetype=SpiceType.DIODE,
     )
 
     return mod
-
 
 
 def _cap_module(modname: str, params: h.Param) -> h.ExternalModule:
@@ -194,6 +202,7 @@ def _cap_module(modname: str, params: h.Param) -> h.ExternalModule:
 
     return mod
 
+
 FourTerminalBipolarPorts = [
     h.Port(name="c"),
     h.Port(name="b"),
@@ -201,9 +210,10 @@ FourTerminalBipolarPorts = [
     h.Port(name="s"),
 ]
 
-def _bjt_module(modname: str, num_terminals = 3) -> h.ExternalModule:
 
-    num2device = {3:Bipolar.port_list, 4:FourTerminalBipolarPorts}
+def _bjt_module(modname: str, num_terminals=3) -> h.ExternalModule:
+
+    num2device = {3: Bipolar.port_list, 4: FourTerminalBipolarPorts}
 
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -214,6 +224,7 @@ def _bjt_module(modname: str, num_terminals = 3) -> h.ExternalModule:
     )
 
     return mod
+
 
 # Individuate component types
 MosKey = Tuple[str, h.MosType]
@@ -226,7 +237,7 @@ xtors: Dict[MosKey, h.ExternalModule] = {
     ("PFET_6p0V", MosType.PMOS, MosFamily.IO): _xtor_module("pfet_06v0"),
     ("NFET_3p3V_DSS", MosType.NMOS, MosFamily.NONE): _xtor_module("nfet_03v3_dss"),
     ("PFET_3p3V_DSS", MosType.PMOS, MosFamily.NONE): _xtor_module("pfet_03v3_dss"),
-    # ("NFET_6p0V_DSS", MosType.NMOS, MosFamily.NONE): _xtor_module("nfet_06v0_dss"),
+    ("NFET_6p0V_DSS", MosType.NMOS, MosFamily.NONE): _xtor_module("nfet_06v0_dss"),
     ("PFET_6p0V_DSS", MosType.PMOS, MosFamily.NONE): _xtor_module("pfet_06v0_dss"),
     ("NFET_6p0V_NAT", MosType.NMOS, MosFamily.NONE): _xtor_module("nfet_06v0_nvt"),
 }
@@ -272,12 +283,12 @@ bjts: Dict[BjtKey, h.ExternalModule] = {
     "PNP_5p0x0p42": _bjt_module("pnp_05p00x00p42"),
     "PNP_10p0x10p0": _bjt_module("pnp_10p00x10p00"),
     "PNP_5p0x5p0": _bjt_module("pnp_05p00x05p00"),
-    "NPN_10p0x10p0": _bjt_module("npn_10p00x10p00",4),
-    "NPN_5p0x5p0": _bjt_module("npn_05p00x05p00",4),
-    "NPN_0p54x16p0": _bjt_module("npn_00p54x16p00",4),
-    "NPN_0p54x8p0": _bjt_module("npn_00p54x08p00",4),
-    "NPN_0p54x4p0": _bjt_module("npn_00p54x04p00",4),
-    "NPN_0p54x2p0": _bjt_module("npn_00p54x02p00",4),
+    "NPN_10p0x10p0": _bjt_module("npn_10p00x10p00", 4),
+    "NPN_5p0x5p0": _bjt_module("npn_05p00x05p00", 4),
+    "NPN_0p54x16p0": _bjt_module("npn_00p54x16p00", 4),
+    "NPN_0p54x8p0": _bjt_module("npn_00p54x08p00", 4),
+    "NPN_0p54x4p0": _bjt_module("npn_00p54x04p00", 4),
+    "NPN_0p54x2p0": _bjt_module("npn_00p54x02p00", 4),
 }
 
 caps: Dict[str, h.ExternalModule] = {
@@ -331,49 +342,49 @@ class Cache:
 CACHE = Cache()
 
 default_xtor_size = {
-    "pfet_03v3" : (h.Scalar(inner=0.220 * µ),h.Scalar(inner=0.280 * µ)),
-    "nfet_03v3" : (h.Scalar(inner=0.220 * µ),h.Scalar(inner=0.280 * µ)),
-    "nfet_06v0" : (h.Scalar(inner=0.300 * µ),h.Scalar(inner=0.700 * µ)),
-    "pfet_06v0" : (h.Scalar(inner=0.300 * µ),h.Scalar(inner=0.500 * µ)),
-    "nfet_03v3_dss" : (h.Scalar(inner=0.220 * µ),h.Scalar(inner=0.280 * µ)),
-    "pfet_03v3_dss" : (h.Scalar(inner=0.220 * µ),h.Scalar(inner=0.280 * µ)),
-    # "nfet_06v0_dss" : (h.Scalar(inner=0.300 * µ),h.Scalar(inner=0.500 * µ)),
-    "pfet_06v0_dss" : (h.Scalar(inner=0.300 * µ),h.Scalar(inner=0.500 * µ)),
-    "nfet_06v0_nvt" : (h.Scalar(inner=0.800 * µ),h.Scalar(inner=1.800 * µ)),
+    "pfet_03v3": (h.Scalar(inner=0.220 * µ), h.Scalar(inner=0.280 * µ)),
+    "nfet_03v3": (h.Scalar(inner=0.220 * µ), h.Scalar(inner=0.280 * µ)),
+    "nfet_06v0": (h.Scalar(inner=0.300 * µ), h.Scalar(inner=0.700 * µ)),
+    "pfet_06v0": (h.Scalar(inner=0.300 * µ), h.Scalar(inner=0.500 * µ)),
+    "nfet_03v3_dss": (h.Scalar(inner=0.220 * µ), h.Scalar(inner=0.280 * µ)),
+    "pfet_03v3_dss": (h.Scalar(inner=0.220 * µ), h.Scalar(inner=0.280 * µ)),
+    "nfet_06v0_dss": (h.Scalar(inner=0.300 * µ), h.Scalar(inner=0.500 * µ)),
+    "pfet_06v0_dss": (h.Scalar(inner=0.300 * µ), h.Scalar(inner=0.500 * µ)),
+    "nfet_06v0_nvt": (h.Scalar(inner=0.800 * µ), h.Scalar(inner=1.800 * µ)),
 }
 
 default_res_size = {
-    "nplus_u" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "pplus_u" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "nplus_s" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "pplus_s" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "nwell" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "npolyf_u" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_u" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "npolyf_s" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_s" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_u_1k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_u_2k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_u_1k_6p0" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_u_2k_6p0" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "ppolyf_u_3k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "rm1" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "rm2" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "rm3" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "tm6k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "tm9k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "tm11k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "tm30k" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
+    "nplus_u": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "pplus_u": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "nplus_s": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "pplus_s": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "nwell": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "npolyf_u": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_u": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "npolyf_s": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_s": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_u_1k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_u_2k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_u_1k_6p0": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_u_2k_6p0": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "ppolyf_u_3k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "rm1": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "rm2": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "rm3": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "tm6k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "tm9k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "tm11k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "tm30k": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
 }
 
 default_diode_size = {
-    "diode_nd2ps_03v3" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_pd2nw_03v3" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_nd2ps_06v0" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_pd2nw_06v0" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_nw2ps_03v3" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_nw2ps_06v0" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_pw2dw" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "diode_dw2ps" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
-    "sc_diode" : (h.Scalar(inner=1*µ), h.Scalar(inner=1*µ)),
+    "diode_nd2ps_03v3": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_pd2nw_03v3": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_nd2ps_06v0": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_pd2nw_06v0": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_nw2ps_03v3": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_nw2ps_06v0": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_pw2dw": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "diode_dw2ps": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
+    "sc_diode": (h.Scalar(inner=1 * µ), h.Scalar(inner=1 * µ)),
 }

@@ -19,7 +19,7 @@ _VLSIR_VERSION = "4.0.dev0"
 
 setup(
     name="gf180-hdl21",
-    version=_VLSIR_VERSION, # Maybe this should change
+    version=_VLSIR_VERSION,  # Maybe this should change
     description="Global Foundries 180nm MCU PDK Package for Hdl21",
     long_description=long_description,
     long_description_content_type="text/markdown",

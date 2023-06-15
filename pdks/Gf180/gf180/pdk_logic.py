@@ -1,6 +1,7 @@
 import hdl21 as h
 from .pdk_data import *
 
+
 @dataclass
 class Install(PdkInstallation):
     """Pdk Installation Data
@@ -10,7 +11,7 @@ class Install(PdkInstallation):
 
     def include_design(self) -> h.sim.Include:
 
-        return h.sim.Include(path=self.model_lib.parent/"design.ngspice")
+        return h.sim.Include(path=self.model_lib.parent / "design.ngspice")
 
     def include_mos(self, corner: h.pdk.Corner) -> h.sim.Lib:
         """# Get the model include file for process corner `corner` for MOSFETs"""
@@ -124,21 +125,23 @@ class Gf180Walker(h.HierarchyWalker):
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         if params.model is not None:
-            
+
             try:
                 return [v for k, v in xtors.items() if params.model in k][0]
             except IndexError:
                 msg = f"No Mos module for model name {(params.model)}"
                 raise RuntimeError(msg)
-            
+
         # Map none to default, otherwise leave alone
         mostype = h.MosType.NMOS if params.tp is None else params.tp
         mosfam = h.MosFamily.CORE if params.family is None else params.family
         mosvth = h.MosVth.STD if params.vth is None else params.vth
-        args = (mostype,mosfam,mosvth)
+        args = (mostype, mosfam, mosvth)
 
         # Filter the xtors by a dictionary by partial match
-        subset = {key: value for key, value in xtors.items() if any(a in key for a in args)}
+        subset = {
+            key: value for key, value in xtors.items() if any(a in key for a in args)
+        }
 
         # More than one answer? You weren't specific enough.
         if len(subset) != 1:
@@ -190,7 +193,7 @@ class Gf180Walker(h.HierarchyWalker):
 
         mod = self.res_module(params)
 
-        w,l = self.use_defaults(params, mod.name, default_res_size)
+        w, l = self.use_defaults(params, mod.name, default_res_size)
 
         modparams = GF180ResParams(r_width=w, r_length=l)
 
@@ -243,9 +246,9 @@ class Gf180Walker(h.HierarchyWalker):
 
         mod = self.diode_module(params)
 
-        w,l = self.use_defaults(params,mod.name,default_diode_size)
+        w, l = self.use_defaults(params, mod.name, default_diode_size)
 
-        modparams = GF180DiodeParams(area=w*l, pj=2*w+2*l)
+        modparams = GF180DiodeParams(area=w * l, pj=2 * w + 2 * l)
 
         modcall = mod(modparams)
         CACHE.diode_modcalls[params] = modcall
@@ -269,7 +272,7 @@ class Gf180Walker(h.HierarchyWalker):
 
         mod = self.bjt_module(params)
 
-        modparams = GF180BipolarParams(m = params.mult or 1)
+        modparams = GF180BipolarParams(m=params.mult or 1)
 
         modcall = mod(modparams)
         CACHE.bjt_modcalls[params] = modcall
@@ -288,7 +291,7 @@ class Gf180Walker(h.HierarchyWalker):
         if isinstance(inner, h.Literal):
             return h.Scalar(inner=h.Literal(f"({inner} * 1e6)"))
         raise TypeError(f"Param Value {inner}")
-    
+
     def use_defaults(self, params: h.paramclass, modname: str, defaults: dict):
 
         w, l = None, None
