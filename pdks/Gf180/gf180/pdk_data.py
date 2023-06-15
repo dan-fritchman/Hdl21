@@ -52,7 +52,7 @@ FIXME = None  # FIXME: Replace with real values!
 PDK_NAME = "gf180"
 
 # Vlsirtool Types to ease downstream parsing
-from vlsir.circuit_pb2 import SpiceType
+from vlsirtools import SpiceType
 
 @h.paramclass
 class MosParams:
