@@ -391,12 +391,6 @@ class Sim:
         """Invoke simulation via `vlsirtools.spice`."""
         return run(self, opts=opts)
 
-    async def run_async(
-        self, opts: Optional[vsp.SimOptions] = None
-    ) -> Awaitable[vsp.SimResultUnion]:
-        """Invoke simulation via `vlsirtools.spice`."""
-        return await run_async(self, opts=opts)
-
     @property
     def Tb(self) -> "Module":
         """Get our testbench Module, with a class-style accessor name."""
@@ -415,27 +409,6 @@ def run(
     # inp.Tb.props.set("simulator", opts.simulator.value)
 
     return vsp.sim(inp=to_proto(inp), opts=opts)
-
-
-async def run_async(
-    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
-) -> Awaitable[OneOrMore[vsp.SimResultUnion]]:
-    """Invoke simulation via `vlsirtools.spice`."""
-    from .to_proto import to_proto
-
-    # FIXME: go through with deprecation
-    warn(
-        PendingDeprecationWarning(
-            dedent(
-                """\
-        Async `hdl21.Sim` invocation will be deprecated and `run_async` will be removed with the next major version.
-        Use `run` instead, which now parallelizes across simulation processes internally.
-    """
-            )
-        )
-    )
-
-    return await vsp.sim_async(inp=to_proto(inp), opts=opts)
 
 
 def _add_attr_func(name: str, cls: type):
@@ -517,7 +490,7 @@ def sim(cls: type) -> Sim:
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.sim inheriting from {cls.__bases__}")
 
-    protected_names = ["attrs", "add", "run", "run_async", "namespace"]
+    protected_names = ["attrs", "add", "run", "namespace"]
 
     # Initialize the content of the eventual `Sim`.
     # Note we largely can't create it now because the `tb` field is required at construction time.

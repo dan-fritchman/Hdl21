@@ -2,7 +2,7 @@
 # `hdl21.sim` Unit Tests
 """
 
-import asyncio, pytest
+import pytest
 
 import hdl21 as h
 from hdl21.sim import *
@@ -265,7 +265,7 @@ def test_delay1():
     # FIXME! some real checks plz
 
 
-def empty_tb() -> h.Module:
+def empty_tb(num=0) -> h.Module:
     from hdl21.prefix import K
     from hdl21.primitives import R
 
@@ -281,7 +281,7 @@ def empty_tb() -> h.Module:
         s = h.Signal()
         r = ri(p=s, n=VSS)
 
-    EmptyTb.name = "EmptyTb"
+    EmptyTb.name = f"EmptyTb{num}"
     return EmptyTb
 
 
@@ -314,18 +314,34 @@ def test_empty_sim2():
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
 
+def test_multi_sim():
+    """Test multiple Sims in parallel"""
+    s1 = Sim(tb=empty_tb(1), attrs=[])
+    s2 = Sim(tb=empty_tb(2), attrs=[])
+    s3 = Sim(tb=empty_tb(3), attrs=[])
+    s4 = Sim(tb=empty_tb(4), attrs=[])
 
-@pytest.mark.skipif(
-    vlsirtools.spice.default() is None,
-    reason="No simulator available",
-)
-def test_sim_async_caller():
-    """# Test invoking simulation from an async caller"""
+    r = sim(to_proto([s1, s2, s3, s4]), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
 
-    async def caller():
-        """# The asynchronous caller of `sim_async`"""
-        s = Sim(tb=empty_tb(), attrs=[])
-        return await s.run_async(SimOptions(fmt=ResultFormat.SIM_DATA))
+    for a in r:
+        assert isinstance(a, vsp.SimResult)
+        assert not len(a.an)
 
-    result = asyncio.run(caller())
-    assert isinstance(result, sd.SimResult)
+def really_empty_tb() -> h.Module:
+
+    @h.module
+    class ReallyEmptyTb:
+        """An Empty TestBench, this time REALLY empty.
+        For inducing an error in a multi-sim below."""
+
+    return ReallyEmptyTb
+
+def test_multi_sim_error():
+    """Test multiple sims fail to avoid erdewit/nest_asyncio#57"""
+    with pytest.raises(Exception):
+        s1 = Sim(tb=empty_tb(1), attrs=[])
+        s2 = Sim(tb=really_empty_tb(), attrs=[])
+        s3 = Sim(tb=empty_tb(3), attrs=[])
+        s4 = Sim(tb=empty_tb(4), attrs=[])
+
+        r = sim(to_proto([s1, s2, s3, s4]), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
