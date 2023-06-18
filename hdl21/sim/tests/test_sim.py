@@ -314,6 +314,7 @@ def test_empty_sim2():
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
 
+
 def test_multi_sim():
     """Test multiple Sims in parallel"""
     s1 = Sim(tb=empty_tb(1), attrs=[])
@@ -327,14 +328,15 @@ def test_multi_sim():
         assert isinstance(a, vsp.SimResult)
         assert not len(a.an)
 
-def really_empty_tb() -> h.Module:
 
+def really_empty_tb() -> h.Module:
     @h.module
     class ReallyEmptyTb:
         """An Empty TestBench, this time REALLY empty.
         For inducing an error in a multi-sim below."""
 
     return ReallyEmptyTb
+
 
 def test_multi_sim_error():
     """Test multiple sims fail to avoid erdewit/nest_asyncio#57"""
