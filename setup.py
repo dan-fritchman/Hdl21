@@ -31,7 +31,7 @@ setup(
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
-        "pydantic==1.9.2",  # Note this is a very specific version, on purpose!
+        "pydantic==1.10.9",  # Note this is a very specific version, on purpose!
     ],
     extras_require={
         "dev": [

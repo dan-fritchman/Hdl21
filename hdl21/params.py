@@ -50,8 +50,8 @@ def paramclass(cls: type) -> type:
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
 
     protected_names = ["descriptions", "defaults"]
-    dunders = dict()
-    params = dict()
+    dunders = dict()  # Double-under attributes; ignored
+    params = dict()  # Parameters; used to create dataclass fields
 
     # Take a lap through the class dictionary, type-check everything and grab Params
     # FIXME: look for, and alert users about, the error writing type annotations rather than equality.
@@ -67,33 +67,30 @@ def paramclass(cls: type) -> type:
             msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
             raise RuntimeError(msg)
 
-    # Translate the Params into dataclass.field-compatible tuples
-    fields = list()
-    for name, par in params.items():
-        field = [name, par.dtype]
-        if par.default is not Default:
-            field.append(dataclasses.field(default=par.default))
-        elif par.default_factory is not Default:
+    # Translate the Params into dataclass-compatible annotations
+    for name, param in params.items():
+        cls.__annotations__[name] = param.dtype
+        if param.default is not Default:
+            setattr(cls, name, param.default)
+        elif param.default_factory is not Default:
+            # FIXME: https://github.com/dan-fritchman/Hdl21/issues/30
             raise NotImplementedError(f"Param.default_factory for {cls}")
             field.append(dataclasses.field(default_factory=par.default_factory))
-        fields.append(tuple(field))
+        # Else it's a required parameter, no default, we're done with this one.
+
     # Add a few helpers to the class namespace
-    ns = dict(
-        __params__=params,
-        __paramclass__=True,
-        descriptions=classmethod(
-            lambda cls: {k: v.desc for k, v in cls.__params__.items()}
-        ),
-        defaults=classmethod(
-            lambda cls: {
-                k: v.default
-                for k, v in cls.__params__.items()
-                if v.default is not Default
-            }
-        ),
+    cls.__params__ = params
+    cls.__paramclass__ = True
+    cls.descriptions = classmethod(
+        lambda cls: {k: v.desc for k, v in cls.__params__.items()}
     )
-    # Create ourselves a (std-lib) dataclass
-    cls = dataclasses.make_dataclass(cls.__name__, fields, namespace=ns, frozen=True)
+    cls.defaults = classmethod(
+        lambda cls: {
+            k: v.default for k, v in cls.__params__.items() if v.default is not Default
+        }
+    )
+    # FIXME: https://github.com/dan-fritchman/Hdl21/issues/76
+
     # Pass this through the pydantic dataclass-decorator-function
     cls = pydantic.dataclasses.dataclass(cls, frozen=True)
     # Pydantic seems to want to add this one *after* class-creation
