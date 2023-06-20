@@ -29,18 +29,16 @@ class MosParams:
 
     def __post_init_post_parse__(self):
         """Value Checks"""
-        if self.w <= 0:
+        if self.w is not None and self.w <= 0:
             raise ValueError(f"MosParams with invalid width {self.w}")
-        if self.l <= 0:
+        if self.l is not None and self.l <= 0:
             raise ValueError(f"MosParams with invalid length {self.l}")
         if self.npar <= 0:
-            raise ValueError(
-                f"MosParams with invalid number parallel fingers {self.npar}"
-            )
+            msg = f"MosParams with invalid number parallel fingers {self.npar}"
+            raise ValueError(msg)
         if self.nser <= 0:
-            raise ValueError(
-                f"MosParams with invalid number series fingers {self.nser}"
-            )
+            msg = f"MosParams with invalid number series fingers {self.nser}"
+            raise ValueError(msg)
 
 
 @generator

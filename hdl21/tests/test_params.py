@@ -117,7 +117,7 @@ def test_bad_params1():
         class D(C):
             ...
 
-    with pytest.raises(TypeError):
+    with pytest.raises(ValidationError):
         # Test that missing arguments fail
         c = C()
 

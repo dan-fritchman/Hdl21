@@ -27,11 +27,13 @@ setup(
     author="Dan Fritchman",
     author_email="dan@fritch.mn",
     packages=find_packages(),
-    python_requires=">=3.7, <4",
+    python_requires=">=3.7, <3.11",
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
-        "pydantic==1.9.2",  # Note this is a very specific version, on purpose!
+        # Our primary external dependency is pydantic.
+        # Tested with everything in the 1.9-1.10 range.
+        "pydantic>=1.9.0,<1.11",
     ],
     extras_require={
         "dev": [
