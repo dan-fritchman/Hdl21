@@ -4,6 +4,7 @@ Hdl21 Parameters and Param-Classes
 
 from typing import Optional, Union, Any, Dict
 import dataclasses
+import inspect
 import json
 import pickle
 import hashlib
@@ -46,6 +47,9 @@ def paramclass(cls: type) -> type:
     * Inheritance is not supported
     """
 
+    if not inspect.isclass(cls):
+        msg = f"Invalid @hdl21.paramclass `{cls}`. Apply the `@apramclass` decorator to classes."
+        raise RuntimeError(msg)
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
 
@@ -67,9 +71,23 @@ def paramclass(cls: type) -> type:
             msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
             raise RuntimeError(msg)
 
+    # Set up type annotations for the dataclass-to-be
+    # There is quite a bit of invaluable content on this here:
+    # https://docs.python.org/3/howto/annotations.html
+    # Especially for Python versions before 3.10.
+    # Some of our constraints - notably the lack of inheritance, checked above -
+    # make that advice somewhat easier to follow;
+    # nonetheless we are definitely not following it in full.
+
+    # Notably, this weird bit right here is the "howto/annotations" recommendation -
+    # Look only in the class `__dict__`, and be prepared for `__annotations__` to be missing.
+    annotations = cls.__dict__.get("__annotations__", None)
+    if annotations is None:
+        annotations = cls.__annotations__ = dict()
+
     # Translate the Params into dataclass-compatible annotations
     for name, param in params.items():
-        cls.__annotations__[name] = param.dtype
+        annotations[name] = param.dtype
         if param.default is not Default:
             setattr(cls, name, param.default)
         elif param.default_factory is not Default:

@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         dep-installer: ["dev", "pypi"]
     continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
@@ -57,11 +57,9 @@ jobs:
 
   # Seperate job for black, to remove all of the venv noise that we've created above
   black:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repo
         uses: actions/checkout@v3
 
