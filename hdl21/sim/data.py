@@ -410,6 +410,7 @@ def run(
 
     return vsp.sim(inp=to_proto(inp), opts=opts)
 
+
 def run_async(
     inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
 ) -> OneOrMore[vsp.SimResultUnion]:
@@ -429,6 +430,7 @@ def run_async(
     )
 
     return vsp.sim(inp=to_proto(inp), opts=opts)
+
 
 def _add_attr_func(name: str, cls: type):
     # Create the internal "construct + add" closure
