@@ -339,7 +339,7 @@ def really_empty_tb() -> h.Module:
 
 
 def test_multi_sim_error():
-    """Test multiple sims fail to avoid erdewit/nest_asyncio#57"""
+    """Test that a failure in multiple concurrent sims fails, unlike in erdewit/nest_asyncio#57"""
     with pytest.raises(Exception):
         s1 = Sim(tb=empty_tb(1), attrs=[])
         s2 = Sim(tb=really_empty_tb(), attrs=[])
