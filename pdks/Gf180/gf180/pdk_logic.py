@@ -10,16 +10,17 @@ class Install(PdkInstallation):
     model_lib: Path  # Path to the transistor models included in this module
 
     def include_design(self) -> h.sim.Include:
-
         return h.sim.Include(path=self.model_lib.parent / "design.ngspice")
 
     def include_mos(self, corner: h.pdk.Corner) -> h.sim.Lib:
         """# Get the model include file for process corner `corner` for MOSFETs"""
 
         mos_corners: Dict[h.pdk.Corner, str] = {
-            h.pdk.Corner.TYP: "typical",
-            h.pdk.Corner.FAST: FIXME,
-            h.pdk.Corner.SLOW: FIXME,
+            h.pdk.CmosCorner.TT: "typical",
+            h.pdk.CmosCorner.FF: "ff",
+            h.pdk.CmosCorner.SS: "ss",
+            h.pdk.CmosCorner.FS: "fs",
+            h.pdk.CmosCorner.SF: "sf",
         }
         return h.sim.Lib(path=self.model_lib, section=mos_corners[corner])
 
@@ -28,8 +29,8 @@ class Install(PdkInstallation):
 
         res_corners: Dict[h.pdk.Corner, str] = {
             h.pdk.Corner.TYP: "res_typical",
-            h.pdk.Corner.FAST: FIXME,
-            h.pdk.Corner.SLOW: FIXME,
+            h.pdk.Corner.FAST: "res_ff",
+            h.pdk.Corner.SLOW: "res_ss",
         }
         if not isinstance(corner, h.pdk.Corner) or corner not in res_corners:
             raise ValueError(f"Invalid corner {corner}")
@@ -41,8 +42,8 @@ class Install(PdkInstallation):
 
         diode_corners: Dict[h.pdk.Corner, str] = {
             h.pdk.Corner.TYP: "diode_typical",
-            h.pdk.Corner.FAST: FIXME,
-            h.pdk.Corner.SLOW: FIXME,
+            h.pdk.Corner.FAST: "diode_ff",
+            h.pdk.Corner.SLOW: "diode_ss",
         }
         if not isinstance(corner, h.pdk.Corner) or corner not in diode_corners:
             raise ValueError(f"Invalid corner {corner}")
@@ -54,8 +55,8 @@ class Install(PdkInstallation):
 
         bjt_corners: Dict[h.pdk.Corner, str] = {
             h.pdk.Corner.TYP: "bjt_typical",
-            h.pdk.Corner.FAST: FIXME,
-            h.pdk.Corner.SLOW: FIXME,
+            h.pdk.Corner.FAST: "bjt_ff",
+            h.pdk.Corner.SLOW: "bjt_ss",
         }
         if not isinstance(corner, h.pdk.Corner) or corner not in bjt_corners:
             raise ValueError(f"Invalid corner {corner}")
@@ -67,8 +68,8 @@ class Install(PdkInstallation):
 
         moscap_corners: Dict[h.pdk.Corner, str] = {
             h.pdk.Corner.TYP: "moscap_typical",
-            h.pdk.Corner.FAST: FIXME,
-            h.pdk.Corner.SLOW: FIXME,
+            h.pdk.Corner.FAST: "moscap_ff",
+            h.pdk.Corner.SLOW: "moscap_ss",
         }
         if not isinstance(corner, h.pdk.Corner) or corner not in moscap_corners:
             raise ValueError(f"Invalid corner {corner}")
@@ -76,11 +77,10 @@ class Install(PdkInstallation):
         return h.sim.Lib(path=self.model_lib, section=moscap_corners[corner])
 
     def include_mimcaps(self, corner: h.pdk.Corner) -> h.sim.Lib:
-
         mimcap_corners: Dict[h.pdk.Corner, str] = {
             h.pdk.Corner.TYP: "mimcap_typical",
-            h.pdk.Corner.FAST: FIXME,
-            h.pdk.Corner.SLOW: FIXME,
+            h.pdk.Corner.FAST: "mimcap_ff",
+            h.pdk.Corner.SLOW: "mimcap_ss",
         }
         if not isinstance(corner, h.pdk.Corner) or corner not in mimcap_corners:
             raise ValueError(f"Invalid corner {corner}")
@@ -125,7 +125,6 @@ class Gf180Walker(h.HierarchyWalker):
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         if params.model is not None:
-
             try:
                 return [v for k, v in xtors.items() if params.model in k][0]
             except IndexError:
@@ -166,7 +165,7 @@ class Gf180Walker(h.HierarchyWalker):
         modparams = GF180MosParams(
             w=w,
             l=l,
-            nf=params.npar,  # FIXME: renaming
+            nf=params.nf,
             m=params.mult,
         )
 
@@ -186,7 +185,6 @@ class Gf180Walker(h.HierarchyWalker):
         return mod
 
     def res_module_call(self, params: PhysicalResistorParams):
-
         # First check our cache
         if params in CACHE.res_modcalls:
             return CACHE.res_modcalls[params]
@@ -212,7 +210,6 @@ class Gf180Walker(h.HierarchyWalker):
         return mod
 
     def cap_module_call(self, params: PhysicalCapacitorParams):
-
         # First check our cache
         if params in CACHE.cap_modcalls:
             return CACHE.cap_modcalls[params]
@@ -239,7 +236,6 @@ class Gf180Walker(h.HierarchyWalker):
         return mod
 
     def diode_module_call(self, params: DiodeParams):
-
         # First check our cache
         if params in CACHE.diode_modcalls:
             return CACHE.diode_modcalls[params]
@@ -265,7 +261,6 @@ class Gf180Walker(h.HierarchyWalker):
         return mod
 
     def bjt_module_call(self, params: BipolarParams):
-
         # First check our cache
         if params in CACHE.diode_modcalls:
             return CACHE.diode_modcalls[params]
@@ -293,23 +288,18 @@ class Gf180Walker(h.HierarchyWalker):
         raise TypeError(f"Param Value {inner}")
 
     def use_defaults(self, params: h.paramclass, modname: str, defaults: dict):
-
         w, l = None, None
 
         if params.w is None:
-
             w = defaults[modname][0]
 
         else:
-
             w = params.w
 
         if params.l is None:
-
             l = defaults[modname][1]
 
         else:
-
             l = params.l
 
         return w, l

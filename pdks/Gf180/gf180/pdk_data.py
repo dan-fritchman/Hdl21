@@ -64,47 +64,47 @@ class MosParams:
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
     # This unfortunate naming is to prevent conflicts with base python.
     As = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Area",
         default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
     )
 
     ad = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Area",
         default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
     )
 
     pd = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Drain Perimeter",
         default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.18u)"),
     )
     ps = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Perimeter",
         default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.18u)"),
     )
     nrd = h.Param(
-        dtype=h.Literal, desc="Drain Resistive Value", default=h.Literal("0.18u / w")
+        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.18u / w")
     )
     nrs = h.Param(
-        dtype=h.Literal, desc="Source Resistive Value", default=h.Literal("0.18u / w")
+        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.18u / w")
     )
     sa = h.Param(
         dtype=h.Scalar,
         desc="Spacing between Adjacent Gate to Drain",
-        default=h.Literal(0),
+        default=0,
     )
     sb = h.Param(
         dtype=h.Scalar,
         desc="Spacing between Adjacent Gate to Source",
-        default=h.Literal(0),
+        default=0,
     )
     sd = h.Param(
         dtype=h.Scalar,
         desc="Spacing between Adjacent Drain to Source",
-        default=h.Literal(0),
+        default=0,
     )
     mult = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -183,7 +183,6 @@ def _res_module(modname: str, numterminals: int) -> h.ExternalModule:
 
 
 def _diode_module(modname: str) -> h.ExternalModule:
-
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,
@@ -197,7 +196,6 @@ def _diode_module(modname: str) -> h.ExternalModule:
 
 
 def _cap_module(modname: str, params: h.Param) -> h.ExternalModule:
-
     """Capacitor Module creator"""
     mod = h.ExternalModule(
         domain=PDK_NAME,
@@ -219,7 +217,6 @@ FourTerminalBipolarPorts = [
 
 
 def _bjt_module(modname: str, num_terminals=3) -> h.ExternalModule:
-
     num2device = {3: Bipolar.port_list, 4: FourTerminalBipolarPorts}
 
     mod = h.ExternalModule(

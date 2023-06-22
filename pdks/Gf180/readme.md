@@ -14,44 +14,163 @@ The GF180MCU open source PDK is a collaboration between Google and GlobalFoundri
 `gf180` defines a set of `hdl21.ExternalModule`s comprising the essential devices of the GlobalFoundries 180nm open-source PDK, '
 and an `compile` method for converting process-portable `hdl21.Primitive` elements into these modules. 
 
+There are two major ways to instantiate PDK components offered in this PDK module:
+
+1. Compilation
+
+We first show an example of how this is done using MOSFETs:
+
+```python
+import hdl21 as h
+import gf180
+
+# Use Hdl21 PDK-agnostic Mos primitive
+mosfet = h.Mos(tp=h.MosType.NMOS,family=h.MosFamily.CORE)
+# This now the correct Gf180 ExternalModule
+gf180.compile(mosfet) 
+```
+
+But this will also work for other components, but these devices don't enjoy the same flexibility as MOSFETs, eg.:
+
+```python
+import hdl21 as h
+import gf180
+
+# Use Hdl21 PDK-agnostic resistors
+resistor = h.Resistor(model="rm1")
+# This is now the correct Gf180 External module
+gf180.compile(resistor) 
+```
+
+2. Direct Reference
+
+All Gf180 `ExternalModules` are stored in the `modules` namespace that makes up the bulk of the PDK module. You can use it to reference `ExternalModules` directly via component name:
+
+```python
+import gf180
+from gf180 import modules as g
+
+p = gf180.Gf180MosParams()
+
+# This is the ExternalModulewe want
+mosfet = g.PFET_3p3V(p)
+```
+
 The complete 180nm design kit includes hundreds of devices. 
 A subset are targets for conversion from generic Hdl21 `Primitives`. 
-They include: 
 
-* "Core" Mos transistors `sky130_fd_pr__{nfet,pfet}_01v8{,_lvt,_hvt}`
+We include them below, two general attributes to note, the first is "Component Name" which is the name that we give the component in the PDK module.
 
-And may in the near future also include: 
+The second is the "Model Name" which refers to the underlying subcircuit or model name found in the Gf180 SPICE files, should you want to look up the device in the PDK documentation itself.
 
-* Resistors `sky130_fd_pr__res_*`
-* Capacitors `sky130_fd_pr__cap_*`
-* Bipolar Transistors `sky130_fd_pr__{npn,pnp}_*`
-* Diodes, which the PDK provides as SPICE `.model` statements alone, and will correspondingly need to be `hdl21.Module`s. 
+### MOSFETs
 
-Remaining devices can be added directly to user-projects as `hdl21.ExternalModule`s, or can be added to this package via pull request.  
+MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select 
 
+| Component Name | Mos Type | Mos Family | Model Name   | Ports      |
+| -------------- | -------- | ---------- | ------------- | ---------- |
+| PFET_3p3V      | PMOS     | CORE       | pfet_03v3     | d, g, s, b |
+| NFET_3p3V      | NMOS     | CORE       | nfet_03v3     | d, g, s, b |
+| NFET_6p0V      | NMOS     | IO         | nfet_06v0     | d, g, s, b |
+| PFET_6p0V      | PMOS     | IO         | pfet_06v0     | d, g, s, b |
+| NFET_3p3V_DSS  | NMOS     | NONE       | nfet_03v3_dss | d, g, s, b |
+| PFET_3p3V_DSS  | PMOS     | NONE       | pfet_03v3_dss | d, g, s, b |
+| NFET_6p0V_DSS  | NMOS     | NONE       | nfet_06v0_dss | d, g, s, b |
+| PFET_6p0V_DSS  | PMOS     | NONE       | pfet_06v0_dss | d, g, s, b |
+| NFET_6p0V_NAT  | NMOS     | NONE       | nfet_06v0_nvt | d, g, s, b |
+
+### Resistors
+
+| Component Name  | Model Name     | Ports   |
+| --------------- | --------------- | ------- |
+| NPLUS_U         | nplus_u         | p, n, b |
+| PPLUS_U         | pplus_u         | p, n, b |
+| NPLUS_S         | nplus_s         | p, n, b |
+| PPLUS_S         | pplus_s         | p, n, b |
+| NWELL           | nwell           | p, n, b |
+| NPOLYF_U        | npolyf_u        | p, n, b |
+| PPOLYF_U        | ppolyf_u        | p, n, b |
+| NPOLYF_S        | npolyf_s        | p, n, b |
+| PPOLYF_S        | ppolyf_s        | p, n, b |
+| PPOLYF_U_1K     | ppolyf_u_1k     | p, n, b |
+| PPOLYF_U_2K     | ppolyf_u_2k     | p, n, b |
+| PPOLYF_U_1K_6P0 | ppolyf_u_1k_6p0 | p, n, b |
+| PPOLYF_U_2K_6P0 | ppolyf_u_2k_6p0 | p, n, b |
+| PPOLYF_U_3K     | ppolyf_u_3k     | p, n, b |
+| RM1             | rm1             | p, n    |
+| RM2             | rm2             | p, n    |
+| RM3             | rm3             | p, n    |
+| TM6K            | tm6k            | p, n    |
+| TM9K            | tm9k            | p, n    |
+| TM11K           | tm11k           | p, n    |
+| TM30K           | tm30k           | p, n    |
+
+### Diodes
+
+| Component Name | Model Name      | Ports |
+| -------------- | ---------------- | ----- |
+| ND2PS_3p3V     | diode_nd2ps_03v3 | p, n  |
+| PD2NW_3p3V     | diode_pd2nw_03v3 | p, n  |
+| ND2PS_6p0V     | diode_nd2ps_06v0 | p, n  |
+| PD2NW_6p0V     | diode_pd2nw_06v0 | p, n  |
+| NW2PS_3p3V     | diode_nw2ps_03v3 | p, n  |
+| NW2PS_6p0V     | diode_nw2ps_06v0 | p, n  |
+| PW2DW          | diode_pw2dw      | p, n  |
+| DW2PS          | diode_dw2ps      | p, n  |
+| Schottky       | sc_diode         | p, n  |
+
+### BJTs
+
+| Component Name | Model Name     | Ports      |
+| -------------- | --------------- | ---------- |
+| PNP_10p0x0p42  | pnp_10p00x00p42 | c, b, e    |
+| PNP_5p0x0p42   | pnp_05p00x00p42 | c, b, e    |
+| PNP_10p0x10p0  | pnp_10p00x10p00 | c, b, e    |
+| PNP_5p0x5p0    | pnp_05p00x05p00 | c, b, e    |
+| NPN_10p0x10p0  | npn_10p00x10p00 | c, b, e, s |
+| NPN_5p0x5p0    | npn_05p00x05p00 | c, b, e, s |
+| NPN_0p54x16p0  | npn_00p54x16p00 | c, b, e, s |
+| NPN_0p54x8p0   | npn_00p54x08p00 | c, b, e, s |
+| NPN_0p54x4p0   | npn_00p54x04p00 | c, b, e, s |
+| NPN_0p54x2p0   | npn_00p54x02p00 | c, b, e, s |
+
+### Capacitors
+
+| Component Name  | Model Name     | Ports |
+| --------------- | --------------- | ----- |
+| MIM_1p5fF       | cap_mim_1f5fF   | p, n  |
+| MIM_1p0fF       | cap_mim_1f0fF   | p, n  |
+| MIM_2p0fF       | cap_mim_2f0fF   | p, n  |
+| PMOS_3p3V       | cap_pmos_03v3   | p, n  |
+| NMOS_6p0V       | cap_nmos_06v0   | p, n  |
+| PMOS_6p0V       | cap_pmos_06v0   | p, n  |
+| NMOS_3p3V       | cap_nmos_03v3   | p, n  |
+| NMOS_Nwell_3p3V | cap_nmos_03v3_b | p, n  |
+| PMOS_Pwell_3p3V | cap_pmos_03v3_b | p, n  |
+| NMOS_Nwell_6p0V | cap_nmos_06v0_b | p, n  |
+| PMOS_Pwell_6p0V | cap_pmos_06v0_b | p, n  |
 
 ## Installation
 
 Install from PyPi via: 
 
 ```
-pip install sky130-hdl21
+pip install gf180-hdl21
 ```
 
-And then import the package as `sky130`: 
+And then import the package as `gf180-hdl21`: 
 
 ```python
-import sky130
-assert sky130.modules.sky130_fd_pr__nfet_01v8 is not None # etc
+import gf180
 ```
 
 
 ## PDK `Install` Data
 
-Silicon process technologies generally require non-Python data to execute simulations and other tasks. Sky130 is no different. *Those files are not distributed as part of this package.* The `sky130` package defines an Hdl21 `PdkInstallation` type `sky130.Install`, which includes references to any such out-of-Python data, generally in the form of filesystem paths. See the [Hdl21 PDK docs](https://github.com/dan-fritchman/Hdl21#process-technologies) for more background. 
+Silicon process technologies generally require non-Python data to execute simulations and other tasks. Gf180 is no different. *Those files are not distributed as part of this package.* The `Gf180` package defines an Hdl21 `PdkInstallation` type `sky130.Install`, which includes references to any such out-of-Python data, generally in the form of filesystem paths. See the [Hdl21 PDK docs](https://github.com/dan-fritchman/Hdl21#process-technologies) for more background. 
 
 A helpful resource for installing the non-Python portions of the 130nm PDK: 
-https://anaconda.org/litex-hub/open_pdks.sky130a
+https://anaconda.org/litex-hub/open_pdks.gf180mcuC
 
 Installable with `conda` via: 
 
@@ -63,13 +182,15 @@ Using the conda-based installation, a typical [sitepdks](https://github.com/dan-
 
 ```python
 CONDA_PREFIX = os.environ.get("CONDA_PREFIX")
-model_lib = Path(CONDA_PREFIX) / "share/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice"
+model_lib = Path(CONDA_PREFIX) / "share/pdk/gf180mcuC/libs.tech/ngModel/sm141064.Model"
 
-import sky130
-sky130.install = sky130.Install(model_lib=model_lib)
+import gf180
+gf180.install = sky130.Install(model_lib=model_lib)
 ```
 
-Note the conda-based installation supports simulation solely with [ngspice](https://ngspice.sourceforge.io/). Sky130 models compatible with Sandia Labs' [Xyce](https://xyce.sandia.gov/) have been generated by the community, but are less straightforward to find, install, and revision control.
+Note the conda-based installation supports simulation solely with [ngModel](https://ngModel.sourceforge.io/). Gf180 models compatible with Sandia Labs' [Xyce](https://xyce.sandia.gov/) have been generated by the community, but are less straightforward to find, install, and revision control.
+
+If you would prefer a local installation, another great method is to use the Volare open_pdk build manager.
 
 
 ## Development 
