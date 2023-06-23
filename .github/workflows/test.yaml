@@ -25,7 +25,7 @@ jobs:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         dep-installer: ["dev", "pypi"]
-    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.11' }}
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
 
     steps:
       - name: Checkout Repo

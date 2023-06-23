@@ -26,7 +26,7 @@ setup(
     url="",
     author="",
     packages=find_packages(),
-    python_requires=">=3.8, <4",
+    python_requires=">=3.7",
     install_requires=[
         "pydantic>=1.9.0",
         f"hdl21=={_VLSIR_VERSION}",
