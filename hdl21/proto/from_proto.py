@@ -128,8 +128,9 @@ class ProtoImporter:
                 inst.connect(pconn.portname, conn)
 
         # Import any literal content
-        for plit in pmod.literals:
-            module.literals.append(Literal(text=plit))
+        # FIXME: https://github.com/dan-fritchman/Hdl21/issues/149
+        # for plit in pmod.literals:
+        #     module.literals.append(Literal(text=plit))
 
         # Add the Module to our cache and return-namespace, and return it
         self.modules[pmod.name] = module
