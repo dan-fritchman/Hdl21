@@ -2,12 +2,9 @@
 Hdl21 Parameters and Param-Classes 
 """
 
-from typing import Optional, Union, Any, Dict
-import dataclasses
-import inspect
-import json
-import pickle
-import hashlib
+# Std-Lib Imports
+from typing import Optional, Any, Type, TypeVar
+import dataclasses, inspect, json, hashlib
 
 # PyPi Imports
 import pydantic
@@ -15,8 +12,10 @@ import pydantic
 # Local Imports
 from .default import Default
 
+T = TypeVar("T")
 
-def paramclass(cls: type) -> type:
+
+def paramclass(cls: Type[T]) -> Type[T]:
     """Parameter-Class Creation Decorator
 
     Transforms a class-definition full of Params into a type-validated dataclass,
@@ -89,14 +88,20 @@ def paramclass(cls: type) -> type:
 
     # Translate the Params into dataclass-compatible annotations
     for name, param in params.items():
+        # Set the type-annotation
         annotations[name] = param.dtype
+
+        # Handle the default value, which is the class-attribute-value on dataclasses
         if param.default is not Default:
             setattr(cls, name, param.default)
+
         elif param.default_factory is not Default:
             # FIXME: https://github.com/dan-fritchman/Hdl21/issues/30
             raise NotImplementedError(f"Param.default_factory for {cls}")
             field.append(dataclasses.field(default_factory=par.default_factory))
-        # Else it's a required parameter, no default, we're done with this one.
+
+        else:  # Otherwise remove the `Param` object from the class namespace
+            delattr(cls, name)
 
     # Add a few helpers to the class namespace
     cls.__params__ = params
@@ -110,9 +115,6 @@ def paramclass(cls: type) -> type:
         }
     )
     # FIXME: https://github.com/dan-fritchman/Hdl21/issues/76
-
-    class Config:  # Pydantic Model Config
-        allow_extra = pydantic.Extra.forbid
 
     # Pass this through the pydantic dataclass-decorator-function
     cls = pydantic.dataclasses.dataclass(cls, config=Config, frozen=True)
@@ -131,9 +133,13 @@ def isparamclass(cls: type) -> bool:
     return getattr(cls, "__paramclass__", False)
 
 
-@pydantic.dataclasses.dataclass
+class Config:  # Pydantic Model Config
+    allow_extra = pydantic.Extra.forbid
+
+
+@pydantic.dataclasses.dataclass(config=Config, frozen=True)
 class Param:
-    """Parameter Declaration"""
+    """# Parameter Declaration"""
 
     dtype: Any  # Datatype. Required
     desc: str  # Description. Required

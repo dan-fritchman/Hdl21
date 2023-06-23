@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic.dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Literal:
     """
     # Literal
@@ -10,5 +10,6 @@ class Literal:
     """
 
     text: str  # String literal text
-    name: Optional[str] = None  # Attribute name, when used in a class
-    # FIXME: probably remove the `name` field?
+
+
+__doc__ = Literal.__doc__
