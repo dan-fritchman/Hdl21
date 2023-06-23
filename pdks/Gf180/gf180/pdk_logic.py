@@ -1,5 +1,7 @@
 import hdl21 as h
 from .pdk_data import *
+from .sc_mcu7t5v0 import *
+from .sc_mcu9t5v0 import *
 
 
 @dataclass
@@ -118,9 +120,7 @@ class Gf180Walker(h.HierarchyWalker):
             return self.bjt_module_call(call.params)
 
         else:
-            raise RuntimeError(f"{call.prim} is not legitimate primitive")
-
-        return call
+            return call
 
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""

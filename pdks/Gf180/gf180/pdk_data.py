@@ -150,6 +150,13 @@ class GF180BipolarParams:
     m = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
 
 
+@h.paramclass
+class GF180LogicParams:
+    """# GF180 Logic Parameters"""
+
+    m = h.Param(dtype=h.Scalar, desc="Parallel Multiplier", default=1)
+
+
 def _xtor_module(modname: str) -> h.ExternalModule:
     """Transistor module creator, with module-name `name`.
     If optional `MosKey` `key` is provided, adds an entry in the `xtors` dictionary."""
@@ -225,6 +232,23 @@ def _bjt_module(modname: str, num_terminals=3) -> h.ExternalModule:
         desc=f"{PDK_NAME} PDK {num_terminals}-terminal BJT {modname}",
         port_list=deepcopy(num2device[num_terminals]),
         paramtype=GF180BipolarParams,
+    )
+
+    return mod
+
+
+def _logic_module(
+    modname: str,
+    family: str,
+    terminals: List[str],
+) -> h.ExternalModule:
+
+    mod = h.ExternalModule(
+        domain=PDK_NAME,
+        name=modname,
+        desc=f"{family} {modname} Logic Circuit",
+        port_list=[h.Port(name=i) for i in terminals],
+        paramtype=GF180LogicParams,
     )
 
     return mod

@@ -51,6 +51,7 @@ parameters of devices in the Sky130 Open PDK. It contains params:
 - Sky130VPPParams - parameters for both Vertical Perpendicular Plate (VPP) and Vertical Parallel Plate (VPP) capacitors
 - Sky130DiodeParams - parameters for diodes
 - Sky130BipolarParams - parameters for bipolar devices
+- Sky130LogicParams - parameters for logic devices
 """
 
 

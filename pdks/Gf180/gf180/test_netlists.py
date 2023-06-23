@@ -190,6 +190,16 @@ def test_4T_bjt_netlists():
 
     p = gf180.GF180BipolarParams()
 
+    @h.generator
+    def GenBipolar(params: h.BipolarParams) -> h.Module:
+        @h.module
+        class SingleBipolar:
+
+            w, x, y, z = 4 * h.Signal()
+            genBipolar = h.Bipolar(params)(c=x, b=y, e=z, s=w)
+
+        return SingleBipolar
+
     for x in gf180.bjts.keys():
 
         if len(gf180.bjts[x].port_list) == 4:
@@ -199,9 +209,9 @@ def test_4T_bjt_netlists():
 
                 a, d, f, g = 4 * h.Signal()
 
-                exec("genBipolar = gf180.modules." + x)
+                exec("GenBipolar = gf180.modules." + x)
 
-                BJT = genBipolar(p)(c=a, b=d, e=f, s=g)
+                BJT = GenBipolar(p)(c=a, b=d, e=f, s=g)
 
             # Generate
             mod = TestBjt
