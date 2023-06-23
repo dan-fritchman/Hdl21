@@ -8,6 +8,8 @@ import inspect
 import json
 import pickle
 import hashlib
+
+# PyPi Imports
 import pydantic
 
 # Local Imports
@@ -109,8 +111,11 @@ def paramclass(cls: type) -> type:
     )
     # FIXME: https://github.com/dan-fritchman/Hdl21/issues/76
 
+    class Config:  # Pydantic Model Config
+        allow_extra = pydantic.Extra.forbid
+
     # Pass this through the pydantic dataclass-decorator-function
-    cls = pydantic.dataclasses.dataclass(cls, frozen=True)
+    cls = pydantic.dataclasses.dataclass(cls, config=Config, frozen=True)
     # Pydantic seems to want to add this one *after* class-creation
     def _brick_subclassing_(cls, *_, **__):
         msg = f"Error: attempt to sub-class `hdl21.paramclass` {cls} is not supported"

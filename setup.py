@@ -10,10 +10,10 @@ https://github.com/pypa/sampleproject/blob/main/setup.py
 from setuptools import setup, find_packages
 import pathlib
 
-here = pathlib.Path(__file__).parent.resolve()
-
 # Get the long description from the README file
-long_description = (here / "readme.md").read_text(encoding="utf-8")
+here = pathlib.Path(__file__).parent.resolve()
+readme = here / "readme.md"
+long_description = "" if not readme.exists() else readme.read_text(encoding="utf-8")
 
 _VLSIR_VERSION = "4.0.dev0"
 

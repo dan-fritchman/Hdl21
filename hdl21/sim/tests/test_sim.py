@@ -315,6 +315,7 @@ def test_empty_sim2():
     assert not len(r.an)  # No analysis inputs, no analysis results
 
 
+@pytest.mark.xfail(reason="VLSIR #71 https://github.com/Vlsir/Vlsir/issues/71")
 def test_multi_sim():
     """Test multiple Sims in parallel"""
     s1 = Sim(tb=empty_tb(1), attrs=[])

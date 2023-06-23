@@ -21,7 +21,6 @@ from .instance import (
     InstanceBundle,
 )
 from .bundle import BundleInstance
-from .qualname import qualname_magic_methods
 from .props import Properties
 from .literal import Literal
 
@@ -31,7 +30,6 @@ ModuleAttr = Union[
 ]
 
 
-@qualname_magic_methods
 @calls_instantiate
 @init
 class Module:

@@ -11,17 +11,16 @@ from pydantic.dataclasses import dataclass
 from vlsirtools import SpiceType
 
 # Local imports
+from .datatype import datatype
 from .default import Default
 from .call import param_call
 from .source_info import source_info, SourceInfo
 from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
-from .qualname import qualname_magic_methods
 
 
-@dataclass
-@qualname_magic_methods
+@datatype
 class ExternalModule:
     """
     # External Module
