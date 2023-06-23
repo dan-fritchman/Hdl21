@@ -84,7 +84,7 @@ def test_simattrs():
         sweep=LogSweep(1e1, 1e10, 10),
         name="mynoise",
     )
-    assert tr.tstop == h.Scalar.new(11 * h.prefix.p)
+    assert tr.tstop == 11 * h.prefix.p
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
         inner=[

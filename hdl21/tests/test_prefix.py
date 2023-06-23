@@ -393,22 +393,22 @@ def test_prefixed_and_scalar_conversions():
     # Test with int for each
     p = P(x=1, y=1)
     assert p.x == h.Prefixed(number=Decimal(1))
-    assert p.y.inner == h.Prefixed(number=Decimal(1))
+    assert p.y == h.Prefixed(number=Decimal(1))
 
     # Test with float for each
     p = P(x=3.0, y=3.0)
     assert p.x == h.Prefixed(number=Decimal(3.0))
-    assert p.y.inner == h.Prefixed(number=Decimal(3.0))
+    assert p.y == h.Prefixed(number=Decimal(3.0))
 
     # Test with str for each
     p = P(x="2e-9", y="2e-9")
     assert p.x == h.Prefixed(number=Decimal("2e-9"))
-    assert p.y == h.Scalar(inner=h.Prefixed(number=Decimal("2e-9")))
+    assert p.y == h.Prefixed(number=Decimal("2e-9"))
 
     # Test with an expression-literal for the `Scalar`
     p = P(x=11.11, y="m*x+b")
     assert p.x == h.Prefixed(number=11.11)
-    assert p.y == h.Scalar(inner=h.Literal(text="m*x+b"))
+    assert p.y == h.Literal(text="m*x+b")
 
     # Test some invalid types
     with pt.raises(ValidationError):

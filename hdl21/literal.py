@@ -1,4 +1,4 @@
-from typing import Optional
+# PyPi Imports
 from pydantic.dataclasses import dataclass
 
 
