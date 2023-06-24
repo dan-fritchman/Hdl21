@@ -86,33 +86,33 @@ class MosParams:
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=150 * MILLI)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
     ad = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Drain Area",
         default=h.Literal("int((nf+1)/2) * w/nf * 0.29"),
     )
 
     # This unfortunate naming is to prevent conflicts with base python.
     As = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Area",
         default=h.Literal("int((nf+2)/2) * w/nf * 0.29"),
     )
 
     pd = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Drain Perimeter",
         default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.29)"),
     )
     ps = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Perimeter",
         default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
     )
     nrd = h.Param(
-        dtype=h.Literal, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
+        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
     )
     nrs = h.Param(
-        dtype=h.Literal, desc="Source Resistive Value", default=h.Literal("0.29 / w")
+        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.29 / w")
     )
     sa = h.Param(
         dtype=h.Scalar,
