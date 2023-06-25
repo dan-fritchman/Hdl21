@@ -38,7 +38,7 @@ class ExternalModule:
 
     name: str  # Module name. Used *directly* when exporting.
     port_list: List[Signal]  # Ordered Ports
-    paramtype: Type = HasNoParams  # Parameter-type `paramclass`
+    paramtype: Type[object] = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
     spicetype: SpiceType = SpiceType.SUBCKT  # Spice type, for SPICE export

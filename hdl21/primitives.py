@@ -96,7 +96,7 @@ class Primitive:
     name: str  # Primitive Name
     desc: str  # String Description
     port_list: List[Signal]  # Ordered Port List
-    paramtype: Type  # Class/ Type of valid Parameters
+    paramtype: Type[object]  # Class/ Type of valid Parameters
     primtype: PrimitiveType  # Ideal vs Physical Primitive-Type
 
     def __post_init_post_parse__(self):
