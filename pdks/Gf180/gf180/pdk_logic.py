@@ -289,9 +289,9 @@ class Gf180Walker(h.HierarchyWalker):
             raise TypeError(f"Invalid Scalar parameter {orig}")
         inner = orig.inner
         if isinstance(inner, h.Prefixed):
-            return h.Scalar(inner=inner)
+            return inner
         if isinstance(inner, h.Literal):
-            return h.Scalar(inner=h.Literal(f"({inner} * 1e6)"))
+            return h.Literal(f"({inner} * 1e6)")
         raise TypeError(f"Param Value {inner}")
 
     def use_defaults(self, params: h.paramclass, modname: str, defaults: dict):
