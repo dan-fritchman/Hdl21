@@ -619,18 +619,10 @@ hd: Dict[str, h.ExternalModule] = {
         "High Density",
         ["VGND", "VNB", "VPB", "VPWR", "HI", "LO"],
     ),
-    "decap_3": _logic_module(
-        "decap_3", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_4": _logic_module(
-        "decap_4", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_6": _logic_module(
-        "decap_6", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_8": _logic_module(
-        "decap_8", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "decap_3": _logic_module("decap_3", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_4": _logic_module("decap_4", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_6": _logic_module("decap_6", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_8": _logic_module("decap_8", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
     "decap_12": _logic_module(
         "decap_12", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
     ),
@@ -969,18 +961,10 @@ hd: Dict[str, h.ExternalModule] = {
         "High Density",
         ["A", "B", "CI", "VGND", "VNB", "VPB", "VPWR", "COUT_N", "SUM"],
     ),
-    "fill_1": _logic_module(
-        "fill_1", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_2": _logic_module(
-        "fill_2", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_4": _logic_module(
-        "fill_4", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_8": _logic_module(
-        "fill_8", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "fill_1": _logic_module("fill_1", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_2": _logic_module("fill_2", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_4": _logic_module("fill_4", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_8": _logic_module("fill_8", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
     "ha_1": _logic_module(
         "ha_1",
         "High Density",
@@ -2098,21 +2082,11 @@ hd: Dict[str, h.ExternalModule] = {
         "High Density",
         ["CLK", "D", "DE", "SCD", "SCE", "VGND", "VNB", "VPB", "VPWR", "Q"],
     ),
-    "tap_1": _logic_module(
-        "tap_1", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tap_2": _logic_module(
-        "tap_2", "High Density", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tapvgnd2_1": _logic_module(
-        "tapvgnd2_1", "High Density", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgnd_1": _logic_module(
-        "tapvgnd_1", "High Density", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvpwrvgnd_1": _logic_module(
-        "tapvpwrvgnd_1", "High Density", ["VGND", "VPWR"]
-    ),
+    "tap_1": _logic_module("tap_1", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tap_2": _logic_module("tap_2", "High Density", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tapvgnd2_1": _logic_module("tapvgnd2_1", "High Density", ["VGND", "VPB", "VPWR"]),
+    "tapvgnd_1": _logic_module("tapvgnd_1", "High Density", ["VGND", "VPB", "VPWR"]),
+    "tapvpwrvgnd_1": _logic_module("tapvpwrvgnd_1", "High Density", ["VGND", "VPWR"]),
     "xnor2_1": _logic_module(
         "xnor2_1",
         "High Density",

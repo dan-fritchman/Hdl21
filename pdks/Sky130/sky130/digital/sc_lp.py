@@ -1173,21 +1173,11 @@ lp: Dict[str, h.ExternalModule] = {
         "Low Power",
         ["VGND", "VNB", "VPB", "VPWR", "HI", "LO"],
     ),
-    "decap_3": _logic_module(
-        "decap_3", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_4": _logic_module(
-        "decap_4", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_6": _logic_module(
-        "decap_6", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_8": _logic_module(
-        "decap_8", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_12": _logic_module(
-        "decap_12", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "decap_3": _logic_module("decap_3", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_4": _logic_module("decap_4", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_6": _logic_module("decap_6", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_8": _logic_module("decap_8", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_12": _logic_module("decap_12", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
     "decapkapwr_3": _logic_module(
         "decapkapwr_3",
         "Low Power",
@@ -1709,18 +1699,10 @@ lp: Dict[str, h.ExternalModule] = {
         "Low Power",
         ["A", "B", "CI", "VGND", "VNB", "VPB", "VPWR", "COUT_N", "SUM"],
     ),
-    "fill_1": _logic_module(
-        "fill_1", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_2": _logic_module(
-        "fill_2", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_4": _logic_module(
-        "fill_4", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_8": _logic_module(
-        "fill_8", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "fill_1": _logic_module("fill_1", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_2": _logic_module("fill_2", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_4": _logic_module("fill_4", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_8": _logic_module("fill_8", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
     "ha_0": _logic_module(
         "ha_0",
         "Low Power",
@@ -1791,9 +1773,7 @@ lp: Dict[str, h.ExternalModule] = {
     "inv_8": _logic_module(
         "inv_8", "Low Power", ["A", "VGND", "VNB", "VPB", "VPWR", "Y"]
     ),
-    "inv_16": _logic_module(
-        "inv_16", "Low Power", ["A", "VGND", "VNB", "VPB", "Y"]
-    ),
+    "inv_16": _logic_module("inv_16", "Low Power", ["A", "VGND", "VNB", "VPB", "Y"]),
     "inv_lp": _logic_module(
         "inv_lp", "Low Power", ["A", "VGND", "VNB", "VPB", "VPWR", "Y"]
     ),
@@ -2290,9 +2270,7 @@ lp: Dict[str, h.ExternalModule] = {
         "Low Power",
         ["A", "B", "VGND", "VNB", "VPB", "VPWR", "Y"],
     ),
-    "nor2_lp": _logic_module(
-        "nor2_lp", "Low Power", ["A", "B", "VNB", "VPB", "Y"]
-    ),
+    "nor2_lp": _logic_module("nor2_lp", "Low Power", ["A", "B", "VNB", "VPB", "Y"]),
     "nor2_m": _logic_module(
         "nor2_m",
         "Low Power",
@@ -3543,21 +3521,11 @@ lp: Dict[str, h.ExternalModule] = {
         "Low Power",
         ["CLK", "D", "SCD", "SCE", "SLEEP_B", "KAPWR", "VGND", "VNB", "VPB", "VPWR"],
     ),
-    "tap_1": _logic_module(
-        "tap_1", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tap_2": _logic_module(
-        "tap_2", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tapvgnd2_1": _logic_module(
-        "tapvgnd2_1", "Low Power", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgnd_1": _logic_module(
-        "tapvgnd_1", "Low Power", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvpwrvgnd_1": _logic_module(
-        "tapvpwrvgnd_1", "Low Power", ["VGND", "VPWR"]
-    ),
+    "tap_1": _logic_module("tap_1", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tap_2": _logic_module("tap_2", "Low Power", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tapvgnd2_1": _logic_module("tapvgnd2_1", "Low Power", ["VGND", "VPB", "VPWR"]),
+    "tapvgnd_1": _logic_module("tapvgnd_1", "Low Power", ["VGND", "VPB", "VPWR"]),
+    "tapvpwrvgnd_1": _logic_module("tapvpwrvgnd_1", "Low Power", ["VGND", "VPWR"]),
     "xnor2_0": _logic_module(
         "xnor2_0",
         "Low Power",

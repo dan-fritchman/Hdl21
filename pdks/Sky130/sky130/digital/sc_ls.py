@@ -579,12 +579,8 @@ ls: Dict[str, h.ExternalModule] = {
         "Low Speed",
         ["VGND", "VNB", "VPB", "VPWR", "HI", "LO"],
     ),
-    "decap_4": _logic_module(
-        "decap_4", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_8": _logic_module(
-        "decap_8", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "decap_4": _logic_module("decap_4", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_8": _logic_module("decap_8", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
     "decaphe_2": _logic_module(
         "decaphe_2", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
     ),
@@ -603,9 +599,7 @@ ls: Dict[str, h.ExternalModule] = {
     "decaphe_18": _logic_module(
         "decaphe_18", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
     ),
-    "decaphetap_2": _logic_module(
-        "decaphetap_2", "Low Speed", ["VGND", "VPB", "VPWR"]
-    ),
+    "decaphetap_2": _logic_module("decaphetap_2", "Low Speed", ["VGND", "VPB", "VPWR"]),
     "dfbbn_1": _logic_module(
         "dfbbn_1",
         "Low Speed",
@@ -944,18 +938,10 @@ ls: Dict[str, h.ExternalModule] = {
         "Low Speed",
         ["A", "B", "CI", "VGND", "VNB", "VPB", "VPWR", "COUT_N", "SUM"],
     ),
-    "fill_1": _logic_module(
-        "fill_1", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_2": _logic_module(
-        "fill_2", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_4": _logic_module(
-        "fill_4", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_8": _logic_module(
-        "fill_8", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "fill_1": _logic_module("fill_1", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_2": _logic_module("fill_2", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_4": _logic_module("fill_4", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_8": _logic_module("fill_8", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
     "fill_diode_2": _logic_module(
         "fill_diode_2", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
     ),
@@ -995,9 +981,7 @@ ls: Dict[str, h.ExternalModule] = {
     "inv_16": _logic_module(
         "inv_16", "Low Speed", ["A", "VGND", "VNB", "VPB", "VPWR", "Y"]
     ),
-    "latchupcell": _logic_module(
-        "latchupcell", "Low Speed", ["VGND", "VPWR"]
-    ),
+    "latchupcell": _logic_module("latchupcell", "Low Speed", ["VGND", "VPWR"]),
     "maj3_1": _logic_module(
         "maj3_1",
         "Low Speed",
@@ -1860,27 +1844,13 @@ ls: Dict[str, h.ExternalModule] = {
         "Low Speed",
         ["CLK", "D", "DE", "SCD", "SCE", "VGND", "VNB", "VPB", "VPWR", "Q"],
     ),
-    "tap_1": _logic_module(
-        "tap_1", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tap_2": _logic_module(
-        "tap_2", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tapmet1_2": _logic_module(
-        "tapmet1_2", "Low Speed", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgnd2_1": _logic_module(
-        "tapvgnd2_1", "Low Speed", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgnd_1": _logic_module(
-        "tapvgnd_1", "Low Speed", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgndnovpb_1": _logic_module(
-        "tapvgndnovpb_1", "Low Speed", ["VGND", "VPWR"]
-    ),
-    "tapvpwrvgnd_1": _logic_module(
-        "tapvpwrvgnd_1", "Low Speed", ["VGND", "VPWR"]
-    ),
+    "tap_1": _logic_module("tap_1", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tap_2": _logic_module("tap_2", "Low Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tapmet1_2": _logic_module("tapmet1_2", "Low Speed", ["VGND", "VPB", "VPWR"]),
+    "tapvgnd2_1": _logic_module("tapvgnd2_1", "Low Speed", ["VGND", "VPB", "VPWR"]),
+    "tapvgnd_1": _logic_module("tapvgnd_1", "Low Speed", ["VGND", "VPB", "VPWR"]),
+    "tapvgndnovpb_1": _logic_module("tapvgndnovpb_1", "Low Speed", ["VGND", "VPWR"]),
+    "tapvpwrvgnd_1": _logic_module("tapvpwrvgnd_1", "Low Speed", ["VGND", "VPWR"]),
     "xnor2_1": _logic_module(
         "xnor2_1",
         "Low Speed",

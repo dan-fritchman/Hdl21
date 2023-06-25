@@ -69,12 +69,8 @@ hvl: Dict[str, h.ExternalModule] = {
         "High Voltage",
         ["VGND", "VNB", "VPB", "VPWR", "HI", "LO"],
     ),
-    "decap_4": _logic_module(
-        "decap_4", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_8": _logic_module(
-        "decap_8", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "decap_4": _logic_module("decap_4", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_8": _logic_module("decap_8", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]),
     "dfrbp_1": _logic_module(
         "dfrbp_1",
         "High Voltage",
@@ -135,18 +131,10 @@ hvl: Dict[str, h.ExternalModule] = {
         "High Voltage",
         ["A", "TE", "VGND", "VNB", "VPB", "VPWR", "Z"],
     ),
-    "fill_1": _logic_module(
-        "fill_1", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_2": _logic_module(
-        "fill_2", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_4": _logic_module(
-        "fill_4", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_8": _logic_module(
-        "fill_8", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "fill_1": _logic_module("fill_1", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_2": _logic_module("fill_2", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_4": _logic_module("fill_4", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_8": _logic_module("fill_8", "High Voltage", ["VGND", "VNB", "VPB", "VPWR"]),
     "inv_1": _logic_module(
         "inv_1",
         "High Voltage",

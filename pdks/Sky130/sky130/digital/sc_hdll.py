@@ -1584,9 +1584,7 @@ hdll: Dict[str, h.ExternalModule] = {
         "High Density Low Leakage",
         ["CLK", "D", "DE", "SCD", "SCE", "VGND", "VNB", "VPB", "VPWR", "Q", "Q_N"],
     ),
-    "tap": _logic_module(
-        "tap", "High Density Low Leakage", ["VGND", "VPWR"]
-    ),
+    "tap": _logic_module("tap", "High Density Low Leakage", ["VGND", "VPWR"]),
     "tap_1": _logic_module(
         "tap_1",
         "High Density Low Leakage",

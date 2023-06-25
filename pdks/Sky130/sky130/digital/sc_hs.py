@@ -581,12 +581,8 @@ hs: Dict[str, h.ExternalModule] = {
         "High Speed",
         ["VGND", "VNB", "VPB", "VPWR", "HI", "LO"],
     ),
-    "decap_4": _logic_module(
-        "decap_4", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "decap_8": _logic_module(
-        "decap_8", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "decap_4": _logic_module("decap_4", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "decap_8": _logic_module("decap_8", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
     "dfbbn_1": _logic_module(
         "dfbbn_1",
         "High Speed",
@@ -927,18 +923,10 @@ hs: Dict[str, h.ExternalModule] = {
         "High Speed",
         ["A", "B", "CI", "VGND", "VNB", "VPB", "VPWR", "COUT_N", "SUM"],
     ),
-    "fill_1": _logic_module(
-        "fill_1", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_2": _logic_module(
-        "fill_2", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_4": _logic_module(
-        "fill_4", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "fill_8": _logic_module(
-        "fill_8", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
+    "fill_1": _logic_module("fill_1", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_2": _logic_module("fill_2", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_4": _logic_module("fill_4", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "fill_8": _logic_module("fill_8", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
     "fill_diode_2": _logic_module(
         "fill_diode_2", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
     ),
@@ -1842,24 +1830,12 @@ hs: Dict[str, h.ExternalModule] = {
         "High Speed",
         ["CLK", "D", "DE", "SCD", "SCE", "VGND", "VNB", "VPB", "VPWR", "Q"],
     ),
-    "tap_1": _logic_module(
-        "tap_1", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tap_2": _logic_module(
-        "tap_2", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]
-    ),
-    "tapmet1_2": _logic_module(
-        "tapmet1_2", "High Speed", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgnd2_1": _logic_module(
-        "tapvgnd2_1", "High Speed", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvgnd_1": _logic_module(
-        "tapvgnd_1", "High Speed", ["VGND", "VPB", "VPWR"]
-    ),
-    "tapvpwrvgnd_1": _logic_module(
-        "tapvpwrvgnd_1", "High Speed", ["VGND", "VPWR"]
-    ),
+    "tap_1": _logic_module("tap_1", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tap_2": _logic_module("tap_2", "High Speed", ["VGND", "VNB", "VPB", "VPWR"]),
+    "tapmet1_2": _logic_module("tapmet1_2", "High Speed", ["VGND", "VPB", "VPWR"]),
+    "tapvgnd2_1": _logic_module("tapvgnd2_1", "High Speed", ["VGND", "VPB", "VPWR"]),
+    "tapvgnd_1": _logic_module("tapvgnd_1", "High Speed", ["VGND", "VPB", "VPWR"]),
+    "tapvpwrvgnd_1": _logic_module("tapvpwrvgnd_1", "High Speed", ["VGND", "VPWR"]),
     "xnor2_1": _logic_module(
         "xnor2_1",
         "High Speed",
