@@ -1,5 +1,5 @@
 import hdl21 as h
-from .pdk_data import *
+from .primitives.prim_dicts import *
 
 
 @dataclass
@@ -12,10 +12,10 @@ class Install(PdkInstallation):
     def include_design(self) -> h.sim.Include:
         return h.sim.Include(path=self.model_lib.parent / "design.ngspice")
 
-    def include_mos(self, corner: h.pdk.Corner) -> h.sim.Lib:
+    def include_mos(self, corner: h.pdk.CmosCorner) -> h.sim.Lib:
         """# Get the model include file for process corner `corner` for MOSFETs"""
 
-        mos_corners: Dict[h.pdk.Corner, str] = {
+        mos_corners: Dict[h.pdk.CmosCorner, str] = {
             h.pdk.CmosCorner.TT: "typical",
             h.pdk.CmosCorner.FF: "ff",
             h.pdk.CmosCorner.SS: "ss",

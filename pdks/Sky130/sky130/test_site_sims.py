@@ -15,7 +15,7 @@ sitepdks = pytest.importorskip("sitepdks")
 import sky130
 import hdl21 as h
 import vlsirtools.spice as vsp
-from sky130 import modules as s
+import sky130.primitives as s
 
 
 def test_installed():
@@ -47,7 +47,7 @@ def test_sim():
             VSS = h.Port()
             vdd = h.Signal()
             v = h.Vdc(dc=1)(p=vdd, n=VSS)
-            n = sky130.modules.NMOS_1p8V_STD()(d=vdd, g=vdd, s=VSS, b=VSS)
+            n = sky130.primitives.NMOS_1p8V_STD()(d=vdd, g=vdd, s=VSS, b=VSS)
 
         # Simulation Controls
         op = h.sim.Op()
@@ -80,8 +80,8 @@ def test_sim_inv():
     @h.module
     class Inv:  # Default-sized inverter
         i, o, VDD, VSS = 4 * h.Port()
-        n = sky130.modules.NMOS_1p8V_STD()(d=o, g=i, s=VSS, b=VSS)
-        p = sky130.modules.PMOS_1p8V_STD()(d=o, g=i, s=VDD, b=VDD)
+        n = sky130.primitives.NMOS_1p8V_STD()(d=o, g=i, s=VSS, b=VSS)
+        p = sky130.primitives.PMOS_1p8V_STD()(d=o, g=i, s=VDD, b=VDD)
 
     @h.sim.sim
     class Sim:

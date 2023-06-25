@@ -80,6 +80,25 @@ It is important to emphasize that all PDK units are written in microns (μm). We
 
 MOSFETs can be defined using either width (W), length (L) and number of fingers (NF), the SKY130-HDL21 PDK module offers the following components, all with the junction terminals (d,g,s,b) with the exception of NMOS_ISO_20p0V
 
+MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select the desired MOS using either model compilation:
+```python
+import sky130
+from hdl21.primitives import Mos, MosType, MosFamily, MosVth
+
+a = Mos(vth=MosVth.STD,tp=MosType.NMOS,family=MosFamily.CORE)
+sky130.compile(a) # a is now an instance of sky130.primitives.NMOS_1p8V_STD
+```
+Or can be referenced directly using the component name listed below from the `primitives` submodule.
+
+NOTE: If any dimensions are not supplied to the params object, the PDK module will assume the minimal viable dimension of the component that you choose.
+```python
+from hdl21.prefix import µ
+from sky130 import sky130MosParams as p
+import sky130.primitives as s
+
+a = s.NMOS_1p8V_STD(p(w=0.2*µ,nf=1))
+```
+
 | Component Key      | MosType | MosVth | MosFamily | Component Name                 | Description                     |
 |--------------------|---------|--------|-----------|--------------------------------|---------------------------------|
 | NMOS_1p8V_STD      | NMOS    | STD    | CORE      | sky130_fd_pr__nfet_01v8        | Standard 1.8V NMOS transistor   |
@@ -103,7 +122,16 @@ MOSFETs can be defined using either width (W), length (L) and number of fingers 
 | ESD_PMOS_5p5V       | PMOS    | STD      | IO     | sky130_fd_pr__esd_pfet_g5v0d10v5     | ESD PMOS, 5.5V, standard Vth, IO family |
 ### Generic Resistors
 
-Generic resistors can be defined using either width (W), length (L), 3-terminal resistors are substrate-based.
+Generic resistors are resistors composed of materials used in the Sky130 process and can be defined using either width (W), length (L), 3-terminal resistors are formed of substrates and have an additional substrate terminal.
+
+Generic esistors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
+```python
+from hdl21.prefix import µ
+from sky130 import Sky130GenResParams as p
+from sky130.primitives import GEN_PO
+
+a = GEN_PO(p(l=0.3 * µ, w=0.18 * µ))
+```
 
 | Component Key | Component Name               | Number of Terminals | Description                          |
 |---------------|-------------------------------|---------------------|--------------------------------------|
@@ -120,7 +148,18 @@ Generic resistors can be defined using either width (W), length (L), 3-terminal 
 
 ### Precision Resistors
 
-Precision resistors have a fixed width in the SKY130 PDK, and can be defined in HDL only using the "L" parameter. All devices have junction terminals (p,n,b).
+Precision resistors are made of polysilicon and have a fixed width in the SKY130 PDK, and can be defined in HDL only using the "L" parameter. All devices have junction terminals (p,n,b).
+
+**NOTE: UNITS ARE ASSUMED TO BE IN MICRONS FOR PRECISION RESISTORS**
+
+```python
+from hdl21.prefix import µ
+from sky130 import Sky130PrecResParams as p
+from sky130.primitives import GEN_PO
+
+# NOTE: We assume the units are in microns here
+a = GEN_PO(p(L=0.3))
+```
 
 | Component Key | Component Name                    | Description                 |
 |---------------|------------------------------------|-----------------------------|
@@ -138,6 +177,16 @@ Precision resistors have a fixed width in the SKY130 PDK, and can be defined in 
 ### Diodes
 
 Diodes in HDL21 are defined using width (W) and length (L) which are then converted into area and junction perimeter behind the scenes. All devices have junction terminals (p,n).
+
+**NOTE: DUE TO ANOTHER INTERESTING SCALING QUIRK, MEASUREMENTS FOR DIODES ARE MULTIPLIED BY 1e12 IN SKY130**
+
+```python
+from hdl21.prefix import MEGA, TERA
+from sky130 import Sky130DiodeParams as par
+from sky130.primitives import PWND_5p5V
+
+a = PWND_5p5V(par(area=0.3 * TERA, pj=1.2 * MEGA))
+```
 
 | Component Key  | Component Name                             | Description                      |
 |----------------|--------------------------------------------|----------------------------------|
@@ -159,6 +208,13 @@ Diodes in HDL21 are defined using width (W) and length (L) which are then conver
 
 Bipolar Junction Transistors in the SKY130 PDK are defined as static devices and do not yet have parametric cells. As such, no parameters can be passed apart from "m" for parallel multiplicity of components:
 
+```python
+from sky130 import Sky130BipolarParams as par
+from sky130.primitives import NPN_5p0V_1x2
+
+a = NPN_5p0V_1x2(par(m=2))
+```
+
 | Component Key      | Component Name                     | Number of Terminals | Description                     |
 |--------------------|------------------------------------|---------------------|---------------------------------|
 | NPN_5p0V_1x2       | sky130_fd_pr__npn_05v5_W1p00L2p00  | 4 (c,b,e,s)                   | NPN BJT, 5.0V, 1x2μm       |
@@ -170,6 +226,32 @@ Bipolar Junction Transistors in the SKY130 PDK are defined as static devices and
 ### Capacitors
 
 Capacitors in SKY130 come in 4 flavours, the MiM capacitor, the Varactor, the Vertical Parallel Plate transistor and the Vertical Perpendicular Plate capacitor, the latter two accept no arguments and their dimensions are fixed, whereas the first two allow their width and length to be defined:
+
+MiM caps:
+```python
+from hdl21.prefix import µ
+from sky130 import Sky130MimCapParams as par
+from sky130.primitives import MIM_M3
+
+a = MIM_M3(w=2 * µ, l=2 * µ)
+```
+
+Varicaps:
+```python
+from hdl21.prefix import µ
+from sky130 import Sky130VarCapParams as par
+from sky130.primitives import VAR_LVT
+
+a = VAR_LVT(w=2 * µ, l=2 * µ)
+```
+
+Vertical-Perpendicular/Parallel Plates:
+```python
+from sky130 import Sky130VPPParams as par
+from sky130.primitives import VPP_PARA_5
+
+a = VPP_PARA_5(m=1)
+```
 
 | Component Key  | Component Name                           | Number of Terminals | Capacitor Type | Description                             |
 |----------------|------------------------------------------|---------------------|---------------|-----------------------------------------|
@@ -205,20 +287,20 @@ The full range of SKY130's Standard Cell Libraries also work with the Sky130 PDK
 
 | Library Name | Import Statement |
 |--------------|------------------|
-| sky130_fd_sc_hd | `from sky130.digital import high_density` |
-| sky130_fd_sc_hdll | `from sky130.digital import low_leakage` |
-| sky130_fd_sc_hs | `from sky130.digital import high_speed` |
-| sky130_fd_sc_hvl | `from sky130.digital import high_voltage` |
-| sky130_fd_sc_lp | `from sky130.digital import low_power` |
-| sky130_fd_sc_ls | `from sky130.digital import low_speed` |
-| sky130_fd_sc_ms | `from sky130.digital import medium_speed` |
+| sky130_fd_sc_hd | `import sky130.digital_cells.high_density as hd` |
+| sky130_fd_sc_hdll | `import sky130.digital_cells.low_leakage as hdll` |
+| sky130_fd_sc_hs | `import sky130.digital_cells.high_speed as hs` |
+| sky130_fd_sc_hvl | `import sky130.digital_cells.high_voltage as hvl` |
+| sky130_fd_sc_lp | `import sky130.digital_cells.low_power as lp` |
+| sky130_fd_sc_ls | `import sky130.digital_cells.low_speed as ls` |
+| sky130_fd_sc_ms | `import sky130.digital_cells.medium_speed as ms` |
 
-If you like to load all the digital simultaneously, you can also import the entire digital library by calling `import sky130.digital`, although - this can take a while.
+If you like to load all the digital simultaneously, you can also import the entire digital library by calling `from sky130.digital_cells import *`, although - this can take a while.
 
 Each component is reflects the naming in DIYChip's documentation as well as their ports, for example:
 
 ```python
-from sky130.digital import high_density as hd
+import sky130.digital_cells.high_density as hd
 from sky130 import Sky130LogicParams as param
 p = param()
 simple_or = hd.or2_0(p)

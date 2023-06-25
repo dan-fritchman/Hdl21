@@ -209,7 +209,7 @@ def test_4T_bjt_netlists():
 
                 a, d, f, g = 4 * h.Signal()
 
-                exec("GenBipolar = gf180.modules." + x)
+                exec("GenBipolar = gf180.primitives." + x)
 
                 BJT = GenBipolar(p)(c=a, b=d, e=f, s=g)
 

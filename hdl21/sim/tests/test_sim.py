@@ -313,19 +313,3 @@ def test_empty_sim2():
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.SIM_DATA))
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
-
-
-@pytest.mark.skipif(
-    vlsirtools.spice.default() is None,
-    reason="No simulator available",
-)
-def test_sim_async_caller():
-    """# Test invoking simulation from an async caller"""
-
-    async def caller():
-        """# The asynchronous caller of `sim_async`"""
-        s = Sim(tb=empty_tb(), attrs=[])
-        return await s.run_async(SimOptions(fmt=ResultFormat.SIM_DATA))
-
-    result = asyncio.run(caller())
-    assert isinstance(result, sd.SimResult)

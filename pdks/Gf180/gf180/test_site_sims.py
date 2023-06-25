@@ -15,9 +15,9 @@ sitepdks = pytest.importorskip("sitepdks")
 import gf180
 import hdl21 as h
 from hdl21.prefix import µ
-from hdl21.pdk import Corner
+from hdl21.pdk import Corner, CmosCorner
 import vlsirtools.spice as vsp
-from gf180 import modules as g
+import gf180.primitives as g
 
 
 def test_installed():
@@ -75,7 +75,7 @@ def test_sim_mosfets():
         # Simulation Controls
         op = h.sim.Op()
         i1 = gf180.install.include_design()
-        i2 = gf180.install.include_mos(Corner.TYP)
+        i2 = gf180.install.include_mos(CmosCorner.TT)
 
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
@@ -131,7 +131,7 @@ def test_sim_resistors():
         op = h.sim.Op()
 
         d1 = gf180.install.include_design()
-        i1 = gf180.install.include_mos(Corner.TYP)
+        i1 = gf180.install.include_mos(CmosCorner.TT)
         i2 = gf180.install.include_resistors(Corner.TYP)
 
     opts = vsp.SimOptions(
@@ -198,7 +198,7 @@ def test_sim_capacitors():
         op = h.sim.Op()
 
         d1 = gf180.install.include_design()
-        i1 = gf180.install.include_mos(Corner.TYP)
+        i1 = gf180.install.include_mos(CmosCorner.TT)
         #! Very important that this is included!
         i11 = h.sim.Lib(gf180.install.model_lib, "cap_mim")
         i2 = gf180.install.include_resistors(Corner.TYP)
@@ -285,7 +285,7 @@ def test_sim_bjt():
         op = h.sim.Op()
 
         d1 = gf180.install.include_design()
-        i1 = gf180.install.include_mos(Corner.TYP)
+        i1 = gf180.install.include_mos(CmosCorner.TT)
         i2 = gf180.install.include_resistors(Corner.TYP)
         i3 = gf180.install.include_moscaps(Corner.TYP)
         i4 = gf180.install.include_bjts(Corner.TYP)

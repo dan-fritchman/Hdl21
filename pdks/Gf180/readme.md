@@ -94,7 +94,7 @@ All Gf180 `ExternalModules` are stored in the `modules` namespace that makes up 
 
 ```python
 import gf180
-from gf180 import modules as g
+from gf180.primitives as g
 
 p = gf180.GF180MosParams()
 
@@ -111,7 +111,24 @@ The second is the "Model Name" which refers to the underlying subcircuit or mode
 
 ### MOSFETs
 
-MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select 
+MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select the desired MOS using either model compilation:
+```python
+import gf180
+from hdl21.primitives import Mos, MosType, MosFamily
+
+a = Mos(tp=MosType.NMOS,family=MosFamily.CORE)
+gf180.compile(a) # a is now an instance of gf180.primitives.NFET_3p3V
+```
+Or can be referenced directly using the component name listed below from the `primitives` submodule.
+
+NOTE: If any dimensions are not supplied to the params object, the PDK module will assume the minimal viable dimension of the component that you choose.
+```python
+from hdl21.prefix import µ
+from gf180 import GF180MosParams as p
+import gf180.primitives as g
+
+a = g.NFET_3p3V(p(w=0.2*µ,nf=1))
+```
 
 | Component Name | Mos Type | Mos Family | Model Name   | Ports      |
 | -------------- | -------- | ---------- | ------------- | ---------- |
@@ -126,6 +143,15 @@ MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select
 | NFET_6p0V_NAT  | NMOS     | NONE       | nfet_06v0_nvt | d, g, s, b |
 
 ### Resistors
+
+Resistors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
+```python
+from hdl21.prefix import µ
+from gf180 import GF180ResParams as p
+from gf180.primitives import NPLUS_U
+
+a = NPLUS_U(p(r_length=0.3 * µ, r_width=0.18 * µ))
+```
 
 | Component Name  | Model Name     | Ports   |
 | --------------- | --------------- | ------- |
@@ -153,6 +179,15 @@ MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select
 
 ### Diodes
 
+Diodes are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
+```python
+from hdl21.prefix import µ, p
+from gf180 import GF180DiodeParams as par
+from gf180.primitives import NDSPS_3p3V
+
+a = NDSPS_3p3V(par(area=0.3 * p, pj=1.2 * µ))
+```
+
 | Component Name | Model Name      | Ports |
 | -------------- | ---------------- | ----- |
 | ND2PS_3p3V     | diode_nd2ps_03v3 | p, n  |
@@ -166,6 +201,15 @@ MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select
 | Schottky       | sc_diode         | p, n  |
 
 ### BJTs
+
+BJTs are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
+```python
+from hdl21.prefix import µ, p
+from gf180 import GF180BipolarParams as par
+from gf180.primitives import PNP_10p0x0p42
+
+a = PNP_10p0x0p42(par(m=2))
+```
 
 | Component Name | Model Name     | Ports      |
 | -------------- | --------------- | ---------- |
@@ -181,6 +225,15 @@ MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select
 | NPN_0p54x2p0   | npn_00p54x02p00 | c, b, e, s |
 
 ### Capacitors
+
+Capacitors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
+```python
+from hdl21.prefix import µ
+from gf180 import GF180CapParams as par
+from gf180.primitives import MIM_1p5fF
+
+a = MIM_1p5fF(par(c_width=1 * µ, c_length=1 * µ))
+```
 
 | Component Name  | Model Name     | Ports |
 | --------------- | --------------- | ----- |
@@ -201,14 +254,14 @@ MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select
 The PDK is also distributed with two standard cell libraries that we call `seven_track` and  `nine_track`. These are distributed with `gf180-hdl21` as seperate name spaces that can be accessed in a similar manner to `modules`:
 
 ```python
-from gf180.digital import seven_track as d7
-from gf180.digital import nine_track as d9
+from gf180.digital_cells.seven_track as d7
+from gf180.digital_cells.nine_track as d9
 ```
 
 These cells are named in their spice files in `libs.ref` of a normal `open_pdk` install as `gf_180_fd_sc_******__device`, to find the corresponding device in the digital name space, use `device`, eg.
 
 ```python
-from gf180.digital import seven_track as d7
+from gf180.digital_cells.seven_track as d7
 from gf180 import GF180LogicParams as p
 simple_and_gate = d7.and2_1(p())
 ```

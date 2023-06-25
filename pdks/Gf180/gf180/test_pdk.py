@@ -7,7 +7,7 @@ Unit Tests
 from io import StringIO
 import hdl21 as h
 import gf180
-from .pdk_data import modules as g
+import gf180.primitives as g
 from hdl21.primitives import *
 
 

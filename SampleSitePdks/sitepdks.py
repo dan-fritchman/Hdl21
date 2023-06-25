@@ -31,7 +31,7 @@ import sky130
 sky130.install = sky130.Install(
     pdk_path=Path(os.environ["PDK_ROOT"] + "/" + os.environ["PDK"]),
     lib_path=Path("libs.tech/ngspice/sky130.lib.spice"),
-    model_ref=Path("libs.ref/sky130_fd_pr/spice"),
+    model_ref=Path("libs.ref/sky130_fd_pr/"),
 )
 
 # ASAP7

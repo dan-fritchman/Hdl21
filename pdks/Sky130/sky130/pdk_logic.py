@@ -51,7 +51,7 @@ from hdl21.primitives import (
 )
 
 # Import relevant data from the PDK's data module
-from .pdk_data import *
+from .primitives.prim_dicts import *
 
 
 @dataclass
