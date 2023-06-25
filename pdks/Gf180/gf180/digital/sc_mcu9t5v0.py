@@ -1018,7 +1018,7 @@ gf180mcu_fd_sc_mcu9t5v0: Dict[str, h.ExternalModule] = {
 }
 
 # Collected `ExternalModule`s are stored in the `mcu9t5v0` namespace
-digital9track = SimpleNamespace()
+nine_track = SimpleNamespace()
 # Add each to the `mcu9t5v0` namespace
 for name, mod in gf180mcu_fd_sc_mcu9t5v0.items():
-    setattr(digital9track, name, mod)
+    setattr(nine_track, name, mod)

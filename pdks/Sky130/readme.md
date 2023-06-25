@@ -201,19 +201,28 @@ Capacitors in SKY130 come in 4 flavours, the MiM capacitor, the Varactor, the Ve
 
 ### Digital Cells
 
-The full range of SKY130's Standard Cell Libraries also work with the Sky130 PDK, they are far too numerous to name here but excellent resources are available at:  https://diychip.org/sky130/ . The general naming convention of the ExternalModules representing digital cells is:
+The full range of SKY130's Standard Cell Libraries also work with the Sky130 PDK, they are far too numerous to name here but excellent documentation is available at:  https://diychip.org/sky130/ . We allow users to select from each of the libraries using the following import statements:
+
+| Library Name | Import Statement |
+|--------------|------------------|
+| sky130_fd_sc_hd | `from sky130.digital import high_density` |
+| sky130_fd_sc_hdll | `from sky130.digital import low_leakage` |
+| sky130_fd_sc_hs | `from sky130.digital import high_speed` |
+| sky130_fd_sc_hvl | `from sky130.digital import high_voltage` |
+| sky130_fd_sc_lp | `from sky130.digital import low_power` |
+| sky130_fd_sc_ls | `from sky130.digital import low_speed` |
+| sky130_fd_sc_ms | `from sky130.digital import medium_speed` |
+
+If you like to load all the digital simultaneously, you can also import the entire digital library by calling `import sky130.digital`, although - this can take a while.
+
+Each component is reflects the naming in DIYChip's documentation as well as their ports, for example:
 
 ```python
-sky130_fd_sc_[acronym of desired standard cell library]__[cell name]_[width]
+from sky130.digital import high_density as hd
+from sky130 import Sky130LogicParams as param
+p = param()
+simple_or = hd.or2_0(p)
 ```
-
-For example, for a 2-input AND gate from the SKY130 High-Density Standard Cell Library with a width of 2, we would use: 
-
-```python
-c = sky130.modules.sky130_fd_sc_hd__and2_2()
-```
-
-The ports of these digital cells match the ports seen in cell documentation with no other parameters, they can now be hooked up and simulated like other PDK ExternalModules.
 
 ## Development 
 

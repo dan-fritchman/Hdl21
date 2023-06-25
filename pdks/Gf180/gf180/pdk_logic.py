@@ -1,8 +1,5 @@
 import hdl21 as h
 from .pdk_data import *
-from .sc_mcu7t5v0 import *
-from .sc_mcu9t5v0 import *
-
 
 @dataclass
 class Install(PdkInstallation):

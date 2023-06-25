@@ -198,17 +198,17 @@ MOSFETs in Hdl21 are designed to be PDK-agnostic, making it possible select
 
 ### Digital Cells
 
-The PDK is also distributed with two standard cell libraries that we call `digital7track` and  digital9track`. These are distributed with `gf180-hdl21` as seperate name spaces that can be accessed in a similar manner to `modules`:
+The PDK is also distributed with two standard cell libraries that we call `seven_track` and  `nine_track`. These are distributed with `gf180-hdl21` as seperate name spaces that can be accessed in a similar manner to `modules`:
 
 ```python
-from gf180 import digital7track as d7
-from gf180 import digital9track as d9
+from gf180.digital import seven_track as d7
+from gf180.digital import nine_track as d9
 ```
 
 These cells are named in their spice files in `libs.ref` of a normal `open_pdk` install as `gf_180_fd_sc_******__device`, to find the corresponding device in the digital name space, use `device`, eg.
 
 ```python
-from gf180 import digital7track as d7
+from gf180.digital import seven_track as d7
 from gf180 import GF180LogicParams as p
 simple_and_gate = d7.and2_1(p())
 ```
