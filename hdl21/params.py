@@ -16,7 +16,7 @@ T = TypeVar("T")
 
 
 def paramclass(cls: Type[T]) -> Type[T]:
-    """Parameter-Class Creation Decorator
+    """# Parameter-Class Creation Decorator
 
     Transforms a class-definition full of Params into a type-validated dataclass,
     with methods for default value and description-dictionary retrieval.
@@ -25,10 +25,12 @@ def paramclass(cls: Type[T]) -> Type[T]:
     They are defined through a syntax similar to `@dataclass`, but using the `Param`
     constructor, and assignment rather than type annotation.
 
+    ```python
     @paramclass
     class C:
         reqd = Param(dtype=int, desc="A Required Parameter")
         optn = Param(dtype=int, desc="An Optional Parameter", default=11)
+    ```
 
     `Param`s each have required datatype (`dtype`) and description (`desc`) fields,
     and optional default values.
@@ -92,15 +94,19 @@ def paramclass(cls: Type[T]) -> Type[T]:
         annotations[name] = param.dtype
 
         # Handle the default value, which is the class-attribute-value on dataclasses
-        if param.default is not Default:
+        if param.default is not Default and param.default_factory is not Default:
+            msg = f"Invalid Param {param} in paramclass {cls}. Only one of `default` or `default_factory` may be specified."
+            raise RuntimeError(msg)
+
+        elif param.default is not Default:
             setattr(cls, name, param.default)
 
         elif param.default_factory is not Default:
-            # FIXME: https://github.com/dan-fritchman/Hdl21/issues/30
-            raise NotImplementedError(f"Param.default_factory for {cls}")
-            field.append(dataclasses.field(default_factory=par.default_factory))
+            field = dataclasses.field(default_factory=param.default_factory)
+            setattr(cls, name, field)
 
-        else:  # Otherwise remove the `Param` object from the class namespace
+        else:  # Otherwise there is no default value, this is a required parameter.
+            # Remove the `Param` object from the class namespace
             delattr(cls, name)
 
     # Add a few helpers to the class namespace
