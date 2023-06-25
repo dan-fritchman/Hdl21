@@ -3,8 +3,8 @@ Hdl21 Parameters and Param-Classes
 """
 
 # Std-Lib Imports
-from typing import Optional, Any, Type, TypeVar
 import dataclasses, inspect, json, hashlib
+from typing import Optional, Any, Type, TypeVar, Dict
 
 # PyPi Imports
 import pydantic
@@ -106,18 +106,12 @@ def paramclass(cls: Type[T]) -> Type[T]:
     # Add a few helpers to the class namespace
     cls.__params__ = params
     cls.__paramclass__ = True
-    cls.descriptions = classmethod(
-        lambda cls: {k: v.desc for k, v in cls.__params__.items()}
-    )
-    cls.defaults = classmethod(
-        lambda cls: {
-            k: v.default for k, v in cls.__params__.items() if v.default is not Default
-        }
-    )
-    # FIXME: https://github.com/dan-fritchman/Hdl21/issues/76
+    cls.descriptions = classmethod(descriptions)
+    cls.defaults = classmethod(defaults)
 
     # Pass this through the pydantic dataclass-decorator-function
     cls = pydantic.dataclasses.dataclass(cls, config=Config, frozen=True)
+
     # Pydantic seems to want to add this one *after* class-creation
     def _brick_subclassing_(cls, *_, **__):
         msg = f"Error: attempt to sub-class `hdl21.paramclass` {cls} is not supported"
@@ -126,6 +120,28 @@ def paramclass(cls: Type[T]) -> Type[T]:
     cls.__init_subclass__ = classmethod(_brick_subclassing_)
     # And don't forget to return it!
     return cls
+
+
+def descriptions(cls: Type) -> Dict[str, str]:
+    """# Get a dictionary of parameter names to descriptions for `cls`
+    Available both as a free function and as a `classmethod` of each `paramclass`.
+    Raises a `RuntimeError` if `cls` is not a param-class."""
+
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+
+    return {k: v.desc for k, v in cls.__params__.items()}
+
+
+def defaults(cls: Type) -> Dict[str, Any]:
+    """# Get a dictionary of parameter names to default values for param-class `cls`.
+    Available both as a free function and as a `classmethod` of each `paramclass`.
+    Raises a `RuntimeError` if `cls` is not a param-class."""
+
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+
+    return {k: v.default for k, v in cls.__params__.items() if v.default is not Default}
 
 
 def isparamclass(cls: type) -> bool:
