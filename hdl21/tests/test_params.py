@@ -117,7 +117,7 @@ def test_bad_params1():
         class D(C):
             ...
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(TypeError):
         # Test that missing arguments fail
         c = C()
 
@@ -170,7 +170,6 @@ def test_bad_params1():
         h.params._unique_name(33)
 
 
-@pytest.mark.xfail(reason="#30 https://github.com/dan-fritchman/Hdl21/issues/30")
 def test_param_default_factory():
     """Test the `default_factory` feature of `Param`"""
 

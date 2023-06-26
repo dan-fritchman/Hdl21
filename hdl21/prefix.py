@@ -297,7 +297,7 @@ def to_prefixed(v: Union[Prefixed, "ToPrefixed"]) -> Prefixed:
     if isinstance(v, str):
         return Prefixed(number=Decimal(v))
 
-    raise ValidationError(f"Cannot convert {v} to Prefixed number")
+    raise RuntimeError(f"Cannot convert {v} to Prefixed number")
 
 
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:

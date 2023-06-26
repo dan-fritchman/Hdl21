@@ -1,22 +1,24 @@
-"""
-# Hdl21 Concatenations 
-"Sequences" of Signals and other Connectable objects. 
-"""
-
+# Std-Lib Imports
 from typing import Optional, Set
 
 # Local imports
+from . import attrmagic
 from .connect import connectable
 from .sliceable import sliceable
 from .concatable import concatable, is_concatable
 
 
+@attrmagic.only_set_known_attrs
+@attrmagic.init
 @sliceable
 @concatable
 @connectable
 class Concat:
-    """Signal Concatenation
-    Uses *Python-convention* ordering, in which "LSBs", i.e. index 0, are specified first."""
+    """
+    # Signal Concat(enations)
+    "Sequences" of Signals and other Connectable objects.
+    Uses *Python-convention* ordering, in which "LSBs", i.e. index 0, are specified first.
+    """
 
     def __init__(self, *parts):
         invalid_parts = [p for p in parts if not is_concatable(p)]
@@ -34,6 +36,7 @@ class Concat:
         self._width: Optional[int] = None
         self._slices: Set["Slice"] = set()
         self._concats: Set["Concat"] = set()
+        self._initialized = True
 
     def __eq__(self, other) -> bool:
         # Identity is equality
@@ -55,4 +58,5 @@ class Concat:
         return width(self)
 
 
+__doc__ = Concat.__doc__
 __all__ = ["Concat"]

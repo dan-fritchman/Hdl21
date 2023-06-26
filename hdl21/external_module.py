@@ -11,17 +11,16 @@ from pydantic.dataclasses import dataclass
 from vlsirtools import SpiceType
 
 # Local imports
+from .datatype import datatype
 from .default import Default
 from .call import param_call
 from .source_info import source_info, SourceInfo
 from .params import HasNoParams, isparamclass, _unique_name
 from .signal import Signal, Visibility
 from .instance import calls_instantiate
-from .qualname import qualname_magic_methods
 
 
-@dataclass
-@qualname_magic_methods
+@datatype
 class ExternalModule:
     """
     # External Module
@@ -39,7 +38,7 @@ class ExternalModule:
 
     name: str  # Module name. Used *directly* when exporting.
     port_list: List[Signal]  # Ordered Ports
-    paramtype: Type = HasNoParams  # Parameter-type `paramclass`
+    paramtype: Type[object] = HasNoParams  # Parameter-type `paramclass`
     desc: Optional[str] = None  # Description
     domain: Optional[str] = None  # Domain name, for references upon export
     spicetype: SpiceType = SpiceType.SUBCKT  # Spice type, for SPICE export

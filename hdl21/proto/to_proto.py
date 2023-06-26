@@ -115,11 +115,7 @@ class ProtoExporter:
         if id(module) in self.modules_by_id:  # Already done
             return self.modules_by_id[id(module)].pmod
 
-        if module.literals:
-            msg = f"Module {module.name} with Literals {list(module.literals.values())}"
-            raise NotImplementedError(msg)
-
-        if module.bundles:  # Can't handle these, at least for now
+        if module.bundles:  # Invalid, should have been elaborated out.
             msg = f"Invalid attribute for Proto export: Module {module.name} with Bundles {list(module.bundles.keys())}"
             raise RuntimeError(msg)
 
@@ -145,6 +141,11 @@ class ProtoExporter:
                 raise RuntimeError(msg)
             pinst = self.export_instance(inst)
             pmod.instances.append(pinst)
+
+        # Create the Module's `literal`s
+        # FIXME: https://github.com/dan-fritchman/Hdl21/issues/149
+        # for literal in module.literals:
+        #     pmod.literals.append(export_literal(literal))
 
         # Store references to the result, and return it
         mapping = ModuleMapping(module, pmod)
@@ -222,7 +223,6 @@ class ProtoExporter:
                     raise ValueError(f"Invalid PrimitiveType {call.prim.primtype}")
 
             elif isinstance(inst._resolved, ExternalModuleCall):
-
                 self.export_external_module(call.module)
                 pinst.module.external.domain = call.module.domain or ""
                 pinst.module.external.name = call.module.name
@@ -465,3 +465,8 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
 #
 #     # And return it
 #     return pmod
+
+
+def export_literal(literal: Literal) -> str:
+    """Export a `Literal`, as its text value"""
+    return literal.text

@@ -86,33 +86,33 @@ class MosParams:
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=150 * MILLI)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
     ad = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Drain Area",
         default=h.Literal("int((nf+1)/2) * w/nf * 0.29"),
     )
 
     # This unfortunate naming is to prevent conflicts with base python.
     As = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Area",
         default=h.Literal("int((nf+2)/2) * w/nf * 0.29"),
     )
 
     pd = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Drain Perimeter",
         default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.29)"),
     )
     ps = h.Param(
-        dtype=h.Literal,
+        dtype=h.Scalar,
         desc="Source Perimeter",
         default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
     )
     nrd = h.Param(
-        dtype=h.Literal, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
+        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
     )
     nrs = h.Param(
-        dtype=h.Literal, desc="Source Resistive Value", default=h.Literal("0.29 / w")
+        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.29 / w")
     )
     sa = h.Param(
         dtype=h.Scalar,
@@ -14408,137 +14408,137 @@ ensuring correct layout and performance in the circuit designs.
 
 # Default param dicts
 default_xtor_size = {
-    "sky130_fd_pr__nfet_01v8": (h.Scalar(inner=0.420 * µ), h.Scalar(inner=0.150 * µ)),
+    "sky130_fd_pr__nfet_01v8": (0.420 * µ, 0.150 * µ),
     "sky130_fd_pr__nfet_01v8_lvt": (
-        h.Scalar(inner=0.420 * µ),
-        h.Scalar(inner=0.150 * µ),
+        0.420 * µ,
+        0.150 * µ,
     ),
-    "sky130_fd_pr__pfet_01v8": (h.Scalar(inner=0.550 * µ), h.Scalar(inner=0.150 * µ)),
+    "sky130_fd_pr__pfet_01v8": (0.550 * µ, 0.150 * µ),
     "sky130_fd_pr__pfet_01v8_hvt": (
-        h.Scalar(inner=0.550 * µ),
-        h.Scalar(inner=0.150 * µ),
+        0.550 * µ,
+        0.150 * µ,
     ),
     "sky130_fd_pr__pfet_01v8_lvt": (
-        h.Scalar(inner=0.550 * µ),
-        h.Scalar(inner=0.350 * µ),
+        0.550 * µ,
+        0.350 * µ,
     ),
     "sky130_fd_pr__pfet_g5v0d10v5": (
-        h.Scalar(inner=0.420 * µ),
-        h.Scalar(inner=0.500 * µ),
+        0.420 * µ,
+        0.500 * µ,
     ),
     "sky130_fd_pr__nfet_g5v0d10v5": (
-        h.Scalar(inner=0.420 * µ),
-        h.Scalar(inner=0.500 * µ),
+        0.420 * µ,
+        0.500 * µ,
     ),
     "sky130_fd_pr__pfet_g5v0d16v0": (
-        h.Scalar(inner=5.000 * µ),
-        h.Scalar(inner=0.660 * µ),
+        5.000 * µ,
+        0.660 * µ,
     ),
-    "sky130_fd_pr__nfet_20v0": (h.Scalar(inner=29.410 * µ), h.Scalar(inner=2.950 * µ)),
+    "sky130_fd_pr__nfet_20v0": (29.410 * µ, 2.950 * µ),
     "sky130_fd_pr__nfet_20v0_zvt": (
-        h.Scalar(inner=30.000 * µ),
-        h.Scalar(inner=1.500 * µ),
+        30.000 * µ,
+        1.500 * µ,
     ),
     "sky130_fd_pr__nfet_20v0_iso": (
-        h.Scalar(inner=30.000 * µ),
-        h.Scalar(inner=1.500 * µ),
+        30.000 * µ,
+        1.500 * µ,
     ),
-    "sky130_fd_pr__pfet_20v0": (h.Scalar(inner=30.000 * µ), h.Scalar(inner=1.000 * µ)),
+    "sky130_fd_pr__pfet_20v0": (30.000 * µ, 1.000 * µ),
     "sky130_fd_pr__nfet_03v3_nvt": (
-        h.Scalar(inner=0.700 * µ),
-        h.Scalar(inner=0.500 * µ),
+        0.700 * µ,
+        0.500 * µ,
     ),
     "sky130_fd_pr__nfet_05v0_nvt": (
-        h.Scalar(inner=0.700 * µ),
-        h.Scalar(inner=0.900 * µ),
+        0.700 * µ,
+        0.900 * µ,
     ),
     "sky130_fd_pr__nfet_20v0_nvt": (
-        h.Scalar(inner=30.000 * µ),
-        h.Scalar(inner=1.000 * µ),
+        30.000 * µ,
+        1.000 * µ,
     ),
     "sky130_fd_pr__esd_nfet_01v8": (
-        h.Scalar(inner=20.350 * µ),
-        h.Scalar(inner=0.165 * µ),
+        20.350 * µ,
+        0.165 * µ,
     ),
     "sky130_fd_pr__esd_nfet_g5v0d10v5": (
-        h.Scalar(inner=14.500 * µ),
-        h.Scalar(inner=0.550 * µ),
+        14.500 * µ,
+        0.550 * µ,
     ),
     "sky130_fd_pr__esd_nfet_g5v0d10v5_nvt": (
-        h.Scalar(inner=10.000 * µ),
-        h.Scalar(inner=0.900 * µ),
+        10.000 * µ,
+        0.900 * µ,
     ),
     "sky130_fd_pr__esd_pfet_g5v0d10v5": (
-        h.Scalar(inner=14.500 * µ),
-        h.Scalar(inner=0.550 * µ),
+        14.500 * µ,
+        0.550 * µ,
     ),
 }
 
 default_gen_res_size = {
     "sky130_fd_pr__res_generic_po": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_l1": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_m1": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_m2": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_m3": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_m4": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_m5": (
-        h.Scalar(inner=0.720 * µ),
-        h.Scalar(inner=0.290 * µ),
+        0.720 * µ,
+        0.290 * µ,
     ),
     "sky130_fd_pr__res_generic_nd": (
-        h.Scalar(inner=0.150 * µ),
-        h.Scalar(inner=0.270 * µ),
+        0.150 * µ,
+        0.270 * µ,
     ),
     "sky130_fd_pr__res_generic_pd": (
-        h.Scalar(inner=0.150 * µ),
-        h.Scalar(inner=0.270 * µ),
+        0.150 * µ,
+        0.270 * µ,
     ),
     # FIXME: This value is lifted from xschem but can't be found in documentation
-    "sky130_fd_pr__res_iso_pw": (h.Scalar(inner=2.650 * µ), h.Scalar(inner=2.650 * µ)),
+    "sky130_fd_pr__res_iso_pw": (2.650 * µ, 2.650 * µ),
 }
 
 # These have to be left in microns for parsing reasons
 default_prec_res_L = {
-    "sky130_fd_pr__res_high_po_0p35": h.Scalar(inner=0.350),
-    "sky130_fd_pr__res_high_po_0p69": h.Scalar(inner=0.690),
-    "sky130_fd_pr__res_high_po_1p41": h.Scalar(inner=1.410),
-    "sky130_fd_pr__res_high_po_2p85": h.Scalar(inner=2.850),
-    "sky130_fd_pr__res_high_po_5p73": h.Scalar(inner=5.300),
-    "sky130_fd_pr__res_xhigh_po_0p35": h.Scalar(inner=0.350),
-    "sky130_fd_pr__res_xhigh_po_0p69": h.Scalar(inner=0.690),
-    "sky130_fd_pr__res_xhigh_po_1p41": h.Scalar(inner=1.410),
-    "sky130_fd_pr__res_xhigh_po_2p85": h.Scalar(inner=2.850),
-    "sky130_fd_pr__res_xhigh_po_5p73": h.Scalar(inner=5.300),
+    "sky130_fd_pr__res_high_po_0p35": 0.350,
+    "sky130_fd_pr__res_high_po_0p69": 0.690,
+    "sky130_fd_pr__res_high_po_1p41": 1.410,
+    "sky130_fd_pr__res_high_po_2p85": 2.850,
+    "sky130_fd_pr__res_high_po_5p73": 5.300,
+    "sky130_fd_pr__res_xhigh_po_0p35": 0.350,
+    "sky130_fd_pr__res_xhigh_po_0p69": 0.690,
+    "sky130_fd_pr__res_xhigh_po_1p41": 1.410,
+    "sky130_fd_pr__res_xhigh_po_2p85": 2.850,
+    "sky130_fd_pr__res_xhigh_po_5p73": 5.300,
 }
 
 default_cap_sizes = {
     # FIXME: Using documentation minimum sizing not sure of correct answer
     "sky130_fd_pr__cap_mim_m3_1": (
-        h.Scalar(inner=2.000 * µ),
-        h.Scalar(inner=2.000 * µ),
+        2.000 * µ,
+        2.000 * µ,
     ),
     "sky130_fd_pr__cap_mim_m3_2": (
-        h.Scalar(inner=2.000 * µ),
-        h.Scalar(inner=2.000 * µ),
+        2.000 * µ,
+        2.000 * µ,
     ),
-    "sky130_fd_pr__cap_var_lvt": (h.Scalar(inner=0.180 * µ), h.Scalar(inner=0.180 * µ)),
-    "sky130_fd_pr__cap_var_hvt": (h.Scalar(inner=0.180 * µ), h.Scalar(inner=0.180 * µ)),
+    "sky130_fd_pr__cap_var_lvt": (0.180 * µ, 0.180 * µ),
+    "sky130_fd_pr__cap_var_hvt": (0.180 * µ, 0.180 * µ),
 }

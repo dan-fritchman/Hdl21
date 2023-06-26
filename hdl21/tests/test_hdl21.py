@@ -750,7 +750,6 @@ def test_wrong_decorator():
     assert "Did you mean to use the `module` decorator?" in str(e)
 
     with pytest.raises(TypeError) as e:
-
         h.Module(2)  # Bad!
 
     assert "Invalid Module name" in str(e)
@@ -1403,14 +1402,18 @@ def test_module_literals():
 
     @h.module
     class HasLit:
-        l1 = h.Literal("mother")
-        l2 = h.Literal("father")
+        x, y, z = 3 * h.Signal()
 
-    HasLit.l3 = h.Literal("child")
+    HasLit.literals.append(h.Literal("mother"))
+    HasLit.literals.append(h.Literal("father"))
+    HasLit.literals.extend(
+        [h.Literal("child"), h.Literal("uncle"), h.Literal("nephew")]
+    )
 
-    assert HasLit.l1.text == "mother"
-    assert HasLit.l2.text == "father"
-    assert HasLit.l3.text == "child"
+    assert len(HasLit.signals) == 3
+    assert HasLit.literals == [
+        h.Literal(t) for t in ["mother", "father", "child", "uncle", "nephew"]
+    ]
 
 
 def test_signal_mult():
@@ -1456,3 +1459,39 @@ def test_bundle_mult():
     assert len(M.signals) == 4
     assert M.b1_i is not M.b2_i
     assert M.b1_q is not M.b2_q
+
+
+def test_set_bad_attrs():
+    """Test the "only allow setting known attributes" feature of a few types."""
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    # Create a `BundleInstance`
+    b = B()
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        b.q = 5
+
+    # Create a `BundleRef` into that instance
+    ref = b.some_signal
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        ref.whatever = 6
+
+    # Create an `AnonymousBundle`
+    bu = h.bundlize(a=h.Signal())
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        bu.q = 5
+
+    # Create a `Concat`
+    c = h.Concat(h.Signal(), h.Signal())
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        c.xyz = TabError

@@ -1,8 +1,8 @@
-from typing import Optional
+# PyPi Imports
 from pydantic.dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Literal:
     """
     # Literal
@@ -10,4 +10,6 @@ class Literal:
     """
 
     text: str  # String literal text
-    name: Optional[str] = None  # Attribute name, when used in a class
+
+
+__doc__ = Literal.__doc__
