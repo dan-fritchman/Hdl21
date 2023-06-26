@@ -63,7 +63,7 @@ Summary of the content of the primitive library:
 import copy
 from enum import Enum
 from dataclasses import replace
-from typing import Optional, Any, List, Type, Dict, Union
+from typing import Optional, Any, List, Type, Dict
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
@@ -126,7 +126,7 @@ class Primitive:
 
     def __eq__(self, other) -> bool:
         # Identity is equality
-        return id(self) == id(other)
+        return other is self
 
     def __hash__(self) -> bool:
         # Identity is equality
@@ -211,47 +211,60 @@ Mos Transistor Section
 
 
 class MosType(Enum):
-    """NMOS/PMOS Type Enumeration"""
+    """# MOS Type (NMOS/ PMOS) Enumeration"""
 
     NMOS = "NMOS"
     PMOS = "PMOS"
 
 
 class MosVth(Enum):
-    """MOS Threshold Enumeration"""
+    """# MOS Threshold Enumeration"""
 
     STD = "STD"
     LOW = "LOW"
     HIGH = "HIGH"
     ULTRA_LOW = "ULTRA_LOW"
     ULTRA_HIGH = "ULTRA_HIGH"
-    IO_STD = "IO_STD"
-    IO_LOW = "IO_LOW"
-    IO_HIGH = "IO_HIGH"
+    ZERO = "ZERO"
+    NATIVE = "NATIVE"
+
+
+class MosFamily(Enum):
+    """# MOS Family Enumeration"""
+
+    NONE = "NONE"
+    CORE = "CORE"
+    IO = "IO"
+    LP = "LP"
+    HP = "HP"
 
 
 @paramclass
 class MosParams:
-    """MOS Transistor Parameters"""
+    """# MOS Transistor Parameters"""
 
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    nf = Param(dtype=Optional[Scalar], desc="Number of parallel fingers", default=1)
-    mult = Param(dtype=int, desc="Number of parallel transistors", default=1)
-    tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
-    vth = Param(dtype=Any, desc="Threshold voltage specifier", default=MosVth.STD)
-    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
-    # FIXME: whether to include `model`
+    npar = Param(
+        dtype=Scalar, desc="Number of parallel fingers", default=1
+    )  # FIXME: rename
+    mult = Param(dtype=Scalar, desc="Multiplier", default=1)
 
-    def __post_init_post_parse__(self):
-        """Value Checks"""
-        if self.w <= 0:
-            raise ValueError(f"MosParams with invalid width {self.w}")
-        if self.l <= 0:
-            raise ValueError(f"MosParams with invalid length {self.l}")
-        if self.npar <= 0:
-            msg = f"MosParams with invalid number parallel fingers {self.npar}"
-            raise ValueError(msg)
+    tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
+    vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
+    family = Param(dtype=MosFamily, desc="Device family", default=MosFamily.NONE)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+
+    # def __post_init_post_parse__(self):
+    #     """Value Checks"""
+    #     # FIXME: re-introduce these, for the case in which the parameters are `Prefixed` and not `Literal` values.
+    #     if self.w <= 0:
+    #         raise ValueError(f"MosParams with invalid width {self.w}")
+    #     if self.l <= 0:
+    #         raise ValueError(f"MosParams with invalid length {self.l}")
+    #     if self.npar <= 0:
+    #         msg = f"MosParams with invalid number parallel fingers {self.npar}"
+    #         raise ValueError(msg)
 
 
 # Mos Transistor Ports, in SPICE Conventional Order
@@ -303,7 +316,7 @@ class ResistorParams:
     r = Param(dtype=Scalar, desc="Resistance (ohms)")
 
 
-_add(
+IdealResistor = _add(
     prim=Primitive(
         name="IdealResistor",
         desc="Ideal Resistor",
@@ -322,7 +335,7 @@ class PhysicalResistorParams:
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
 
-_add(
+PhysicalResistor = _add(
     prim=Primitive(
         name="PhysicalResistor",
         desc="Physical Resistor",
@@ -334,7 +347,7 @@ _add(
 )
 
 
-_add(
+ThreeTerminalResistor = _add(
     prim=Primitive(
         name="ThreeTerminalResistor",
         desc="Three Terminal Resistor",
@@ -351,7 +364,7 @@ class IdealCapacitorParams:
     c = Param(dtype=Scalar, desc="Capacitance (F)")
 
 
-_add(
+IdealCapacitor = _add(
     prim=Primitive(
         name="IdealCapacitor",
         desc="Ideal Capacitor",
@@ -365,10 +378,14 @@ _add(
 
 @paramclass
 class PhysicalCapacitorParams:
-    c = Param(dtype=Scalar, desc="Capacitance (F)")
+    c = Param(dtype=Scalar, desc="Capacitance (F)", default=None)
+    w = Param(dtype=Scalar, desc="Width in resolution units", default=None)
+    l = Param(dtype=Scalar, desc="Length in resolution units", default=None)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[str], desc="Multiplier", default=None)
 
 
-_add(
+PhysicalCapacitor = _add(
     prim=Primitive(
         name="PhysicalCapacitor",
         desc="Physical Capacitor",
@@ -380,7 +397,7 @@ _add(
 )
 
 
-_add(
+ThreeTerminalCapacitor = _add(
     prim=Primitive(
         name="ThreeTerminalCapacitor",
         desc="Three Terminal Capacitor",
@@ -397,7 +414,7 @@ class IdealInductorParams:
     l = Param(dtype=Scalar, desc="Inductance (H)")
 
 
-_add(
+IdealInductor = _add(
     prim=Primitive(
         name="IdealInductor",
         desc="Ideal Inductor",
@@ -414,7 +431,7 @@ class PhysicalInductorParams:
     l = Param(dtype=Scalar, desc="Inductance (H)")
 
 
-_add(
+PhysicalInductor = _add(
     Primitive(
         name="PhysicalInductor",
         desc="Physical Inductor",
@@ -426,7 +443,7 @@ _add(
 )
 
 
-_add(
+ThreeTerminalInductor = _add(
     prim=Primitive(
         name="ThreeTerminalInductor",
         desc="Three Terminal Inductor",
@@ -440,12 +457,12 @@ _add(
 
 @paramclass
 class PhysicalShortParams:
-    layer = Param(dtype=Optional[Union[int, str]], desc="Metal layer", default=None)
+    layer = Param(dtype=Optional[Scalar], desc="Metal layer", default=None)
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
 
 
-_add(
+PhysicalShort = _add(
     prim=Primitive(
         name="PhysicalShort",
         desc="Short-Circuit/ Net-Tie",
@@ -470,7 +487,7 @@ class DcVoltageSourceParams:
     ac = Param(dtype=Optional[Scalar], default=None, desc="AC Amplitude (V)")
 
 
-_add(
+DcVoltageSource = _add(
     prim=Primitive(
         name="DcVoltageSource",
         desc="DC Voltage Source",
@@ -499,7 +516,7 @@ class PulseVoltageSourceParams:
     width = Param(dtype=Optional[Scalar], default=None, desc="Pulse width (s)")
 
 
-_add(
+PulseVoltageSource = _add(
     prim=Primitive(
         name="PulseVoltageSource",
         desc="Pulse Voltage Source",
@@ -509,6 +526,9 @@ _add(
     ),
     aliases=["Vpu", "Vpulse"],
 )
+
+Vpu = PulseVoltageSource
+Vpulse = PulseVoltageSource
 
 
 @paramclass
@@ -522,7 +542,7 @@ class SineVoltageSourceParams:
     phase = Param(dtype=Optional[Scalar], default=None, desc="Phase at td (degrees)")
 
 
-_add(
+SineVoltageSource = _add(
     prim=Primitive(
         name="SineVoltageSource",
         desc="Sine Voltage Source",
@@ -539,7 +559,7 @@ class CurrentSourceParams:
     dc = Param(dtype=Optional[Scalar], default=0, desc="DC Value (A)")
 
 
-_add(
+CurrentSource = _add(
     Primitive(
         name="CurrentSource",
         desc="Ideal DC Current Source",
@@ -569,7 +589,7 @@ ControlledSourcePorts = [
     Port(name="cn", desc="Control, Negative"),
 ]
 
-_add(
+VoltageControlledVoltageSource = _add(
     prim=Primitive(
         name="VoltageControlledVoltageSource",
         desc="Voltage Controlled Voltage Source",
@@ -579,7 +599,7 @@ _add(
     ),
     aliases=["Vcvs", "VCVS"],
 )
-_add(
+CurrentControlledVoltageSource = _add(
     prim=Primitive(
         name="CurrentControlledVoltageSource",
         desc="Current Controlled Voltage Source",
@@ -589,7 +609,7 @@ _add(
     ),
     aliases=["Ccvs", "CCVS"],
 )
-_add(
+VoltageControlledCurrentSource = _add(
     prim=Primitive(
         name="VoltageControlledCurrentSource",
         desc="Voltage Controlled Current Source",
@@ -599,7 +619,7 @@ _add(
     ),
     aliases=["Vccs", "VCCS"],
 )
-_add(
+CurrentControlledCurrentSource = _add(
     prim=Primitive(
         name="CurrentControlledCurrentSource",
         desc="Current Controlled Current Source",
@@ -631,12 +651,14 @@ class BipolarParams:
     tp = Param(
         dtype=BipolarType, desc="Bipolar Type (NPN/ PNP)", default=BipolarType.NPN
     )
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
+    mult = Param(dtype=Optional[Scalar], desc="Multiplier", default=None)
 
     def __post_init_post_parse__(self):
         """Value Checks"""
-        if self.w <= 0:
+        if self.w is not None and self.w <= 0:
             raise ValueError(f"BipolarParams with invalid width {self.w}")
-        if self.l <= 0:
+        if self.l is not None and self.l <= 0:
             raise ValueError(f"BipolarParams with invalid length {self.l}")
 
 
@@ -678,10 +700,9 @@ class DiodeParams:
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
-    # FIXME: whether to include `model`
 
 
-_add(
+Diode = _add(
     prim=Primitive(
         name="Diode",
         desc="Diode",

@@ -4,6 +4,7 @@ Hdl21 Parameters and Param-Classes
 
 from typing import Optional, Union, Any, Dict
 import dataclasses
+import inspect
 import json
 import pickle
 import hashlib
@@ -46,12 +47,15 @@ def paramclass(cls: type) -> type:
     * Inheritance is not supported
     """
 
+    if not inspect.isclass(cls):
+        msg = f"Invalid @hdl21.paramclass `{cls}`. Apply the `@apramclass` decorator to classes."
+        raise RuntimeError(msg)
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
 
     protected_names = ["descriptions", "defaults"]
-    dunders = dict()
-    params = dict()
+    dunders = dict()  # Double-under attributes; ignored
+    params = dict()  # Parameters; used to create dataclass fields
 
     # Take a lap through the class dictionary, type-check everything and grab Params
     # FIXME: look for, and alert users about, the error writing type annotations rather than equality.
@@ -67,33 +71,44 @@ def paramclass(cls: type) -> type:
             msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
             raise RuntimeError(msg)
 
-    # Translate the Params into dataclass.field-compatible tuples
-    fields = list()
-    for name, par in params.items():
-        field = [name, par.dtype]
-        if par.default is not Default:
-            field.append(dataclasses.field(default=par.default))
-        elif par.default_factory is not Default:
+    # Set up type annotations for the dataclass-to-be
+    # There is quite a bit of invaluable content on this here:
+    # https://docs.python.org/3/howto/annotations.html
+    # Especially for Python versions before 3.10.
+    # Some of our constraints - notably the lack of inheritance, checked above -
+    # make that advice somewhat easier to follow;
+    # nonetheless we are definitely not following it in full.
+
+    # Notably, this weird bit right here is the "howto/annotations" recommendation -
+    # Look only in the class `__dict__`, and be prepared for `__annotations__` to be missing.
+    annotations = cls.__dict__.get("__annotations__", None)
+    if annotations is None:
+        annotations = cls.__annotations__ = dict()
+
+    # Translate the Params into dataclass-compatible annotations
+    for name, param in params.items():
+        annotations[name] = param.dtype
+        if param.default is not Default:
+            setattr(cls, name, param.default)
+        elif param.default_factory is not Default:
+            # FIXME: https://github.com/dan-fritchman/Hdl21/issues/30
             raise NotImplementedError(f"Param.default_factory for {cls}")
             field.append(dataclasses.field(default_factory=par.default_factory))
-        fields.append(tuple(field))
+        # Else it's a required parameter, no default, we're done with this one.
+
     # Add a few helpers to the class namespace
-    ns = dict(
-        __params__=params,
-        __paramclass__=True,
-        descriptions=classmethod(
-            lambda cls: {k: v.desc for k, v in cls.__params__.items()}
-        ),
-        defaults=classmethod(
-            lambda cls: {
-                k: v.default
-                for k, v in cls.__params__.items()
-                if v.default is not Default
-            }
-        ),
+    cls.__params__ = params
+    cls.__paramclass__ = True
+    cls.descriptions = classmethod(
+        lambda cls: {k: v.desc for k, v in cls.__params__.items()}
     )
-    # Create ourselves a (std-lib) dataclass
-    cls = dataclasses.make_dataclass(cls.__name__, fields, namespace=ns, frozen=True)
+    cls.defaults = classmethod(
+        lambda cls: {
+            k: v.default for k, v in cls.__params__.items() if v.default is not Default
+        }
+    )
+    # FIXME: https://github.com/dan-fritchman/Hdl21/issues/76
+
     # Pass this through the pydantic dataclass-decorator-function
     cls = pydantic.dataclasses.dataclass(cls, frozen=True)
     # Pydantic seems to want to add this one *after* class-creation

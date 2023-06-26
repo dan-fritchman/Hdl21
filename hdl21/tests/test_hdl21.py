@@ -1411,3 +1411,48 @@ def test_module_literals():
     assert HasLit.l1.text == "mother"
     assert HasLit.l2.text == "father"
     assert HasLit.l3.text == "child"
+
+
+def test_signal_mult():
+    """# Test using the multiplication operator to create multiple `Signal`s."""
+
+    @h.module
+    class M:
+        a, b, c = 3 * h.Signal()
+        i1, i2 = 2 * h.Input()
+        o1, o2 = 2 * h.Output()
+        io1, io2 = 2 * h.Inout()
+        p1, p2, p3 = 3 * h.Port()
+
+    assert M.a is not M.b
+    assert M.a is not M.c
+    assert M.b is not M.c
+    assert M.i1 is not M.i2
+    assert M.o1 is not M.o2
+    assert M.io1 is not M.io2
+    assert M.p1 is not M.p2
+
+    assert len(M.ports) == 9
+    assert len(M.signals) == 3
+
+
+def test_bundle_mult():
+    """# Test using the multiplication operator to create multiple `BundleInstance`s."""
+
+    @h.bundle
+    class B:
+        i, q = 2 * h.Signal()
+
+    @h.module
+    class M:
+        b1, b2 = 2 * B()  # <= here's the test!
+
+    assert isinstance(M.b1, h.BundleInstance)
+    assert isinstance(M.b2, h.BundleInstance)
+    assert M.b1 is not M.b2
+
+    h.elaborate(M)
+
+    assert len(M.signals) == 4
+    assert M.b1_i is not M.b2_i
+    assert M.b1_q is not M.b2_q
