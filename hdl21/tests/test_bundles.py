@@ -178,16 +178,15 @@ def test_bundle4():
 def test_bigger_bundles():
     """Test a slightly more elaborate Bundle-based system"""
 
+    @h.roleset
     class HostDevice(Enum):
+        # A pair of roles `Host` and `Device`, as commonly used by USB, JTAG, and similar buses.
         HOST = auto()
         DEVICE = auto()
-
-    HostDevice = h.RoleSet.from_enum(HostDevice)
 
     @h.bundle
     class Jtag:
         # Jtag Bundle
-
         roles = HostDevice
         tck, tdi, tms = h.Signals(3, src=roles.HOST, dest=roles.DEVICE)
         tdo = h.Signal(src=roles.DEVICE, dest=roles.HOST)
@@ -195,17 +194,9 @@ def test_bigger_bundles():
     @h.bundle
     class Uart:
         # Uart Bundle
-        class Roles(Enum):
-            # Uart roles are essentially peers, here named `ME` and `YOU`.
-            # Essentially everything will use the role `ME`,
-            # except for interconnect which swaps between the two.
-            ME = auto()
-            YOU = auto()
-
-        Roles = h.RoleSet.from_enum(Roles)
-
-        tx = h.Signal(src=Roles.ME, dest=Roles.YOU)
-        rx = h.Signal(src=Roles.YOU, dest=Roles.ME)
+        # Note the UART bundle is not role-based; `tx` is always output, `rx` is always input.
+        tx = h.Output()
+        rx = h.Input()
 
     @h.bundle
     class Spi:
@@ -218,7 +209,7 @@ def test_bigger_bundles():
     class Chip:
         spi = Spi(role=HostDevice.HOST, port=True)
         jtag = Jtag(role=HostDevice.DEVICE, port=True)
-        uart = Uart(role=Uart.Roles.ME, port=True)
+        uart = Uart(port=True)
         ...  # Actual internal content, which likely connects these down *many* levels of hierarchy
 
     @h.module
@@ -230,7 +221,7 @@ def test_bigger_bundles():
     class Board:
         # A typical embedded board, featuring a custom chip, SPI-connected flash, and JTAG port
         jtag = Jtag(role=HostDevice.DEVICE, port=True)
-        uart = Uart(role=Uart.Roles.ME, port=True)
+        uart = Uart(port=True)
 
         chip = Chip(jtag=jtag, uart=uart)
         flash = SpiFlash(spi=chip.spi)
@@ -239,20 +230,17 @@ def test_bigger_bundles():
     class Tester:
         # A typical test-widget with a JTAG port
         jtag = Jtag(role=HostDevice.HOST, port=True)
-        uart = Uart(role=Uart.Roles.ME, port=True)
+        uart = Uart(port=True)
 
     @h.module
     class TestSystem:
         # A system in which `Tester` can test `Board`
         jtag = Jtag()
-
-        tester = Tester(jtag=jtag)
-        board = Board(jtag=jtag)
-
-        # Connect UART, swapping `rx` and `tx`
         u0, u1 = h.Signals(2)
-        board.uart = h.AnonymousBundle(tx=u0, rx=u1)
-        tester.uart = h.AnonymousBundle(rx=u0, tx=u1)
+
+        # Connect the two, swapping UART `rx` and `tx`
+        board = Board(jtag=jtag, uart=h.bundlize(tx=u0, rx=u1))
+        tester = Tester(jtag=jtag, uart=h.bundlize(tx=u1, rx=u0))
 
     assert isinstance(TestSystem.jtag, h.BundleInstance)
     assert isinstance(TestSystem.tester, h.Instance)
