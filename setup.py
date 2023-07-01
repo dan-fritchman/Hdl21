@@ -10,10 +10,10 @@ https://github.com/pypa/sampleproject/blob/main/setup.py
 from setuptools import setup, find_packages
 import pathlib
 
-here = pathlib.Path(__file__).parent.resolve()
-
 # Get the long description from the README file
-long_description = (here / "readme.md").read_text(encoding="utf-8")
+here = pathlib.Path(__file__).parent.resolve()
+readme = here / "readme.md"
+long_description = "" if not readme.exists() else readme.read_text(encoding="utf-8")
 
 _VLSIR_VERSION = "4.0.dev0"
 
@@ -27,11 +27,13 @@ setup(
     author="Dan Fritchman",
     author_email="dan@fritch.mn",
     packages=find_packages(),
-    python_requires=">=3.7, <4",
+    python_requires=">=3.7, <3.12",
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
-        "pydantic==1.9.2",  # Note this is a very specific version, on purpose!
+        # Our primary external dependency is pydantic.
+        # Tested with everything in the 1.9-1.10 range.
+        "pydantic>=1.9.0,<1.11",
     ],
     extras_require={
         "dev": [

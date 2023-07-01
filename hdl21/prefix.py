@@ -17,7 +17,7 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 from enum import Enum
 from decimal import Decimal
-from typing import Optional, Any, Union
+from typing import Optional, Any, Union, Tuple
 from pydantic import BaseModel, ValidationError, Field
 from pydantic.dataclasses import dataclass
 
@@ -177,17 +177,7 @@ class Prefixed(BaseModel):
         While usable elsewhere, `validate` is primarily intended for use in type-validated
         dataclass trees, such as those generated in `paramclass`es."""
 
-        if isinstance(v, Prefixed):
-            return v  # Valid as-is, return it.
-        if isinstance(v, Decimal):
-            return Prefixed(number=v)  # Also pretty much done
-        # Convert the remaining convertible types to `Decimal` inline
-        if isinstance(v, (int, float)):
-            # Note that, like `pydantic`, we convert numeric types to `str` before passing to `Decimal`.
-            return Prefixed(number=Decimal(str(v)))
-        if isinstance(v, str):
-            return Prefixed(number=Decimal(v))
-        raise ValidationError(f"Cannot convert {v} to Prefixed number")
+        return to_prefixed(v)
 
     @classmethod
     def __get_validators__(cls):
@@ -293,6 +283,23 @@ class Prefixed(BaseModel):
 ToPrefixed = Union[int, float, str, Decimal]
 
 
+def to_prefixed(v: Union[Prefixed, "ToPrefixed"]) -> Prefixed:
+    """Convert any convertible type to a `Prefixed` number."""
+
+    if isinstance(v, Prefixed):
+        return v  # Valid as-is, return it.
+    if isinstance(v, Decimal):
+        return Prefixed(number=v)  # Also pretty much done
+    # Convert the remaining convertible types to `Decimal` inline
+    if isinstance(v, (int, float)):
+        # Note that, like `pydantic`, we convert numeric types to `str` before passing to `Decimal`.
+        return Prefixed(number=Decimal(str(v)))
+    if isinstance(v, str):
+        return Prefixed(number=Decimal(v))
+
+    raise RuntimeError(f"Cannot convert {v} to Prefixed number")
+
+
 def _add(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     """`Prefixed` Addition"""
     if lhs.prefix == rhs.prefix:
@@ -315,9 +322,17 @@ def _subtract(lhs: Prefixed, rhs: Prefixed) -> Prefixed:
     return Prefixed.new(newnum, smaller)
 
 
-def _scale_to_smaller(lhs: Prefixed, rhs: Prefixed):
-    smaller = lhs.prefix if lhs.prefix.value < rhs.prefix.value else rhs.prefix
-    return lhs.scale(smaller), rhs.scale(smaller)
+def _scale_to_smaller(
+    me: Prefixed, other: Union[Prefixed, ToPrefixed]
+) -> Tuple[Prefixed, Prefixed]:
+    """# Scale two `Prefixed` numbers to the smaller of the two prefixes.
+    The `me` argument is always a `Prefixed`, generally due to being the `self` in a `Prefixed` mthod.
+    The `other` argument is commonly another compatible/ convertible type,
+    and is converted before scaling."""
+
+    other = to_prefixed(other)
+    smaller = me.prefix if me.prefix.value < other.prefix.value else other.prefix
+    return me.scale(smaller), other.scale(smaller)
 
 
 # Common prefixes as single-character identifiers, and exposed in the module namespace.

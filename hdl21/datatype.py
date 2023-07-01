@@ -27,8 +27,9 @@ Notes:
   * Notable exceptions include *union types* thereof, which do not have the necessary fields/ methods. 
 """
 
+from pydantic import Extra
 from pydantic.dataclasses import dataclass
-from typing import TypeVar, Type
+from typing import TypeVar, Type, Any
 
 # The list of defined datatypes
 datatypes = []
@@ -36,12 +37,16 @@ datatypes = []
 T = TypeVar("T")
 
 
+class Config:  # Pydantic Model Config
+    allow_extra = Extra.forbid
+
+
 def datatype(cls: Type[T]) -> Type[T]:
     """Register a class as a datatype."""
 
     # Convert `cls` to a `pydantic.dataclasses.dataclass`,
     # and add it to the list of datatypes
-    cls = dataclass(cls)
+    cls = dataclass(cls, config=Config)
     datatypes.append(cls)
     return cls
 

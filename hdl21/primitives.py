@@ -96,7 +96,7 @@ class Primitive:
     name: str  # Primitive Name
     desc: str  # String Description
     port_list: List[Signal]  # Ordered Port List
-    paramtype: Type  # Class/ Type of valid Parameters
+    paramtype: Type[object]  # Class/ Type of valid Parameters
     primtype: PrimitiveType  # Ideal vs Physical Primitive-Type
 
     def __post_init_post_parse__(self):
@@ -655,9 +655,9 @@ class BipolarParams:
 
     def __post_init_post_parse__(self):
         """Value Checks"""
-        if self.w <= 0:
+        if self.w is not None and self.w <= 0:
             raise ValueError(f"BipolarParams with invalid width {self.w}")
-        if self.l <= 0:
+        if self.l is not None and self.l <= 0:
             raise ValueError(f"BipolarParams with invalid length {self.l}")
 
 

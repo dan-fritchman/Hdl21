@@ -4,14 +4,15 @@
 Structured connection objects, instances thereof, and associated utilities.
 """
 
+# Std-Lib Imports
 import warnings
 from copy import copy
 from enum import Enum, EnumMeta
 from typing import Optional, Union, Any, Dict, Set, List, ClassVar
 
 # Local Imports
+from . import attrmagic
 from .role import Role, RoleSet
-from .attrmagic import init
 from .connect import connectable, is_connectable
 from .sliceable import sliceable
 from .concat import concatable
@@ -65,7 +66,8 @@ def has_getattr_bundle_refs(obj: Any) -> bool:
 
 @getattr_bundle_refs
 @connectable
-@init
+@attrmagic.only_set_known_attrs
+@attrmagic.init
 class BundleInstance:
     """# Instance of a `Bundle`
     Generally in a `Module` or another `Bundle`"""
@@ -115,6 +117,8 @@ class BundleInstance:
     def _resolved(self) -> "Bundle":
         return self.of
 
+    """ Special Methods """
+
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
 
@@ -144,7 +148,7 @@ def assert_bundle_attr(b: "Bundle", val: Any) -> None:
 _banned = ["signals", "bundles", "namespace"]
 
 
-@init
+@attrmagic.init
 class Bundle:
     """
     # hdl21 Bundle
@@ -255,34 +259,6 @@ class Bundle:
         val.name = key
         _add(bundle=self, val=val)
         return None
-
-        if not getattr(self, "_initialized", False) or key.startswith("_"):
-            return super().__setattr__(key, val)
-
-        # Protected attrs - the internal dicts
-        banned = ["signals", "bundles", "namespace"]
-        if key in banned:
-            msg = f"Error attempting to over-write protected attribute {key} of Bundle {self}"
-            raise RuntimeError(msg)
-        # Special case(s)
-        if key == "name":
-            return super().__setattr__(key, val)
-        if key == "roles":
-            if not isinstance(val, EnumMeta):
-                raise TypeError(f"Bundle roles must be an `enum.Enum`")
-            return super().__setattr__(key, val)
-
-        # Type-based organization
-        if isinstance(val, Signal):
-            val.name = key
-            self.namespace[key] = val
-            self.signals[key] = val
-        elif isinstance(val, BundleInstance):
-            val.name = key
-            self.bundles[key] = val
-            self.namespace[key] = val
-        else:
-            raise TypeError(f"Invalid Bundle attribute {val} for {self}")
 
     def __getattr__(self, key):
         ns = self.__getattribute__("namespace")
@@ -419,6 +395,8 @@ def bundle(cls: type) -> Bundle:
     return bundle
 
 
+@attrmagic.no_setattr
+@attrmagic.init
 @connectable
 class AnonymousBundle:
     """# Anonymous Connection Bundle
@@ -435,6 +413,8 @@ class AnonymousBundle:
         # And add each keyword-arg
         for key, val in kwargs.items():
             self.add(key, val)
+
+        self._initialized = True
 
     def add(self, name: str, val: BundleAttr) -> BundleAttr:
         """Add attribute `val` to our namespace."""
@@ -463,7 +443,8 @@ def bundlize(**kwargs) -> AnonymousBundle:
 @concatable
 @sliceable
 @connectable
-@init
+@attrmagic.only_set_known_attrs
+@attrmagic.init
 class BundleRef:
     """Reference into a Bundle Instance"""
 
@@ -510,7 +491,7 @@ class BundleRef:
             return self.parent.path() + [self.attrname]
         if isinstance(self.parent, BundleInstance):
             return [self.attrname]
-        raise TypeError
+        raise TypeError(f"Invalid parent {self.parent} for {self}")
 
     def root(self) -> "BundleInstance":
         """Get the root `BundleInstance` of this potentially nested reference."""
@@ -518,7 +499,7 @@ class BundleRef:
             return self.parent.root()
         if isinstance(self.parent, BundleInstance):
             return self.parent
-        raise TypeError
+        raise TypeError(f"Invalid parent {self.parent} for {self}")
 
     def __repr__(self):
         return f"{self.__class__.__name__}(root={self.root()} path={self.path()})"

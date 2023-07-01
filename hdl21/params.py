@@ -2,19 +2,21 @@
 Hdl21 Parameters and Param-Classes 
 """
 
-from typing import Optional, Union, Any, Dict
-import dataclasses
-import json
-import pickle
-import hashlib
+# Std-Lib Imports
+import dataclasses, inspect, json, hashlib
+from typing import Optional, Any, Type, TypeVar, Dict
+
+# PyPi Imports
 import pydantic
 
 # Local Imports
 from .default import Default
 
+T = TypeVar("T")
 
-def paramclass(cls: type) -> type:
-    """Parameter-Class Creation Decorator
+
+def paramclass(cls: Type[T]) -> Type[T]:
+    """# Parameter-Class Creation Decorator
 
     Transforms a class-definition full of Params into a type-validated dataclass,
     with methods for default value and description-dictionary retrieval.
@@ -23,10 +25,12 @@ def paramclass(cls: type) -> type:
     They are defined through a syntax similar to `@dataclass`, but using the `Param`
     constructor, and assignment rather than type annotation.
 
+    ```python
     @paramclass
     class C:
         reqd = Param(dtype=int, desc="A Required Parameter")
         optn = Param(dtype=int, desc="An Optional Parameter", default=11)
+    ```
 
     `Param`s each have required datatype (`dtype`) and description (`desc`) fields,
     and optional default values.
@@ -46,12 +50,15 @@ def paramclass(cls: type) -> type:
     * Inheritance is not supported
     """
 
+    if not inspect.isclass(cls):
+        msg = f"Invalid @hdl21.paramclass `{cls}`. Apply the `@apramclass` decorator to classes."
+        raise RuntimeError(msg)
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")
 
     protected_names = ["descriptions", "defaults"]
-    dunders = dict()
-    params = dict()
+    dunders = dict()  # Double-under attributes; ignored
+    params = dict()  # Parameters; used to create dataclass fields
 
     # Take a lap through the class dictionary, type-check everything and grab Params
     # FIXME: look for, and alert users about, the error writing type annotations rather than equality.
@@ -67,35 +74,50 @@ def paramclass(cls: type) -> type:
             msg = f"Invalid class-attribute {key} in paramclass {cls}. All attributes should be `hdl21.Param`s."
             raise RuntimeError(msg)
 
-    # Translate the Params into dataclass.field-compatible tuples
-    fields = list()
-    for name, par in params.items():
-        field = [name, par.dtype]
-        if par.default is not Default:
-            field.append(dataclasses.field(default=par.default))
-        elif par.default_factory is not Default:
-            raise NotImplementedError(f"Param.default_factory for {cls}")
-            field.append(dataclasses.field(default_factory=par.default_factory))
-        fields.append(tuple(field))
+    # Set up type annotations for the dataclass-to-be
+    # There is quite a bit of invaluable content on this here:
+    # https://docs.python.org/3/howto/annotations.html
+    # Especially for Python versions before 3.10.
+    # Some of our constraints - notably the lack of inheritance, checked above -
+    # make that advice somewhat easier to follow;
+    # nonetheless we are definitely not following it in full.
+
+    # Notably, this weird bit right here is the "howto/annotations" recommendation -
+    # Look only in the class `__dict__`, and be prepared for `__annotations__` to be missing.
+    annotations = cls.__dict__.get("__annotations__", None)
+    if annotations is None:
+        annotations = cls.__annotations__ = dict()
+
+    # Translate the Params into dataclass-compatible annotations
+    for name, param in params.items():
+        # Set the type-annotation
+        annotations[name] = param.dtype
+
+        # Handle the default value, which is the class-attribute-value on dataclasses
+        if param.default is not Default and param.default_factory is not Default:
+            msg = f"Invalid Param {param} in paramclass {cls}. Only one of `default` or `default_factory` may be specified."
+            raise RuntimeError(msg)
+
+        elif param.default is not Default:
+            setattr(cls, name, param.default)
+
+        elif param.default_factory is not Default:
+            field = dataclasses.field(default_factory=param.default_factory)
+            setattr(cls, name, field)
+
+        else:  # Otherwise there is no default value, this is a required parameter.
+            # Remove the `Param` object from the class namespace
+            delattr(cls, name)
+
     # Add a few helpers to the class namespace
-    ns = dict(
-        __params__=params,
-        __paramclass__=True,
-        descriptions=classmethod(
-            lambda cls: {k: v.desc for k, v in cls.__params__.items()}
-        ),
-        defaults=classmethod(
-            lambda cls: {
-                k: v.default
-                for k, v in cls.__params__.items()
-                if v.default is not Default
-            }
-        ),
-    )
-    # Create ourselves a (std-lib) dataclass
-    cls = dataclasses.make_dataclass(cls.__name__, fields, namespace=ns, frozen=True)
+    cls.__params__ = params
+    cls.__paramclass__ = True
+    cls.descriptions = classmethod(descriptions)
+    cls.defaults = classmethod(defaults)
+
     # Pass this through the pydantic dataclass-decorator-function
-    cls = pydantic.dataclasses.dataclass(cls, frozen=True)
+    cls = pydantic.dataclasses.dataclass(cls, config=Config, frozen=True)
+
     # Pydantic seems to want to add this one *after* class-creation
     def _brick_subclassing_(cls, *_, **__):
         msg = f"Error: attempt to sub-class `hdl21.paramclass` {cls} is not supported"
@@ -106,14 +128,40 @@ def paramclass(cls: type) -> type:
     return cls
 
 
+def descriptions(cls: Type) -> Dict[str, str]:
+    """# Get a dictionary of parameter names to descriptions for `cls`
+    Available both as a free function and as a `classmethod` of each `paramclass`.
+    Raises a `RuntimeError` if `cls` is not a param-class."""
+
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+
+    return {k: v.desc for k, v in cls.__params__.items()}
+
+
+def defaults(cls: Type) -> Dict[str, Any]:
+    """# Get a dictionary of parameter names to default values for param-class `cls`.
+    Available both as a free function and as a `classmethod` of each `paramclass`.
+    Raises a `RuntimeError` if `cls` is not a param-class."""
+
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+
+    return {k: v.default for k, v in cls.__params__.items() if v.default is not Default}
+
+
 def isparamclass(cls: type) -> bool:
     """Boolean indication of whether `cls` has been `@paramclass`-decorated"""
     return getattr(cls, "__paramclass__", False)
 
 
-@pydantic.dataclasses.dataclass
+class Config:  # Pydantic Model Config
+    allow_extra = pydantic.Extra.forbid
+
+
+@pydantic.dataclasses.dataclass(config=Config, frozen=True)
 class Param:
-    """Parameter Declaration"""
+    """# Parameter Declaration"""
 
     dtype: Any  # Datatype. Required
     desc: str  # Description. Required

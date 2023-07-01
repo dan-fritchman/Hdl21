@@ -17,6 +17,7 @@ from ..instance import Instance
 from ..signal import Signal, PortDir, Visibility
 from ..slice import Slice
 from ..concat import Concat
+from ..literal import Literal
 from .. import primitives
 from ..primitives import Primitive, Vpulse
 
@@ -29,7 +30,8 @@ def from_proto(pkg: vckt.Package) -> SimpleNamespace:
 
 class ProtoImporter:
     """Protobuf Package Importer.
-    Collects all `Modules` defined in Protobuf-sourced primary-argument `pkg` into a Python `types.SimpleNamespace`."""
+    Collects all `Modules` defined in Protobuf-sourced primary-argument `pkg` into a Python `types.SimpleNamespace`.
+    """
 
     def __init__(self, pkg: vckt.Package):
         self.pkg = pkg
@@ -110,7 +112,7 @@ class ProtoImporter:
         for sig in import_ports_and_signals(pmod):
             module.add(sig)
 
-        # Lap through instances, connecting them, creating internal Signals if necessary (bleh)
+        # Lap through instances & connect them
         for pinst in pmod.instances:
             inst = self.import_instance(pinst)
             module.add(inst)
@@ -124,6 +126,11 @@ class ProtoImporter:
                 conn = import_connection_target(pconn.target, module)
                 # And connect it to the Instance
                 inst.connect(pconn.portname, conn)
+
+        # Import any literal content
+        # FIXME: https://github.com/dan-fritchman/Hdl21/issues/149
+        # for plit in pmod.literals:
+        #     module.literals.append(Literal(text=plit))
 
         # Add the Module to our cache and return-namespace, and return it
         self.modules[pmod.name] = module
@@ -187,7 +194,8 @@ def import_ports_and_signals(
     pmod: Union[vckt.Module, vckt.ExternalModule]
 ) -> List[Signal]:
     """Import all Ports and Signals from Proto-Module `pmod`.
-    Returns them as a single list, which can serve as arguments to `Module.add` or `ExternalModule.port_list`."""
+    Returns them as a single list, which can serve as arguments to `Module.add` or `ExternalModule.port_list`.
+    """
 
     # Keep a dictionary from name: Signal imported
     signals: Dict[str, Signal] = {}
