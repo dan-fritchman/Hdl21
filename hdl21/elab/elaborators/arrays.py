@@ -46,45 +46,45 @@ class ArrayFlattener(Elaborator):
                 inst = module.add(Instance(of=target, name=name))
                 new_insts.append(inst)
 
-            # And connect them
-            for portname, conn in array.conns.items():
-                if isinstance(conn, BundleInstance):
-                    # All new instances get the same BundleInstance
-                    for inst in new_insts:
-                        inst.connect(portname, conn)
-                elif isinstance(conn, (Signal, Slice, Concat)):
-                    # Get the target-module port, particularly for its width
-                    port = target.ports.get(portname, None)
-                    if port is None:
-                        msg = f"Connection to invalid Port `{portname}` on InstanceArray `{array}` in Module `{module.name}`"
-                        self.fail(msg)
-                    if not isinstance(port, Signal):
-                        msg = f"Invalid Port `{portname}` ({port}) on InstanceArray `{array}` in Module `{module.name}`"
-                        self.fail(msg)
+            # And connect them, matching Instance list to
+            for idx, instance in enumerate(array.instances):
+                for portname, conn in instance.conns.items():
+                    if isinstance(conn, BundleInstance):
+                        # All new instances get the same BundleInstance
+                        new_insts[idx].connect(portname, conn)
+                    elif isinstance(conn, (Signal, Slice, Concat)):
+                        # Get the target-module port, particularly for its width
+                        port = target.ports.get(portname, None)
+                        if port is None:
+                            msg = f"Connection to invalid Port `{portname}` on InstanceArray `{array}` in Module `{module.name}`"
+                            self.fail(msg)
+                        if not isinstance(port, Signal):
+                            msg = f"Invalid Port `{portname}` ({port}) on InstanceArray `{array}` in Module `{module.name}`"
+                            self.fail(msg)
 
-                    if port.width == conn.width:
-                        # All new instances get the same signal
-                        for inst in new_insts:
-                            inst.connect(portname, conn)
-                    elif port.width * array.n == conn.width:
-                        # Each new instance gets a slice, equal to its own width
-                        for k, inst in enumerate(new_insts):
+                        if port.width == conn.width:
+                            # All new instances get the same signal
+                            new_insts[idx].connect(portname, conn)
+                        elif port.width * array.n == conn.width:
+                            # Each new instance gets a slice, equal to its own width
                             slize = conn[k * port.width : (k + 1) * port.width]
                             if slize.width != port.width:
                                 msg = f"Width mismatch connecting {slize} to {port}"
                                 self.fail(msg)
-                            inst.connect(portname, slize)
-                    else:  # All other width-values are invalid
-                        msg = f"Invalid connection of {conn} of width {conn.width} to port {portname} on Array {array.name} of width {port.width}. "
-                        msg += f"Valid widths are either {port.width} (broadcasting across instances) and {port.width * array.n} (individually wiring to each)."
+                            new_insts[idx].connect(portname, slize)
+                        else:  # All other width-values are invalid
+                            msg = f"Invalid connection of {conn} of width {conn.width} to port {portname} on Array {array.name} of width {port.width}. "
+                            msg += f"Valid widths are either {port.width} (broadcasting across instances) and {port.width * array.n} (individually wiring to each)."
+                            self.fail(msg)
+                    elif isinstance(conn, PortRef):
+                        msg = f"Error elaborating {array} in {module}. "
+                        msg += (
+                            f"Connection {conn} has not been resolved to a `Signal`. "
+                        )
+                        raise RuntimeError
+                    else:
+                        msg = f"Invalid connection to {conn} in InstanceArray {array}"
                         self.fail(msg)
-                elif isinstance(conn, PortRef):
-                    msg = f"Error elaborating {array} in {module}. "
-                    msg += f"Connection {conn} has not been resolved to a `Signal`. "
-                    raise RuntimeError
-                else:
-                    msg = f"Invalid connection to {conn} in InstanceArray {array}"
-                    self.fail(msg)
             self.stack.pop()
 
         return module

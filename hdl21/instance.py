@@ -5,7 +5,7 @@ Create instances of Modules, Generators, and Primitives in a hierarchy
 """
 
 # Std-Lib Imports
-from typing import Optional, Any, Dict, Type, TypeVar
+from typing import Optional, Any, Dict, Type, TypeVar, List, Union
 from dataclasses import dataclass, field
 from textwrap import dedent
 
@@ -234,23 +234,58 @@ class InstanceArray(_Instance):
         "connect",
         "disconnect",
         "replace",
+        "instances",
+        "n",
     ]
 
     def __init__(
-        self,
-        of: "Instantiable",
-        n: int,
-        name: Optional[str] = None,
+        self, of: "Instantiable", n: int, name: Optional[str] = None, *_, **__
     ):
-        super().__init__(of=of, name=name)
-        self.n = n
+        super().__init__(of=of, name=name, *_, **__)
+        self.n: int = n
+        self.instances: List["Instantiable"] = [
+            Instance(of=of, name=f"{name}_{i}") for i in range(n)
+        ]
         self._initialized = True
 
-    def __getitem__(self, idx: int):
-        return RuntimeError(f"Illegal indexing into Array {self}")
+    def __call__(self, **kwargs) -> "_Instance":
+        """Connect-by-call"""
+        for key, val in kwargs.items():
+            self.connect(key, val)
+            for inst in self.instances:
+                inst.connect(key, val)
+        # Don't forget to retain ourselves at the call-site!
+        return self
 
-    def __setitem__(self, _idx: Any, _val: Any):
-        return RuntimeError(f"Illegal indexing into Array {self}")
+    def __setattr__(self, key: str, val: Any) -> None:
+        """Connect-by-setattr, overridden for 'instances' attribute and for broadcasting connections"""
+        if not self.__getattribute__("_initialized") or key.startswith("_"):
+            # Bootstrapping phase: do regular getattrs to get started
+            return object.__setattr__(self, key, val)
+        elif key in self._specialcases:
+            return object.__setattr__(self, key, val)
+        else:
+            self.conns[key] = val
+            for instance in self.instances:
+                instance.connect(key, val)
+
+    def __getitem__(self, index):
+        return self.instances[index]
+
+    def __setitem__(self, index: Union[int, slice], value: "Instantiable"):
+
+        if not isinstance(index, Union[int, slice]):
+            raise TypeError
+        if not isinstance(value, "Instantiable"):
+            raise TypeError("Value is instance of f{type(a)}, must be `Instantiable`")
+
+        # Make allocation sliceable
+        if isinstance(index, slice):
+            for i in range(*index.indices(index.stop)):
+                self.instances[i] = value
+        # The ordinary case
+        elif isinstance(index, int):
+            self.instances[index] = value
 
 
 """ 

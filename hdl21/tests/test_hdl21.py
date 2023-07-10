@@ -974,7 +974,7 @@ def test_instance_array_portrefs():
     m.a, m.b = h.Signals(2, width=4)
 
     # Create an InstanceArray
-    m.inva = 4 * Inv()(i=m.a)
+    m.inva = 4 * Inv()(i=m.a, z=m.b)
     # And another which connects to it via PortRef
     m.invb = 4 * Inv()(i=m.inva.z, z=m.b)
 
@@ -982,6 +982,44 @@ def test_instance_array_portrefs():
 
     assert len(m.instances) == 8
     assert len(m.instarrays) == 0
+
+
+def test_instance_array_indexing():
+    # Create a module to use in the instance array
+    M = h.Module()
+
+    # Create an instance array
+    ia = h.InstanceArray(of=M, n=3, name="my_array")
+
+    # Test that the instance array has the correct number of instances
+    assert len(ia.instances) == 3
+
+    # Test that each instance in the array has a unique name
+    assert ia.instances[0].name == "my_array_0"
+    assert ia.instances[1].name == "my_array_1"
+    assert ia.instances[2].name == "my_array_2"
+
+    # Test setting a connection on the instance array
+    s = h.Signal()
+    ia.s = s
+
+    # Test that the connection was broadcast to all instances in the array
+    assert ia.instances[0].conns["s"] == s
+    assert ia.instances[1].conns["s"] == s
+    assert ia.instances[2].conns["s"] == s
+
+    # Test getting a connection from the instance array
+    assert ia.conns["s"] == s
+
+    # Test setting a connection on an individual instance in the array
+    s1 = h.Signal(name="New Signal")
+    ia[0].s = s1
+
+    # Test that the connection was applied to the correct instance
+    assert ia.instances[0].conns["s"] == s1
+    # And not inherited by the array as a whole
+    assert ia.instances[1].conns["s"] == s
+    assert ia.conns["s"] == s
 
 
 def test_array_bundle():
