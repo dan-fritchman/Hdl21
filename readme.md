@@ -685,11 +685,13 @@ Hdl21 PDKs are Python packages which generally include two primary elements:
 - (a) A library `ExternalModules` describing the technology's cells, and
 - (b) A `compile` conversion-method which transforms a hierarchical Hdl21 tree, mapping generic `hdl21.Primitives` into the tech-specific `ExternalModules`.
 
-Since PDKs are python packages, using them is as simple as importing them. Hdl21 includes two built-in PDKs: the academic predicitive [ASAP7](https://pypi.org/project/asap7-hdl21/) technology, and the open-source [SkyWater 130nm](https://pypi.org/project/sky130-hdl21/) technology.
+Since PDKs are python packages, using them is as simple as importing them. Hdl21 includes three built-in PDKs: the academic predicitive [ASAP7](https://pypi.org/project/asap7-hdl21/) technology, and the open-source [SkyWater 130nm](https://pypi.org/project/sky130-hdl21/) and [Global Foundries 180nm MCU](https://pypi.org/project/gf180-hdl21) technologies.
+
+All technology modules can be found in the `pdks` file of this repository, and each contain much more detail documentation on their specific installation and use.
 
 ```python
 import hdl21 as h
-import sky130
+import sky130_hdl21
 
 @h.module
 class SkyInv:
@@ -698,9 +700,11 @@ class SkyInv:
     # Create some IO
     i, o, VDD, VSS = h.Ports(4)
 
+    p = sky130_hdl21.Sky130MosParams(w=1,l=1)
+
     # And create some transistors!
-    ps = sky130.modules.sky130_fd_pr__pfet_01v8(w=1, l=1)(d=o, g=i, s=VDD, b=VDD)
-    ns = sky130.modules.sky130_fd_pr__nfet_01v8(w=1, l=1)(d=o, g=i, s=VSS, b=VSS)
+    ps = sky130_hdl21.primtives.PMOS_1p8V_STD(p)(d=o, g=i, s=VDD, b=VDD)
+    ns = sky130_hdl21.primtives.NMOS_1p8V_STD(p)(d=o, g=i, s=VSS, b=VSS)
 ```
 
 Process-portable modules instead use Hdl21 `Primitives`, which can be compiled to a target technology:
@@ -726,9 +730,9 @@ Compiling the generic devices to a target PDK then just requires a pass through 
 
 ```python
 import hdl21 as h
-import sky130
+import sky130_hdl21
 
-sky130.compile(Inv) # Produces the same content as `SkyInv` above
+sky130_hdl21.compile(Inv) # Produces the same content as `SkyInv` above
 ```
 
 Hdl21 includes an `hdl21.pdk` subpackage which tracks the available in-memory PDKs. If there is a single PDK available, it need not be explicitly imported: `hdl21.pdk.compile()` will use it by default.
@@ -773,7 +777,7 @@ Hdl21 exposes each of these corner-types as Python enumerations and combinations
 
 ### PDK Installations and Sites
 
-Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `_nfet` and `_pfet` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type.
+Much of the content of a typical process technology - even the subset that Hdl21 cares about - is not defined in Python. Transistor models and SPICE "library" files, such as those defining the `PMOS` and `NMOS` above, are common examples pertinent to Hdl21. Tech-files, layout libraries, and the like are similarly necessary for related pieces of EDA software. These PDK contents are commonly stored in a technology-specific arrangement of interdependent files. Hdl21 PDK packages structure this external content as a `PdkInstallation` type.
 
 Each `PdkInstallation` is a runtime type-checked Python `dataclass` which extends the base `hdl21.pdk.PdkInstallation` type. Installations are free to define arbitrary fields and methods, which will be type-validated for each `Install` instance. Example:
 
@@ -829,11 +833,11 @@ These "site packages" are named `sitepdks` by convention. They can often be shar
 # The built-in sample `sitepdks` package
 from pathlib import Path
 
-import sky130
-sky130.install = sky130.Install(model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice")
+import sky130_hdl21
+sky130_hdl21.install = sky130_hdl21.Install(model_lib=Path("pdks") / "sky130" / ... / "sky130.lib.spice")
 
-import asap7
-asap7.install = asap7.Install(model_lib=Path("pdks") / "asap7" / ... / "TT.pm")
+import asap7_hdl21
+asap7_hdl21.install = asap7_hdl21.Install(model_lib=Path("pdks") / "asap7" / ... / "TT.pm")
 ```
 
 "Site-portable" code requiring external PDK content can then refer to the PDK package's `install`, without being directly aware of its contents.
