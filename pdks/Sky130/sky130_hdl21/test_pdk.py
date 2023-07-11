@@ -7,7 +7,7 @@ Unit Tests
 from io import StringIO
 import hdl21 as h
 from . import pdk_logic as sky130
-from .pdk_logic import modules as s
+import sky130_hdl21.primitives as s
 from hdl21.prefix import µ
 from hdl21.primitives import *
 

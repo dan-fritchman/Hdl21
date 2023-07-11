@@ -18,21 +18,15 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 _VLSIR_VERSION = "4.0.dev0"
 
 setup(
-    name="sitepdks",
-    version=_VLSIR_VERSION,
-    description="PDK Installations on THIS Machine",
+    name="gf180-hdl21",
+    version=_VLSIR_VERSION,  # Maybe this should change
+    description="Global Foundries 180nm MCU PDK Package for Hdl21",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="",
-    author="Dan Fritchman",
-    author_email="dan@fritch.mn",
+    url="https://github.com/dan-fritchman/Hdl21",
+    author="Dan Fritchman, Thomas Pluck",
     packages=find_packages(),
     python_requires=">=3.7",
-    install_requires=[
-        f"sky130-hdl21=={_VLSIR_VERSION}",
-        # f"asap7-hdl21=={_VLSIR_VERSION}",
-    ],
-    extras_require={
-        "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==22.6", "twine"]
-    },
+    install_requires=[f"hdl21=={_VLSIR_VERSION}"],
+    extras_require={"dev": ["pytest==7.1", "coverage", "pytest-cov", "twine"]},
 )

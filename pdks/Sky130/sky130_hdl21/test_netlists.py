@@ -13,7 +13,8 @@ from io import StringIO
 
 import hdl21 as h
 from hdl21.prefix import µ
-import sky130  # No weird or illegal parameters...
+from . import pdk_logic as sky130  # No weird or illegal parameters...
+import sky130_hdl21
 
 
 def test_xtor_netlists():
@@ -193,19 +194,19 @@ def test_pnp_netlists():
 
 def test_npn_netlists():
 
-    p = sky130.Sky130BipolarParams()
+    p = sky130_hdl21.Sky130BipolarParams()
 
     @h.module
     class Bipolar1:
 
         w, x, y, z = 4 * h.Signal()
-        genBipolar = sky130.modules.NPN_5p0V_1x2(p)(c=w, b=x, e=y, s=z)
+        genBipolar = sky130_hdl21.primitives.NPN_5p0V_1x2(p)(c=w, b=x, e=y, s=z)
 
     @h.module
     class Bipolar2:
 
         w, x, y, z = 4 * h.Signal()
-        genBipolar = sky130.modules.NPN_5p0V_1x1(p)(c=w, b=x, e=y, s=z)
+        genBipolar = sky130_hdl21.primitives.NPN_5p0V_1x1(p)(c=w, b=x, e=y, s=z)
 
     s = StringIO()
     h.netlist(Bipolar1, dest=s, fmt="spice")
