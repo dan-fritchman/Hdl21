@@ -19,7 +19,7 @@ pip install gf180-hdl21
 And then import the package as `gf180-hdl21`: 
 
 ```python
-import gf180_hdl21_hdl21
+import gf180_hdl21
 ```
 
 ## Development 
@@ -94,7 +94,7 @@ All Gf180 `ExternalModules` are stored in the `modules` namespace that makes up 
 
 ```python
 import gf180_hdl21
-from gf180_hdl21_hdl21.primitives as g
+from gf180_hdl21.primitives as g
 
 p = gf180_hdl21.GF180MosParams(w=3*µ, l=3*µ)
 
@@ -124,7 +124,7 @@ Or can be referenced directly using the component name listed below from the `pr
 NOTE: If any dimensions are not supplied to the params object, the PDK module will assume the minimal viable dimension of the component that you choose.
 ```python
 from hdl21.prefix import µ
-from gf180_hdl21 import GF180_hdl21MosParams as p
+from gf180_hdl21 import GF180MosParams as p
 import gf180_hdl21.primitives as g
 
 a = g.NFET_3p3V(p(w=0.2*µ,nf=1))
@@ -147,7 +147,7 @@ a = g.NFET_3p3V(p(w=0.2*µ,nf=1))
 Resistors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
 ```python
 from hdl21.prefix import µ
-from gf180_hdl21 import GF180_hdl21ResParams as p
+from gf180_hdl21 import GF180ResParams as p
 from gf180_hdl21.primitives import NPLUS_U
 
 a = NPLUS_U(p(r_length=0.3 * µ, r_width=0.18 * µ))
@@ -182,7 +182,7 @@ a = NPLUS_U(p(r_length=0.3 * µ, r_width=0.18 * µ))
 Diodes are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
 ```python
 from hdl21.prefix import µ, p
-from gf180_hdl21 import GF180_hdl21DiodeParams as par
+from gf180_hdl21 import GF180DiodeParams as par
 from gf180_hdl21.primitives import NDSPS_3p3V
 
 a = NDSPS_3p3V(par(area=0.3 * p, pj=1.2 * µ))
@@ -205,7 +205,7 @@ a = NDSPS_3p3V(par(area=0.3 * p, pj=1.2 * µ))
 BJTs are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
 ```python
 from hdl21.prefix import µ, p
-from gf180_hdl21 import GF180_hdl21BipolarParams as par
+from gf180_hdl21 import GF180BipolarParams as par
 from gf180_hdl21.primitives import PNP_10p0x0p42
 
 a = PNP_10p0x0p42(par(m=2))
@@ -229,7 +229,7 @@ a = PNP_10p0x0p42(par(m=2))
 Capacitors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
 ```python
 from hdl21.prefix import µ
-from gf180_hdl21 import GF180_hdl21CapParams as par
+from gf180_hdl21 import GF180CapParams as par
 from gf180_hdl21.primitives import MIM_1p5fF
 
 a = MIM_1p5fF(par(c_width=1 * µ, c_length=1 * µ))
@@ -262,7 +262,7 @@ These cells are named in their spice files in `libs.ref` of a normal `open_pdk` 
 
 ```python
 from gf180_hdl21.digital_cells.seven_track as d7
-from gf180_hdl21 import GF180_hdl21LogicParams as p
+from gf180_hdl21 import GF180LogicParams as p
 simple_and_gate = d7.and2_1(p())
 ```
 
