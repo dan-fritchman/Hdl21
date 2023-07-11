@@ -863,7 +863,170 @@ Note that `sim_my_pdk.py` need not necessarily import or directly depend upon `s
 
 ## Bundles
 
-... FIXME! ...
+Hdl21 `Bundle`s are _structured connection types_ which can include `Signal`s and instances of other `Bundle`s.
+Think of them as "connection structs". Similar ideas are implemented by Chisel's `Bundle`s and SystemVerilog's `interface`s.
+
+```python
+@h.bundle
+class Diff:
+    p = h.Signal()
+    n = h.Signal()
+
+@h.bundle
+class Quadrature:
+    i = Diff()
+    q = Diff()
+```
+
+Like `Module`s, `Bundle`s can be defined either procedurally or as a class decorated by the `hdl21.bundle` function.
+
+```python
+# This creates the same stuff as the class-based definitions above:
+
+Diff = h.Bundle(name="Diff")
+Diff.add(h.Signal(name="p"))
+Diff.add(h.Signal(name="n"))
+
+Quadrature = h.Bundle(name="Quadrature")
+Quadrature.add(Diff(name="i"))
+Quadrature.add(Diff(name="q"))
+```
+
+Calling a `Bundle` as in the calls to `Diff()` and `Diff(name=q)` creates an instance of that `Bundle`.
+
+## Bundle Ports
+
+Bundles are commonly most valuable for shipping collections of related `Signal`s between `Module`s.
+Modules can accordingly have Bundle-valued ports. To create a Bundle-port, set the `port` argument to either the boolean `True`
+or the `hdl21.Visibility.PORT` value.
+
+```python
+@h.module
+class HasDiffs:
+    d1 = Diff(port=True)
+    d2 = Diff(port=h.Visbility.PORT)
+```
+
+Port directions on bundle-ports can be set by either of two methods.
+The first is to set the directions directly on the Bundle's constituent `Signal`s.
+To swap directions, pass the bundle-instances through the `hdl21.flipped` function,
+or set the `flipped` argument to the instance-constructor.
+
+```python
+@h.bundle
+class Inner:
+    i = h.Input()
+    o = h.Output()
+
+@h.bundle
+class Outer:
+    b1 = Inner()
+    b2 = h.flipped(Inner())
+    b3 = Inner(flipped=True)
+```
+
+Here:
+
+- An `Inner` bundle defines an `Input` and an `Output`
+- An `Outer` bundle instantiates three of them
+  - Instance `b1` is not flipped; its `i` is an input, and its `o` is an output
+  - Instance `b2` is flipped; its `i` is an _output_, and its `o` is an _input_
+  - Instance `b3` is also flipped, via its constructor argument
+
+These "flipping based" bundles require that all constituent signals, including nested ones, have port-visibility.
+The rules for flipping port directions are:
+
+- Inputs become Outputs
+- Outputs become Inputs
+- Inouts and undirected ports (`direction=NONE`) retain their directions
+
+```python
+@h.bundle
+class B:
+    clk = h.Output()
+    data = h.Input()
+
+@h.module
+class X: # Module with a `clk` output and `data` input
+    b = B(port=True)
+
+@h.module
+class Y: # Module with a `clk` input and `data` output
+    b = B(flipped=True, port=True)
+
+@h.module
+class Z:
+    b = B() # Internal instance of the `B` bundle
+    x = X(b=b)
+    y = Y(b=b)
+```
+
+The second method for setting bundle-port directions is with `Role`s.
+Each Hdl21 bundle either explicitly or implictly defines a set of `Role`s, which might alternately be called "endpoints".
+These are the expected "end users" of the Bundle.
+Signal directions are then defined on each signal's `src` (source) and `dest` (destination) arguments, which can be set to any of the bundle's roles.
+
+```python
+@h.roles
+class HostDevice(Enum):
+    HOST = auto()
+    DEVICE = auto()
+
+@h.bundle
+class Jtag:
+    roles = HostDevice # Set the bundle's roles
+    # Note each signal sets one of the roles as `src` and another as `dest`
+    tck, tdi, tms = h.Signals(3, src=roles.HOST, dest=roles.DEVICE)
+    tdo = h.Signal(src=roles.DEVICE, dest=roles.HOST)
+```
+
+Bundle-valued ports are then assigned a role and associated signal-port directions via their `role` constructor argument.
+
+```python
+@h.module
+class Widget: # with a Jtag Device port
+    jtag = Jtag(port=True, role=Jtag.roles.DEVICE)
+
+@h.module
+class Debugger: # with a Jtag Host port
+    jtag = Jtag(port=True, role=Jtag.roles.HOST)
+
+@h.module
+class System: # combining the two
+    widget = Widget()
+    debugger = Debugger(jtag=widget.jtag)
+```
+
+The rules for port-directions of role-based bundles are:
+
+- If the bundle's role is the signal's source, the signal is an `Output`
+- If the bundle's role is the signal's destination, the signal is an `Input`
+- Otherwise the signal is assigned no direction, i.e. `direction=NONE`
+
+## Collecting Bundles
+
+It is often helpful or necessary to collect existing signals into a bundle, or to "re-arrange" signals from one bundle into another.
+The primary mechanism for doing so is the `hdl21.bundlize` function which creates them.
+Each call to `bundlize` creates an "anonymous" bundle which lacks a backing bundle-definition type.
+
+```python
+@h.bundle
+class Uart:
+    tx = h.Output()
+    rx = h.Input()
+
+@h.module
+class HasUart:
+    # Module with a `Uart` port
+    uart = Uart(port=True)
+
+@h.module
+class ConnectTwo:
+    # Connect two `HasUart`s, swapping `tx` and `rx`.
+    uart = Uart()
+    m1 = HasUart(uart=uart)
+    m2 = HasUart(uart=h.bundlize(tx=uart.rx, rx=uart.tx))
+```
 
 ## Examples
 
