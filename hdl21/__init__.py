@@ -2,7 +2,7 @@
 # Hdl21 Hardware Description Library 
 """
 
-__version__ = "4.0.0rc0"  # NOTE: VLSIR_VERSION
+__version__ = "4.0.0"  # NOTE: VLSIR_VERSION
 
 
 # Before any real importing, ensure we can instantiate non-pydantic types in type-checked dataclasses.
