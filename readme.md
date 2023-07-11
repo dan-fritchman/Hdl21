@@ -718,8 +718,8 @@ class SkyInv:
     p = sky130_hdl21.Sky130MosParams(w=1,l=1)
 
     # And create some transistors!
-    ps = sky130_hdl21.primtives.PMOS_1p8V_STD(p)(d=o, g=i, s=VDD, b=VDD)
-    ns = sky130_hdl21.primtives.NMOS_1p8V_STD(p)(d=o, g=i, s=VSS, b=VSS)
+    ps = sky130_hdl21.primitives.PMOS_1p8V_STD(p)(d=o, g=i, s=VDD, b=VDD)
+    ns = sky130_hdl21.primitives.NMOS_1p8V_STD(p)(d=o, g=i, s=VSS, b=VSS)
 ```
 
 Process-portable modules instead use Hdl21 `Primitives`, which can be compiled to a target technology:
