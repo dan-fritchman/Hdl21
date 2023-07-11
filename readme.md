@@ -305,7 +305,7 @@ Parameters may be provided as keywords, or as a single positional argument which
 
 Hdl21 `Generators` have parameters. `Modules` do not.
 
-This is a deliberate decision, which in this sense makes `hdl21.Module` less feature-rich than the analogous `module` concepts in existing HDLs (Verilog, VHDL, and even SPICE). These languages support what might be called "static parameters" - relatively simple relationships between parent and child-module parameterization. Setting, for example, the width of a signal or number of instances in an array is straightforward. But more elaborate parametrization-cases are either highly cumbersome or altogether impossible to create. (As an example, try using Verilog parametrization to make a programmable-depth binary tree.) Hdl21, in contrast, exposes all parametrization to the full Python-power of its generator functions.
+This is a deliberate decision, which in this sense makes `hdl21.Module` less feature-rich than the analogous `module` concepts in existing HDLs (Verilog, VHDL, and even SPICE). These languages support what might be called "static parameters" - relatively simple relationships between parent and child-module parameterization. Setting, for example, the width of a signal or number of instances in an array is straightforward. But more elaborate parametrization-cases are either highly cumbersome or altogether impossible to create. (As an example, try using Verilog parametrization to make a programmable-depth binary tree.) Hdl21, in contrast, exposes all parametrization to the full Python-power of its generators.
 
 ## Numeric Parameters
 
@@ -328,7 +328,7 @@ Most of Hdl21's built-in `Generators` and `Primitives` use `Prefixed` extensivel
 f = FEMTO = Prefix.FEMTO
 p = PICO = Prefix.PICO
 n = NANO = Prefix.NANO
-µ = MICRO = Prefix.MICRO
+µ = u = MICRO = Prefix.MICRO # Note both `u` and `µ` are valid
 m = MILLI = Prefix.MILLI
 K = KILO = Prefix.KILO
 M = MEGA = Prefix.MEGA

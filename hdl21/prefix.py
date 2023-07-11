@@ -342,7 +342,7 @@ a = ATTO = Prefix.ATTO
 f = FEMTO = Prefix.FEMTO
 p = PICO = Prefix.PICO
 n = NANO = Prefix.NANO
-µ = MICRO = Prefix.MICRO
+µ = u = MICRO = Prefix.MICRO
 m = MILLI = Prefix.MILLI
 c = CENTI = Prefix.CENTI
 d = DECI = Prefix.DECI
