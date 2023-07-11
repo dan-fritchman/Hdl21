@@ -570,7 +570,6 @@ def test_netlist_spicetypes():
     assert "nmos_model" in nl
 
 
-@pytest.mark.xfail(reason="#149 https://github.com/dan-fritchman/Hdl21/issues/149")
 def test_module_with_literals():
     """# Test exporting modules with literals"""
 

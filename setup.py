@@ -27,6 +27,7 @@ setup(
     author="Dan Fritchman",
     author_email="dan@fritch.mn",
     packages=find_packages(),
+    package_data={"hdl21": ["**/*.sp"]},  # Include built-in PDK models
     python_requires=">=3.7, <3.12",
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
@@ -43,6 +44,7 @@ setup(
             "pre-commit==2.20",
             "black==22.6",
             "twine",
+            "build",
         ]
     },
 )

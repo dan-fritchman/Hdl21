@@ -143,9 +143,8 @@ class ProtoExporter:
             pmod.instances.append(pinst)
 
         # Create the Module's `literal`s
-        # FIXME: https://github.com/dan-fritchman/Hdl21/issues/149
-        # for literal in module.literals:
-        #     pmod.literals.append(export_literal(literal))
+        for literal in module.literals:
+            pmod.literals.append(export_literal(literal))
 
         # Store references to the result, and return it
         mapping = ModuleMapping(module, pmod)
