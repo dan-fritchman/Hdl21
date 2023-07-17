@@ -36,12 +36,13 @@ def qualname(i: Instantiable) -> str:
         return module_qualname(i.module)
     if isinstance(i, GeneratorCall):
         return module_qualname(i.result)
-    raise TypeError
+    raise TypeError(f"Invalid Instantiable {i}")
 
 
 def io(i: Instantiable) -> Dict[str, "Connectable"]:
     """Get a complete dictionary of IO ports for `i`, including all types: Signals and Bundles.
-    Copies the Instantiable's top-level dictionary so that it is not modified by consumers."""
+    Copies the Instantiable's top-level dictionary so that it is not modified by consumers.
+    """
 
     if isinstance(i, GeneratorCall):
         if i.result is None:

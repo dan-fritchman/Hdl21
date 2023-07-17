@@ -18,13 +18,13 @@ long_description = (here / "readme.md").read_text(encoding="utf-8")
 _VLSIR_VERSION = "4.0.0"
 
 setup(
-    name="asap7-hdl21",
-    version=_VLSIR_VERSION,
-    description="ASAP7 PDK Package for Hdl21",
+    name="gf180-hdl21",
+    version=_VLSIR_VERSION,  # Maybe this should change
+    description="Global Foundries 180nm MCU PDK Package for Hdl21",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/dan-fritchman/Hdl21",
-    author="Dan Fritchman",
+    author="Dan Fritchman, Thomas Pluck",
     packages=find_packages(),
     python_requires=">=3.7",
     install_requires=[f"hdl21=={_VLSIR_VERSION}"],

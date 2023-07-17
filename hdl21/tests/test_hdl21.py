@@ -9,7 +9,7 @@ import hdl21 as h
 
 
 def test_version():
-    assert h.__version__ == "2.0.dev0"
+    assert h.__version__ == "4.0.0"  # NOTE: VLSIR_VERSION
 
 
 def test_module1():

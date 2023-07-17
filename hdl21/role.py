@@ -3,13 +3,15 @@
 """
 
 # Std Lib Imports
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Type, TypeVar
 from dataclasses import field
 from copy import copy
 from enum import EnumMeta
 
 # Local Imports
 from .datatype import datatype
+
+T = TypeVar("T")
 
 
 @datatype
@@ -23,12 +25,6 @@ class Role:
         if not isinstance(num, int):
             return NotImplemented
         return [copy(self) for _ in range(num)]
-
-    # def __call__(self, *args, **kwargs) -> "BundleInstance":
-    #     if self._parent_bundle is None:
-    #         raise ValueError("Cannot instantiate a Role without a parent Bundle")
-    #     from .bundle import BundleInstance
-    #     return BundleInstance(of=self._parent_bundle, role=self, *args, **kwargs)
 
 
 def Roles(num: int) -> List[Role]:
@@ -88,4 +84,10 @@ class RoleSet:
         return self.inner[name]
 
 
-__all__ = ["Role", "Roles", "RoleSet"]
+def roleset(cls: Type[T]) -> Type[T]:
+    """# Decorator to convert an Enum class into a `RoleSet`."""
+
+    return RoleSet.from_enum(cls)
+
+
+__all__ = ["Role", "Roles", "RoleSet", "roleset"]

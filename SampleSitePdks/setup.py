@@ -15,7 +15,7 @@ here = pathlib.Path(__file__).parent.resolve()
 # Get the long description from the README file
 long_description = (here / "readme.md").read_text(encoding="utf-8")
 
-_VLSIR_VERSION = "4.0.dev0"
+_VLSIR_VERSION = "4.0.0"
 
 setup(
     name="sitepdks",
@@ -30,7 +30,7 @@ setup(
     python_requires=">=3.7",
     install_requires=[
         f"sky130-hdl21=={_VLSIR_VERSION}",
-        f"asap7-hdl21=={_VLSIR_VERSION}",
+        # f"asap7-hdl21=={_VLSIR_VERSION}",
     ],
     extras_require={
         "dev": ["pytest==7.1", "coverage", "pytest-cov", "black==22.6", "twine"]
