@@ -607,7 +607,7 @@ s = Sim(
 )
 
 # And run it!
-sim.run()
+s.run()
 ```
 
 `Sim` also includes a class-based syntax similar to `Module` and `Bundle`. This also allows for inline definition of a testbench module, which can be named either `tb` or `Tb`:
