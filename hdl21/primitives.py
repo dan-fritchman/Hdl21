@@ -224,6 +224,7 @@ class MosVth(Enum):
     LOW = "LOW"
     HIGH = "HIGH"
     ULTRA_LOW = "ULTRA_LOW"
+    ULTRA_HIGH = "ULTRA_HIGH"
     ZERO = "ZERO"
     NATIVE = "NATIVE"
 

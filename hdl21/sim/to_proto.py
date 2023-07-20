@@ -117,6 +117,7 @@ class SimProtoExporter:
         return vsp.OpInput(
             analysis_name=analysis_name,
             ctrls=[],  # FIXME: analysis-specific controls
+            raw=op.raw,
         )
 
     def export_dc(self, dc: data.Dc) -> vsp.DcInput:
@@ -127,6 +128,7 @@ class SimProtoExporter:
             indep_name=self.export_sweep_variable(dc.var),
             sweep=self.export_sweep(dc.sweep),
             ctrls=[],  # FIXME: analysis-specific controls
+            raw=dc.raw,
         )
 
     def export_ac(self, ac: data.Ac) -> vsp.AcInput:
@@ -138,18 +140,21 @@ class SimProtoExporter:
             fstop=export_float(ac.sweep.stop),
             npts=ac.sweep.npts,
             ctrls=[],  # FIXME: analysis-specific controls
+            raw=ac.raw,
         )
 
     def export_tran(self, tran: data.Tran) -> vsp.TranInput:
         """Export a transient analysis"""
         analysis_name = tran.name or self.next_analysis_name()
+        parameters = tran.parameters if tran.parameters else []
         return vsp.TranInput(
             analysis_name=analysis_name,
             # FIXME: VLSIR #26 move schema to Param / Prefixed
             tstop=export_float(tran.tstop),
             tstep=export_float(tran.tstep),
             ic={},  # FIXME: initial conditions
-            ctrls=[],  # FIXME: analysis-specific controls
+            ctrls=[vsp.Control(param=export_param(p)) for p in parameters],
+            raw=tran.raw,
         )
 
     def export_noise(self, noise: data.Noise) -> vsp.NoiseInput:
@@ -203,6 +208,7 @@ class SimProtoExporter:
             fstop=export_float(noise.sweep.stop),
             npts=noise.sweep.npts,
             ctrls=[],  # FIXME: analysis-specific controls
+            raw=noise.raw,
         )
 
     def export_sweep_analysis(self, swp_an: data.SweepAnalysis) -> vsp.SweepInput:
