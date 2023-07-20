@@ -7,7 +7,7 @@
 [![test](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml/badge.svg)](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml)
 [![codecov](https://codecov.io/gh/dan-fritchman/Hdl21/branch/main/graph/badge.svg?token=f8LKUqEPdq)](https://codecov.io/gh/dan-fritchman/Hdl21)
 
-Hdl21 is a [hardware description library](https://en.wikipedia.org/wiki/Hardware_description_language) embedded in Python.  
+Hdl21 is a [hardware description library](https://en.wikipedia.org/wiki/Hardware_description_language) embedded in Python.
 It is targeted for analog and custom integrated circuits, and for maximum productivity with minimum fancy-programming skill.
 
 ## Contents
@@ -434,7 +434,7 @@ A summary of `hdl21.primitives`:
 | IdealInductor                  | Ideal Inductor                    | IDEAL    | L, Ind, Inductor, IdealL, IdealInd    | p, n         |
 | PhysicalInductor               | Physical Inductor                 | PHYSICAL | PhyL, PhyInd, IndPhy, PhyInductor     | p, n         |
 | ThreeTerminalInductor          | Three Terminal Inductor           | PHYSICAL | Ind3, PhyInd3, IndPhy3, PhyInductor3  | p, n, b      |
-| PhysicalShort                  | Short-Circuit/ Net-Tie            | PHYSICAL | Short                                 | p, n         |
+| PhysicalShort                  | Short-Circuit/Net-Tie             | PHYSICAL | Short                                 | p, n         |
 | DcVoltageSource                | DC Voltage Source                 | IDEAL    | V, Vdc, Vsrc                          | p, n         |
 | PulseVoltageSource             | Pulse Voltage Source              | IDEAL    | Vpu, Vpulse                           | p, n         |
 | CurrentSource                  | Ideal DC Current Source           | IDEAL    | I, Idc, Isrc                          | p, n         |
@@ -488,7 +488,7 @@ BandGap = h.ExternalModule(
 )
 ```
 
-Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few other pieces of metadata, but no internal implementation: no internal signals, and no instances of other modules. Unlike `Modules`, both _do_ have parameters. `Primitives` each have an associated `paramclass`, while `ExternalModules` can optionally declare one via their `paramtype` attribute. Their parameter-types are limited to a small subset of those possible for `Generators` - generally "scalar" types such as numbers, strings, and `Scalar` - primarily limited by the need to need to provide them to legacy HDLs. Parameters are applied in the same style as for `Generators`, by calling the `Primitive` or `ExternalModule`. Parameter-applications can either be an instance of the module's `paramtype` or a set of keyword arguments which validly contruct one inline.
+Both `Primitives` and `ExternalModules` have names, ordered `Ports`, and a few other pieces of metadata, but no internal implementation: no internal signals, and no instances of other modules. Unlike `Modules`, both _do_ have parameters. `Primitives` each have an associated `paramclass`, while `ExternalModules` can optionally declare one via their `paramtype` attribute. Their parameter-types are limited to a small subset of those possible for `Generators` - generally "scalar" types such as numbers, strings, and `Scalar` - primarily limited by the need to need to provide them to legacy HDLs. Parameters are applied in the same style as for `Generators`, by calling the `Primitive` or `ExternalModule`. Parameter-applications can either be an instance of the module's `paramtype` or a set of keyword arguments which validly construct one inline.
 
 ```python
 # Continuing from the snippet above:
@@ -607,7 +607,7 @@ s = Sim(
 )
 
 # And run it!
-sim.run()
+s.run()
 ```
 
 `Sim` also includes a class-based syntax similar to `Module` and `Bundle`. This also allows for inline definition of a testbench module, which can be named either `tb` or `Tb`:
@@ -698,9 +698,9 @@ Since PDKs are python packages, using them is as simple as importing them. Hdl21
 
 |                                       | PyPi                                   | Source        |
 | ------------------------------------- | -------------------------------------- | ------------- |
-| ASAP7 Predictive/ Academic PDK        | https://pypi.org/project/asap7-hdl21/  | [pdks/Asap7](./pdks/Asap7)  |
+| ASAP7 Predictive/Academic PDK         | https://pypi.org/project/asap7-hdl21/  | [pdks/Asap7](./pdks/Asap7)  |
 | SkyWater 130nm Open-Source PDK        | https://pypi.org/project/sky130-hdl21/ | [pdks/Sky130](./pdks/Sky130) |
-| GlobalFoundries 180nm Open-Source PDK | https://pypi.org/project/gf180-hdl21   | [pdks/Gf180](./pdks/Gf180)  |
+| GlobalFoundries 180nm Open-Source PDK | https://pypi.org/project/gf180-hdl21/  | [pdks/Gf180](./pdks/Gf180)  |
 
 Each contain much more detail documentation on their specific installation and use.
 
@@ -985,7 +985,7 @@ class Z:
 ```
 
 The second method for setting bundle-port directions is with `Role`s.
-Each Hdl21 bundle either explicitly or implictly defines a set of `Role`s, which might alternately be called "endpoints".
+Each Hdl21 bundle either explicitly or implicitly defines a set of `Role`s, which might alternately be called "endpoints".
 These are the expected "end users" of the Bundle.
 Signal directions are then defined on each signal's `src` (source) and `dest` (destination) arguments, which can be set to any of the bundle's roles.
 
@@ -1091,7 +1091,7 @@ Custom IC design is a complicated field. Its practitioners have to know
 [lot](http://rfic.eecs.berkeley.edu/~niknejad/ee142_fa05lects/pdf/lect24.pdf) |
 [of](https://www.delroy.com/PLL_dir/ISSCC2004/PLLTutorialISSCC2004.pdf) |
 [stuff](https://inst.eecs.berkeley.edu/~ee247/fa10/files07/lectures/L25_2_f10.pdf),
-independent of any programming background. Many have little or no programming experience at all. Python is reknowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like.
+independent of any programming background. Many have little or no programming experience at all. Python is renowned for its accessibility to new programmers, largely attributable to its concise syntax, prototyping-friendly execution model, and thriving community. Moreover, Python has also become a hotbed for many of the tasks hardware designers otherwise learn programming for: numerical analysis, data visualization, machine learning, and the like.
 
 Hdl21 exposes the ideas they're used to - `Modules`, `Ports`, `Signals` - via as simple of a Python interface as it can. `Generators` are just functions. For many, this fact alone is enough to create powerfully reusable hardware.
 
@@ -1121,11 +1121,11 @@ The Chisel library's primary goal is producing a compiler-style intermediate rep
 Next, Chisel targets _RTL-level_ hardware. This includes lots of things that would need something like a logic-synthesis tool to resolve to the structural circuits targeted by Hdl21. For example in Chisel (as well as Verilog and VHDL), it's semantically valid to perform an operation like `Signal + Signal`. In custom-circuit-land, it's much harder to say what that addition-operator would mean. Should it infer a digital adder? Short two currents together? Stick two capacitors in series?
 Many custom-circuit primitives such as individual transistors actively fight the signal-flow/RTL modeling style assumed by the Chisel semantics and compiler. Again, it's in the way. Perhaps more important, many of Chisel's abstractions actively hide much of the detail custom circuits are designed to explicitly create. Implicit clock and reset signals serve as prominent examples.
 
-Above all - Chisel is embedded in Scala. It's niche, it's complicated, it's subtle, it requires dragging around a JVM. It's not a language anyone would recommend to expert-designer/ novice-programmers for any reason other than using Chisel. For Hdl21's goals, Scala itself is Chisel's biggest burden.
+Above all - Chisel is embedded in Scala. It's niche, it's complicated, it's subtle, it requires dragging around a JVM. It's not a language anyone would recommend to expert-designer/novice-programmers for any reason other than using Chisel. For Hdl21's goals, Scala itself is Chisel's biggest burden.
 
 ### Other Fancy Modern HDLs
 
-There are lots of other very cool hardware-description projects out there which take Hdl21's big-picture approach - embedding hardware idioms as a library in a modern programming languare. All focus on logical and/or RTL-level descriptions, unlike Hdl21's structural/ custom/ analog focus. We recommend checking them out:
+There are lots of other very cool hardware-description projects out there which take Hdl21's big-picture approach - embedding hardware idioms as a library in a modern programming language. All focus on logical and/or RTL-level descriptions, unlike Hdl21's structural/custom/analog focus. We recommend checking them out:
 
 - [SpinalHDL](https://github.com/SpinalHDL/SpinalHDL)
 - [MyHDL](http://www.myhdl.org/)
