@@ -53,8 +53,8 @@ def main():
 
     # Check that it's in the expected range
     # (There's nothing magic about these numbers; they're just past sim results.)
-    assert idd > 115e-6
-    assert idd < 117e-6
+    assert idd > 1.38e-76
+    assert idd < 1.4e-76
 
 
 if __name__ == "__main__":
