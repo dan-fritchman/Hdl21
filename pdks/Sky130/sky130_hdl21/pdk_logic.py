@@ -162,12 +162,12 @@ class Sky130Walker(h.HierarchyWalker):
                 raise RuntimeError(msg)
 
         """
-        Here we wittle down our list of potential candidates
+        Here we whittle down our list of potential candidates
 
         General parameters we're concerned with are:
 
         1) h.MosType - Most important decision is it a PMOS or an NMOS, default = NMOS
-        2) h.MosFamily - Detemines what class of transistor, CORE, IO, HVT, default = CORE
+        2) h.MosFamily - Determines what class of transistor, CORE, IO, HVT, default = CORE
         3) h.MosVth - Mos Threshold, HIGH, STD, LOW, ULTRA_LOW, default = STD
         """
 
