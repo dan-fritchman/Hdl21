@@ -132,7 +132,7 @@ def _slice_inner(slize: Slice) -> SliceInner:
             # Align bot with the step
             bot += (top - bot) % abs(step)
         else:
-            # Here `start` and `stop` match `top` and `bot`'s inclsive/ exclusivity.
+            # Here `start` and `stop` match `top` and `bot`'s inclusive/exclusivity.
             # No need to add any offsets.
             top = (
                 parent.width

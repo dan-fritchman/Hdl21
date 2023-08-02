@@ -5,7 +5,7 @@ Hdl21 "process development kit" (PDK) packages provide the bundle between the Py
 PDK packages typically include: 
 
 * (a) Definitions of technology-specific `ExternalModule`s, commonly including transistors and passive components, and 
-* (b) A transformation method for converting genertic `Primitive` elements to the technology-specific `ExternalModule`s.
+* (b) A transformation method for converting generic `Primitive` elements to the technology-specific `ExternalModule`s.
 
 The latter manifests as a "compiler pass" over the Hdl21 circuit-proto tree. 
 An Hdl21 design hierarchically traversed and instances of `hdl21.Primitive`s 
@@ -141,7 +141,7 @@ def compile(
 
     Uses the optional `pdk` argument as a target, if provided and valid.
     Otherwise uses the default PDK module.
-    Raises a `RuntimeError` if there is no unambigous default.
+    Raises a `RuntimeError` if there is no unambiguous default.
     """
     if pdk is None:
         pdk = default()

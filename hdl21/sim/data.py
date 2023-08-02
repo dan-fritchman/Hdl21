@@ -282,7 +282,7 @@ SaveTarget = Union[
     SaveMode,  # A `SaveMode`, e.g. `SaveMode.ALL`
     Signal,  # A single `Signal`
     List[Signal],  # A list of `Signal`s
-    str,  # A signal signale-name
+    str,  # A signal signal-name
     List[str],  # A list of signal-names
 ]
 
@@ -495,7 +495,7 @@ def sim(cls: type) -> Sim:
 
     Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
     Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
-    such as the `a_path` field in the example aboe.
+    such as the `a_path` field in the example above.
 
     Classes decoratated by `sim` a single special required field,
     named either `tb` or `Tb`, which sets the simulation testbench.

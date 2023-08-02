@@ -9,7 +9,7 @@ this module serves as more of a written reminder of how Hdl21's `getattr` and `s
 Getting them completely straight can be a pain, including a few complications: 
 * During object initialization, and for setting "built-ins" e.g. the "dunder" methods 
 * Many failures tend to occur only while *debugging*, e.g. with `pdb` or an IDE plugin. 
-  * This makes tracking down problems with this scheme aways more difficult, as unit-tests fail to catch them. 
+  * This makes tracking down problems with this scheme way more difficult, as unit-tests fail to catch them. 
 
 The scheme adopted here is what we've empirically observed to be the most reliable. 
 * A `_initialized` boolean field is set to `False` as the VERY FIRST thing in object construction.

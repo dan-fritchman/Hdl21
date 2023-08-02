@@ -1,6 +1,6 @@
 """
 # Hdl21 Unit Tests
-Pulling directly from the documenation snippets, and making sure they work as claimed. 
+Pulling directly from the documentation snippets, and making sure they work as claimed. 
 """
 
 import hdl21 as _h

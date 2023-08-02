@@ -1,6 +1,6 @@
 """
 Type-alias for `Instantiable` hdl21 types. Each is valid as the `of` field of `hdl21.Instance`s, 
-and thus supports its "connect by call" and "connect by assigment" semantics. 
+and thus supports its "connect by call" and "connect by assignment" semantics. 
 """
 
 import copy
