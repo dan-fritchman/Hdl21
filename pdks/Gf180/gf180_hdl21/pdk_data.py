@@ -59,9 +59,14 @@ from vlsirtools import SpiceType
 class MosParams:
     """# GF180 Mos Parameters"""
 
+    # Note: When nf is even, the source and drain have unequal areas
+    # As nf increments, area is added to the source first,
+    # with the drain subsequently 'catching up'. This is seen in equations below.
+
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1 * µ)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1 * µ)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
+
     # This unfortunate naming is to prevent conflicts with base python.
     As = h.Param(
         dtype=h.Scalar,
@@ -71,8 +76,8 @@ class MosParams:
 
     ad = h.Param(
         dtype=h.Scalar,
-        desc="Source Area",
-        default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
+        desc="Drain Area",
+        default=h.Literal("int((nf+1)/2) * w/nf * 0.18u"),
     )
 
     pd = h.Param(

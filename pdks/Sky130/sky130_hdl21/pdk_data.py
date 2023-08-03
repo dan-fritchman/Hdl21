@@ -47,7 +47,7 @@ parameters of devices in the Sky130 Open PDK. It contains params:
 - Sky130GenResParams - parameters for generic resistors
 - Sky130PrecResParams - parameters for Sky130's precision resistors
 - Sky130MimParams - parameters for  Metal-insulator-Metal (MiM) capacitors
-- Sky130VarParams - paramaters foVPWRr variable capacitors (ie. varactors)
+- Sky130VarParams - parameters foVPWRr variable capacitors (ie. varactors)
 - Sky130VPPParams - parameters for both Vertical Perpendicular Plate (VPP) and Vertical Parallel Plate (VPP) capacitors
 - Sky130DiodeParams - parameters for diodes
 - Sky130BipolarParams - parameters for bipolar devices
@@ -73,8 +73,8 @@ class MosParams:
 
     ad (h.Literal): Drain area of the MOSFET. Default is 'int((nf+1)/2) * w/nf * 0.29'.
     As (h.Literal): Source area of the MOSFET. Default is 'int((nf+2)/2) * w/nf * 0.29'.
-    pd (h.Literal): Drain perimeter of the MOSFET. Default is '2int((nf+1)/2) * (w/nf + 0.29)'.
-    ps (h.Literal): Source perimeter of the MOSFET. Default is '2int((nf+2)/2) * (w/nf + 0.29)'.
+    pd (h.Literal): Drain perimeter of the MOSFET. Default is '2*int((nf+1)/2) * (w/nf + 0.29)'.
+    ps (h.Literal): Source perimeter of the MOSFET. Default is '2*int((nf+2)/2) * (w/nf + 0.29)'.
     nrd (h.Literal): Drain resistive value of the MOSFET. Default is '0.29 / w'.
     nrs (h.Literal): Source resistive value of the MOSFET. Default is '0.29 / w'.
     sa (h.Scalar): Spacing between adjacent gate to drain. Default is 0.
