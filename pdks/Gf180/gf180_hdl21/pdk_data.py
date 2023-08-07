@@ -58,7 +58,7 @@ from vlsirtools import SpiceType
 @h.paramclass
 class MosParams:
     """# GF180 Mos Parameters"""
-    
+
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1 * µ)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1 * µ)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
@@ -97,11 +97,15 @@ class MosParams:
     nrd = h.Param(
         # Equivalent number of resistive 'squares' of the drain diffusion
         # Will be multiplied with sheet resistance to model series resistance of drain
-        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.18u / w")
+        dtype=h.Scalar,
+        desc="Drain Resistive Value",
+        default=h.Literal("0.18u / w"),
     )
     nrs = h.Param(
         # Same idea as above, but with respect to source
-        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.18u / w")
+        dtype=h.Scalar,
+        desc="Source Resistive Value",
+        default=h.Literal("0.18u / w"),
     )
     sa = h.Param(
         dtype=h.Scalar,
@@ -254,7 +258,6 @@ def logic_module(
     family: str,
     terminals: List[str],
 ) -> h.ExternalModule:
-
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,
