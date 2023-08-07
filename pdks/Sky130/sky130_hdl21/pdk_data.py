@@ -83,6 +83,7 @@ class MosParams:
     mult (h.Scalar): Multiplier for the MOSFET. Default is 1.
     """
 
+    # Pdk units are in µm, throughout
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=650 * MILLI)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=150 * MILLI)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
@@ -90,7 +91,8 @@ class MosParams:
     ad = h.Param(
         dtype=h.Scalar,
         desc="Drain Area",
-        # `0.29`` is oxide length in µm
+        # `0.29` is diffusion length in µm
+        # As `nf` increments, drain region quantity is alternatively -1 or == source region quantity
         default=h.Literal("int((nf+1)/2) * w/nf * 0.29"),
     )
 
@@ -98,24 +100,30 @@ class MosParams:
     As = h.Param(
         dtype=h.Scalar,
         desc="Source Area",
-        # as `nf` increments, source region quantity alternates between 1+ | == drain region quantity
+        # See above, and note expression `int((nf+2)/2)` is different
         default=h.Literal("int((nf+2)/2) * w/nf * 0.29"),
     )
 
     pd = h.Param(
         dtype=h.Scalar,
         desc="Drain Perimeter",
-        default=h.Literal("int((nf+1)/2) * 2*(w/nf + 0.29)"),
+        # Perimeter of a single diffusion region is 2 * (TotalWidth / Fingers + DiffusionLength)
+        # Then multiply by total number of diffusion regions that make up drain
+        default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.29)"),
     )
     ps = h.Param(
         dtype=h.Scalar,
         desc="Source Perimeter",
-        default=h.Literal("int((nf+2)/2) * 2*(w/nf + 0.29)"),
+        # Ditto to above, but with respect to to source
+        default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
     )
     nrd = h.Param(
+        # Equivalent number of resistive 'squares' of the drain diffusion
+        # Will be multiplied with sheet resistance to model series resistance of drain
         dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
     )
     nrs = h.Param(
+        # Same idea as above, but with respect to source
         dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.29 / w")
     )
     sa = h.Param(
