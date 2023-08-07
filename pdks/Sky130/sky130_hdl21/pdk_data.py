@@ -114,7 +114,7 @@ class MosParams:
     ps = h.Param(
         dtype=h.Scalar,
         desc="Source Perimeter",
-        # Ditto to above, but with respect to to source
+        # Ditto to above, but with respect to source
         default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
     )
     nrd = h.Param(
