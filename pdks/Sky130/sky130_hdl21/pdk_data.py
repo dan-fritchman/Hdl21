@@ -86,9 +86,11 @@ class MosParams:
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=650 * MILLI)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=150 * MILLI)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
+
     ad = h.Param(
         dtype=h.Scalar,
         desc="Drain Area",
+        # `0.29`` is oxide length in µm
         default=h.Literal("int((nf+1)/2) * w/nf * 0.29"),
     )
 
@@ -96,18 +98,19 @@ class MosParams:
     As = h.Param(
         dtype=h.Scalar,
         desc="Source Area",
+        # as `nf` increments, source region quantity alternates between 1+ | == drain region quantity
         default=h.Literal("int((nf+2)/2) * w/nf * 0.29"),
     )
 
     pd = h.Param(
         dtype=h.Scalar,
         desc="Drain Perimeter",
-        default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.29)"),
+        default=h.Literal("int((nf+1)/2) * 2*(w/nf + 0.29)"),
     )
     ps = h.Param(
         dtype=h.Scalar,
         desc="Source Perimeter",
-        default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
+        default=h.Literal("int((nf+2)/2) * 2*(w/nf + 0.29)"),
     )
     nrd = h.Param(
         dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
@@ -313,7 +316,6 @@ def xtor_module(
     params: h.Param = Sky130MosParams,
     num_terminals: int = 4,
 ) -> h.ExternalModule:
-
     """Transistor module creator, with module-name `name`.
     If `MoKey` `key` is provided, adds an entry in the `xtors` dictionary."""
 
@@ -337,7 +339,6 @@ def res_module(
     params: h.Param,
     spicetype=SpiceType.SUBCKT,
 ) -> h.ExternalModule:
-
     """Resistor Module creator"""
 
     num2device = {2: PhysicalResistor, 3: ThreeTerminalResistor}
@@ -357,7 +358,6 @@ def res_module(
 def diode_module(
     modname: str,
 ) -> h.ExternalModule:
-
     """Diode Module creator"""
 
     mod = h.ExternalModule(
@@ -384,7 +384,6 @@ def bjt_module(
     modname: str,
     numterminals: int = 3,
 ) -> h.ExternalModule:
-
     num2device = {3: Bipolar.port_list, 4: BJT4TPortList}
 
     mod = h.ExternalModule(
@@ -403,7 +402,6 @@ def cap_module(
     numterminals: int,
     params: h.Param,
 ) -> h.ExternalModule:
-
     num2device = {2: PhysicalCapacitor, 3: ThreeTerminalCapacitor}
 
     """Capacitor Module creator"""
@@ -433,7 +431,6 @@ def vpp_module(
     """VPP Creator module"""
 
     if num_terminals == 3:
-
         mod = h.ExternalModule(
             domain=PDK_NAME,
             name=modname,
@@ -443,7 +440,6 @@ def vpp_module(
         )
 
     elif num_terminals == 4:
-
         mod = h.ExternalModule(
             domain=PDK_NAME,
             name=modname,
@@ -460,7 +456,6 @@ def logic_module(
     family: str,
     terminals: List[str],
 ) -> h.ExternalModule:
-
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,
