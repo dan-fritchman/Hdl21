@@ -120,11 +120,15 @@ class MosParams:
     nrd = h.Param(
         # Equivalent number of resistive 'squares' of the drain diffusion
         # Will be multiplied with sheet resistance to model series resistance of drain
-        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
+        dtype=h.Scalar,
+        desc="Drain Resistive Value",
+        default=h.Literal("0.29 / w"),
     )
     nrs = h.Param(
         # Same idea as above, but with respect to source
-        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.29 / w")
+        dtype=h.Scalar,
+        desc="Source Resistive Value",
+        default=h.Literal("0.29 / w"),
     )
     sa = h.Param(
         dtype=h.Scalar,

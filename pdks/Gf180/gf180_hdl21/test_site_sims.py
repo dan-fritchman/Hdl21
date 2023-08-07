@@ -22,10 +22,10 @@ import gf180_hdl21.primitives as g
 
 def test_installed():
     """
-        Test if the PDK is installed and properly configured.
+    Test if the PDK is installed and properly configured.
 
-        This test checks if the PDK `gf180.install` is not None and if its type
-        is `gf180.Install`. If both conditions are met, the test passes.
+    This test checks if the PDK `gf180.install` is not None and if its type
+    is `gf180.Install`. If both conditions are met, the test passes.
     """
     assert gf180_hdl21.install is not None
     assert isinstance(gf180_hdl21.install, gf180_hdl21.Install)
