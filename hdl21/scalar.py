@@ -16,7 +16,7 @@ class Scalar(BaseModel):
     # The `Scalar` parameter type
 
     Generally this means
-    ````python
+    ```python
     Union[Prefixed, Literal]
     ```
     with built-in automatic conversions from each of:
