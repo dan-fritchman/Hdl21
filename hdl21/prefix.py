@@ -331,7 +331,12 @@ def _scale_to_smaller(
     and is converted before scaling."""
 
     other = to_prefixed(other)
-    smaller = me.prefix if me.prefix.value < other.prefix.value else other.prefix
+    smaller = (
+        me.prefix
+        if me.number * Decimal(10**me.prefix.value)
+        < other.number * Decimal(10**other.prefix.value)
+        else other.prefix
+    )
     return me.scale(smaller), other.scale(smaller)
 
 
