@@ -52,3 +52,6 @@ def netlist(
 
     # And invoke the VLSIR netlister
     return vlisr_netlist(pkg=pkg, dest=dest, **kwargs)
+
+
+__all__ = ["netlist", "NetlistFormat", "NetlistFormatSpec", "NetlistOptions"]
