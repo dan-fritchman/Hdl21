@@ -275,14 +275,14 @@ class SimProtoExporter:
 
 def export_options(options: data.Options) -> vsp.SimOptions:
     """Export simulation options"""
-    from ..proto.to_proto import export_param_value
+    from ..proto import export_param_value
 
     return vsp.SimOptions(name=options.name, value=export_param_value(options.value))
 
 
 def export_control(ctrl: data.Control) -> vsp.Control:
     """Export a `Control` element"""
-    from ..proto.to_proto import export_literal
+    from ..proto import export_literal
 
     if isinstance(ctrl, data.Include):
         return vsp.Control(include=export_include(ctrl))
@@ -349,7 +349,7 @@ def export_analysis_type(an: Union[str, data.Analysis]) -> str:
 
 def export_param(param: data.Param) -> vlsir.Param:
     """Export a parameter declaration"""
-    from ..proto.to_proto import export_param_value
+    from ..proto import export_param_value
 
     return vlsir.Param(name=param.name, value=export_param_value(param.val))
 

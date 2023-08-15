@@ -14,7 +14,7 @@ from vlsirtools.netlist import (
 )
 
 from .elab import Elaboratables
-from .proto.to_proto import to_proto
+from .proto import to_proto
 
 
 def netlist(

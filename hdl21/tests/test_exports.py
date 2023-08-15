@@ -616,3 +616,13 @@ def test_module_with_literals():
     assert isinstance(HasLitRoundTripped, h.Module)
     assert len(HasLitRoundTripped.literals) == 3
     assert HasLitRoundTripped.literals == HasLit.literals
+
+
+def test_external_module_to_vlsir():
+    emod = h.ExternalModule(
+        name="emod",
+        port_list=[h.Port(name="p", direction=h.PortDir.INPUT)],
+    )
+    pmod = h.proto.export_external_module(emod)
+    assert isinstance(pmod, vlsir.circuit.ExternalModule)
+    # FIXME: some better tests

@@ -158,15 +158,8 @@ class ProtoExporter:
         if id(emod) in self.ext_modules:  # Already done
             return self.ext_modules[id(emod)]
 
-        # Create the Proto-ExternalModule
-        qname = vlsir.utils.QualifiedName(name=emod.name, domain=emod.domain)
-        pmod = vckt.ExternalModule(name=qname, spicetype=emod.spicetype.to_schema())
-
-        # Create its Port-objects, which also require Vlsir Signal objects
-        for port in emod.port_list:
-            psig = vckt.Signal(name=port.name, width=port.width)
-            pmod.signals.append(psig)
-            pmod.ports.append(export_port(port))
+        # ...
+        pmod = export_external_module(emod)
 
         # Store references to the result, and return it
         self.ext_modules[id(emod)] = pmod
@@ -469,3 +462,19 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
 def export_literal(literal: Literal) -> str:
     """Export a `Literal`, as its text value"""
     return literal.text
+
+
+def export_external_module(emod: ExternalModule) -> vckt.ExternalModule:
+    """Export an `ExternalModule`"""
+
+    # Create the Proto-ExternalModule
+    qname = vlsir.utils.QualifiedName(name=emod.name, domain=emod.domain)
+    pmod = vckt.ExternalModule(name=qname, spicetype=emod.spicetype.to_schema())
+
+    # Create its Port-objects, which also require Vlsir Signal objects
+    for port in emod.port_list:
+        psig = vckt.Signal(name=port.name, width=port.width)
+        pmod.signals.append(psig)
+        pmod.ports.append(export_port(port))
+
+    return pmod
