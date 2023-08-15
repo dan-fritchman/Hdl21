@@ -31,7 +31,7 @@ from .module import *
 from .generator import *
 from .bundle import *
 from .role import *
-from .netlist import *
+from .netlisting import *
 from .instantiable import *
 from .diff_pair import *
 from .props import Properties
