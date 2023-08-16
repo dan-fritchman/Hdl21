@@ -2,9 +2,17 @@
 #
 # Exports PDK data in Vlsir schema format (protobufs).
 
-# This requires that Vlsir schema bindings and VlsirTools both be importable by
-# Python. For development you can invoke with:
-#   PYTHONPATH=../VlsirTools/:../bindings/python/ ./proto2spice.py
+# This script requires that the following Vlsir ecosystem packages be available
+# for import by Python:
+#   - VlsirTools
+#   - Vlsir proto bindings
+#   - Sky130
+#   - Hdl21
+#
+# You can install these from PyPi or, particularly during development, set your
+# PYTHONPATH explicitly. For example:
+#   PYTHONPATH=/path/Hdl21/pdks/Sky130:/path/Hdl21:/path/Vlsir/VlsirTools/:/path/Vlsir/bindings/python/ \
+#   ./export.py --text_format
 
 from collections.abc import Sequence
 from typing import Optional, Dict
@@ -15,6 +23,7 @@ import google.protobuf.text_format as text_format
 import vlsir.circuit_pb2 as vlsir_circuit
 import hdl21 as h
 
+from sky130_hdl21 import pdk_data
 from sky130_hdl21.primitives import prim_dicts
 from tabulate import tabulate
 
@@ -72,10 +81,7 @@ def process(options: optparse.Values):
         collect_other_primitives(defs, ext_modules)
 
     package_pb = vlsir_circuit.Package()
-    package_pb.domain = "sky130"
-    package_pb.ext_modules.extend(
-        [h.proto.exporting.export_external_module(m) for m in ext_modules]
-    )
+    package_pb.domain = pdk_data.PDK_NAME
 
     for module in ext_modules:
         module_pb = h.proto.exporting.export_external_module(module)
