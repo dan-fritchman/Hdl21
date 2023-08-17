@@ -115,6 +115,15 @@ class Prefix(Enum):
 
         return NotImplemented
 
+    def __int__(self):
+        return 10**self.value
+
+    def __float__(self):
+        return float(10**self.value)
+
+    def __str__(self):
+        return str(Decimal(10) ** self.value)
+
 
 """
 # Note on Numeric Types 
@@ -231,9 +240,9 @@ class Prefixed(BaseModel):
     def __rpow__(self, other) -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return (
-            Decimal(str(other)) ** (self.number * (Decimal(10) ** self.prefix))
-        ).scale()
+        return Prefixed.new(
+            Decimal(str(other)) ** (self.number * (Decimal(str(self.prefix))))
+        )
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal, Prefixed)):
@@ -466,6 +475,12 @@ class Exponent:
 
     def __repr__(self) -> str:
         return f"e({self.symbol.value+self.residual})"
+
+    def __float__(self) -> float:
+        return float(10 ** (self.symbol.value + self.residual))
+
+    def __str__(self) -> str:
+        return str(Decimal(10) ** (self.symbol.value + self.residual))
 
 
 def e(exp: Any) -> Exponent:

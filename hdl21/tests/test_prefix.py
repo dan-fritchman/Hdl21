@@ -382,21 +382,25 @@ def test_not_implemented_prefixed():
     from hdl21.prefix import e
 
     with pt.raises(TypeError):
+        assert type((1 * e(1)) + []) == NotImplemented
+    with pt.raises(TypeError):
+        assert type([] + (1 * e(1))) == NotImplemented
+    with pt.raises(TypeError):
+        assert type((1 * e(1)) - []) == NotImplemented
+    with pt.raises(TypeError):
+        assert type([] - (1 * e(1))) == NotImplemented
+    with pt.raises(TypeError):
         assert type([] * (2 * e(1))) == NotImplemented
     with pt.raises(TypeError):
         assert type((2 * e(2)) * []) == NotImplemented
     with pt.raises(TypeError):
         assert type((1 * e(0)) / []) == NotImplemented
     with pt.raises(TypeError):
+        assert type([] / (1 * e(0))) == NotImplemented
+    with pt.raises(TypeError):
         assert type((1 * e(4)) ** []) == NotImplemented
     with pt.raises(TypeError):
-        assert type(1 + (1 * e(0))) == NotImplemented
-    with pt.raises(TypeError):
-        assert type((1 * e(0)) + 1) == NotImplemented
-    with pt.raises(TypeError):
-        assert type(1 - (1 * e(0))) == NotImplemented
-    with pt.raises(TypeError):
-        assert type((1 * e(0)) - 1) == NotImplemented
+        assert type([] ** (1 * e(4))) == NotImplemented
 
 
 def test_not_implemented_exponent():
