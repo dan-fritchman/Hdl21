@@ -128,6 +128,7 @@ def test_prefixed_mul():
     assert (1 * e(1)) * (1 * e(2)) == 1 * e(3)
     assert 2 * (1 * e(2)) == 2 * e(2)
     assert (1 * e(2)) * 2 == 2 * e(2)
+    assert (1 * e(2)) * 2.0 == 2.0 * e(2)
 
 
 def test_prefixed_div():
@@ -136,6 +137,8 @@ def test_prefixed_div():
 
     assert (1 * e(0)) / 2 == 0.5 * e(0)
     assert (1 * e(0)) / (2 * e(0)) == 0.5 * e(0)
+    assert 2 / (1 * e(0)) == 2 * e(0)
+    assert 6 / (3 * e(0)) == 2 * e(0)
 
 
 def test_prefixed_pow():
@@ -144,6 +147,11 @@ def test_prefixed_pow():
 
     assert (1 * e(1)) ** 2 == 1 * e(2)
     assert (2 * e(-2)) ** 2 == 4 * e(-4)
+
+    # Test with __rpow__
+    assert 2 ** (2 * e(0)) == 4 * e(0)
+    assert 2.0 ** (2 * e(0)) == 4 * e(0)
+    assert Decimal(2) ** (2 * e(0)) == 4 * e(0)
 
 
 def test_prefixed_addition():
@@ -159,6 +167,14 @@ def test_prefixed_addition():
     assert (1 * e(0)) + (1 * e(-2)) == 1.01 * e(0)
     assert (1 * e(2)) + (1 * e(0)) == 1.01 * e(2)
 
+    # Addition with other types:
+    assert (1 * e(0)) + 1 == 2 * e(0)
+    assert 1 + (1 * e(0)) == 2 * e(0)
+    assert (1 * e(0)) + 1.0 == 2.0 * e(0)
+    assert 1.0 + (1 * e(0)) == 2.0 * e(0)
+    assert (1 * e(0)) + Decimal(1) == 2.0 * e(0)
+    assert Decimal(1) + (1 * e(0)) == 2.0 * e(0)
+
 
 def test_prefixed_subtraction():
     """Test `Prefixed` Subtraction"""
@@ -172,6 +188,14 @@ def test_prefixed_subtraction():
     assert (1 * e(0)) - (1 * e(0)) == 0.0 * e(1)
     assert (1 * e(0)) - (1 * e(-2)) == 0.99 * e(0)
     assert (1 * e(2)) - (1 * e(0)) == 0.99 * e(2)
+
+    # Subtraction with other types:
+    assert (1 * e(0)) - 1 == 0 * e(0)
+    assert 1 - (1 * e(0)) == 0 * e(0)
+    assert (1 * e(0)) - 1.0 == 0.0 * e(0)
+    assert 1.0 - (1 * e(0)) == 0.0 * e(0)
+    assert (1 * e(0)) - Decimal(1) == 0.0 * e(0)
+    assert Decimal(1) - (1 * e(0)) == 0.0 * e(0)
 
 
 def test_e():
@@ -216,6 +240,13 @@ def test_e_mult():
     assert 1 * e(-0.123) * e(0.003) * e(0.1) == 1 * e(-0.02)
     assert 11 * e(0.123) * e(0.123) * e(0.123) == 11 * e(0.369)
     assert 1 * e(0.123) * e(-0.123) == 1 * e(0)
+
+    # Test __mul__
+    assert e(-9) * 11 == h.Prefixed.new(11, h.Prefix.NANO)
+    assert e(1.5) * e(4.5) * 11 == 11 * e(6)
+    assert e(1) * e(-1) * 11 == 11 * e(0)
+    assert e(1) * e(-2) * e(3) * 11 == 11 * e(2)
+    assert e(-0.5) * e(1) * 1 == 1 * e(0.5)
 
 
 def test_e_pow():

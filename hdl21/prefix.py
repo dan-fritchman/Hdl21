@@ -214,6 +214,13 @@ class Prefixed(BaseModel):
             return NotImplemented
         return Prefixed.new(self.number / Decimal(str(other)), self.prefix).scale()
 
+    def __rtruediv__(self, other) -> "Prefixed":
+        if isinstance(other, Prefixed):
+            return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
+        elif not isinstance(other, (str, int, float, Decimal)):
+            return NotImplemented
+        return Prefixed.new(Decimal(str(other)) / self.number, self.prefix).scale()
+
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
@@ -221,25 +228,40 @@ class Prefixed(BaseModel):
             self.number ** Decimal(str(other)) * (self.prefix ** Decimal(str(other)))
         ).scale()
 
-    def __add__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+    def __rpow__(self, other) -> "Prefixed":
+        if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
+        return (
+            Decimal(str(other)) ** (self.number * (Decimal(10) ** self.prefix))
+        ).scale()
+
+    def __add__(self, other: "Prefixed") -> "Prefixed":
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
+            return NotImplemented
+        elif not isinstance(other, Prefixed):
+            return _add(lhs=self, rhs=Prefixed.new(other))
         return _add(lhs=self, rhs=other).scale()
 
     def __radd__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
-        return _add(lhs=other, rhs=self).scale()
+        elif not isinstance(other, Prefixed):
+            return _add(lhs=self, rhs=Prefixed.new(other))
+        return _add(lhs=self, rhs=other).scale()
 
     def __sub__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
+        elif not isinstance(other, Prefixed):
+            return _subtract(lhs=self, rhs=Prefixed.new(other))
         return _subtract(lhs=self, rhs=other).scale()
 
     def __rsub__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
-        return _subtract(lhs=other, rhs=self).scale()
+        elif not isinstance(other, Prefixed):
+            return _subtract(lhs=self, rhs=Prefixed.new(other))
+        return _subtract(lhs=self, rhs=other).scale()
 
     def scale(self, prefix: Prefix = None) -> "Prefixed":
         """Scale to a new `Prefix`"""
@@ -388,12 +410,17 @@ class Exponent:
         out_residual = Decimal(str(exp)) - out_symbol.value
         return Exponent(out_symbol, out_residual)
 
-    def __mul__(self, other: Optional["Exponent"]) -> Optional["Exponent"]:
+    def __mul__(self, other: Any) -> Optional[Union["Exponent", "Prefixed"]]:
 
         if isinstance(other, Exponent):
             # Exponent(n,0.3) * Exponent(K,0.4) == e(-8.7) * e(3.4) = e(-5.3)
             return Exponent.from_exp(
                 self.symbol.value + other.symbol.value + self.residual + other.residual
+            )
+
+        elif isinstance(other, (str, int, float, Decimal)):
+            return Prefixed.new(
+                Decimal(str(other)) * Decimal(10) ** self.residual, self.symbol
             )
 
         return NotImplemented
