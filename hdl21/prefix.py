@@ -69,6 +69,9 @@ class Prefix(Enum):
             # Prefix times Prefix, eg. `p * M == µ`
             targ = self.value + other.value
             return e(targ)
+        elif isinstance(other, (str, int, float, Decimal, Prefixed)):
+            # Prefix times number, eg. `p * 5 == 5 * p == 5 * Prefix.UNIT`
+            return self.__rmul__(other)
 
         return NotImplemented
 
@@ -201,9 +204,12 @@ class Prefixed(BaseModel):
     def __float__(self) -> float:
         """Convert to float"""
         return float(self.number) * 10**self.prefix.value
-    
+
     def __neg__(self) -> "Prefixed":
         return Prefixed.new(-self.number, self.prefix)
+
+    def __abs__(self) -> "Prefixed":
+        return Prefixed.new(abs(self.number), self.prefix)
 
     def __mul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
@@ -225,7 +231,7 @@ class Prefixed(BaseModel):
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
         elif float(other) == 0.0:
-            return float('inf')
+            return float("inf")
         return Prefixed.new(self.number / Decimal(str(other)), self.prefix).scale()
 
     def __rtruediv__(self, other) -> "Prefixed":
@@ -234,7 +240,7 @@ class Prefixed(BaseModel):
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
         elif float(self.number) == 0.0:
-            return float('inf')
+            return float("inf")
         return Prefixed.new(Decimal(str(other)) / self.number, self.prefix).scale()
 
     def __pow__(self, other) -> "Prefixed":
