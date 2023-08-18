@@ -119,7 +119,7 @@ class Prefix(Enum):
         return NotImplemented
 
     def __int__(self):
-        return 10**self.value
+        return int(10**self.value)
 
     def __float__(self):
         return float(10**self.value)
@@ -293,6 +293,9 @@ class Prefixed(BaseModel):
         else:
             newpref = Prefix.closest(abs(self.number).log10() + self.prefix.value)
             return self.scale(newpref)
+
+    def __str__(self) -> str:
+        return f"{self.number}*{self.prefix.name}"
 
     def __repr__(self) -> str:
         return f"{self.number}*{self.prefix.name}"
@@ -521,3 +524,4 @@ def e(exp: Any) -> Exponent:
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
 # They can be explicityle imported from `hdl21.prefix` instead.
 __all__ = ["Prefix", "Prefixed", "Exponent"]
+

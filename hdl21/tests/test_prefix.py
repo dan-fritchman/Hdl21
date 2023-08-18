@@ -5,7 +5,6 @@ from pydantic.dataclasses import dataclass
 
 import hdl21 as h
 
-
 def test_decimal():
     """This isnt a test of Hdl21 so much as a demo and reminder of how
     the standard library's `Decimal` works, particularly in conjunction with
@@ -132,6 +131,7 @@ def test_prefixed_mul():
 
 
 def test_prefixed_div():
+
     """Test `Prefixed` True Division"""
     from hdl21.prefix import e
 
@@ -336,7 +336,7 @@ def test_prefix_comparison():
     assert (2 * e(1 / 3)) ** 2 == 4 * e(2 / 3)
 
 
-def test_prefix_conversion():
+def test_prefixed_conversion():
     """Test types that can be converted to `Prefixed`'s internal `Decimal`."""
     from hdl21.prefix import e, y
 
@@ -353,6 +353,14 @@ def test_prefix_conversion():
     assert type(int(2 * e(2))) == int
     assert int(2 * e(2)) == 200
 
+def test_prefix_conversion():
+    """Test types that can be converted to `Prefix`'s internal `Decimal`."""
+    from hdl21.prefix import m,M
+
+    assert int(m) == 0
+    assert float(m) == 0.001
+    assert int(M) == 1e6
+    assert float(M) == 1e6
 
 def test_unit_prefix():
     """Test the UNIT prefix"""
@@ -402,6 +410,49 @@ def test_not_implemented_prefixed():
     with pt.raises(TypeError):
         assert type([] ** (1 * e(4))) == NotImplemented
 
+def test_to_prefixed():
+    from hdl21.prefix import to_prefixed
+
+    assert to_prefixed(1) == h.Prefixed.new(1)
+    assert to_prefixed(1.0) == h.Prefixed.new(1.0)
+    assert to_prefixed(Decimal(1)) == h.Prefixed.new(Decimal(1))
+    assert to_prefixed(1 * h.Prefix.KILO) == h.Prefixed.new(1, h.Prefix.KILO)
+    # with pt.raises(RuntimeError):
+    #     assert to_prefixed([]) == NotImplemented
+
+def test_exponent_conversions():
+
+    from hdl21.prefix import e
+
+    assert e(1).__repr__() == "e(1)"
+    assert e(1).__str__() == "10"
+    assert e(1).__float__() == 10.0
+
+def test_prefixed_conversion():
+
+    from hdl21.prefix import n
+
+    assert (1*n).__repr__() == "1*NANO"
+    assert (1*n).__str__() == "1*NANO"
+    assert (1*n).__float__() == 1e-9
+
+def test_prefixed_abs():
+
+    from hdl21.prefix import n
+
+    assert abs(-1*n) == 1*n
+
+def test_prefixed_neg():
+
+    from hdl21.prefix import n
+
+    assert -(1*n) == -1*n
+
+def test_prefixed_divzero():
+
+    from hdl21.prefix import n
+
+    assert 1*n / 0 == float('inf')
 
 def test_not_implemented_exponent():
     from hdl21.prefix import Exponent, K, e
