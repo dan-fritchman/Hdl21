@@ -232,7 +232,9 @@ class Prefixed(BaseModel):
             return NotImplemented
         elif float(other) == 0.0:
             return float("inf")
-        return Prefixed.new(self.number / Decimal(str(other)), self.prefix).scale()
+        return Prefixed.new(
+            self.number / Decimal(str(other)), self.prefix.value
+        ).scale()
 
     def __rtruediv__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
@@ -241,7 +243,9 @@ class Prefixed(BaseModel):
             return NotImplemented
         elif float(self.number) == 0.0:
             return float("inf")
-        return Prefixed.new(Decimal(str(other)) / self.number, self.prefix).scale()
+        return Prefixed.new(
+            Decimal(str(other)) / self.number, -self.prefix.value
+        ).scale()
 
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal)):
@@ -254,7 +258,8 @@ class Prefixed(BaseModel):
         if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
         return Prefixed.new(
-            Decimal(str(other)) ** (self.number * (Decimal(str(self.prefix))))
+            Decimal(str(other))
+            ** (self.number * (10 ** Decimal(str(self.prefix.value))))
         )
 
     def __add__(self, other: "Prefixed") -> "Prefixed":
@@ -282,8 +287,8 @@ class Prefixed(BaseModel):
         if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
         elif not isinstance(other, Prefixed):
-            return _subtract(lhs=self, rhs=Prefixed.new(other))
-        return _subtract(lhs=self, rhs=other).scale()
+            return _subtract(lhs=Prefixed.new(other), rhs=self)
+        return _subtract(lhs=other, rhs=self).scale()
 
     def scale(self, prefix: Prefix = None) -> "Prefixed":
         """Scale to a new `Prefix`"""
@@ -399,6 +404,7 @@ m = MILLI = Prefix.MILLI
 c = CENTI = Prefix.CENTI
 d = DECI = Prefix.DECI
 D = DECA = Prefix.DECA
+H = HECTO = Prefix.HECTO
 K = KILO = Prefix.KILO
 M = MEGA = Prefix.MEGA
 G = GIGA = Prefix.GIGA
