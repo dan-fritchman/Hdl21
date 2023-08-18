@@ -524,4 +524,3 @@ def e(exp: Any) -> Exponent:
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
 # They can be explicityle imported from `hdl21.prefix` instead.
 __all__ = ["Prefix", "Prefixed", "Exponent"]
-
