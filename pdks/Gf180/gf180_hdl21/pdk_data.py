@@ -59,8 +59,8 @@ from vlsirtools import SpiceType
 class MosParams:
     """# GF180 Mos Parameters"""
 
-    w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1 * µ)
-    l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1 * µ)
+    w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (m)", default=1 * µ)
+    l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1 * µ)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
 
     #! CAUTION: The subsequent parameters are not recommended for design use.
