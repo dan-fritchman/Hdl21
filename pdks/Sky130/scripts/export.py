@@ -2,15 +2,9 @@
 #
 # Exports PDK data in Vlsir schema format (protobufs).
 
-# This script requires that the following Vlsir ecosystem packages be available
-# for import by Python:
-#   - VlsirTools
-#   - Vlsir proto bindings
-#   - Sky130
-#   - Hdl21
-#
-# You can install these from PyPi or, particularly during development, set your
-# PYTHONPATH explicitly. For example:
+# To run this without installation (maybe during development), you need to
+# specify paths to VlsirTools, the Vlsir proto bindings, Hdl21 and the Sky130
+# PDK package (this one):
 #   PYTHONPATH=/path/Hdl21/pdks/Sky130:/path/Hdl21:/path/Vlsir/VlsirTools/:/path/Vlsir/bindings/python/ \
 #   ./export.py --text_format
 
