@@ -403,10 +403,7 @@ def run(
 ) -> OneOrMore[vsp.SimResultUnion]:
     """Invoke one or more `Sim`s via `vlsirtools.spice`."""
 
-    from .to_proto import to_proto
-
-    # FIXME: I don't see anything that relied on this, but whatever it was, has gotta go
-    # inp.Tb.props.set("simulator", opts.simulator.value)
+    from .proto import to_proto
 
     return vsp.sim(inp=to_proto(inp), opts=opts)
 
@@ -415,7 +412,7 @@ def run_async(
     inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
 ) -> OneOrMore[vsp.SimResultUnion]:
     """Invoke simulation via `vlsirtools.spice`."""
-    from .to_proto import to_proto
+    from .proto import to_proto
 
     # FIXME: go through with deprecation
     warn(

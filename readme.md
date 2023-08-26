@@ -84,7 +84,7 @@ Hdl21's primary connection type is `Signal`. Think of it as Verilog's `wire`, or
 
 A subset of `Signals` are exposed outside their parent `Module`. These externally-connectable signals are referred to as `Ports`. Hdl21 provides four port constructors: `Input`, `Output`, `Inout`, and `Port`. The last creates a directionless (or direction unspecified) port akin to those of common spice-level languages.
 
-## Connections
+### Connections
 
 Popular HDLs generally feature one of two forms of connection semantics. Verilog, VHDL, and most dedicated HDLs use "connect by call" semantics, in which signal-objects are first declared, then passed as function-call-style arguments to instances of other modules.
 
@@ -164,6 +164,71 @@ m.i1 = AnotherModule()
 m.i2 = AnotherModule(a=m.i1.a, b=m.i1.b, c=m.i1.c)
 ```
 
+These methods hides some of what happens under the hood of HDL21 for ease-of-use. A more thorough method of defining objects, especially in `Generator`s seen below, leverage endpoints in the `Module` and `Instance` APIs:
+
+`h.Module.add` is used to add either `Signal` or `Instance`s instantiated in the usual way and also allows the use of an optional `name` keyword argument which names the newly added object so it can be accessed using the methods we've already described above.
+
+`h.Module.get` is used to get the `Signal` or `Instance` with a given name from a module via a single argument in string form.
+
+`h.Instance.connect` takes two arguments, the first a string referring to an `Instance`'s available ports and the second refers to any "connectable" object which can be of the type `Signal`, `PortRef`, `Slice` or `Concat`.
+
+### Slicing
+
+`Signal` objects are equipped with a `width` keyword argument, which determines the width of a signal bus. This creates a 1D array that can accessed using Python's usual slicing syntax used with lists:
+
+```python
+sig1 = h.Signal(width=12)
+sig2 = h.Input(width=6)
+# Map sig2 signals to even numbered sig1 signals
+sig2 = sig1[::2]
+```
+
+NOTE: the slicing provided works by creating a reference to the underlying signals to be mapped, so at this time can't be used to *set* connections but only *get* connections. That is, the following will raise an error:
+
+```python
+sig1 = h.Signal(width=12)
+sig2 = h.Input(width=6)
+# Map sig2 signals to even numbered sig1 signals
+sig1[::2] = sig2
+```
+
+### Concatenation
+
+`Signal`'s can be concatenated to make wider signal buses that you can use to interface with between buses of variable width. This is done using the `Concat` command:
+
+```python
+a = h.Signal()
+b = h.Signal(width=2)
+
+# This is a Concat with two parts
+# that is resolved into signal bus
+# with a width of 3.
+c = h.Concat(a,b)
+```
+
+The Concat command can be used with an arbitrary number of `Signal`s, as well as recursively to create heirarchical `Concat` structures:
+
+```python
+a = h.Signal()
+b = h.Signal(width=2)
+c = h.Signal(width=3)
+
+# This is a Concat with three parts
+# it is resolved to a width-6 bus
+d = h.Concat(a,b,c)
+
+# This is a Concat with two parts
+# with objects 2-part Concat and c
+# it is flattened to the same width-6 bus
+d = h.Concat(h.Concat(a,b),c)
+```
+
+### Debugging Tips
+
+Each `Module` has an attribute called `ports` and `signals` which store what they are labelled respectively. Taking either of these, you can examine individual `Signal`s to see if they've been correctly connected by checking their individual `_slices`, `_concats` and `_connected_ports` attributes.
+
+Whereas, `Instances` contain attributes `conns` which list what objects an `Instance`'s ports are connected to and `_refs` which keeps track of where `PortRef`s for a given `Instance` are being distributed to other `Module`s and `Instance`s in your program.
+
 ## Generators
 
 Hdl21 `Modules` are "plain old data". They require no runtime or execution environment. They can be (and are!) fully represented in markup languages such as ProtoBuf, JSON, and YAML. The power of embedding `Modules` in a general-purpose programming language lies in allowing code to create and manipulate them. Hdl21's `Generators` are functions which produce `Modules`, and have a number of built-in features to aid embedding in a hierarchical hardware tree.
@@ -221,6 +286,20 @@ def MyThirdGenerator(params: MyParams) -> h.Module:
     Outer.inp = h.Input(width=params.w)
     return Outer
 ```
+
+### Debugging Tips
+
+Generators when they're called return `GeneratorCall`s, which are sufficient to validate them with respect to the rest of circuit, but don't contain the resolved `Module` that you might intuitively expect from the type-hinting. To get at this module the usual procedure is as follows:
+
+```python
+MyGen = MyGenerator(params)
+#  Explicitly elaborate your generator
+h.elaborate(MyGen)
+# Extract the resolved Module within
+MyGen = MyGen.result
+```
+
+You can then manipulate this `Module` using the debugging tips provided above at the end of the `Signal` section.
 
 ## Parameters
 

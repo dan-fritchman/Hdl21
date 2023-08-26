@@ -1,3 +1,5 @@
 from .data import *
 from .delay import *
-from .to_proto import to_proto
+
+from . import proto
+from .proto import to_proto

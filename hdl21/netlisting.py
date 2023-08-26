@@ -14,7 +14,7 @@ from vlsirtools.netlist import (
 )
 
 from .elab import Elaboratables
-from .proto.to_proto import to_proto
+from .proto import to_proto
 
 
 def netlist(
@@ -52,3 +52,6 @@ def netlist(
 
     # And invoke the VLSIR netlister
     return vlisr_netlist(pkg=pkg, dest=dest, **kwargs)
+
+
+__all__ = ["netlist", "NetlistFormat", "NetlistFormatSpec", "NetlistOptions"]
