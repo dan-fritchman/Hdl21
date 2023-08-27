@@ -2,7 +2,7 @@
 
 # Hdl21 + SkyWater 130nm Open-Source PDK Modules and Transformations 
 
-Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the SkyWater 130nm open-source PDK, '
+Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the SkyWater 130nm open-source PDK,
 and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
 
 The complete 130nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`. 
@@ -70,7 +70,7 @@ class Install(PdkInstallation):
     """
 
     pdk_path: Path  # Path to PDK installation
-    lib_path: Path  # Relative path to PDK ngpisce library file
+    lib_path: Path  # Relative path to PDK ngpspice library file
     model_ref: Path  # Relative path to PDK SPICE models reference
 
     def include(self, corner: h.pdk.Corner) -> h.sim.Lib:
