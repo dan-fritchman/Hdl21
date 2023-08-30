@@ -384,9 +384,9 @@ def export_param_value(val: ToVlsirParam) -> Optional[vlsir.ParamValue]:
     if isinstance(val, Decimal):
         return vlsir.ParamValue(literal=str(val))
     if isinstance(val, int):
-        return vlsir.ParamValue(integer=val)
+        return vlsir.ParamValue(int64_value=val)
     if isinstance(val, float):
-        return vlsir.ParamValue(double=val)
+        return vlsir.ParamValue(double_value=val)
 
     msg = f"Unsupported parameter for proto-export: `{val}`"
     raise TypeError(msg)
@@ -430,8 +430,8 @@ def export_prefixed(pref: Prefixed) -> vlsir.Prefixed:
 
     # And export the numeric part. Use Vlsir's `integer` variant for Decimal values which equal integers, and strings otherwise.
     if pref.number == int(pref.number):
-        return vlsir.Prefixed(integer=int(pref.number), prefix=prefix)
-    return vlsir.Prefixed(string=str(pref.number), prefix=prefix)
+        return vlsir.Prefixed(int64_value=int(pref.number), prefix=prefix)
+    return vlsir.Prefixed(string_value=str(pref.number), prefix=prefix)
 
 
 # FIXME: #54 also expose the `hdl21.primitives` as a VLSIR package
