@@ -435,7 +435,7 @@ Capacitor.Params(
 These multiplications are the easiest and most common way to create `Prefixed` parameter values.
 Note the single-character identifiers `µ`, `n`, `f`, et al _are not_ exported by star-exports (`from hdl21 import *`). They must be imported explicitly from `hdl21.prefix`.
 
-`hdl21.prefix` also exposes an `e()` function, which produces a prefix from an integer exponent value:
+`hdl21.prefix` also exposes an `e()` function which returns an `Exponent` type, which produces a prefix from an integer exponent value:
 
 ```python
 from hdl21.prefix import e, µ
@@ -445,6 +445,48 @@ from hdl21.prefix import e, µ
 
 These `e()` values are also most common in multiplication expressions,
 to create `Prefixed` values in "floating point" style such as `11 * e(-9)`.
+
+#### Exponent Arithmetic
+
+The `Prefix` has its own arithmetic which can be accessed with `*`, `/` and `**`, this allows users to chain together rescaling parameters. Behind the scenes, this is done by converting the `Prefix`'s into an `Exponent` type (the default type returned by the `e` function). For example, the following test passes:
+
+```python
+def test_prefix_arithmetic:
+
+    assert 1 * m * m == 1 * u
+    assert 1 * (K / D) == 0.1 * K
+    assert 1 * (K ** 2) == 1 * M 
+```
+
+`Exponent` types support floats and also have arithmetic with `*`, `/` and `**` which works using rules relating power arithmetic to these operators:
+
+```python
+def test_exponent_arithmetic:
+
+    assert 1 * e(0.5) * e(0.5) == 1 * e(1)
+    assert 1 * e(0.5) / e(0.5) == 1 * e(0)
+    assert 1 * e(0.2) ** 5 == 1 * e(1)
+```
+
+#### Mathematical Tricks
+
+##### Comparison and Equality
+
+`Prefixed` determines if two values are the same by comparing their difference up to 20 decimal places in their SI unit, this means that a yottameter + yoctometer is indistinguishable from a plain yottameter in `Prefixed` comparison logic. It's assumed this is safe because numerical errors at this scale difference compound very quickly with routine mathematics like square-roots, even with arbitrary precision arithmetic.
+
+At this time, comparison and equality operators are not supported for the `Prefix` or `Exponent`, since these types describe scale rather than encode actual quantities, a Kilomilliwatt is just a Watt, after all.
+
+##### Scale Agnostic
+
+`Prefixed` in general is scale agnostic and can safely move across scales without any issue, with the `prefix` serving more as an indication of where the user would like to treat as units than explicit declaration of scale where no comparison can happen.
+
+##### Linear Algebra
+
+`numpy` supports `Prefixed` arrays out of the box, meaning that arrays can be used with `Prefix` arithmetic and used for simple linear algebra and any operations where a `np.float` dtype is required.
+
+##### Zero Division
+
+Dividing a `Prefixed` instance by `0` will return `float('inf')` regardless of sign.
 
 ### `Scalar`
 

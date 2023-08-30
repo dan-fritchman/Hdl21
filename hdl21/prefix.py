@@ -69,6 +69,9 @@ class Prefix(Enum):
             # Prefix times Prefix, eg. `p * M == µ`
             targ = self.value + other.value
             return e(targ)
+        elif isinstance(other, (str, int, float, Decimal, Prefixed)):
+            # Prefix times number, eg. `p * 5 == 5 * p == 5 * Prefix.UNIT`
+            return self.__rmul__(other)
 
         return NotImplemented
 
@@ -114,6 +117,15 @@ class Prefix(Enum):
             return e(targ)
 
         return NotImplemented
+
+    def __int__(self):
+        return int(10**self.value)
+
+    def __float__(self):
+        return float(10**self.value)
+
+    def __str__(self):
+        return str(Decimal(10) ** self.value)
 
 
 """
@@ -193,6 +205,12 @@ class Prefixed(BaseModel):
         """Convert to float"""
         return float(self.number) * 10**self.prefix.value
 
+    def __neg__(self) -> "Prefixed":
+        return Prefixed.new(-self.number, self.prefix)
+
+    def __abs__(self) -> "Prefixed":
+        return Prefixed.new(abs(self.number), self.prefix)
+
     def __mul__(self, other) -> "Prefixed":
         if isinstance(other, Prefixed):
             return (self.number * other.number * self.prefix * other.prefix).scale()
@@ -212,7 +230,22 @@ class Prefixed(BaseModel):
             return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
         elif not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
-        return Prefixed.new(self.number / Decimal(str(other)), self.prefix).scale()
+        elif float(other) == 0.0:
+            return float("inf")
+        return Prefixed.new(
+            self.number / Decimal(str(other)), self.prefix.value
+        ).scale()
+
+    def __rtruediv__(self, other) -> "Prefixed":
+        if isinstance(other, Prefixed):
+            return ((self.number / other.number) * (self.prefix / other.prefix)).scale()
+        elif not isinstance(other, (str, int, float, Decimal)):
+            return NotImplemented
+        elif float(self.number) == 0.0:
+            return float("inf")
+        return Prefixed.new(
+            Decimal(str(other)) / self.number, -self.prefix.value
+        ).scale()
 
     def __pow__(self, other) -> "Prefixed":
         if not isinstance(other, (str, int, float, Decimal)):
@@ -221,24 +254,40 @@ class Prefixed(BaseModel):
             self.number ** Decimal(str(other)) * (self.prefix ** Decimal(str(other)))
         ).scale()
 
-    def __add__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+    def __rpow__(self, other) -> "Prefixed":
+        if not isinstance(other, (str, int, float, Decimal)):
             return NotImplemented
+        return Prefixed.new(
+            Decimal(str(other))
+            ** (self.number * (10 ** Decimal(str(self.prefix.value))))
+        )
+
+    def __add__(self, other: "Prefixed") -> "Prefixed":
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
+            return NotImplemented
+        elif not isinstance(other, Prefixed):
+            return _add(lhs=self, rhs=Prefixed.new(other))
         return _add(lhs=self, rhs=other).scale()
 
     def __radd__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
-        return _add(lhs=other, rhs=self).scale()
+        elif not isinstance(other, Prefixed):
+            return _add(lhs=self, rhs=Prefixed.new(other))
+        return _add(lhs=self, rhs=other).scale()
 
     def __sub__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
+        elif not isinstance(other, Prefixed):
+            return _subtract(lhs=self, rhs=Prefixed.new(other))
         return _subtract(lhs=self, rhs=other).scale()
 
     def __rsub__(self, other: "Prefixed") -> "Prefixed":
-        if not isinstance(other, Prefixed):
+        if not isinstance(other, (str, int, float, Decimal, Prefixed)):
             return NotImplemented
+        elif not isinstance(other, Prefixed):
+            return _subtract(lhs=Prefixed.new(other), rhs=self)
         return _subtract(lhs=other, rhs=self).scale()
 
     def scale(self, prefix: Prefix = None) -> "Prefixed":
@@ -249,6 +298,9 @@ class Prefixed(BaseModel):
         else:
             newpref = Prefix.closest(abs(self.number).log10() + self.prefix.value)
             return self.scale(newpref)
+
+    def __str__(self) -> str:
+        return f"{self.number}*{self.prefix.name}"
 
     def __repr__(self) -> str:
         return f"{self.number}*{self.prefix.name}"
@@ -352,6 +404,7 @@ m = MILLI = Prefix.MILLI
 c = CENTI = Prefix.CENTI
 d = DECI = Prefix.DECI
 D = DECA = Prefix.DECA
+H = HECTO = Prefix.HECTO
 K = KILO = Prefix.KILO
 M = MEGA = Prefix.MEGA
 G = GIGA = Prefix.GIGA
@@ -388,12 +441,17 @@ class Exponent:
         out_residual = Decimal(str(exp)) - out_symbol.value
         return Exponent(out_symbol, out_residual)
 
-    def __mul__(self, other: Optional["Exponent"]) -> Optional["Exponent"]:
+    def __mul__(self, other: Any) -> Optional[Union["Exponent", "Prefixed"]]:
 
         if isinstance(other, Exponent):
             # Exponent(n,0.3) * Exponent(K,0.4) == e(-8.7) * e(3.4) = e(-5.3)
             return Exponent.from_exp(
                 self.symbol.value + other.symbol.value + self.residual + other.residual
+            )
+
+        elif isinstance(other, (str, int, float, Decimal)):
+            return Prefixed.new(
+                Decimal(str(other)) * Decimal(10) ** self.residual, self.symbol
             )
 
         return NotImplemented
@@ -439,6 +497,12 @@ class Exponent:
 
     def __repr__(self) -> str:
         return f"e({self.symbol.value+self.residual})"
+
+    def __float__(self) -> float:
+        return float(10 ** (self.symbol.value + self.residual))
+
+    def __str__(self) -> str:
+        return str(Decimal(10) ** (self.symbol.value + self.residual))
 
 
 def e(exp: Any) -> Exponent:
