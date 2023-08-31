@@ -21,7 +21,7 @@ def qualpath(mod: HasQualPath) -> Optional[List[str]]:
 
     if getattr(mod, "_importpath", None) is not None:
         # Imported. Return the period-separated import path.
-        return mod._importpath
+        return mod._importpath + [mod.name]
 
     if mod.name is None:
         # Unnamed. Return None.
