@@ -268,12 +268,12 @@ def import_parameter_value(
 ) -> Union[int, float, str, Prefixed]:
     """Import a `ParamValue`"""
     ptype = pparam.WhichOneof("value")
-    if ptype == "integer":
-        return int(pparam.integer)
-    if ptype == "double":
-        return float(pparam.double)
-    if ptype == "string":
-        return str(pparam.string)
+    if ptype == "int64_value":
+        return int(pparam.int64_value)
+    if ptype == "double_value":
+        return float(pparam.double_value)
+    if ptype == "string_value":
+        return str(pparam.string_value)
     if ptype == "literal":
         return str(pparam.literal)
     if ptype == "prefixed":
@@ -372,12 +372,12 @@ def import_prefixed(vpref: vlsir.Prefixed) -> Prefixed:
 
     # And import the numeric part, dispatched across its type.
     ptype = vpref.WhichOneof("number")
-    if ptype == "integer":
-        number = vpref.integer
-    elif ptype == "double":
-        number = vpref.double
-    elif ptype == "string":
-        number = vpref.string
+    if ptype == "int64_value":
+        number = vpref.int64_value
+    elif ptype == "double_value":
+        number = vpref.double_value
+    elif ptype == "string_value":
+        number = vpref.string_value
     else:
         raise ValueError(f"Invalid Parameter Type: `{ptype}`")
 
