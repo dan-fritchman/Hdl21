@@ -117,7 +117,6 @@ class SamplePdkWalker(h.HierarchyWalker):
 
     def mos_params(self, params: PrimMosParams) -> SamplePdkMosParams:
         """Convert generic primitive `MosParams` into PDK-specific `SamplePdkMosParams`"""
-        # FIXME: pending rename of `primitives.MosParams.nf`
         # FIXME: map parameters using the `default` field directly; needs debug
         w = params.w or 1 * µ
         l = params.l or 1 * µ

@@ -246,9 +246,7 @@ class MosParams:
 
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    nf = Param(
-        dtype=Scalar, desc="Number of parallel fingers", default=1
-    )
+    nf = Param(dtype=Scalar, desc="Number of parallel fingers", default=1)
     mult = Param(dtype=Scalar, desc="Multiplier", default=1)
 
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
