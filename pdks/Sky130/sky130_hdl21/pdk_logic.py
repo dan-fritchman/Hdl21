@@ -221,7 +221,7 @@ class Sky130Walker(h.HierarchyWalker):
             modparams = Sky130MosParams(
                 w=w,
                 l=l,
-                nf=params.npar,  # FIXME: renaming
+                nf=params.nf,
                 mult=params.mult,
             )
 

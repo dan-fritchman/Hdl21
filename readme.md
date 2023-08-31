@@ -307,7 +307,7 @@ You can then manipulate this `Module` using the debugging tips provided above at
 
 ```python
 # Example parameter:
-npar = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
+nf = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
 ```
 
 The collections of these parameters used by `Generators` are called param-classes, and are typically formed by applying the `hdl21.paramclass` decorator to a class-body-full of `hdl21.Params`:
