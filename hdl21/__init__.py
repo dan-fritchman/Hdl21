@@ -7,7 +7,7 @@ __version__ = "4.0.0"  # NOTE: VLSIR_VERSION
 
 # Before any real importing, ensure we can instantiate non-pydantic types in type-checked dataclasses.
 # This `Config` seems to be shared for *all* pydantic types, even when not applied to `BaseModel`.
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 BaseModel.Config.arbitrary_types_allowed = True
 

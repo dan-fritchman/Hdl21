@@ -16,7 +16,7 @@ from dataclasses import fields
 from enum import Enum
 from typing import Optional, List, Union, Dict, Any
 
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Local imports
 # Proto-definitions

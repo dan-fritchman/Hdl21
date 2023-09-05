@@ -7,7 +7,7 @@ import dataclasses, inspect, json, hashlib
 from typing import Optional, Any, Type, TypeVar, Dict
 
 # PyPi Imports
-import pydantic
+import pydantic.v1
 
 # Local Imports
 from .default import Default
@@ -116,7 +116,7 @@ def paramclass(cls: Type[T]) -> Type[T]:
     cls.defaults = classmethod(defaults)
 
     # Pass this through the pydantic dataclass-decorator-function
-    cls = pydantic.dataclasses.dataclass(cls, config=Config, frozen=True)
+    cls = pydantic.v1.dataclasses.dataclass(cls, config=Config, frozen=True)
 
     # Pydantic seems to want to add this one *after* class-creation
     def _brick_subclassing_(cls, *_, **__):
@@ -156,10 +156,10 @@ def isparamclass(cls: type) -> bool:
 
 
 class Config:  # Pydantic Model Config
-    allow_extra = pydantic.Extra.forbid
+    allow_extra = pydantic.v1.Extra.forbid
 
 
-@pydantic.dataclasses.dataclass(config=Config, frozen=True)
+@pydantic.v1.dataclasses.dataclass(config=Config, frozen=True)
 class Param:
     """# Parameter Declaration"""
 
@@ -221,9 +221,9 @@ def _unique_name(params: Any) -> str:
 def hdl21_naming_encoder(obj: Any) -> Any:
     """JSON encoder for naming of Hdl21 parameter-values.
 
-    "Extends" `pydantic.json.pydantic_encoder` by first checking for
+    "Extends" `pydantic.v1.json.pydantic_encoder` by first checking for
     each of the non-serializable Hdl21 types (`Module`, `Instance`, `Generator`, etc.),
-    then hands everything else off to `pydantic.json.pydantic_encoder`.
+    then hands everything else off to `pydantic.v1.json.pydantic_encoder`.
 
     Note this *does not fully serialize `Module`s and the like -
     see `hdl21.to_proto` for this. This JSON-ization is just good enough
@@ -263,7 +263,7 @@ def hdl21_naming_encoder(obj: Any) -> Any:
         return {f.name: getattr(obj, f.name) for f in dataclasses.fields(obj)}
 
     # Not an Hdl21 type. Hand off to pydantic.
-    return pydantic.json.pydantic_encoder(obj)
+    return pydantic.v1.json.pydantic_encoder(obj)
 
 
 # Shortcut for parameter-less generators.

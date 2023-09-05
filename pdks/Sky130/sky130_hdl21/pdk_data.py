@@ -5,7 +5,7 @@ from typing import Dict, Tuple, List
 from types import SimpleNamespace
 
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Hdl21 Imports
 import hdl21 as h

@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from dataclasses import field
 
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Hdl21 Imports
 import hdl21 as h

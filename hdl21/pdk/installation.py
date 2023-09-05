@@ -52,7 +52,7 @@ sim.run()
 
 """
 
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 
 @dataclass
@@ -68,14 +68,14 @@ class PdkInstallation:
     e.g. compilation settings for a particular tool, or metadata indicating
     relevant tool versions.
 
-    Most PDK modules should generally create a `pydantic.dataclass` which is also
+    Most PDK modules should generally create a `pydantic.v1.dataclass` which is also
     a sub-class of `PdkInstallation`, e.g.
 
     ```python
     # mypdk.py
 
     from pathlib import Path
-    from pydantic.dataclasses import dataclass
+    from pydantic.v1.dataclasses import dataclass
     from hdl21.pdk import PdkInstallation
 
     @dataclass

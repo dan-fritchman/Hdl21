@@ -23,7 +23,7 @@ import copy
 from pathlib import Path
 
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Project Imports
 import hdl21 as h

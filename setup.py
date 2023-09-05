@@ -34,7 +34,7 @@ setup(
         f"vlsirtools=={_VLSIR_VERSION}",
         # Our primary external dependency is pydantic.
         # Tested with everything in the 1.9-1.10 range.
-        "pydantic>=1.9.0,<1.11",
+        "pydantic>=2",
     ],
     extras_require={
         "dev": [

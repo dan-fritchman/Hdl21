@@ -1,5 +1,5 @@
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 
 @dataclass(frozen=True)

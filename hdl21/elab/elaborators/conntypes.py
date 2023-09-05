@@ -7,7 +7,7 @@ import copy
 from typing import Any, Union, Dict
 
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Local imports
 from ...connect import is_connectable, Connectable

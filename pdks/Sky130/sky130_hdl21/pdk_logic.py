@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Hdl21 Imports
 import hdl21 as h

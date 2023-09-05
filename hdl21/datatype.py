@@ -1,7 +1,7 @@
 """ 
 # Datatypes Decorator 
 
-Wraps `@pydantic.dataclasses.dataclass` so that we can make forward type-references 
+Wraps `@pydantic.v1.dataclasses.dataclass` so that we can make forward type-references
 throughout the package, and then sort them all out at the end of import-time. 
 
 The intended usage is such that `__init__.py` includes
@@ -23,12 +23,12 @@ Notes:
   * Importing this function into other packages is therefore highly discouraged. (Copying it is quite easy though.) 
 * `@datatype` only works on modules which are imported before `_update_forward_refs()` is run. 
   * Generally this means modules which are imported as part of `__init__.py`
-* `@datatype` is designed solely to work on `pydantic.dataclasses.dataclass`es. 
+* `@datatype` is designed solely to work on `pydantic.v1.dataclasses.dataclass`es.
   * Notable exceptions include *union types* thereof, which do not have the necessary fields/ methods. 
 """
 
-from pydantic import Extra
-from pydantic.dataclasses import dataclass
+from pydantic.v1 import Extra
+from pydantic.v1.dataclasses import dataclass
 from typing import TypeVar, Type, Any
 
 # The list of defined datatypes

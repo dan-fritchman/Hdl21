@@ -7,7 +7,7 @@ If both were provided, fail.
 """
 
 from typing import Union, Any, Dict
-from pydantic import ValidationError
+from pydantic.v1 import ValidationError
 
 # Local Imports
 from .default import Default

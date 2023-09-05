@@ -27,7 +27,7 @@ from pathlib import Path
 from types import ModuleType, FrameType
 from typing import Optional, Set
 
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 
 @dataclass

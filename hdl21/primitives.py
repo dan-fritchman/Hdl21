@@ -66,7 +66,7 @@ from dataclasses import replace
 from typing import Optional, Any, List, Type, Dict
 
 # PyPi Imports
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Local imports
 from .default import Default

@@ -1,6 +1,6 @@
 from typing import Union
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 # Local Imports
 from .prefix import Prefixed

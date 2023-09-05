@@ -18,8 +18,8 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 from enum import Enum
 from decimal import Decimal
 from typing import Optional, Any, Union, Tuple
-from pydantic import BaseModel, ValidationError, Field
-from pydantic.dataclasses import dataclass
+from pydantic.v1 import BaseModel, ValidationError, Field
+from pydantic.v1.dataclasses import dataclass
 
 
 EPSILON = 20

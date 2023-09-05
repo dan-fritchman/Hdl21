@@ -17,7 +17,7 @@ from typing import Union, Optional
 from types import SimpleNamespace
 from dataclasses import asdict
 
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 import hdl21 as h
 from hdl21.pdk import PdkInstallation

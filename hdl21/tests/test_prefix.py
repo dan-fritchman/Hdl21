@@ -1,7 +1,7 @@
 import pytest as pt
 from decimal import Decimal
-from pydantic import ValidationError
-from pydantic.dataclasses import dataclass
+from pydantic.v1 import ValidationError
+from pydantic.v1.dataclasses import dataclass
 
 import hdl21 as h
 

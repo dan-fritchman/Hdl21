@@ -6,8 +6,8 @@
 import pytest
 from dataclasses import field, FrozenInstanceError
 
-from pydantic import ValidationError
-from pydantic.dataclasses import dataclass
+from pydantic.v1 import ValidationError
+from pydantic.v1.dataclasses import dataclass
 
 # Import the PUT (package under test)
 import hdl21 as h

@@ -28,7 +28,7 @@ setup(
     packages=find_packages(),
     python_requires=">=3.7",
     install_requires=[
-        "pydantic>=1.9.0",
+        "pydantic>=2",
         f"hdl21=={_VLSIR_VERSION}",
     ],
     extras_require={"dev": ["pytest==7.1", "coverage", "pytest-cov", "twine"]},

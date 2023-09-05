@@ -5,7 +5,7 @@ Wrapper for circuits defined outside Hdl21.
 """
 
 from typing import Any, Optional, List, Type, Dict
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # VLSIR Imports
 from vlsirtools import SpiceType

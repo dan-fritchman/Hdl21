@@ -8,7 +8,7 @@ from dataclasses import field
 from typing import Dict, List, Union, Optional
 
 # PyPi
-from pydantic.dataclasses import dataclass
+from pydantic.v1.dataclasses import dataclass
 
 # Local imports
 from ...module import Module
