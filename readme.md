@@ -307,7 +307,7 @@ You can then manipulate this `Module` using the debugging tips provided above at
 
 ```python
 # Example parameter:
-npar = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
+nf = h.Param(dtype=int, desc="Number of parallel fingers", default=1)
 ```
 
 The collections of these parameters used by `Generators` are called param-classes, and are typically formed by applying the `hdl21.paramclass` decorator to a class-body-full of `hdl21.Params`:
@@ -379,6 +379,12 @@ MyParams(width=8, text="My Favorite Module")
 ```
 
 Parameters may be provided as keywords, or as a single positional argument which is an instance of the generator's param-class. Combinations of the two are not supported.
+
+### Names of Generated Modules
+Using `Params` with a `Generator` will generally produce a module with a name in the form of `{Module_Name}_{long_string}`, e.g. `NmosIdac_46b3842dc8718a80a86891e28bc798e5_`.
+This 32-character hex-string is a hash of the parameters. This rule applies when parameters are "compound", i.e. not a simple scalar. 
+
+In constrast, when the `Params` are all-scalar, exported modules are named with a suffixed string of the directly concatenated values, e.g. `NmosIdac_nbits_5`.
 
 ## A Note on Parametrization
 

@@ -59,37 +59,53 @@ from vlsirtools import SpiceType
 class MosParams:
     """# GF180 Mos Parameters"""
 
-    w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=1 * µ)
-    l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=1 * µ)
+    w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (m)", default=1 * µ)
+    l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (m)", default=1 * µ)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
+
+    #! CAUTION: The subsequent parameters are not recommended for design use.
+
+    ad = h.Param(
+        dtype=h.Scalar,
+        desc="Drain Area",
+        # `0.18u` is diffusion length (m)
+        # As `nf` increments, drain region quantity is alternatively -1 or == source region quantity
+        default=h.Literal("int((nf+1)/2) * w/nf * 0.18u"),
+    )
+
     # This unfortunate naming is to prevent conflicts with base python.
     As = h.Param(
         dtype=h.Scalar,
         desc="Source Area",
-        default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
-    )
-
-    ad = h.Param(
-        dtype=h.Scalar,
-        desc="Source Area",
+        # See above, and note expression `int((nf+2)/2)` is different
         default=h.Literal("int((nf+2)/2) * w/nf * 0.18u"),
     )
 
     pd = h.Param(
         dtype=h.Scalar,
         desc="Drain Perimeter",
+        # Perimeter of a single diffusion region is 2 * (TotalWidth / Fingers + DiffusionLength)
+        # Then multiply by total number of diffusion regions that make up drain
         default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.18u)"),
     )
     ps = h.Param(
         dtype=h.Scalar,
         desc="Source Perimeter",
+        # Ditto to above, but with respect to source
         default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.18u)"),
     )
     nrd = h.Param(
-        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.18u / w")
+        # Equivalent number of resistive 'squares' of the drain diffusion
+        # Will be multiplied with sheet resistance to model series resistance of drain
+        dtype=h.Scalar,
+        desc="Drain Resistive Value",
+        default=h.Literal("0.18u / w"),
     )
     nrs = h.Param(
-        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.18u / w")
+        # Same idea as above, but with respect to source
+        dtype=h.Scalar,
+        desc="Source Resistive Value",
+        default=h.Literal("0.18u / w"),
     )
     sa = h.Param(
         dtype=h.Scalar,
@@ -242,7 +258,6 @@ def logic_module(
     family: str,
     terminals: List[str],
 ) -> h.ExternalModule:
-
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,

@@ -46,7 +46,7 @@ For example when invoking a simulation requiring `mypdk`'s models:
 
 import mypdk
 sim = Sim(tb=tb)
-sim.lib(mypdk.install.models, "ss")
+sim.Lib(mypdk.install.models, "ss")
 sim.run()
 ```
 
@@ -106,7 +106,7 @@ class PdkInstallation:
     sim.run()
     ```
 
-    This "installation data" can in principle be store anywhere, or in unstructured types.
+    This "installation data" can in principle be stored anywhere, or in unstructured types.
     The primary goal of the `PdkInstallation` type is to centralize this data,
     and to enable shorthand registration and recall, particularly for
     the common case of a single in-memory `PdkInstallation`.

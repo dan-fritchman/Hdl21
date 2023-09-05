@@ -51,7 +51,7 @@ def paramclass(cls: Type[T]) -> Type[T]:
     """
 
     if not inspect.isclass(cls):
-        msg = f"Invalid @hdl21.paramclass `{cls}`. Apply the `@apramclass` decorator to classes."
+        msg = f"Invalid @hdl21.paramclass `{cls}`. Apply the `@paramclass` decorator to classes."
         raise RuntimeError(msg)
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.paramclass inheriting from {cls.__bases__}")

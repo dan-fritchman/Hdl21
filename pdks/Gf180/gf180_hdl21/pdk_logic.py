@@ -172,7 +172,7 @@ class Gf180Walker(h.HierarchyWalker):
         modparams = GF180MosParams(
             w=w,
             l=l,
-            nf=params.npar,  # FIXME: renaming?
+            nf=params.nf,
             m=params.mult,
         )
 

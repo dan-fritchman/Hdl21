@@ -7,7 +7,7 @@ import hdl21 as h
 
 
 def test_decimal():
-    """This isnt a test of Hdl21 so much as a demo and reminder of how
+    """This isn't a test of Hdl21 so much as a demo and reminder of how
     the standard library's `Decimal` works, particularly in conjunction with
     our widely-used `pydantic.dataclasses`.
 

@@ -7,7 +7,7 @@ The Hdl21 sample PDK is integrated in the Hdl21 package, and is therefore availa
 It includes: 
 * Nmos and Pmos transistor `ExternalModule`s
 * Similar transistor modules, defined as SPICE primitive-MOS models
-* Comilation from `hdl21.primitives` to the PDK modules 
+* Compilation from `hdl21.primitives` to the PDK modules 
 * An `Install` type, demonstrating typical usage of out-of-Python PDK installation data 
 * A built-in model file, compatible with all supported simulators
 

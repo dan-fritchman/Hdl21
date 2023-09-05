@@ -2,7 +2,7 @@
 
 # Hdl21 + SkyWater 130nm Open-Source PDK Modules and Transformations 
 
-Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the SkyWater 130nm open-source PDK, '
+Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the SkyWater 130nm open-source PDK,
 and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
 
 The complete 130nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`. 
@@ -70,7 +70,7 @@ class Install(PdkInstallation):
     """
 
     pdk_path: Path  # Path to PDK installation
-    lib_path: Path  # Relative path to PDK ngpisce library file
+    lib_path: Path  # Relative path to PDK ngpspice library file
     model_ref: Path  # Relative path to PDK SPICE models reference
 
     def include(self, corner: h.pdk.Corner) -> h.sim.Lib:
@@ -162,12 +162,12 @@ class Sky130Walker(h.HierarchyWalker):
                 raise RuntimeError(msg)
 
         """
-        Here we wittle down our list of potential candidates
+        Here we whittle down our list of potential candidates
 
         General parameters we're concerned with are:
 
         1) h.MosType - Most important decision is it a PMOS or an NMOS, default = NMOS
-        2) h.MosFamily - Detemines what class of transistor, CORE, IO, HVT, default = CORE
+        2) h.MosFamily - Determines what class of transistor, CORE, IO, HVT, default = CORE
         3) h.MosVth - Mos Threshold, HIGH, STD, LOW, ULTRA_LOW, default = STD
         """
 
@@ -221,7 +221,7 @@ class Sky130Walker(h.HierarchyWalker):
             modparams = Sky130MosParams(
                 w=w,
                 l=l,
-                nf=params.npar,  # FIXME: renaming
+                nf=params.nf,
                 mult=params.mult,
             )
 

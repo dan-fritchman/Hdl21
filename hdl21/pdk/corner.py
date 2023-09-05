@@ -11,7 +11,7 @@ class Corner(Enum):
 
     Values of the `Corner` enum can mean either the variations in a particular device,
     e.g. the "slow" versus "fast" variations of a poly resistor,
-    or can just as oftern refer to a set of such variations within a given technology.
+    or can just as often refer to a set of such variations within a given technology.
 
     In the latter case `Corner` values are often expanded by PDK-level code to include each
     constituent device variation. For example `my.pdk.corner(Corner.FAST)` might expand to

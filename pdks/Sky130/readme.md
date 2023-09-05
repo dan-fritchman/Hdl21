@@ -120,11 +120,12 @@ a = s.NMOS_1p8V_STD(p(w=0.2*µ,nf=1))
 | ESD_NMOS_5p5V_D10   | NMOS    | STD      | IO     | sky130_fd_pr__esd_nfet_g5v0d10v5     | ESD NMOS, 5.5V, standard Vth, IO family, D10 variant |
 | ESD_NMOS_5p5V_NAT   | NMOS    | NATIVE   | IO     | sky130_fd_pr__esd_nfet_g5v0d10v5_nvt | ESD NMOS, 5.5V, native Vth, IO family, D10 variant |
 | ESD_PMOS_5p5V       | PMOS    | STD      | IO     | sky130_fd_pr__esd_pfet_g5v0d10v5     | ESD PMOS, 5.5V, standard Vth, IO family |
+
 ### Generic Resistors
 
 Generic resistors are resistors composed of materials used in the Sky130 process and can be defined using either width (W), length (L), 3-terminal resistors are formed of substrates and have an additional substrate terminal.
 
-Generic esistors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
+Generic resistors are not offered with PDK-agnostic compilation and so must be referred to directly with the correct paramtype:
 ```python
 from hdl21.prefix import µ
 from sky130_hdl21_hdl21 import Sky130GenResParams as p

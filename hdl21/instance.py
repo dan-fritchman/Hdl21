@@ -261,7 +261,7 @@ These could be instance methods, but are kept here to minimally pollute their na
 
 def _to_array(inst: Instance, num: int) -> InstanceArray:
     """Create an Instance Array from an Instance"""
-    # Several contraints asserted here which may eventually be relaxed.
+    # Several constraints asserted here which may eventually be relaxed.
     # * No port-references (yet)
     # * Not a member of a module (yet)
     if len(inst._refs.portrefs) > 0:
@@ -297,7 +297,7 @@ class Refs:
 
     The combination of the two is stored in the `all` dictionary.
     All items in both `portrefs` and `connrefs` are always also located in `all`.
-    Attemptes to retrieve a reference come from `all`, and therefore generate the same
+    Attempts to retrieve a reference come from `all`, and therefore generate the same
     objects for successive fetches of the same port name.
 
     Entries are never removed from `refs` over the course of an Instance's lifetime.

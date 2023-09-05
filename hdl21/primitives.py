@@ -224,6 +224,7 @@ class MosVth(Enum):
     LOW = "LOW"
     HIGH = "HIGH"
     ULTRA_LOW = "ULTRA_LOW"
+    ULTRA_HIGH = "ULTRA_HIGH"
     ZERO = "ZERO"
     NATIVE = "NATIVE"
 
@@ -236,6 +237,7 @@ class MosFamily(Enum):
     IO = "IO"
     LP = "LP"
     HP = "HP"
+    RF = "RF"
 
 
 @paramclass
@@ -244,9 +246,7 @@ class MosParams:
 
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    npar = Param(
-        dtype=Scalar, desc="Number of parallel fingers", default=1
-    )  # FIXME: rename
+    nf = Param(dtype=Scalar, desc="Number of parallel fingers", default=1)
     mult = Param(dtype=Scalar, desc="Multiplier", default=1)
 
     tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
@@ -261,8 +261,8 @@ class MosParams:
     #         raise ValueError(f"MosParams with invalid width {self.w}")
     #     if self.l <= 0:
     #         raise ValueError(f"MosParams with invalid length {self.l}")
-    #     if self.npar <= 0:
-    #         msg = f"MosParams with invalid number parallel fingers {self.npar}"
+    #     if self.nf <= 0:
+    #         msg = f"MosParams with invalid number parallel fingers {self.nf}"
     #         raise ValueError(msg)
 
 

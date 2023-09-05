@@ -90,7 +90,7 @@ gf180.compile(resistor)
 
 2. Direct Reference
 
-All Gf180 `ExternalModules` are stored in the `modules` namespace that makes up the bulk of the PDK module. You can use it to reference `ExternalModules` directly via component name:
+All Gf180 `ExternalModule`s are stored in the `modules` namespace that makes up the bulk of the PDK module. You can use it to reference `ExternalModule`s directly via component name:
 
 ```python
 import gf180_hdl21
@@ -98,7 +98,7 @@ from gf180_hdl21.primitives as g
 
 p = gf180_hdl21.GF180MosParams(w=3*µ, l=3*µ)
 
-# This is the ExternalModulewe want
+# This is the ExternalModule we want
 mosfet = g.PFET_3p3V(p)
 ```
 
@@ -251,7 +251,7 @@ a = MIM_1p5fF(par(c_width=1 * µ, c_length=1 * µ))
 
 ### Digital Cells
 
-The PDK is also distributed with two standard cell libraries that we call `seven_track` and  `nine_track`. These are distributed with `gf180-hdl21` as seperate name spaces that can be accessed in a similar manner to `modules`:
+The PDK is also distributed with two standard cell libraries that we call `seven_track` and  `nine_track`. These are distributed with `gf180-hdl21` as separate name spaces that can be accessed in a similar manner to `modules`:
 
 ```python
 from gf180_hdl21.digital_cells.seven_track as d7

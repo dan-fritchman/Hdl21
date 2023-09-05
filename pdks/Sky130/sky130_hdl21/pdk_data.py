@@ -47,7 +47,7 @@ parameters of devices in the Sky130 Open PDK. It contains params:
 - Sky130GenResParams - parameters for generic resistors
 - Sky130PrecResParams - parameters for Sky130's precision resistors
 - Sky130MimParams - parameters for  Metal-insulator-Metal (MiM) capacitors
-- Sky130VarParams - paramaters foVPWRr variable capacitors (ie. varactors)
+- Sky130VarParams - parameters foVPWRr variable capacitors (ie. varactors)
 - Sky130VPPParams - parameters for both Vertical Perpendicular Plate (VPP) and Vertical Parallel Plate (VPP) capacitors
 - Sky130DiodeParams - parameters for diodes
 - Sky130BipolarParams - parameters for bipolar devices
@@ -73,8 +73,8 @@ class MosParams:
 
     ad (h.Literal): Drain area of the MOSFET. Default is 'int((nf+1)/2) * w/nf * 0.29'.
     As (h.Literal): Source area of the MOSFET. Default is 'int((nf+2)/2) * w/nf * 0.29'.
-    pd (h.Literal): Drain perimeter of the MOSFET. Default is '2int((nf+1)/2) * (w/nf + 0.29)'.
-    ps (h.Literal): Source perimeter of the MOSFET. Default is '2int((nf+2)/2) * (w/nf + 0.29)'.
+    pd (h.Literal): Drain perimeter of the MOSFET. Default is '2*int((nf+1)/2) * (w/nf + 0.29)'.
+    ps (h.Literal): Source perimeter of the MOSFET. Default is '2*int((nf+2)/2) * (w/nf + 0.29)'.
     nrd (h.Literal): Drain resistive value of the MOSFET. Default is '0.29 / w'.
     nrs (h.Literal): Source resistive value of the MOSFET. Default is '0.29 / w'.
     sa (h.Scalar): Spacing between adjacent gate to drain. Default is 0.
@@ -83,12 +83,16 @@ class MosParams:
     mult (h.Scalar): Multiplier for the MOSFET. Default is 1.
     """
 
+    # Pdk units are in µm, throughout
     w = h.Param(dtype=h.Scalar, desc="Width in PDK Units (µm)", default=650 * MILLI)
     l = h.Param(dtype=h.Scalar, desc="Length in PDK Units (µm)", default=150 * MILLI)
     nf = h.Param(dtype=h.Scalar, desc="Number of Fingers", default=1)
+
     ad = h.Param(
         dtype=h.Scalar,
         desc="Drain Area",
+        # `0.29` is diffusion length in µm
+        # As `nf` increments, drain region quantity is alternatively -1 or == source region quantity
         default=h.Literal("int((nf+1)/2) * w/nf * 0.29"),
     )
 
@@ -96,24 +100,35 @@ class MosParams:
     As = h.Param(
         dtype=h.Scalar,
         desc="Source Area",
+        # See above, and note expression `int((nf+2)/2)` is different
         default=h.Literal("int((nf+2)/2) * w/nf * 0.29"),
     )
 
     pd = h.Param(
         dtype=h.Scalar,
         desc="Drain Perimeter",
+        # Perimeter of a single diffusion region is 2 * (TotalWidth / Fingers + DiffusionLength)
+        # Then multiply by total number of diffusion regions that make up drain
         default=h.Literal("2*int((nf+1)/2) * (w/nf + 0.29)"),
     )
     ps = h.Param(
         dtype=h.Scalar,
         desc="Source Perimeter",
+        # Ditto to above, but with respect to source
         default=h.Literal("2*int((nf+2)/2) * (w/nf + 0.29)"),
     )
     nrd = h.Param(
-        dtype=h.Scalar, desc="Drain Resistive Value", default=h.Literal("0.29 / w")
+        # Equivalent number of resistive 'squares' of the drain diffusion
+        # Will be multiplied with sheet resistance to model series resistance of drain
+        dtype=h.Scalar,
+        desc="Drain Resistive Value",
+        default=h.Literal("0.29 / w"),
     )
     nrs = h.Param(
-        dtype=h.Scalar, desc="Source Resistive Value", default=h.Literal("0.29 / w")
+        # Same idea as above, but with respect to source
+        dtype=h.Scalar,
+        desc="Source Resistive Value",
+        default=h.Literal("0.29 / w"),
     )
     sa = h.Param(
         dtype=h.Scalar,
@@ -313,7 +328,6 @@ def xtor_module(
     params: h.Param = Sky130MosParams,
     num_terminals: int = 4,
 ) -> h.ExternalModule:
-
     """Transistor module creator, with module-name `name`.
     If `MoKey` `key` is provided, adds an entry in the `xtors` dictionary."""
 
@@ -337,7 +351,6 @@ def res_module(
     params: h.Param,
     spicetype=SpiceType.SUBCKT,
 ) -> h.ExternalModule:
-
     """Resistor Module creator"""
 
     num2device = {2: PhysicalResistor, 3: ThreeTerminalResistor}
@@ -357,7 +370,6 @@ def res_module(
 def diode_module(
     modname: str,
 ) -> h.ExternalModule:
-
     """Diode Module creator"""
 
     mod = h.ExternalModule(
@@ -384,7 +396,6 @@ def bjt_module(
     modname: str,
     numterminals: int = 3,
 ) -> h.ExternalModule:
-
     num2device = {3: Bipolar.port_list, 4: BJT4TPortList}
 
     mod = h.ExternalModule(
@@ -403,7 +414,6 @@ def cap_module(
     numterminals: int,
     params: h.Param,
 ) -> h.ExternalModule:
-
     num2device = {2: PhysicalCapacitor, 3: ThreeTerminalCapacitor}
 
     """Capacitor Module creator"""
@@ -433,7 +443,6 @@ def vpp_module(
     """VPP Creator module"""
 
     if num_terminals == 3:
-
         mod = h.ExternalModule(
             domain=PDK_NAME,
             name=modname,
@@ -443,7 +452,6 @@ def vpp_module(
         )
 
     elif num_terminals == 4:
-
         mod = h.ExternalModule(
             domain=PDK_NAME,
             name=modname,
@@ -460,7 +468,6 @@ def logic_module(
     family: str,
     terminals: List[str],
 ) -> h.ExternalModule:
-
     mod = h.ExternalModule(
         domain=PDK_NAME,
         name=modname,

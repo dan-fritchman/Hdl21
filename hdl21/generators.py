@@ -23,7 +23,7 @@ class MosParams:
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     nser = Param(dtype=int, desc="Number of series fingers", default=1)
-    npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
+    nf = Param(dtype=int, desc="Number of parallel fingers", default=1)
     tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
 
@@ -33,8 +33,8 @@ class MosParams:
             raise ValueError(f"MosParams with invalid width {self.w}")
         if self.l is not None and self.l <= 0:
             raise ValueError(f"MosParams with invalid length {self.l}")
-        if self.npar <= 0:
-            msg = f"MosParams with invalid number parallel fingers {self.npar}"
+        if self.nf <= 0:
+            msg = f"MosParams with invalid number parallel fingers {self.nf}"
             raise ValueError(msg)
         if self.nser <= 0:
             msg = f"MosParams with invalid number series fingers {self.nser}"
@@ -97,7 +97,7 @@ class SeriesParParams:
     )
     # Optional
     nser = Param(dtype=int, desc="Number of series instances", default=1)
-    npar = Param(dtype=int, desc="Number of parallel stacks", default=1)
+    nf = Param(dtype=int, desc="Number of parallel stacks", default=1)
 
 
 @generator
@@ -105,7 +105,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
     """
     # Series-Parallel Generator
 
-    Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`.
+    Arrays `params.nf` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`.
     The generated `Module` includes the same ports as `unit`.
     The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`.
     All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`.
@@ -141,7 +141,7 @@ def SeriesPar(params: SeriesParParams) -> Module:
     ]
     par_conns = {port.name: m.add(deepcopy(port)) for port in par_ports}
 
-    for ipar in range(params.npar):
+    for ipar in range(params.nf):
         # Add instances, starting at the `series_conns[0]`-side
         inst = unit(**par_conns).connect(ser0.name, ser0)
         inst = m.add(name=f"unit_{ipar}_0", val=inst)
