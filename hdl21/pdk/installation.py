@@ -46,7 +46,7 @@ For example when invoking a simulation requiring `mypdk`'s models:
 
 import mypdk
 sim = Sim(tb=tb)
-sim.Lib(mypdk.install.models, "ss")
+sim.lib(mypdk.install.models, "ss")
 sim.run()
 ```
 
