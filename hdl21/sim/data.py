@@ -15,6 +15,7 @@ import vlsirtools.spice as vsp
 from vlsirtools.spice import SimResultUnion
 from vlsirtools.spice.sim_data import SimResult
 from vlsir.spice_pb2 import SimResult as SimResultProto
+from vlsirtools import SpiceType
 
 # Local Imports
 from ..one_or_more import OneOrMore
@@ -155,6 +156,8 @@ class Op:
     def tp(self) -> AnalysisType:
         return AnalysisType.OP
 
+def DcName(name:str, type: SpiceType = SpiceType.VSOURCE) -> str:
+    return f"{type.value}.xtop.{type.value}{name}"
 
 @simattr
 @datatype
