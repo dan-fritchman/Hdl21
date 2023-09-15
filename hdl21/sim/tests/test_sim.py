@@ -12,7 +12,6 @@ import vlsir.spice_pb2 as vsp
 import vlsirtools
 from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
 
-
 def test_sim1():
     """Test minimal `Sim` creation"""
     s = Sim(tb=tb("empty"), attrs=[])
@@ -284,6 +283,76 @@ def empty_tb(num=0) -> h.Module:
     EmptyTb.name = f"EmptyTb{num}"
     return EmptyTb
 
+
+@pytest.mark.skipif(
+    not vlsirtools.spice.ngspice.available(),
+    reason="Only ngspice supports `Sim` with DC analysis",
+)
+def test_dc_analysis():
+
+    @h.sim.sim
+    class MySim:
+
+        @h.module
+        class Tb:
+
+            VSS = h.Port()
+            s = h.Signal()
+            dd = h.DcVoltageSource(dc=1)(p=s, n=VSS)
+            r = h.R(r=1 * h.prefix.K)(p=s, n=VSS)
+
+        dc = Dc(DcName("r",h.sim.SpiceType.RESISTOR), sweep=LinearSweep(0.1, 1, 0.1))
+
+    opts = vlsirtools.spice.SimOptions(
+        simulator=vlsirtools.spice.SupportedSimulators.NGSPICE,
+        fmt=vlsirtools.spice.ResultFormat.SIM_DATA,
+        rundir="./scratch",
+    )
+
+    rvs = MySim.run(opts)
+
+    # assert isinstance(rvs, vsp.SimResult)
+
+    result = rvs[vlsirtools.spice.sim_data.AnalysisType.DC]
+
+    assert all([result.data['i(v.xtop.vdd)'][i-1]+1/(i/10) < 0.001 for i in range(1,11)])
+
+@pytest.mark.skipif(
+    not vlsirtools.spice.ngspice.available(),
+    reason="Only ngspice supports `Sim` with Sweep Analysis",
+)
+def test_sweep_analysis():
+
+    @h.sim.sim
+    class MySim:
+
+        @h.module
+        class Tb:
+
+            VSS = h.Port()
+            s = h.Signal()
+            dd = h.DcVoltageSource(dc=1)(p=s, n=VSS)
+            r = h.R(r=1 * h.prefix.K)(p=s, n=VSS)
+
+        dc = SweepAnalysis(
+            inner=[Op()],
+            var=DcName("r",h.sim.SpiceType.RESISTOR),
+            sweep=LinearSweep(0.1, 1, 0.1)
+        )
+
+    opts = vlsirtools.spice.SimOptions(
+        simulator=vlsirtools.spice.SupportedSimulators.NGSPICE,
+        fmt=vlsirtools.spice.ResultFormat.SIM_DATA,
+        rundir="./scratch",
+    )
+
+    rvs = MySim.run(opts)
+
+    # assert isinstance(rvs, vsp.SimResult)
+    
+    result = rvs[vlsirtools.spice.sim_data.AnalysisType.SWEEP]
+
+    assert all([result.data['i(v.xtop.vdd)'][i-1]+1/(i/10) < 0.001 for i in range(1,11)])
 
 @pytest.mark.skipif(
     vlsirtools.spice.default() is None,
