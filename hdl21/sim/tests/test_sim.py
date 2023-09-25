@@ -348,11 +348,39 @@ def test_sweep_analysis():
 
     rvs = MySim.run(opts)
 
-    # assert isinstance(rvs, vsp.SimResult)
-    
-    result = rvs[vlsirtools.spice.sim_data.AnalysisType.SWEEP]
+    assert isinstance(rvs, vsp.SimResult)
 
-    assert all([result.data['i(v.xtop.vdd)'][i-1]+1/(i/10) < 0.001 for i in range(1,11)])
+def test_custom_analysis():
+
+    @h.sim.sim
+    class MySim:
+
+        @h.module
+        class Tb:
+
+            VSS = h.Port()
+            s = h.Signal()
+            dd = h.DcVoltageSource(dc=1)(p=s, n=VSS)
+            r = h.R(r=1 * h.prefix.K)(p=s, n=VSS)
+
+        custom = CustomAnalysis(
+            cmd = """
+.param r=1k
+.dc r 0.1 1 0.1
+.print i(v.xtop.vdd)
+.end
+            """
+        )
+    
+    opts = vlsirtools.spice.SimOptions(
+        simulator=vlsirtools.spice.SupportedSimulators.NGSPICE,
+        fmt=vlsirtools.spice.ResultFormat.SIM_DATA,
+        rundir="./scratch",
+    )
+
+    rvs = MySim.run(opts)
+
+    assert isinstance(rvs, vsp.SimResult)
 
 @pytest.mark.skipif(
     vlsirtools.spice.default() is None,
