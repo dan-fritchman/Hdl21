@@ -1495,3 +1495,29 @@ def test_set_bad_attrs():
     # And assert we can't assign stuff to it
     with pytest.raises(RuntimeError):
         c.xyz = TabError
+
+
+@pytest.mark.xfail(reason="#192 https://github.com/dan-fritchman/Hdl21/issues/192")
+def test_generator_function_combo():
+    """Test instantiating hierarchies that combine `@h.generator`s and regular old functions.
+    #192 https://github.com/dan-fritchman/Hdl21/issues/192"""
+
+    @h.generator
+    def Gen(_: h.HasNoParams) -> h.Module:
+        @h.module
+        class HasDiff:
+            d = h.Diff(port=True)
+
+        return HasDiff
+
+    def NonGen() -> h.Module:
+        @h.module
+        class HasTwoHasDiffs:
+            d = h.Diff(port=False)
+            a = Gen()(d=d)
+            b = Gen()(d=d)
+
+        return HasTwoHasDiffs
+
+    h.elaborate(NonGen())
+    h.elaborate(NonGen())

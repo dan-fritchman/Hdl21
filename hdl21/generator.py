@@ -95,6 +95,7 @@ class GeneratorCall:
 
 def generator(f: Callable) -> Generator:
     """Decorator for Generator Functions"""
+
     from .params import isparamclass
     from .elab import Context
 
@@ -103,7 +104,6 @@ def generator(f: Callable) -> Generator:
 
     # Grab, parse, and validate its call-signature
     sig = inspect.signature(f)
-    error: Optional[str] = None
 
     args = list(sig.parameters.values())
     if len(args) < 1:
