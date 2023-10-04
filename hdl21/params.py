@@ -141,7 +141,7 @@ def descriptions(cls: Type) -> Dict[str, str]:
     return {k: v.desc for k, v in cls.__params__.items()}
 
 
-def default_instance(cls: Type) -> "cls":
+def default_instance(cls: Type[T]) -> T:
     """# Default Instance
     Create the default instance of param-class `cls`.
     Available both as a free function and as a `classmethod` of each `paramclass`.
@@ -152,7 +152,7 @@ def default_instance(cls: Type) -> "cls":
     return cls()
 
 
-def default_dict(cls: Type) -> Dict[str, Any]:
+def default_dict(cls: Type[T]) -> Dict[str, Any]:
     """# Default Values Dictionary
 
     Get a dictionary of parameter names to default values for param-class `cls`.
