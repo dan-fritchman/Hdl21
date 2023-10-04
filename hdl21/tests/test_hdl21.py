@@ -1497,10 +1497,9 @@ def test_set_bad_attrs():
         c.xyz = TabError
 
 
-@pytest.mark.xfail(reason="#192 https://github.com/dan-fritchman/Hdl21/issues/192")
 def test_generator_function_combo():
     """Test instantiating hierarchies that combine `@h.generator`s and regular old functions.
-    #192 https://github.com/dan-fritchman/Hdl21/issues/192"""
+    Inspired #192 https://github.com/dan-fritchman/Hdl21/issues/192."""
 
     @h.generator
     def Gen(_: h.HasNoParams) -> h.Module:
@@ -1521,3 +1520,65 @@ def test_generator_function_combo():
 
     h.elaborate(NonGen())
     h.elaborate(NonGen())
+
+
+def test_how_elab_caching_works():
+    """Not exactly a test of Hdl21, but of the mechanism used by class-level elaborator caching.
+    More or less the fix for #192 https://github.com/dan-fritchman/Hdl21/issues/192."""
+
+    from typing import Optional, List
+    from dataclasses import dataclass, field
+
+    @dataclass
+    class Cache:
+        ls: List[int] = field(default_factory=list)
+
+    class Base:
+        CLASS_CACHE: Optional[Cache] = None
+
+        def __init_subclass__(cls) -> None:
+            # Create a new `Cache` for each subclass
+            cls.CLASS_CACHE = Cache()
+
+        def do_something(self) -> None:
+            # Modify the class-level cache in an instance method
+            self.CLASS_CACHE.ls.append(1)
+
+    class Sub1(Base):
+        pass
+
+    class Sub2(Base):
+        pass
+
+    sub1 = Sub1()
+    sub2 = Sub2()
+
+    assert Base.CLASS_CACHE is None
+    assert Sub1.CLASS_CACHE is not None
+    assert Sub2.CLASS_CACHE is not None
+    assert Sub1.CLASS_CACHE is not Sub2.CLASS_CACHE
+    assert sub1.CLASS_CACHE is not None
+    assert sub2.CLASS_CACHE is not None
+    assert sub1.CLASS_CACHE is not sub2.CLASS_CACHE
+
+    sub1.do_something()
+    sub1.do_something()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == []
+
+    sub2.do_something()
+    sub2.do_something()
+    sub2.do_something()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == [1, 1, 1]
+
+    sub1b = Sub1()
+    sub2b = Sub2()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == [1, 1, 1]
