@@ -113,6 +113,8 @@ def paramclass(cls: Type[T]) -> Type[T]:
     cls.__params__ = params
     cls.__paramclass__ = True
     cls.descriptions = classmethod(descriptions)
+    cls.default_instance = classmethod(default_instance)
+    cls.default_dict = classmethod(default_dict)
     cls.defaults = classmethod(defaults)
 
     # Pass this through the pydantic dataclass-decorator-function
@@ -139,15 +141,40 @@ def descriptions(cls: Type) -> Dict[str, str]:
     return {k: v.desc for k, v in cls.__params__.items()}
 
 
-def defaults(cls: Type) -> Dict[str, Any]:
-    """# Get a dictionary of parameter names to default values for param-class `cls`.
+def default_instance(cls: Type) -> "cls":
+    """# Default Instance
+    Create the default instance of param-class `cls`.
     Available both as a free function and as a `classmethod` of each `paramclass`.
-    Raises a `RuntimeError` if `cls` is not a param-class."""
+    Throws an exception if `cls` is not a param-class, or is not default-constructible.
+    """
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+    return cls()
+
+
+def default_dict(cls: Type) -> Dict[str, Any]:
+    """# Default Values Dictionary
+
+    Get a dictionary of parameter names to default values for param-class `cls`.
+    Available both as a free function and as a `classmethod` of each `paramclass`.
+    Raises a `RuntimeError` if `cls` is not a param-class.
+    *Does not* require that `cls` is default constructible.
+    Returns the default values for whatever parameters have them."""
 
     if not isparamclass(cls):
         raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
 
-    return {k: v.default for k, v in cls.__params__.items() if v.default is not Default}
+    rv: Dict[str, Any] = {}
+    for k, v in cls.__params__.items():
+        if v.default is not Default:
+            rv[k] = v.default
+        if v.default_factory is not Default:
+            rv[k] = v.default_factory()
+    return rv
+
+
+# Retain the original name `defaults` for the dictionary version
+defaults = default_dict
 
 
 def isparamclass(cls: type) -> bool:
