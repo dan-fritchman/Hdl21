@@ -119,11 +119,16 @@ class Elaborator:
         # Check if this has already been elaborated by this pass/ class
         if module in self.CLASS_LEVEL_CACHE.done:
             return module
-        if module in self.CLASS_LEVEL_CACHE.pending:
-            return self.fail(f"Invalid self-referencing `{module}`")
-        self.CLASS_LEVEL_CACHE.pending.add(module)
 
+        # Add `module` to our elab stack.
+        # This is helpful even if (especially if) we find it's a circular dependency next.
         self.stack.append(module)
+
+        # Check for circular dependencies
+        if module in self.CLASS_LEVEL_CACHE.pending:
+            msg = f"Invalid self referencing/ circular dependency in `{module}`"
+            return self.fail(msg)
+        self.CLASS_LEVEL_CACHE.pending.add(module)
 
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():

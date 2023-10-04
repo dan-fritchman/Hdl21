@@ -1580,5 +1580,27 @@ def test_how_elab_caching_works():
     sub2b = Sub2()
 
     assert Base.CLASS_CACHE is None
-    assert sub1.CLASS_CACHE.ls == [1, 1]
-    assert sub2.CLASS_CACHE.ls == [1, 1, 1]
+    assert sub1b.CLASS_CACHE.ls == [1, 1]
+    assert sub2b.CLASS_CACHE.ls == [1, 1, 1]
+    assert sub1.CLASS_CACHE is sub1b.CLASS_CACHE
+    assert sub2.CLASS_CACHE is sub2b.CLASS_CACHE
+
+
+def test_module_circular_dependency():
+    """Test attempting to elaborate an invalid circular dependency loop between `Module`s."""
+
+    # Create two modules which errantly instantiate each other
+    a = h.Module(name="a")
+    b = h.Module(name="b")
+    a.add(h.Instance(of=b, name="ib"))
+    b.add(h.Instance(of=a, name="ia"))
+
+    # Test that attempting to elaborate either throws the circular-dependency error
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(a)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(b)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
