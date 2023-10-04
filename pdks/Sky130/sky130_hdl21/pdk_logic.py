@@ -154,7 +154,6 @@ class Sky130Walker(h.HierarchyWalker):
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         if params.model is not None:
-
             try:
                 return [v for k, v in xtors.items() if params.model in k][0]
             except IndexError:
@@ -180,7 +179,6 @@ class Sky130Walker(h.HierarchyWalker):
         # Find all the xtors that match the args
         subset = {}
         for k, v in xtors.items():
-
             match = False
             for a in args:
                 if a not in k:
@@ -213,16 +211,15 @@ class Sky130Walker(h.HierarchyWalker):
 
         # Select appropriate parameters for 20V/ESD-G5V0D10V5 mosfets
         if "20v" in mod.name:
-
-            modparams = Sky130Mos20VParams(w=w, l=l, m=params.mult)
+            modparams = Sky130Mos20VParams(w=w, l=l, m=params.mult or 1)
 
         else:
-
+            defaults: dict = Sky130MosParams.defaults()
             modparams = Sky130MosParams(
                 w=w,
                 l=l,
-                nf=params.nf,
-                mult=params.mult,
+                nf=params.nf or defaults["nf"],
+                mult=params.mult or defaults["mult"],
             )
 
         # Combine the two into a call, cache and return it

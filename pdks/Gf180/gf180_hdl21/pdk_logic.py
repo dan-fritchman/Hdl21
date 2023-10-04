@@ -169,11 +169,12 @@ class Gf180Walker(h.HierarchyWalker):
         # Convert to `mod`s parameter-space
         w, l = self.use_defaults(params, mod.name, default_xtor_size)
 
+        defaults: dict = GF180MosParams.defaults()
         modparams = GF180MosParams(
             w=w,
             l=l,
-            nf=params.nf,
-            m=params.mult,
+            nf=params.nf or defaults["nf"],
+            m=params.mult or defaults["nf"],
         )
 
         # Combine the two into a call, cache and return it
