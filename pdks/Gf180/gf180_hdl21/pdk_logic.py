@@ -138,7 +138,6 @@ class Gf180Walker(h.HierarchyWalker):
         # Find all the xtors that match the args
         subset = {}
         for k, v in xtors.items():
-
             match = False
             for a in args:
                 if a not in k:
@@ -169,11 +168,12 @@ class Gf180Walker(h.HierarchyWalker):
         # Convert to `mod`s parameter-space
         w, l = self.use_defaults(params, mod.name, default_xtor_size)
 
+        defaults = GF180MosParams.default_instance()
         modparams = GF180MosParams(
             w=w,
             l=l,
-            nf=params.nf,
-            m=params.mult,
+            nf=params.nf or defaults.nf,
+            m=params.mult or defaults.m,
         )
 
         # Combine the two into a call, cache and return it

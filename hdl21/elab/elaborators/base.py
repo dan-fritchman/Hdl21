@@ -6,7 +6,11 @@
 # Std-Lib Imports
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from dataclasses import field
+from typing import Dict, List, Set, Optional, Union
+
+# PyPi Imports
+from pydantic.dataclasses import dataclass
 
 # Local imports
 from ...module import Module
@@ -25,6 +29,16 @@ from ..context import Context
 ElabStackEntry = Union[GeneratorCall, Module, Instance, InstanceArray, InstanceBundle]
 
 
+@dataclass
+class ClassLevelCache:
+    """# Class-Level Cache for Elaborators"""
+
+    # Note Modules hash *by identity*, so each instance of `Module`,
+    # regardless of the similarity of their content, gets its own entry in these sets.
+    done: Set[Module] = field(default_factory=set)
+    pending: Set[Module] = field(default_factory=set)
+
+
 class Elaborator:
     """
     # Base Elaborator Class
@@ -41,7 +55,19 @@ class Elaborator:
     This requires that sub-classes also carefully audit when they call their own
     `elaborate_module` method. Generally, they should not, and should always call
     `elaborate_module_base` instead.
+
+    `Elaborator` and `elaborate_module_base` also manage the `ClassLevelCache` for each pass-class.
+    Subclasses should not need to know there is such a cache, and should not need to access it directly.
     """
+
+    # The class-level cache.
+    # Each sub-class gets its own.
+    # The base-class does not have one, should be the only `Elaborator` with `CLASS_CACHE=None`.
+    CLASS_LEVEL_CACHE: Optional[ClassLevelCache] = None
+
+    def __init_subclass__(cls) -> None:
+        # Create a new `ClassLevelCache` for each subclass
+        cls.CLASS_LEVEL_CACHE = ClassLevelCache()
 
     @classmethod
     def elaborate(cls, tops: List[Elaboratable], ctx: Context) -> List[Elaboratable]:
@@ -74,25 +100,35 @@ class Elaborator:
         self.fail(f"Invalid call to elaborate GeneratorCall by {self}")
 
     def elaborate_module_base(self, module: Module) -> Module:
-        """Base-Case `Module` Elaboration
+        """# Base-Case `Module` Elaboration
 
         For most passes, elaborating a `Module` at a time is the primary activity.
         To offload the need for each sub-class to cache `Module` definitions,
         and to traverse their internal contents, the base class defines `elaborate_module_base`, which:
+
         * Checks for the module result being pre-cached
         * Pre-order traverses its instances, arrays, and bundle instances
         * Calls the per-pass `elaborate_module`
         * Adds the result to the `modules` cache.
+
         This requires that sub-classes also carefully audit when they call their own
         `elaborate_module` method. Generally, they should not, and should always call
         `elaborate_module_base` instead.
         """
 
-        # Check if this has already been elaborated
-        if module._elaborated is not None:
-            return module._elaborated
+        # Check if this has already been elaborated by this pass/ class
+        if module in self.CLASS_LEVEL_CACHE.done:
+            return module
 
+        # Add `module` to our elab stack.
+        # This is helpful even if (especially if) we find it's a circular dependency next.
         self.stack.append(module)
+
+        # Check for circular dependencies
+        if module in self.CLASS_LEVEL_CACHE.pending:
+            msg = f"Invalid self referencing/ circular dependency in `{module}`"
+            return self.fail(msg)
+        self.CLASS_LEVEL_CACHE.pending.add(module)
 
         # Depth-first traverse instances, ensuring their targets are defined
         for inst in module.instances.values():
@@ -111,6 +147,8 @@ class Elaborator:
 
         # Pop the hierarchy-stack and return it
         self.stack.pop()
+        self.CLASS_LEVEL_CACHE.pending.remove(module)
+        self.CLASS_LEVEL_CACHE.done.add(module)
         return result
 
     def elaborate_module(self, module: Module) -> Module:
@@ -161,7 +199,8 @@ class Elaborator:
         """Create a attribute-name merging string-list `segments`, while avoiding all keys in dictionary `avoid`.
         Commonly re-used while flattening  nested objects and while creating explicit attributes from implicit ones.
         Raises a `RunTimeError` if no such name can be found of length less than `maxlen`.
-        The default max-length is 511 characters, a value representative of typical limits in target EDA formats."""
+        The default max-length is 511 characters, a value representative of typical limits in target EDA formats.
+        """
 
         if avoid is None:
             avoid = {}

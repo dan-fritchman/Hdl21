@@ -7,7 +7,8 @@ from dataclasses import asdict, replace
 from typing import Optional, Tuple, Union
 
 from . import primitives
-from .primitives import MosType, MosVth, Scalar
+from .primitives import MosType, MosVth, MosFamily
+from .scalar import Scalar
 from .generator import generator
 from .module import Module
 from .params import paramclass, Param
@@ -20,25 +21,29 @@ from .instantiable import Instantiable
 class MosParams:
     """Mos Series-Stack Generator Parameters"""
 
+    # These are identical to `primitives.MosParams`
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    nser = Param(dtype=int, desc="Number of series fingers", default=1)
-    nf = Param(dtype=int, desc="Number of parallel fingers", default=1)
-    tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
+    nf = Param(dtype=Optional[Scalar], desc="Number of parallel fingers", default=None)
+    mult = Param(dtype=Optional[Scalar], desc="Multiplier", default=None)
+    tp = Param(dtype=MosType, desc="MosType (Nmos/ Pmos)", default=MosType.NMOS)
     vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
+    family = Param(dtype=MosFamily, desc="Device family", default=MosFamily.NONE)
+    model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
-    def __post_init_post_parse__(self):
-        """Value Checks"""
-        if self.w is not None and self.w <= 0:
-            raise ValueError(f"MosParams with invalid width {self.w}")
-        if self.l is not None and self.l <= 0:
-            raise ValueError(f"MosParams with invalid length {self.l}")
-        if self.nf <= 0:
-            msg = f"MosParams with invalid number parallel fingers {self.nf}"
-            raise ValueError(msg)
-        if self.nser <= 0:
-            msg = f"MosParams with invalid number series fingers {self.nser}"
-            raise ValueError(msg)
+    # Number of series fingers: the unique parameter
+    nser = Param(dtype=int, desc="Number of series fingers", default=1)
+
+    # def __post_init_post_parse__(self):
+    #     """Value Checks"""
+    #     # FIXME: re-introduce these, for the case in which the parameters are `Prefixed` and not `Literal` values.
+    #     if self.w <= 0:
+    #         raise ValueError(f"MosParams with invalid width {self.w}")
+    #     if self.l <= 0:
+    #         raise ValueError(f"MosParams with invalid length {self.l}")
+    #     if self.nf <= 0:
+    #         msg = f"MosParams with invalid number parallel fingers {self.nf}"
+    #         raise ValueError(msg)
 
 
 @generator

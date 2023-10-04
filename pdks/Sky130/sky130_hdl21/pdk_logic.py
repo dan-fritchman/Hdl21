@@ -154,7 +154,6 @@ class Sky130Walker(h.HierarchyWalker):
     def mos_module(self, params: MosParams) -> h.ExternalModule:
         """Retrieve or create an `ExternalModule` for a MOS of parameters `params`."""
         if params.model is not None:
-
             try:
                 return [v for k, v in xtors.items() if params.model in k][0]
             except IndexError:
@@ -180,7 +179,6 @@ class Sky130Walker(h.HierarchyWalker):
         # Find all the xtors that match the args
         subset = {}
         for k, v in xtors.items():
-
             match = False
             for a in args:
                 if a not in k:
@@ -213,16 +211,16 @@ class Sky130Walker(h.HierarchyWalker):
 
         # Select appropriate parameters for 20V/ESD-G5V0D10V5 mosfets
         if "20v" in mod.name:
-
-            modparams = Sky130Mos20VParams(w=w, l=l, m=params.mult)
+            defaults = Sky130Mos20VParams.default_instance()
+            modparams = Sky130Mos20VParams(w=w, l=l, m=params.mult or defaults.m)
 
         else:
-
+            defaults = Sky130MosParams.default_instance()
             modparams = Sky130MosParams(
                 w=w,
                 l=l,
-                nf=params.nf,
-                mult=params.mult,
+                nf=params.nf or defaults.nf,
+                mult=params.mult or defaults.mult,
             )
 
         # Combine the two into a call, cache and return it
@@ -241,7 +239,6 @@ class Sky130Walker(h.HierarchyWalker):
         return mod
 
     def res_module_call(self, params: PhysicalResistorParams):
-
         # First check our cache
         if params in CACHE.res_modcalls:
             return CACHE.res_modcalls[params]
@@ -249,13 +246,11 @@ class Sky130Walker(h.HierarchyWalker):
         mod = self.res_module(params)
 
         if mod.paramtype == Sky130GenResParams:
-
             w, l = self.use_defaults(params, mod.name, default_gen_res_size)
 
             modparams = Sky130GenResParams(w=w, l=l)
 
         elif mod.paramtype == Sky130PrecResParams:
-
             l = default_prec_res_L[mod.name]
 
             modparams = Sky130PrecResParams(l=l)
@@ -275,7 +270,6 @@ class Sky130Walker(h.HierarchyWalker):
         return mod
 
     def cap_module_call(self, params: PhysicalCapacitorParams):
-
         if params in CACHE.cap_modcalls:
             return CACHE.cap_modcalls[params]
 
@@ -284,16 +278,13 @@ class Sky130Walker(h.HierarchyWalker):
         m = 1
 
         if params.mult is not None:
-
             m = int(params.mult)
 
         if mod.paramtype == Sky130MimParams:
-
             w, l = self.use_defaults(params, mod.name, default_cap_sizes)
             modparams = Sky130MimParams(w=w, l=l, mf=m)
 
         elif mod.paramtype == Sky130VarParams:
-
             w, l = self.use_defaults(params, mod.name, default_cap_sizes)
             modparams = Sky130VarParams(w=w, l=l, vm=m)
 
@@ -312,21 +303,18 @@ class Sky130Walker(h.HierarchyWalker):
         return mod
 
     def diode_module_call(self, params: DiodeParams):
-
         if params in CACHE.diode_modcalls:
             return CACHE.diode_modcalls[params]
 
         mod = self.diode_module(params)
 
         if params.w is not None and params.w is not None:
-
             # This scaling is a quirk of SKY130
             a = params.w * params.l * 1 * TERA
             pj = 2 * (params.w + params.l) * MEGA
             modparams = Sky130DiodeParams(area=a, pj=pj)
 
         else:
-
             modparams = Sky130DiodeParams()
 
         modcall = mod(modparams)
@@ -344,7 +332,6 @@ class Sky130Walker(h.HierarchyWalker):
         return mod
 
     def bjt_module_call(self, params: BipolarParams):
-
         if params in CACHE.bjt_modcalls:
             return CACHE.bjt_modcalls[params]
 
@@ -376,23 +363,18 @@ class Sky130Walker(h.HierarchyWalker):
         raise TypeError(f"Param Value {orig}")
 
     def use_defaults(self, params: h.paramclass, modname: str, defaults: dict):
-
         w, l = None, None
 
         if params.w is None:
-
             w = defaults[modname][0]
 
         else:
-
             w = params.w
 
         if params.l is None:
-
             l = defaults[modname][1]
 
         else:
-
             l = params.l
 
         w = self.scale_param(w, 1000 * MILLI)

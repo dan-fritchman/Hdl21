@@ -44,7 +44,7 @@ def is_tb(i: Instantiable) -> bool:
     if isinstance(i, (Module, ExternalModuleCall)):
         m = i
     elif isinstance(i, GeneratorCall):
-        m = i.result
+        m = i.result  # FIXME: handle the case where this hasn't been elaborated
     else:
         raise TypeError(f"Invalid un-instantiable argument {i} to `is_tb`")
 

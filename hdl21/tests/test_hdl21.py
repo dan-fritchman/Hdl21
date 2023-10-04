@@ -1495,3 +1495,112 @@ def test_set_bad_attrs():
     # And assert we can't assign stuff to it
     with pytest.raises(RuntimeError):
         c.xyz = TabError
+
+
+def test_generator_function_combo():
+    """Test instantiating hierarchies that combine `@h.generator`s and regular old functions.
+    Inspired #192 https://github.com/dan-fritchman/Hdl21/issues/192."""
+
+    @h.generator
+    def Gen(_: h.HasNoParams) -> h.Module:
+        @h.module
+        class HasDiff:
+            d = h.Diff(port=True)
+
+        return HasDiff
+
+    def NonGen() -> h.Module:
+        @h.module
+        class HasTwoHasDiffs:
+            d = h.Diff(port=False)
+            a = Gen()(d=d)
+            b = Gen()(d=d)
+
+        return HasTwoHasDiffs
+
+    h.elaborate(NonGen())
+    h.elaborate(NonGen())
+
+
+def test_how_elab_caching_works():
+    """Not exactly a test of Hdl21, but of the mechanism used by class-level elaborator caching.
+    More or less the fix for #192 https://github.com/dan-fritchman/Hdl21/issues/192."""
+
+    from typing import Optional, List
+    from dataclasses import dataclass, field
+
+    @dataclass
+    class Cache:
+        ls: List[int] = field(default_factory=list)
+
+    class Base:
+        CLASS_CACHE: Optional[Cache] = None
+
+        def __init_subclass__(cls) -> None:
+            # Create a new `Cache` for each subclass
+            cls.CLASS_CACHE = Cache()
+
+        def do_something(self) -> None:
+            # Modify the class-level cache in an instance method
+            self.CLASS_CACHE.ls.append(1)
+
+    class Sub1(Base):
+        pass
+
+    class Sub2(Base):
+        pass
+
+    sub1 = Sub1()
+    sub2 = Sub2()
+
+    assert Base.CLASS_CACHE is None
+    assert Sub1.CLASS_CACHE is not None
+    assert Sub2.CLASS_CACHE is not None
+    assert Sub1.CLASS_CACHE is not Sub2.CLASS_CACHE
+    assert sub1.CLASS_CACHE is not None
+    assert sub2.CLASS_CACHE is not None
+    assert sub1.CLASS_CACHE is not sub2.CLASS_CACHE
+
+    sub1.do_something()
+    sub1.do_something()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == []
+
+    sub2.do_something()
+    sub2.do_something()
+    sub2.do_something()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == [1, 1, 1]
+
+    sub1b = Sub1()
+    sub2b = Sub2()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1b.CLASS_CACHE.ls == [1, 1]
+    assert sub2b.CLASS_CACHE.ls == [1, 1, 1]
+    assert sub1.CLASS_CACHE is sub1b.CLASS_CACHE
+    assert sub2.CLASS_CACHE is sub2b.CLASS_CACHE
+
+
+def test_module_circular_dependency():
+    """Test attempting to elaborate an invalid circular dependency loop between `Module`s."""
+
+    # Create two modules which errantly instantiate each other
+    a = h.Module(name="a")
+    b = h.Module(name="b")
+    a.add(h.Instance(of=b, name="ib"))
+    b.add(h.Instance(of=a, name="ia"))
+
+    # Test that attempting to elaborate either throws the circular-dependency error
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(a)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(b)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
