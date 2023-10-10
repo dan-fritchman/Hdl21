@@ -1604,3 +1604,29 @@ def test_module_circular_dependency():
     with pytest.raises(RuntimeError) as einfo:
         h.elaborate(b)
     assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+
+def test_generator_call_as_param():
+    """Test using a generated module as a parameter.
+    Inspired by #93 https://github.com/dan-fritchman/Hdl21/issues/93."""
+
+    from hdl21.generators import Pmos as Hdl21Pmos
+
+    @h.generator
+    def Pmos(_: h.HasNoParams) -> h.Module:
+        return Hdl21Pmos()  # Wrap the built-in generator
+
+    @h.paramclass
+    class Params:
+        unit = h.Param(dtype=h.Instantiable, desc="the unit pmos")
+
+    @h.generator
+    def PmosPair(params: Params) -> h.Module:
+        @h.module
+        class PmosPair:
+            x = h.Signal()
+            pair = h.Pair(params.unit)(d=x, g=x, s=x, b=x)
+
+        return PmosPair
+
+    h.elaborate(PmosPair(Params(Pmos())))
