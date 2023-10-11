@@ -1601,6 +1601,33 @@ def test_module_circular_dependency():
     assert "Invalid self referencing/ circular dependency" in str(einfo.value)
 
 
+def test_generator_circular_dependency():
+    """Test attempting to elaborate an invalid circular dependency loop between `Generator`s."""
+
+    # Create two generators which errantly instantiate each other
+    @h.generator
+    def f(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.g = g()()
+        return m
+
+    @h.generator
+    def g(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.f = f()()
+        return m
+
+    # Test that attempting to elaborate either throws the circular-dependency error
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(f())
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(g())
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+
 def test_generator_call_as_param():
     """Test using a generated module as a parameter.
     Inspired by #93 https://github.com/dan-fritchman/Hdl21/issues/93."""

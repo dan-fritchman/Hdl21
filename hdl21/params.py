@@ -182,6 +182,15 @@ def isparamclass(cls: type) -> bool:
     return getattr(cls, "__paramclass__", False)
 
 
+def hasparams(cls: type) -> bool:
+    """Boolean indication of whether `cls` has a nonzero number of parameters.
+    `HasNoParams` is a prominent, built-in example of a `paramclass` with no parameters.
+    Throws an exception is `cls` is not a paramclass."""
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+    return len(cls.__params__) > 0
+
+
 class Config:  # Pydantic Model Config
     allow_extra = pydantic.Extra.forbid
 
