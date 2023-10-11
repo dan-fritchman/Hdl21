@@ -257,7 +257,7 @@ class BundleFlattener(Elaborator):
         particularly between the Instance and instantiating module.
         """
 
-        entry = BundlePortEntry(inst._resolved, portname)
+        entry = BundlePortEntry(inst.of, portname)
         flat_bundle_port = THE_CACHE.flat_bundle_ports.get(entry, None)
         if flat_bundle_port is None:
             msg = f"Invalid Port Connection to {portname} on Instance {inst}"

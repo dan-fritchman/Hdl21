@@ -34,7 +34,7 @@ class _Instance:
             raise RuntimeError(f"Invalid Instance of {of}")
 
         self.name: Optional[str] = name
-        self.of: "Instantiable" = of
+        self.of: Instantiable = of
         self.conns: Dict[str, "Connectable"] = dict()
         self.props: Properties = Properties()
 
@@ -47,11 +47,6 @@ class _Instance:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
-
-    @property
-    def _resolved(self) -> Optional["Instantiable"]:
-        # FIXME: deprecate this if #196 sticks
-        return self.of
 
     def __getattr__(self, key: str) -> Any:
         """Port access by getattr"""

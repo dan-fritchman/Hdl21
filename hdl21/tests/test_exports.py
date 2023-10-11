@@ -81,7 +81,7 @@ def test_prim_proto1():
     assert len(HasPrims.signals) == 2
     assert len(HasPrims.instances) == 5
     for inst in HasPrims.instances.values():
-        assert isinstance(inst._resolved, h.primitives.PrimitiveCall)
+        assert isinstance(inst.of, h.primitives.PrimitiveCall)
 
 
 def test_ideal_primitives():

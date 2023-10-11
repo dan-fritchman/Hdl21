@@ -216,7 +216,7 @@ class ResolvePortRefs(Elaborator):
 
         # Get its Module for its IO
         # Note if the other entries in `group` have incompatible IO, this will be flagged by a later pass.
-        ios = io_for_resolving(portref.inst._resolved)
+        ios = io_for_resolving(portref.inst.of)
 
         port = ios.get(portref.portname, None)
         if port is None:  # Clone it, and remove any Port-attributes
@@ -266,7 +266,7 @@ class ResolvePortRefs(Elaborator):
         """Replace `noconn` with a newly minted `Signal` or `BundleInstance`."""
 
         # Get the target Module's port-object corresponding to `portref`
-        io_dict: Dict[str, Connectable] = io_for_resolving(portref.inst._resolved)
+        io_dict: Dict[str, Connectable] = io_for_resolving(portref.inst.of)
         port = io_dict.get(portref.portname, None)
         if port is None:
             msg = f"Invalid port connection to `{portref}` in Module `{module}`"

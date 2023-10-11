@@ -86,7 +86,7 @@ def resolve_portref_type(
 ) -> Union[Signal, BundleInstance]:
     """Get the `Port` object referred to by `pref`."""
 
-    instantiable = pref.inst._resolved
+    instantiable = pref.inst.of
 
     if pref.portname in instantiable.ports:
         return instantiable.ports[pref.portname]

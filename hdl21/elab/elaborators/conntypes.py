@@ -107,7 +107,7 @@ class ConnTypes(Elaborator):
         # These will be two {str: Connectable} dictionaries, who should have the same keys,
         # and each paired value should be connection-compatible.
         conns = copy.copy(inst.conns)
-        io = io_for_checking(parent=module, i=inst._resolved)
+        io = io_for_checking(parent=module, i=inst.of)
 
         # Track the status of each connection, so we can report the Instance-wide state if there are errors.
         statuses: Dict[str, ConnStatus] = dict()

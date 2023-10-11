@@ -136,7 +136,7 @@ class ProtoExporter:
 
         # Create each Proto-Instance
         for inst in module.instances.values():
-            if not inst._resolved:
+            if not inst.of:
                 msg = f"Invalid Instance {inst.name} of unresolved Module in Module {module.name}"
                 raise RuntimeError(msg)
             pinst = self.export_instance(inst)
@@ -176,14 +176,14 @@ class ProtoExporter:
 
         # First depth-first seek out our definition,
         # Retrieving the data we need to make a `Reference` to it
-        if isinstance(inst._resolved, Module):
-            pmod = self.export_module(inst._resolved)
+        if isinstance(inst.of, Module):
+            pmod = self.export_module(inst.of)
             # Give it a Reference to its Module
             pinst.module.local = pmod.name
-        elif isinstance(inst._resolved, (PrimitiveCall, ExternalModuleCall)):
-            call = inst._resolved
+        elif isinstance(inst.of, (PrimitiveCall, ExternalModuleCall)):
+            call = inst.of
 
-            if isinstance(inst._resolved, PrimitiveCall):
+            if isinstance(inst.of, PrimitiveCall):
                 # Create a reference to one of the `primitive` namespaces
                 if call.prim.primtype == PrimitiveType.PHYSICAL:
                     # FIXME: #54 also expose the `hdl21.primitives` as a VLSIR package
@@ -214,14 +214,16 @@ class ProtoExporter:
                 else:
                     raise ValueError(f"Invalid PrimitiveType {call.prim.primtype}")
 
-            elif isinstance(inst._resolved, ExternalModuleCall):
+            elif isinstance(inst.of, ExternalModuleCall):
                 self.export_external_module(call.module)
                 pinst.module.external.domain = call.module.domain or ""
                 pinst.module.external.name = call.module.name
                 params = dictify_params(call.params)
 
             else:
-                msg = f"Un-exportable Instance {inst} resolves to invalid type {inst._resolved}"
+                msg = (
+                    f"Un-exportable Instance {inst} resolves to invalid type {inst.of}"
+                )
                 raise TypeError(msg)
 
             # Export the instance parameters
@@ -233,7 +235,7 @@ class ProtoExporter:
                 pinst.parameters.append(vparam)
 
         else:
-            raise TypeError(f"Un-exportable Instance {inst} of {inst._resolved}")
+            raise TypeError(f"Un-exportable Instance {inst} of {inst.of}")
 
         # Create its connections mapping
         for pname, conn in inst.conns.items():

@@ -163,7 +163,7 @@ class Elaborator:
         # Turn off `PortRef` magic
         inst._elaborated = True
         # And visit the Instance's target
-        rv = self.elaborate_instantiable(inst._resolved)
+        rv = self.elaborate_instantiable(inst.of)
         self.stack.pop()
         return rv
 
