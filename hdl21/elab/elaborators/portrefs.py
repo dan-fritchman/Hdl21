@@ -11,7 +11,13 @@ from typing import Union, List, Optional, Dict
 # Local imports
 from ...connect import Connectable
 from ...instance import _get_connref
-from ...instantiable import io
+from ...instantiable import (
+    io,
+    Instantiable,
+    GeneratorCall,
+    ExternalModuleCall,
+    PrimitiveCall,
+)
 from ...module import Module
 from ...portref import PortRef
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
@@ -70,7 +76,6 @@ class ResolvePortRefs(Elaborator):
         # FIXME: move from SetList to a regular Set. Thus far breaks one test, somehow.
         module_portrefs = SetList()
         for inst in instancelike:
-
             # Populate the module-level set of PortRefs
             for portref in inst._refs.portrefs.values():
                 module_portrefs.add(portref)
@@ -212,7 +217,7 @@ class ResolvePortRefs(Elaborator):
 
         # Get its Module for its IO
         # Note if the other entries in `group` have incompatible IO, this will be flagged by a later pass.
-        ios = io(portref.inst._resolved)
+        ios = io_for_resolving(portref.inst._resolved)
 
         port = ios.get(portref.portname, None)
         if port is None:  # Clone it, and remove any Port-attributes
@@ -262,7 +267,7 @@ class ResolvePortRefs(Elaborator):
         """Replace `noconn` with a newly minted `Signal` or `BundleInstance`."""
 
         # Get the target Module's port-object corresponding to `portref`
-        io_dict: Dict[str, Connectable] = io(portref.inst._resolved)
+        io_dict: Dict[str, Connectable] = io_for_resolving(portref.inst._resolved)
         port = io_dict.get(portref.portname, None)
         if port is None:
             msg = f"Invalid port connection to `{portref}` in Module `{module}`"
@@ -347,3 +352,24 @@ def resolve_portref(pref: PortRef, to: Connectable) -> None:
 
     # Update all downstream dependencies, e.g. connected ports, slices
     update_ref_deps(pref, to)
+
+
+def io_for_resolving(i: Instantiable) -> Dict[str, "Connectable"]:
+    """Get the relevant IOs of Instantiable `i` for port-ref resolution.
+    Depending on the elaboration state of `i`, this is either the "bundled" or "flattened" IOs.
+    """
+
+    if isinstance(i, GeneratorCall):
+        # Take the result of the generator call
+        i = i.result
+
+    if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
+        # These do not have Bundle-valued ports
+        return copy.copy(i.ports)
+
+    if not isinstance(i, Module):
+        raise TypeError(f"Invalid Instantiable: {i}")
+
+    if i._pre_flattening_io is not None:
+        return copy.copy(i._pre_flattening_io)
+    return io(i)
