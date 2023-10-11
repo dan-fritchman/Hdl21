@@ -14,7 +14,7 @@ from .elaboratable import Elaboratable, Elaboratables, is_elaboratable
 from .elabpass import ElabPass
 
 
-ElaboratableType = TypeVar("ElaboratableType", bound=Elaboratable)
+ElaboratableType = TypeVar("ElaboratableType", bound=Elaboratables)
 
 
 def elaborate(

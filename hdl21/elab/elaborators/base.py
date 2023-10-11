@@ -18,13 +18,12 @@ from ...external_module import ExternalModuleCall
 from ...instance import _Instance, Instance, InstanceArray, InstanceBundle
 from ...primitives import PrimitiveCall
 from ...bundle import BundleInstance
-from ...generator import GeneratorCall
 from ...instantiable import Instantiable
 from ..elaboratable import Elaboratable
 
 
 # Union of entry-types in the elaboration stack
-ElabStackEntry = Union[GeneratorCall, Module, Instance, InstanceArray, InstanceBundle]
+ElabStackEntry = Union[Module, Instance, InstanceArray, InstanceBundle]
 
 
 @dataclass
@@ -81,20 +80,11 @@ class Elaborator:
         if not isinstance(self.tops, List):
             self.fail(f"Invalid Top for Elaboration: {self.tops} must be a list")
 
-        # The base-class Elaborator, and most sub-classes, return the `self.tops` list unmodified,
+        # The base-class Elaborator, and most (perhaps all) sub-classes, return the `self.tops` list unmodified,
         # while modifiying its elements inline.
-        # This differs from the `Generator` elaborator, which returns a new list,
-        # generally converting `GeneratorCall`s into `Module`s.
-
         for t in self.tops:
             self.elaborate_module_base(t)  # Note `_base` here!
         return self.tops
-
-    def elaborate_generator_call(self, call: GeneratorCall) -> Module:
-        """Elaborate a GeneratorCall"""
-        # Only the generator-elaborator can handle generator calls.
-        # By default it generates errors for all other elaboration passes.
-        self.fail(f"Invalid call to elaborate GeneratorCall by {self}")
 
     def elaborate_module_base(self, module: Module) -> Module:
         """# Base-Case `Module` Elaboration

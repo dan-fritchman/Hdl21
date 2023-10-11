@@ -260,7 +260,7 @@ def hdl21_naming_encoder(obj: Any) -> Any:
     from .qualname import qualname as module_qualname
     from .external_module import ExternalModule, ExternalModuleCall
     from .instance import Instance
-    from .generator import Generator, GeneratorCall
+    from .generator import Generator
     from .primitives import Primitive, PrimitiveCall
 
     if isinstance(obj, (Instance,)):
@@ -273,11 +273,8 @@ def hdl21_naming_encoder(obj: Any) -> Any:
 
     if isinstance(obj, (Primitive, PrimitiveCall)):
         # Primitives use their `name` attribute/ property directly
+        # FIXME: this should really mix in the parameters as well, as `ExternalModuleCall` does.
         return obj.name
-
-    # Mix the qualified class names/paths with the parameters
-    if isinstance(obj, GeneratorCall):
-        return module_qualname(obj.gen) + _unique_name(obj.params)
 
     if isinstance(obj, ExternalModuleCall):
         # Mix the qualified class names/paths with the parameters

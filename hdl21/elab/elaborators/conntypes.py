@@ -25,7 +25,6 @@ from .width import width, HasWidth
 from ...instantiable import (
     io,
     Instantiable,
-    GeneratorCall,
     ExternalModuleCall,
     PrimitiveCall,
 )
@@ -228,10 +227,6 @@ class ConnTypes(Elaborator):
 def io_for_checking(parent: Module, i: Instantiable) -> Dict[str, "Connectable"]:
     """Get the relevant IOs of Instantiable `i` for checking.
     Depending on the elaboration state of `parent` and `i`, this may include the "bundled" or "flattened" IOs."""
-
-    if isinstance(i, GeneratorCall):
-        # Take the result of the generator call
-        i = i.result
 
     if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
         # These do not have Bundle-valued ports

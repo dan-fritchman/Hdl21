@@ -7,13 +7,12 @@ import copy
 from typing import Any, Union, Dict
 
 from .module import Module
-from .external_module import ExternalModuleCall
-from .generator import GeneratorCall
 from .primitives import PrimitiveCall
+from .external_module import ExternalModuleCall
 
 
 # Instantiable types-union
-Instantiable = Union[Module, ExternalModuleCall, GeneratorCall, PrimitiveCall]
+Instantiable = Union[Module, ExternalModuleCall, PrimitiveCall]
 
 
 def is_instantiable(val: Any) -> bool:
@@ -34,21 +33,15 @@ def qualname(i: Instantiable) -> str:
         return module_qualname(i)
     if isinstance(i, ExternalModuleCall):
         return module_qualname(i.module)
-    if isinstance(i, GeneratorCall):
-        return module_qualname(i.result)
+
     raise TypeError(f"Invalid Instantiable {i}")
 
 
 def io(i: Instantiable) -> Dict[str, "Connectable"]:
-    """Get a complete dictionary of IO ports for `i`, including all types: Signals and Bundles.
+    """
+    Get a complete dictionary of IO ports for `i`, including all types: Signals and Bundles.
     Copies the Instantiable's top-level dictionary so that it is not modified by consumers.
     """
-
-    if isinstance(i, GeneratorCall):
-        if i.result is None:
-            raise RuntimeError(f"Cannot get IO of unelaborated Generator {i}")
-        # Take the result of the generator call
-        i = i.result
 
     rv = copy.copy(i.ports)
     if hasattr(i, "bundle_ports"):

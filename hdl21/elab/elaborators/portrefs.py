@@ -14,7 +14,6 @@ from ...instance import _get_connref
 from ...instantiable import (
     io,
     Instantiable,
-    GeneratorCall,
     ExternalModuleCall,
     PrimitiveCall,
 )
@@ -358,10 +357,6 @@ def io_for_resolving(i: Instantiable) -> Dict[str, "Connectable"]:
     """Get the relevant IOs of Instantiable `i` for port-ref resolution.
     Depending on the elaboration state of `i`, this is either the "bundled" or "flattened" IOs.
     """
-
-    if isinstance(i, GeneratorCall):
-        # Take the result of the generator call
-        i = i.result
 
     if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
         # These do not have Bundle-valued ports
