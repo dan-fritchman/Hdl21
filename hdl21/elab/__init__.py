@@ -4,7 +4,6 @@
 
 from .elab import (
     elaborate,
-    Context,
     Elaboratable,
     Elaboratables,
     ElabPass,

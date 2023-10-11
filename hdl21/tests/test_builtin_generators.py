@@ -11,9 +11,10 @@ def test_mos_generator():
 
     Mos = h.generators.Mos
     m = Mos(Mos.Params(nser=2))
+    call = m._generated_by
 
-    assert isinstance(m, h.GeneratorCall)
-    assert isinstance(m.params, Mos.Params)
+    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call.params, Mos.Params)
 
     m = h.elaborate(m)
 
@@ -76,9 +77,10 @@ def test_series_parallel_generator():
 
     params = SeriesPar.Params(unit=M, nf=2, nser=2, series_conns=["a", "b"])
     m = SeriesPar(params)
+    call = m._generated_by
 
-    assert isinstance(m, h.GeneratorCall)
-    assert isinstance(m.params, SeriesPar.Params)
+    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call.params, SeriesPar.Params)
 
     m = h.elaborate(m)
 

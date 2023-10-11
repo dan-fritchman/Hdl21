@@ -4,7 +4,6 @@
 Recursive walkers of Hdl21 hierarchies which perform the mechanics of elaboration. 
 """
 
-from .generators import GeneratorElaborator
 from .inst_bundles import InstBundleElaborator
 from .slices import SliceResolver
 from .orphanage import Orphanage

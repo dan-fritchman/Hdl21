@@ -20,9 +20,7 @@ from ...primitives import PrimitiveCall
 from ...bundle import BundleInstance
 from ...generator import GeneratorCall
 from ...instantiable import Instantiable
-
 from ..elaboratable import Elaboratable
-from ..context import Context
 
 
 # Union of entry-types in the elaboration stack
@@ -70,13 +68,12 @@ class Elaborator:
         cls.CLASS_LEVEL_CACHE = ClassLevelCache()
 
     @classmethod
-    def elaborate(cls, tops: List[Elaboratable], ctx: Context) -> List[Elaboratable]:
+    def elaborate(cls, tops: List[Elaboratable]) -> List[Elaboratable]:
         """Elaboration entry-point. Elaborate the top-level objects."""
-        return cls(tops, ctx).elaborate_tops()
+        return cls(tops).elaborate_tops()
 
-    def __init__(self, tops: List[Elaboratable], ctx: Context):
+    def __init__(self, tops: List[Elaboratable]):
         self.tops = tops
-        self.ctx = ctx
         self.stack: List[ElabStackEntry] = list()
 
     def elaborate_tops(self) -> List[Elaboratable]:

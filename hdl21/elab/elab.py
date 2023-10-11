@@ -11,7 +11,6 @@ from typing import List, Optional, TypeVar
 
 # Local imports
 from .elaboratable import Elaboratable, Elaboratables, is_elaboratable
-from .context import Context
 from .elabpass import ElabPass
 
 
@@ -21,7 +20,6 @@ ElaboratableType = TypeVar("ElaboratableType", bound=Elaboratable)
 def elaborate(
     top: ElaboratableType,
     *,
-    ctx: Optional[Context] = None,
     passes: Optional[List[ElabPass]] = None,
 ) -> ElaboratableType:
     """
@@ -31,12 +29,9 @@ def elaborate(
 
     Optional `passes` lists the ordered `ElabPass`es to run. By default it runs the order specified by `ElabPass.default`.
     Note the order of passes is important; many depend upon others to have completed before they can successfully run.
-
-    Optional `Context` field `ctx` is not yet supported.
     """
 
     # Expand default values
-    ctx = ctx or Context()
     passes = passes or ElabPass.default()
 
     # Check whether we are elaborating a single object or a list thereof
@@ -44,7 +39,7 @@ def elaborate(
 
     # Pass `tops` through each of our passes, in order
     for elabpass in passes:
-        tops = elabpass.elaborate(tops=tops, ctx=ctx)
+        tops = elabpass.elaborate(tops=tops)
 
     # Extract the single-element case
     if not isinstance(top, List):

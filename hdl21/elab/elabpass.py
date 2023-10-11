@@ -7,7 +7,6 @@ from typing import List
 
 # Import all the defined passes
 from .elaborators import (
-    GeneratorElaborator,
     InstBundleElaborator,
     Orphanage,
     ConnTypes,
@@ -31,7 +30,6 @@ class ElabPass(Enum):
     The `default` class-method produces the default such list.
     """
 
-    RUN_GENERATORS = GeneratorElaborator
     ORPHANAGE = Orphanage
     INSTANCE_BUNDLES = InstBundleElaborator
     RESOLVE_PORT_REFS = ResolvePortRefs

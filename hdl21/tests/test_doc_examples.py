@@ -97,7 +97,8 @@ def test_generator1():
         m.i = h.Input(width=params.w)
         return m
 
-    call = MyFirstGenerator(MyParams(w=16))
+    m = MyFirstGenerator(MyParams(w=16))
+    call = m._generated_by
     assert isinstance(call, h.GeneratorCall)
     assert call.params == MyParams(w=16)
 
@@ -190,6 +191,8 @@ def test_inline_params_construction():
     @h.generator
     def MyGen(params: MyParams) -> h.Module:
         ...
+        # Module content is really irrelevant; really just shows caching
+        return h.Module()
 
     assert MyGen(width=8, text="My Favorite Module") == MyGen(
         MyParams(width=8, text="My Favorite Module")
