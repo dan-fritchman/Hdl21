@@ -25,7 +25,6 @@ from .width import width, HasWidth
 from ...instantiable import (
     io,
     Instantiable,
-    GeneratorCall,
     ExternalModuleCall,
     PrimitiveCall,
 )
@@ -108,7 +107,7 @@ class ConnTypes(Elaborator):
         # These will be two {str: Connectable} dictionaries, who should have the same keys,
         # and each paired value should be connection-compatible.
         conns = copy.copy(inst.conns)
-        io = io_for_checking(parent=module, i=inst._resolved)
+        io = io_for_checking(parent=module, i=inst.of)
 
         # Track the status of each connection, so we can report the Instance-wide state if there are errors.
         statuses: Dict[str, ConnStatus] = dict()
@@ -228,10 +227,6 @@ class ConnTypes(Elaborator):
 def io_for_checking(parent: Module, i: Instantiable) -> Dict[str, "Connectable"]:
     """Get the relevant IOs of Instantiable `i` for checking.
     Depending on the elaboration state of `parent` and `i`, this may include the "bundled" or "flattened" IOs."""
-
-    if isinstance(i, GeneratorCall):
-        # Take the result of the generator call
-        i = i.result
 
     if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
         # These do not have Bundle-valued ports

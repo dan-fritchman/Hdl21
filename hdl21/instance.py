@@ -1,7 +1,6 @@
-""" 
-# Hdl21 Hierarchical Instances 
-
-Create instances of Modules, Generators, and Primitives in a hierarchy
+"""
+# Instance
+Hierarchical instance of another `Module`, `Primitive`, or similar piece of replicable hardware.
 """
 
 # Std-Lib Imports
@@ -20,7 +19,8 @@ T = TypeVar("T")
 
 @init
 class _Instance:
-    """Shared base class for Instance-like types (Instance, InstanceArray)"""
+    """# _Instance
+    Shared base class for Instance-like types (Instance, InstanceArray)"""
 
     def __init__(
         self,
@@ -34,7 +34,7 @@ class _Instance:
             raise RuntimeError(f"Invalid Instance of {of}")
 
         self.name: Optional[str] = name
-        self.of: "Instantiable" = of
+        self.of: Instantiable = of
         self.conns: Dict[str, "Connectable"] = dict()
         self.props: Properties = Properties()
 
@@ -47,18 +47,6 @@ class _Instance:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name} of={self.of})"
-
-    @property
-    def _resolved(
-        self,
-    ) -> Optional["Instantiable"]:
-        """Property to retrieve the Instance's resolved Module, if complete.
-        Returns `None` if unresolved."""
-        from .generator import GeneratorCall
-
-        if isinstance(self.of, GeneratorCall):
-            return self.of.result
-        return self.of
 
     def __getattr__(self, key: str) -> Any:
         """Port access by getattr"""
@@ -162,7 +150,10 @@ def _mult(inst: "Instance", other: int) -> "InstanceArray":
 
 
 class Instance(_Instance):
-    """Hierarchical Instance of another Module or Generator"""
+    """
+    # Instance
+    Hierarchical instance of another `Module`, `Primitive`, or similar piece of replicable hardware.
+    """
 
     __mul__ = __rmul__ = _mult  # Apply `_mult` on both left and right
 
@@ -183,7 +174,8 @@ class Instance(_Instance):
 
 
 class InstanceBundle(_Instance):
-    """Named set of Instances, paired with a Signal Bundle."""
+    """# Instance Bundle
+    A named set of Instances, paired with a Signal Bundle."""
 
     # The paired signal-Bundle type. Note this is a class-level attribute.
     bundle: Optional["Bundle"] = None
@@ -223,7 +215,9 @@ def InstanceBundleType(name: str, bundle: "Bundle", doc: Optional[str] = None) -
 
 
 class InstanceArray(_Instance):
-    """Array of `n` Instances"""
+    """# Instance Array
+    A single-dimensional array of `n` `Instance`s of the same `Module`.
+    Enables numpy-style "connection broadcasting" semantics."""
 
     _specialcases = [
         "name",
@@ -350,7 +344,7 @@ Instantiation Decorator
 def calls_instantiate(cls: Type[T]) -> Type[T]:
     """# Calls Instantiate
     Decorator which adds 'calls produce `hdl21.Instance`s' functionality.
-    Added to `Module`, `GeneratorCall`, and everything else that is `Instantiable`."""
+    Added to everything that is `Instantiable`, notably including `Module`."""
 
     def __call__(self, **kwargs) -> Instance:
         """Calls Create `hdl21.Instances`,

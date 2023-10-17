@@ -21,7 +21,7 @@ from ..one_or_more import OneOrMore
 from ..datatype import datatype
 from ..instance import Instance
 from ..signal import Signal, Port
-from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
+from ..instantiable import Instantiable, Module, ExternalModuleCall
 from ..scalar import Scalar
 from ..literal import Literal
 
@@ -39,13 +39,10 @@ def tb(name: str) -> Module:
     return tb
 
 
-def is_tb(i: Instantiable) -> bool:
+def is_tb(m: Instantiable) -> bool:
     """Boolean indication of whether Instantiable `m` meets the test-bench interface."""
-    if isinstance(i, (Module, ExternalModuleCall)):
-        m = i
-    elif isinstance(i, GeneratorCall):
-        m = i.result  # FIXME: handle the case where this hasn't been elaborated
-    else:
+    if not isinstance(m, (Module, ExternalModuleCall)):
+        # Also filter out `Primitive`s, which don't work as testbenches
         raise TypeError(f"Invalid un-instantiable argument {i} to `is_tb`")
 
     if len(m.ports) != 1:

@@ -182,6 +182,15 @@ def isparamclass(cls: type) -> bool:
     return getattr(cls, "__paramclass__", False)
 
 
+def hasparams(cls: type) -> bool:
+    """Boolean indication of whether `cls` has a nonzero number of parameters.
+    `HasNoParams` is a prominent, built-in example of a `paramclass` with no parameters.
+    Throws an exception is `cls` is not a paramclass."""
+    if not isparamclass(cls):
+        raise RuntimeError(f"Invalid @hdl21.paramclass {cls}")
+    return len(cls.__params__) > 0
+
+
 class Config:  # Pydantic Model Config
     allow_extra = pydantic.Extra.forbid
 
@@ -260,7 +269,7 @@ def hdl21_naming_encoder(obj: Any) -> Any:
     from .qualname import qualname as module_qualname
     from .external_module import ExternalModule, ExternalModuleCall
     from .instance import Instance
-    from .generator import Generator, GeneratorCall
+    from .generator import Generator
     from .primitives import Primitive, PrimitiveCall
 
     if isinstance(obj, (Instance,)):
@@ -273,11 +282,8 @@ def hdl21_naming_encoder(obj: Any) -> Any:
 
     if isinstance(obj, (Primitive, PrimitiveCall)):
         # Primitives use their `name` attribute/ property directly
+        # FIXME: this should really mix in the parameters as well, as `ExternalModuleCall` does.
         return obj.name
-
-    # Mix the qualified class names/paths with the parameters
-    if isinstance(obj, GeneratorCall):
-        return module_qualname(obj.gen) + _unique_name(obj.params)
 
     if isinstance(obj, ExternalModuleCall):
         # Mix the qualified class names/paths with the parameters

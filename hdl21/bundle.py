@@ -113,10 +113,6 @@ class BundleInstance:
         self._elaborated = False
         self._initialized = True
 
-    @property
-    def _resolved(self) -> "Bundle":
-        return self.of
-
     """ Special Methods """
 
     def __repr__(self):
@@ -284,7 +280,8 @@ class Bundle:
 def _add(bundle: Bundle, val: BundleAttr) -> BundleAttr:
     """Internal `Module.add` and `Module.__setattr__` implementation.
     Primarily sort `val` into one of our type-based containers.
-    Layers above `_add` must ensure that `val` has its `name` attribute before calling this method."""
+    Layers above `_add` must ensure that `val` has its `name` attribute before calling this method.
+    """
 
     if bundle._elaborated:  ## FIXME: is not None:
         raise RuntimeError(f"Cannot add {val} to {bundle} after elaboration.")

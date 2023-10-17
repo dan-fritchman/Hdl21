@@ -3,8 +3,6 @@
 """
 
 import copy, pytest
-from enum import Enum, EnumMeta, auto
-
 import hdl21 as h
 
 
@@ -85,16 +83,15 @@ def test_generator1():
     assert isinstance(m.i, h.Signal)
 
 
+@pytest.mark.xfail(reason="Deprecated/ unimplemented Context feature")
 def test_generator2():
     @h.paramclass
     class P2:
         f = h.Param(dtype=float, desc="a real number", default=1e-11)
 
     @h.generator
-    def g2(params: P2, ctx: h.Context) -> h.Module:
-        # Generator which takes a Context-argument
+    def g2(params: P2) -> h.Module:
         assert isinstance(params, P2)
-        assert isinstance(ctx, h.Context)
         return h.Module()
 
     m = h.elaborate(g2(P2()))
@@ -113,7 +110,7 @@ def test_generator3():
         return h.Module()
 
     @h.generator
-    def g3b(params: P3, ctx: h.Context) -> h.Module:
+    def g3b(params: P3) -> h.Module:
         return h.Module()
 
     M = h.Module(name="M")
@@ -131,17 +128,19 @@ def test_generator3():
 
     # Post-elab checks
     assert isinstance(HasGen.a, h.Instance)
-    assert isinstance(HasGen.a.of, h.GeneratorCall)
-    assert HasGen.a.of.gen is g3a
-    assert HasGen.a.of.params == P3()
-    assert isinstance(HasGen.a.of.result, h.Module)
-    assert HasGen.a.of.result.name == "g3a(width=1)"
+    call = HasGen.a.of._generated_by
+    assert isinstance(call, h.GeneratorCall)
+    assert call.gen is g3a
+    assert call.params == P3()
+    assert isinstance(call.result, h.Module)
+    assert call.result.name == "g3a(width=1)"
     assert isinstance(HasGen.b, h.Instance)
-    assert isinstance(HasGen.b.of, h.GeneratorCall)
-    assert isinstance(HasGen.b.of.result, h.Module)
-    assert HasGen.b.of.result.name == "g3b(width=5)"
-    assert HasGen.b.of.gen is g3b
-    assert HasGen.b.of.params == P3(width=5)
+    call = HasGen.b.of._generated_by
+    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call.result, h.Module)
+    assert call.result.name == "g3b(width=5)"
+    assert call.gen is g3b
+    assert call.params == P3(width=5)
     assert isinstance(HasGen.c, h.Instance)
     assert isinstance(HasGen.c.of, h.Module)
     assert HasGen.c.of is M
@@ -421,11 +420,9 @@ def test_instantiable_as_param():
         m = h.Param(dtype=h.Module, desc="A `Module`")
         e = h.Param(dtype=h.ExternalModule, desc="An `ExternalModule`")
         ec = h.Param(dtype=h.ExternalModuleCall, desc="An `ExternalModuleCall`")
-        # FIXME: `Generator` is the one exception here. Maybe it can work, some day.
-        # g = h.Param(dtype=h.Generator, desc="An `Generator`")
-        gc = h.Param(dtype=h.GeneratorCall, desc="An `GeneratorCall`")
-        p = h.Param(dtype=h.Primitive, desc="An `Primitive`")
-        pc = h.Param(dtype=h.PrimitiveCall, desc="An `PrimitiveCall`")
+        g = h.Param(dtype=h.Generator, desc="A `Generator`")
+        p = h.Param(dtype=h.Primitive, desc="A `Primitive`")
+        pc = h.Param(dtype=h.PrimitiveCall, desc="A `PrimitiveCall`")
         i = h.Param(dtype=h.Instantiable, desc="An `Instantiable`")
 
     @h.generator
@@ -437,8 +434,7 @@ def test_instantiable_as_param():
             m = params.m(x=x)
             e = params.e()(x=x)
             ec = params.ec(x=x)
-            # g = params.g()(x=x)
-            gc = params.gc(x=x)
+            g = params.g()(x=x)
             p = params.p()(d=x, g=x, s=x, b=x)
             pc = params.pc(d=x, g=x, s=x, b=x)
             i = params.i(x=x)
@@ -459,15 +455,13 @@ def test_instantiable_as_param():
         m=Mod,
         e=Emod,
         ec=Emod(),
-        # g=Gen,
-        gc=Gen(),
+        g=Gen,
         p=h.Mos,
         pc=h.Mos(),
         i=Mod,
     )
     m = UsesThemParams(p)
     m = h.elaborate(m)
-    # assert m == Mod
 
 
 def test_instance_mult():
@@ -919,7 +913,7 @@ def test_common_attr_errors():
     with pytest.raises(TypeError) as einfo:
         M.g = G(h.NoParams)  # Bad - GeneratorCall
     assert "Did you mean" in str(einfo.value)
-    assert "`GeneratorCall`" in str(einfo.value)
+    assert "`Module`" in str(einfo.value)
     M.g = G(h.NoParams)()  # Good - Instance
 
     X = h.ExternalModule(name="X", port_list=[])
@@ -949,8 +943,9 @@ def test_generator_call_by_kwargs():
 
     # Call without constructing a `P`
     m = M(a=1, b=2.0, c="3")
+    call = m._generated_by
 
-    assert isinstance(m, h.GeneratorCall)
+    assert isinstance(call, h.GeneratorCall)
     m = h.elaborate(m)
     assert isinstance(m, h.Module)
 
@@ -1209,8 +1204,8 @@ def test_generator_eq():
     assert Gen() == Gen()
     assert Gen() == Gen(Params(p=111))
     assert Gen() == Gen(p=111)
-    assert Gen().params == Params()
-    assert Gen().params == Params(p=111)
+    assert Gen()._generated_by.params == Params()
+    assert Gen()._generated_by.params == Params(p=111)
 
     assert hash(Gen()) == hash(Gen(Params(p=111)))
     assert hash(Gen()) == hash(Gen(p=111))
@@ -1284,7 +1279,7 @@ def test_bad_generators():
     with pytest.raises(RuntimeError):
         # Extra arg
         @h.generator
-        def bad(p: P, ctx: h.Context, something_else: int) -> h.Module:
+        def bad(p: P, something_else: int) -> h.Module:
             return h.Module()
 
     with pytest.raises(RuntimeError):
@@ -1603,6 +1598,33 @@ def test_module_circular_dependency():
 
     with pytest.raises(RuntimeError) as einfo:
         h.elaborate(b)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+
+def test_generator_circular_dependency():
+    """Test attempting to elaborate an invalid circular dependency loop between `Generator`s."""
+
+    # Create two generators which errantly instantiate each other
+    @h.generator
+    def f(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.g = g()()
+        return m
+
+    @h.generator
+    def g(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.f = f()()
+        return m
+
+    # Test that attempting to elaborate either throws the circular-dependency error
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(f())
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(g())
     assert "Invalid self referencing/ circular dependency" in str(einfo.value)
 
 

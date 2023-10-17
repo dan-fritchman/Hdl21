@@ -119,7 +119,7 @@ class ProtoImporter:
 
             # Make the instance's connections
             for pconn in pinst.connections:
-                if pconn.portname not in inst._resolved.ports:
+                if pconn.portname not in inst.of.ports:
                     msg = f"Invalid Port {pconn.portname} on {inst} in Module {module.name}"
                     raise RuntimeError(msg)
                 # Import the Signal-object
