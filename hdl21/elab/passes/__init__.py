@@ -1,10 +1,14 @@
 """ 
-# Elaborator Class(es)
+# Elaboration Passes
 
 Recursive walkers of Hdl21 hierarchies which perform the mechanics of elaboration. 
 """
 
-from .inst_bundles import InstBundleElaborator
+# Import the abstract base class for typing guards
+from .base import ElabPass
+
+# And all the built-in passes
+from .inst_bundles import InstBundleElabPass
 from .slices import SliceResolver
 from .orphanage import Orphanage
 from .arrays import ArrayFlattener

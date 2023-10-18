@@ -1,5 +1,5 @@
 """ 
-# `InstanceBundle`s Elaborator Pass
+# `InstanceBundle`s ElabPass Pass
 
 Transform each `InstanceBundle` into a set of "scalar" `Instance`s, 
 and reconnect them to the signals of the original `Bundle`. 
@@ -20,12 +20,12 @@ from ...module import Module
 from ...instance import Instance, InstanceBundle
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 
-class InstBundleElaborator(Elaborator):
+class InstBundleElabPass(ElabPass):
     """
-    # Instance Bundle Elaborator Pass
+    # Instance Bundle Elaboration Pass
     """
 
     def elaborate_module(self, module: Module) -> Module:

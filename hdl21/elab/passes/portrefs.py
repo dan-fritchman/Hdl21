@@ -22,10 +22,10 @@ from ...portref import PortRef
 from ...bundle import BundleInstance, BundleRef, AnonymousBundle
 from ...signal import PortDir, Signal, Visibility
 from ...noconn import NoConn
-from .resolve_ref_types import update_ref_deps
+from ..helpers.resolve_ref_types import update_ref_deps
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 # Union of the types which serve as "source signals",
 # i.e. the things which we are resolve `PortRef`s *to*.
@@ -38,7 +38,7 @@ Source = Union[Signal, BundleInstance, BundleRef, AnonymousBundle]
 PortType = Union[Signal, BundleInstance]
 
 
-class ResolvePortRefs(Elaborator):
+class ResolvePortRefs(ElabPass):
     """Resolve all `PortRef`s on all `Instance`s.
 
     This pass resolves "Instance to Instance" connections such as:

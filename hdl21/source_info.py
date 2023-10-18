@@ -5,20 +5,20 @@ Track the source file and line number of user calls.
 
 This source-level tracking is invaluable for hierarchical hardware designs, 
 especially since the Hdl21 elaboration process means default debugger errors 
-do not produce a stack-trace through the *hardware*, but through the *elaborators*. 
+do not produce a stack-trace through the *hardware*, but through the *elaboration* call-stack. 
 
 Most of the logic to produce nice error messages using `SourceInfo`s 
-is in `Elaborator`s, particularly the base-class `Elaborator`'s `fail` method. 
+is in `ElabPass`s, particularly the base-class `ElabPass`'s `fail` method. 
 
 The mechanisms for tracking this source info have been the subject of some experimentation. 
 Past methods, and associated lessons include: 
 
-* `inspect.stack()` and `inspect.getmodule()` are REALLY slow. 
-  * Versions of Hdl21 overusing these methods have observed them taking as much as 90% of elaboration time. 
-  * `stack()` in particular does not abide the Python3 "everything is a generator" rule, and computes all stack-frames into a list upfront
-  * We still use `getmodule()` as a basis for (Hdl21) Module naming. But beware to limit its calls, and get rid of it if we can. 
-* Storing the `frame` object returned by `inspect.currentframe()` at creation time and referring back to it later, just doesn't work. 
-  * The `frame` objects are mutated directly by the interpreter; the stack is lost essentially immediately. 
+- `inspect.stack()` and `inspect.getmodule()` are REALLY slow. 
+  - Versions of Hdl21 overusing these methods have observed them taking as much as 90% of elaboration time. 
+  - `stack()` in particular does not abide the Python3 "everything is a generator" rule, and computes all stack-frames into a list upfront
+  - We still use `getmodule()` as a basis for (Hdl21) Module naming. But beware to limit its calls, and get rid of it if we can. 
+- Storing the `frame` object returned by `inspect.currentframe()` at creation time and referring back to it later, just doesn't work. 
+  - The `frame` objects are mutated directly by the interpreter; the stack is lost essentially immediately. 
 
 """
 

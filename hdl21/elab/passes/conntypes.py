@@ -21,16 +21,16 @@ from ...bundle import (
     BundleRef,
     Bundle,
 )
-from .width import width, HasWidth
 from ...instantiable import (
     io,
     Instantiable,
     ExternalModuleCall,
     PrimitiveCall,
 )
+from ..helpers.width import width, HasWidth
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 
 """
@@ -71,7 +71,7 @@ class InvalidType:
 ConnStatus = Union[Valid, NoPort, Unconnected, InvalidType]
 
 
-class ConnTypes(Elaborator):
+class ConnTypes(ElabPass):
     """
     Check for connection-type-validity on each Instance connection.
 
@@ -201,7 +201,7 @@ class ConnTypes(Elaborator):
 
         if isinstance(conn, BundleRef):
             # Recursively call this function on the ref's resolved value
-            from .resolve_ref_types import resolve_bundleref_type
+            from ..helpers.resolve_ref_types import resolve_bundleref_type
 
             referent = resolve_bundleref_type(conn, self.fail)
             return self.check_compatible(port, referent)
@@ -226,7 +226,8 @@ class ConnTypes(Elaborator):
 
 def io_for_checking(parent: Module, i: Instantiable) -> Dict[str, "Connectable"]:
     """Get the relevant IOs of Instantiable `i` for checking.
-    Depending on the elaboration state of `parent` and `i`, this may include the "bundled" or "flattened" IOs."""
+    Depending on the elaboration state of `parent` and `i`, this may include the "bundled" or "flattened" IOs.
+    """
 
     if isinstance(i, (ExternalModuleCall, PrimitiveCall)):
         # These do not have Bundle-valued ports
