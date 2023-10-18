@@ -12,13 +12,13 @@ from ...slice import Slice
 from ...concat import Concat
 from ...portref import PortRef
 from ...bundle import BundleRef
-from .width import width, Sliceable
+from ..helpers.width import width, Sliceable
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 
-class SliceResolver(Elaborator):
+class SliceResolver(ElabPass):
     """Elaboration pass to resolve slices and concatenations to concrete signals.
     Modifies connections to any nested slices, nested concatenations, or combinations thereof.
     "Full-width" `Slice`s e.g. `sig[:]` are replaced with their parent `Signal`s.

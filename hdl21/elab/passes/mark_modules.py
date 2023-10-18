@@ -4,10 +4,10 @@
 
 # Local imports
 from ...module import Module
-from .base import Elaborator
+from .base import ElabPass
 
 
-class MarkModules(Elaborator):
+class MarkModules(ElabPass):
     def elaborate_module(self, module: Module) -> Module:
         # Check that every module has a name
         if not module.name:

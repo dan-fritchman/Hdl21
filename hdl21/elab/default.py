@@ -6,8 +6,8 @@ from enum import Enum
 from typing import List
 
 # Import all the defined passes
-from .elaborators import (
-    InstBundleElaborator,
+from .passes import (
+    InstBundleElabPass,
     Orphanage,
     ConnTypes,
     BundleFlattener,
@@ -20,9 +20,9 @@ from .elaborators import (
 
 class ElabPass(Enum):
     """
-    # Enumerated Elaborator Passes
+    # Enumerated ElabPass Passes
 
-    Each has a `value` attribute which is an `Elaborator` class,
+    Each has a `value` attribute which is an `ElabPass` class,
     and a `name` attribute which is a (Python-enum-style) capitalized name.
 
     Typical usage involves arranging several `ElabPass` in a list
@@ -31,7 +31,7 @@ class ElabPass(Enum):
     """
 
     ORPHANAGE = Orphanage
-    INSTANCE_BUNDLES = InstBundleElaborator
+    INSTANCE_BUNDLES = InstBundleElabPass
     RESOLVE_PORT_REFS = ResolvePortRefs
     CONN_TYPES = ConnTypes
     FLATTEN_BUNDLES = BundleFlattener
@@ -41,7 +41,7 @@ class ElabPass(Enum):
 
     @classmethod
     def default(cls) -> List["ElabPass"]:
-        """Return the default ordered Elaborator Passes."""
+        """Return the default ordered ElabPass Passes."""
         # Returns each in definition order, then a final few tests.
         return list(ElabPass)[:-1] + [
             ElabPass.CONN_TYPES,

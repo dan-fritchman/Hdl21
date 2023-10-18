@@ -12,10 +12,10 @@ from ...slice import Slice
 from ...concat import Concat
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 
-class ArrayFlattener(Elaborator):
+class ArrayFlattener(ElabPass):
     """
     Elaboration Pass to Flatten `InstanceArray`s into `Instance`s, broadcast and remake their connections.
     """

@@ -44,13 +44,18 @@ def test_bundle2():
     assert "i1_i" not in m3.namespace
 
     # First run the "implicit bundles" pass, and see that an explicit one is created
-    from hdl21.elab import ElabPass
+    from hdl21.elab import Elaborator, set_elaborator, reset_elaborator
+    from hdl21.elab.passes import ResolvePortRefs
 
-    m3 = h.elaborate(m3, passes=[ElabPass.RESOLVE_PORT_REFS])
+    e = Elaborator(passes=[ResolvePortRefs])
+    set_elaborator(e)
+
+    m3 = e.elaborate(m3)
     assert isinstance(m3, h.Module)
     assert isinstance(m3.i1, h.Instance)
     assert isinstance(m3.i2, h.Instance)
     assert "i1_i" in m3.namespace
+    reset_elaborator()
 
     # Now elaborate it the rest of the way, to scalar signals
     m3 = h.elaborate(m3)
@@ -158,9 +163,12 @@ def test_bundle4():
     assert "host_hr" not in System.namespace
 
     # First run the "implicit bundles" pass, and see that an explicit one is created
-    from hdl21.elab import ElabPass
+    from hdl21.elab import Elaborator
+    from hdl21.elab.passes import ResolvePortRefs
 
-    sys = h.elaborate(System, passes=[ElabPass.RESOLVE_PORT_REFS])
+    e = Elaborator(passes=[ResolvePortRefs])
+
+    sys = e.elaborate(System)
     assert "host_hr" in sys.namespace
 
     # Now expand the rest of the way, down to scalar signals
@@ -845,3 +853,16 @@ def test_nested_flipping():
     assert M.n_n_b_i.direction == h.PortDir.OUTPUT
     assert M.n_n_b_o.vis == h.Visibility.PORT
     assert M.n_n_b_o.direction == h.PortDir.INPUT
+
+
+def test_custom_elaborator():
+    """Test creating a custom elaborator, and making it the global one"""
+
+    from hdl21.elab import Elaborator, set_elaborator, reset_elaborator
+    from hdl21.elab.passes import ResolvePortRefs
+
+    e = Elaborator(passes=[ResolvePortRefs])
+    set_elaborator(e)
+    assert h.elab.the_global_elaborator is e
+    reset_elaborator()
+    assert h.elab.the_global_elaborator is not e

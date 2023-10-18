@@ -1,5 +1,5 @@
 """
-# Bundle-Flattening Elaborator Pass 
+# Bundle-Flattening ElabPass Pass 
 """
 
 # Std-Lib Imports
@@ -21,10 +21,10 @@ from ...bundle import (
 )
 from ...signal import PortDir, Signal, Visibility
 from ...instantiable import io
-from .resolve_ref_types import update_ref_deps
+from ..helpers.resolve_ref_types import update_ref_deps
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 
 @dataclass(frozen=True)
@@ -116,7 +116,7 @@ class BundlePortEntry:
 class Cache:
     """
     The Bundle Flattening Cache
-    Designed to operate at Module level, across multiple Elaborators.
+    Designed to operate at Module level, across multiple ElabPasss.
     """
 
     bundle_insts: Dict[int, BundleScope] = field(default_factory=dict)
@@ -135,8 +135,8 @@ class Cache:
 THE_CACHE = Cache()
 
 
-class BundleFlattener(Elaborator):
-    """Bundle-Flattening Elaborator Pass"""
+class BundleFlattener(ElabPass):
+    """Bundle-Flattening ElabPass Pass"""
 
     def elaborate_module(self, module: Module) -> Module:
         """Flatten Module `module`s Bundles, replacing them with newly-created Signals.

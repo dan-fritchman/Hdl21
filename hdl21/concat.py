@@ -53,7 +53,7 @@ class Concat:
     def width(self):
         # FIXME: whether to keep me around as a property
         # As is the elaboration mechanics do not use this property, but users may.
-        from .elab.elaborators.width import width
+        from .elab.helpers.width import width
 
         return width(self)
 

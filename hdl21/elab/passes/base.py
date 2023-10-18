@@ -1,5 +1,5 @@
 """
-# Base Elaborator
+# Base ElabPass
 """
 
 
@@ -28,7 +28,7 @@ ElabStackEntry = Union[Module, Instance, InstanceArray, InstanceBundle]
 
 @dataclass
 class ClassLevelCache:
-    """# Class-Level Cache for Elaborators"""
+    """# Class-Level Cache for ElabPasss"""
 
     # Note Modules hash *by identity*, so each instance of `Module`,
     # regardless of the similarity of their content, gets its own entry in these sets.
@@ -36,9 +36,9 @@ class ClassLevelCache:
     pending: Set[Module] = field(default_factory=set)
 
 
-class Elaborator:
+class ElabPass:
     """
-    # Base Elaborator Class
+    # Base ElabPass Class
 
     Defines the hierarchy-traversing methods used by each "elaborator pass" sub-class.
 
@@ -53,13 +53,13 @@ class Elaborator:
     `elaborate_module` method. Generally, they should not, and should always call
     `elaborate_module_base` instead.
 
-    `Elaborator` and `elaborate_module_base` also manage the `ClassLevelCache` for each pass-class.
+    `ElabPass` and `elaborate_module_base` also manage the `ClassLevelCache` for each pass-class.
     Subclasses should not need to know there is such a cache, and should not need to access it directly.
     """
 
     # The class-level cache.
     # Each sub-class gets its own.
-    # The base-class does not have one, should be the only `Elaborator` with `CLASS_CACHE=None`.
+    # The base-class does not have one, should be the only `ElabPass` with `CLASS_CACHE=None`.
     CLASS_LEVEL_CACHE: Optional[ClassLevelCache] = None
 
     def __init_subclass__(cls) -> None:
@@ -80,7 +80,7 @@ class Elaborator:
         if not isinstance(self.tops, List):
             self.fail(f"Invalid Top for Elaboration: {self.tops} must be a list")
 
-        # The base-class Elaborator, and most (perhaps all) sub-classes, return the `self.tops` list unmodified,
+        # The base-class ElabPass, and most (perhaps all) sub-classes, return the `self.tops` list unmodified,
         # while modifiying its elements inline.
         for t in self.tops:
             self.elaborate_module_base(t)  # Note `_base` here!

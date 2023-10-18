@@ -1,5 +1,5 @@
 """
-# Orphan-Testing (Orphanage) Elaborator
+# Orphan-Testing (Orphanage) ElabPass
 """
 
 # Local imports
@@ -7,11 +7,11 @@ from ...module import Module, ModuleAttr
 from ...instance import _Instance
 
 # Import the base class
-from .base import Elaborator
+from .base import ElabPass
 
 
-class Orphanage(Elaborator):
-    """# Orphan-Checking Elaborator Pass
+class Orphanage(ElabPass):
+    """# Orphan-Checking ElabPass Pass
 
     Ensures each Module-attribute is "parented" by the `Module` which holds it.
     Errant cases can come up for code such as:
