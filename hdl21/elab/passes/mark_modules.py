@@ -18,3 +18,5 @@ class MarkModules(ElabPass):
         # and not just a boolean, in case we want to
         # have differences between the two some day.
         module._elaborated = module
+
+        return module
