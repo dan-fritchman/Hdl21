@@ -244,6 +244,7 @@ class MosFamily(Enum):
 class MosParams:
     """# MOS Transistor Parameters"""
 
+    # All optional
     w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
     l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
     nf = Param(dtype=Optional[Scalar], desc="Number of parallel fingers", default=None)

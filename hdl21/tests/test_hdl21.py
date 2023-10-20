@@ -1632,11 +1632,11 @@ def test_generator_call_as_param():
     """Test using a generated module as a parameter.
     Inspired by #93 https://github.com/dan-fritchman/Hdl21/issues/93."""
 
-    from hdl21.generators import Pmos as Hdl21Pmos
+    from hdl21.generators import MosStack as Hdl21Mos
 
     @h.generator
     def Pmos(_: h.HasNoParams) -> h.Module:
-        return Hdl21Pmos()  # Wrap the built-in generator
+        return Hdl21Mos()  # Wrap the built-in generator
 
     @h.paramclass
     class Params:
