@@ -224,8 +224,8 @@ class Cache:
         self.stack.clear()
 
 
-# Create the class-level `Generator.Cache`
-Generator.Cache = Cache()
+# Create the `Cache`
+generator.cache = Generator.Cache = Cache()
 
 # Star-exports
 # FIXME: make `GeneratorCall` "private"

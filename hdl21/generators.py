@@ -90,31 +90,36 @@ def Pmos(params: MosParams) -> Module:
     return Mos(replace(params, tp=MosType.PMOS))
 
 
+SeriesConn = Union[Signal, str]
+
+
 @paramclass
-class SeriesParParams:
+class SeriesParams:
     """Series-Parallel Generator Parameters"""
 
     # Required
     unit = Param(dtype=Instantiable, desc="Unit cell")
-    series_conns = Param(
-        dtype=Tuple[Union[Signal, str], Union[Signal, str]],
-        desc="Ports or port-names of `unit` to be connected in series",
+    conns = Param(
+        dtype=Tuple[SeriesConn, SeriesConn],
+        desc="Series ports (or port-names)",
     )
     # Optional
-    nser = Param(dtype=int, desc="Number of series instances", default=1)
-    nf = Param(dtype=int, desc="Number of parallel stacks", default=1)
+    nser = Param(dtype=int, desc="Number in series", default=1)
 
 
 @generator
-def SeriesPar(params: SeriesParParams) -> Module:
+def Series(params: SeriesParams) -> Module:
     """
-    # Series-Parallel Generator
+    # Series Generator
 
-    Arrays `params.nf` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`.
+    Arrays `params.nser` series-stacked Instances of unit-cell `params.unit`.
     The generated `Module` includes the same ports as `unit`.
-    The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`.
+    The two series-connected ports of `unit` are specified by parameter two-tuple `conns`.
     All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`.
     """
+
+    if params.nser < 1:
+        raise ValueError(f"Invalid Series() generator with nser={params.nser}")
 
     unit = params.unit
 
@@ -125,29 +130,27 @@ def SeriesPar(params: SeriesParParams) -> Module:
         m.add(deepcopy(p))
 
     # Check for validity of the series-ports
-    if isinstance(params.series_conns[0], str):
-        ser0 = m.ports.get(params.series_conns[0], None)
-    elif isinstance(params.series_conns[0], Signal):
-        ser0 = params.series_conns[0]
+    if isinstance(params.conns[0], str):
+        ser0 = m.ports.get(params.conns[0], None)
+    elif isinstance(params.conns[0], Signal):
+        ser0 = params.conns[0]
     else:  # Unreachable
         raise TypeError
-    if isinstance(params.series_conns[1], str):
-        ser1 = m.ports.get(params.series_conns[1], None)
-    elif isinstance(params.series_conns[1], Signal):
-        ser1 = params.series_conns[1]
+    if isinstance(params.conns[1], str):
+        ser1 = m.ports.get(params.conns[1], None)
+    elif isinstance(params.conns[1], Signal):
+        ser1 = params.conns[1]
     else:  # Unreachable
         raise TypeError
     if ser0 is None or ser1 is None:
-        raise ValueError(f"SeriesPar: unit does not have ports {params.series_conns}")
+        raise ValueError(f"Series: unit does not have ports {params.conns}")
 
     # Extract all the parallel-connected ports, and
-    par_ports = [
-        port for port in unit.ports.values() if port.name not in params.series_conns
-    ]
+    par_ports = [port for port in unit.ports.values() if port.name not in params.conns]
     par_conns = {port.name: m.add(deepcopy(port)) for port in par_ports}
 
     for ipar in range(params.nf):
-        # Add instances, starting at the `series_conns[0]`-side
+        # Add instances, starting at the `conns[0]`-side
         inst = unit(**par_conns).connect(ser0.name, ser0)
         inst = m.add(name=f"unit_{ipar}_0", val=inst)
         for iser in range(1, params.nser):
@@ -159,6 +162,23 @@ def SeriesPar(params: SeriesParParams) -> Module:
         inst.connect(ser1.name, ser1)
     # And return the module
     return m
+
+
+def _seriesconns(
+    unit: Module, conns: Tuple[SeriesConn, SeriesConn]
+) -> Tuple[Optional[Signal], Optional[Signal]]:
+    return (
+        _seriesconn(unit, conns[0]),
+        _seriesconn(unit, conns[1]),
+    )
+
+
+def _seriesconn(m: Module, conn: SeriesConn) -> Optional[Signal]:
+    if isinstance(conn, Signal):
+        return conn
+    if isinstance(conn, str):
+        return m.ports.get(conn, None)
+    raise TypeError(f"Invalid Series connection {conn}")
 
 
 def Wrapper(m: Module) -> Module:
