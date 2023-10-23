@@ -28,8 +28,8 @@ class Generator:
     Stores a function-object and parameters-type, along with some auxiliary data.
     """
 
-    func: Callable[Any, Module]
-    paramtype: Type
+    func: Callable[[Any], Module]
+    paramtype: Type[object]
 
     # Optional fields
     # Boolean indication of whether to cache calls, or return a new Module with each call.
@@ -37,7 +37,9 @@ class Generator:
 
     def __post_init__(self):
         if not isparamclass(self.paramtype):
-            raise TypeError(f"Invalid paramtype {paramtype} for Generator {func}")
+            raise TypeError(
+                f"Invalid paramtype {self.paramtype} for Generator {self.func}"
+            )
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
 
     def __call__(self, arg: Any = Default, **kwargs: Dict) -> Module:
