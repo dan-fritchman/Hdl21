@@ -89,6 +89,7 @@ class MyParams:
 
 def test_generator1():
     import hdl21 as h
+    from hdl21.generator import GeneratorCall
 
     @h.generator
     def MyFirstGenerator(params: MyParams) -> h.Module:
@@ -99,7 +100,7 @@ def test_generator1():
 
     m = MyFirstGenerator(MyParams(w=16))
     call = m._generated_by
-    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call, GeneratorCall)
     assert call.params == MyParams(w=16)
 
 

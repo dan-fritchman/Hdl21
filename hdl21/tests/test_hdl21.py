@@ -127,18 +127,22 @@ def test_generator3():
     h.elaborate(HasGen)
 
     # Post-elab checks
+    from hdl21.generator import GeneratorCall
+
     assert isinstance(HasGen.a, h.Instance)
     call = HasGen.a.of._generated_by
-    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call, GeneratorCall)
     assert call.gen is g3a
     assert call.params == P3()
-    assert isinstance(call.result, h.Module)
-    assert call.result.name == "g3a(width=1)"
+    result = h.Generator.Cache.done.get(call)
+    assert isinstance(result, h.Module)
+    assert result.name == "g3a(width=1)"
     assert isinstance(HasGen.b, h.Instance)
     call = HasGen.b.of._generated_by
-    assert isinstance(call, h.GeneratorCall)
-    assert isinstance(call.result, h.Module)
-    assert call.result.name == "g3b(width=5)"
+    assert isinstance(call, GeneratorCall)
+    result = h.Generator.Cache.done.get(call)
+    assert isinstance(result, h.Module)
+    assert result.name == "g3b(width=5)"
     assert call.gen is g3b
     assert call.params == P3(width=5)
     assert isinstance(HasGen.c, h.Instance)
@@ -945,7 +949,9 @@ def test_generator_call_by_kwargs():
     m = M(a=1, b=2.0, c="3")
     call = m._generated_by
 
-    assert isinstance(call, h.GeneratorCall)
+    from hdl21.generator import GeneratorCall
+
+    assert isinstance(call, GeneratorCall)
     m = h.elaborate(m)
     assert isinstance(m, h.Module)
 
@@ -1652,3 +1658,38 @@ def test_generator_call_as_param():
         return PmosPair
 
     h.elaborate(PmosPair(Params(Pmos())))
+
+
+def test_generator_caching():
+    """Test generators with and without caching.
+    https://github.com/dan-fritchman/Hdl21/issues/198"""
+
+    @h.generator
+    def G(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    g1 = G()
+    g2 = G()
+    assert g1 is g2
+
+    @h.generator(enable_cache=False)
+    def N(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    n1 = N()
+    n2 = N()
+    assert n1 is not n2
+
+    # Clear the cache and re-run em a few times
+    h.generator.cache.reset()
+
+    g3 = G()
+    g4 = G()
+    assert g3 is g4
+    assert g3 is not g2
+
+    n3 = N()
+    n4 = N()
+    assert n3 is not n4
+    assert n3 is not n2
+    assert n3 is not n1

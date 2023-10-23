@@ -4,6 +4,7 @@
 """
 
 import hdl21 as h
+from hdl21.generator import GeneratorCall
 
 
 def test_mos_generator():
@@ -13,7 +14,7 @@ def test_mos_generator():
     m = Mos(Mos.Params(nser=2))
     call = m._generated_by
 
-    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call, GeneratorCall)
     assert isinstance(call.params, Mos.Params)
 
     m = h.elaborate(m)
@@ -46,7 +47,7 @@ def test_series_generator():
     m = Series(params)
     call = m._generated_by
 
-    assert isinstance(call, h.GeneratorCall)
+    assert isinstance(call, GeneratorCall)
     assert isinstance(call.params, Series.Params)
 
     m = h.elaborate(m)
