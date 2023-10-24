@@ -163,16 +163,22 @@ def CmDmGen(p: CmDmGenParams) -> h.Module:
     return CmDmGen
 
 
-@h.module
-class Balun:
-    # IO
-    vic = h.Diff(port=True, role=h.Diff.Roles.SINK)
-    vid = h.Diff(port=True, role=h.Diff.Roles.SINK)
-    vod = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
-    VSS = h.Ground()
+@h.generator
+def Balun(_: h.HasNoParams) -> h.Module:
+    """# Balun Generator"""
 
-    # Implementation
-    voc = h.Signal()
-    ec = h.Vcvs(gain=1)(p=voc, n=VSS, cp=vic.p, cn=vic.n)
-    ep = h.Vcvs(gain=+500 * h.prefix.MILLI)(p=vod.p, n=voc, cp=vid.p, cn=vid.n)
-    en = h.Vcvs(gain=-500 * h.prefix.MILLI)(p=vod.n, n=voc, cp=vid.p, cn=vid.n)
+    @h.module
+    class Balun:
+        # IO
+        vic = h.Diff(port=True, role=h.Diff.Roles.SINK)
+        vid = h.Diff(port=True, role=h.Diff.Roles.SINK)
+        vod = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
+        VSS = h.Ground()
+
+        # Implementation
+        voc = h.Signal()
+        ec = h.Vcvs(gain=1)(p=voc, n=VSS, cp=vic.p, cn=vic.n)
+        ep = h.Vcvs(gain=+500 * h.prefix.MILLI)(p=vod.p, n=voc, cp=vid.p, cn=vid.n)
+        en = h.Vcvs(gain=-500 * h.prefix.MILLI)(p=vod.n, n=voc, cp=vid.p, cn=vid.n)
+
+    return Balun
