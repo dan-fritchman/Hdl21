@@ -9,10 +9,8 @@ from pathlib import Path
 from dataclasses import field
 from typing import Dict, List, Set, Optional, Union
 
-# PyPi Imports
-from pydantic.dataclasses import dataclass
-
 # Local imports
+from ...datatype import datatype, AllowArbConfig
 from ...module import Module
 from ...external_module import ExternalModuleCall
 from ...instance import _Instance, Instance, InstanceArray, InstanceBundle
@@ -26,7 +24,7 @@ from ..elaboratable import Elaboratable
 ElabStackEntry = Union[Module, Instance, InstanceArray, InstanceBundle]
 
 
-@dataclass
+@datatype(config=AllowArbConfig)
 class ClassLevelCache:
     """# Class-Level Cache for ElabPasss"""
 

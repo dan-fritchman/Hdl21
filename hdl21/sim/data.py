@@ -23,8 +23,8 @@ from vlsirtools.spice import (
 from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
+from ..datatype import datatype, AllowArbConfig
 from ..one_or_more import OneOrMore
-from ..datatype import datatype
 from ..instance import Instance
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, ExternalModuleCall
@@ -186,7 +186,7 @@ class Tran:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class Noise:
     """Noise Analysis"""
 
@@ -347,7 +347,7 @@ def is_simattr(val: Any) -> bool:
     return isinstance(val, SimAttr.__args__)
 
 
-@datatype
+@datatype(config=AllowArbConfig)
 class Sim:
     """
     # Simulation Input

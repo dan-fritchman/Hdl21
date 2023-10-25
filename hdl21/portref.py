@@ -1,8 +1,8 @@
-from copy import copy
+# Std-Lib imports
 from typing import Set, Union, Optional
 
 # Local imports
-from .datatype import datatype
+from .datatype import datatype, AllowArbConfig
 from .connect import connectable
 from .sliceable import sliceable
 from .concat import concatable
@@ -12,7 +12,7 @@ from .instance import _Instance
 @concatable
 @sliceable
 @connectable
-@datatype
+@datatype(config=AllowArbConfig)
 class PortRef:
     """
     # PortRef

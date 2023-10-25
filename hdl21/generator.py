@@ -11,7 +11,7 @@ from dataclasses import field
 from typing import Callable, Any, Optional, Dict, Set, List, Type
 
 # Local imports
-from .datatype import datatype
+from .datatype import datatype, AllowArbConfig
 from .params import _unique_name, hasparams, isparamclass
 from .default import Default
 from .call import param_call
@@ -204,7 +204,7 @@ def run(call: GeneratorCall) -> Module:
     return m
 
 
-@datatype
+@datatype(config=AllowArbConfig)
 class GeneratorCache:
     """
     # Generator "Cache" (and then some)

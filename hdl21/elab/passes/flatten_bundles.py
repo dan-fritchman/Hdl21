@@ -7,10 +7,8 @@ import copy
 from dataclasses import field
 from typing import Dict, List, Union, Optional
 
-# PyPi
-from pydantic.dataclasses import dataclass
-
 # Local imports
+from ...datatype import datatype, AllowArbConfig
 from ...module import Module
 from ...instance import Instance
 from ... import Slice, Concat, NoConn, PortRef
@@ -27,7 +25,7 @@ from ..helpers.resolve_ref_types import update_ref_deps
 from .base import ElabPass
 
 
-@dataclass(frozen=True)
+@datatype(frozen=True)
 class Path:
     """
     # Hierarchical String-Valued Path
@@ -60,7 +58,7 @@ class Path:
         return self.segs == other.segs
 
 
-@dataclass
+@datatype(config=AllowArbConfig)
 class BundleScope:
     """Scope-worth of Signals for a flattened Bundle"""
 
@@ -95,7 +93,7 @@ class BundleScope:
 BundleScope.__pydantic_model__.update_forward_refs()
 
 
-@dataclass
+@datatype(config=AllowArbConfig)
 class BundlePortEntry:
     """# Bundle-Port Entry in the Cache
     Hashable combination of a Module and a portname."""
@@ -112,7 +110,7 @@ class BundlePortEntry:
         return hash((id(self.module), self.portname))
 
 
-@dataclass
+@datatype(config=AllowArbConfig)
 class Cache:
     """
     The Bundle Flattening Cache
@@ -169,7 +167,8 @@ class BundleFlattener(ElabPass):
 
     def replace_bundle_inst(self, module: Module, bundle_inst: BundleInstance):
         """Replace a `BundleInstance`, flattening its Signals into `module`'s namespace,
-        and replacing all of its Instance connections with their flattened replacements."""
+        and replacing all of its Instance connections with their flattened replacements.
+        """
 
         # Check we haven't (somehow) already replaced it
         if id(bundle_inst) in THE_CACHE.bundle_insts:

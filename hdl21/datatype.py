@@ -18,18 +18,19 @@ _update_forward_refs()
 ```
 
 Notes: 
-* `@datatype` is designed solely to work *intra-package*. 
-  * Attempts to import and use it after `__init__.py` completes will generally fail. 
-  * Importing this function into other packages is therefore highly discouraged. (Copying it is quite easy though.) 
-* `@datatype` only works on modules which are imported before `_update_forward_refs()` is run. 
-  * Generally this means modules which are imported as part of `__init__.py`
-* `@datatype` is designed solely to work on `pydantic.dataclasses.dataclass`es. 
-  * Notable exceptions include *union types* thereof, which do not have the necessary fields/ methods. 
+- `@datatype` is designed solely to work *intra-package*. 
+  - Attempts to import and use it after `__init__.py` completes will generally fail. 
+  - Importing this function into other packages is therefore highly discouraged. (Copying it is quite easy though.) 
+- `@datatype` only works on modules which are imported before `_update_forward_refs()` is run. 
+  - Generally this means modules which are imported as part of `__init__.py`
+- `@datatype` is designed solely to work on `pydantic.dataclasses.dataclass`es. 
+  - Notable exceptions include *union types* thereof, which do not have the necessary fields/ methods. 
 """
 
 from pydantic import Extra
 from pydantic.dataclasses import dataclass
-from typing import TypeVar, Type, Any
+from typing import TypeVar, Type, Optional
+
 
 # The list of defined datatypes
 datatypes = []
@@ -37,21 +38,43 @@ datatypes = []
 T = TypeVar("T")
 
 
-class Config:  # Pydantic Model Config
-    allow_extra = Extra.forbid
+def _datatype(cls: Type[T], *, config: Optional[Type] = None, **kwargs) -> Type[T]:
+    """# Inner implementation of `@datatype`"""
 
-
-def datatype(cls: Type[T]) -> Type[T]:
-    """Register a class as a datatype."""
+    # Get the default `Config` if none is provided
+    config = config or OurBaseConfig
 
     # Convert `cls` to a `pydantic.dataclasses.dataclass`,
-    # and add it to the list of datatypes
-    cls = dataclass(cls, config=Config)
+    cls = dataclass(cls, config=config, **kwargs)
+
+    # And add it to the list of datatypes
     datatypes.append(cls)
     return cls
+
+
+def datatype(cls: Optional[Type] = None, **kwargs) -> Type:
+    """Register a class as a datatype."""
+
+    inner = lambda c: _datatype(c, **kwargs)
+    if cls is None:
+        return inner  # Called with parens, e.g. `@datatype()`
+    return inner(cls)  # Called without parens
 
 
 def _update_forward_refs():
     """Update all the forward type-references"""
     for tp in datatypes:
         tp.__pydantic_model__.update_forward_refs()
+
+
+"""
+# Define a few common pydantic model `Config`s
+"""
+
+
+class OurBaseConfig:
+    allow_extra = Extra.forbid
+
+
+class AllowArbConfig(OurBaseConfig):
+    arbitrary_types_allowed = True

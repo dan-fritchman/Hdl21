@@ -11,6 +11,7 @@ import pydantic
 
 # Local Imports
 from .default import Default
+from .datatype import AllowArbConfig
 
 T = TypeVar("T")
 
@@ -118,7 +119,7 @@ def paramclass(cls: Type[T]) -> Type[T]:
     cls.defaults = classmethod(defaults)
 
     # Pass this through the pydantic dataclass-decorator-function
-    cls = pydantic.dataclasses.dataclass(cls, config=Config, frozen=True)
+    cls = pydantic.dataclasses.dataclass(cls, config=AllowArbConfig, frozen=True)
 
     # Pydantic seems to want to add this one *after* class-creation
     def _brick_subclassing_(cls, *_, **__):
@@ -191,11 +192,7 @@ def hasparams(cls: type) -> bool:
     return len(cls.__params__) > 0
 
 
-class Config:  # Pydantic Model Config
-    allow_extra = pydantic.Extra.forbid
-
-
-@pydantic.dataclasses.dataclass(config=Config, frozen=True)
+@pydantic.dataclasses.dataclass(config=AllowArbConfig, frozen=True)
 class Param:
     """# Parameter Declaration"""
 
