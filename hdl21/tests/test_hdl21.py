@@ -2,8 +2,11 @@
 # Hdl21 Unit Tests 
 """
 
+from typing import TypeVar
 import copy, pytest
 import hdl21 as h
+
+T = TypeVar("T")
 
 
 def test_version():
@@ -930,6 +933,44 @@ def test_common_attr_errors():
     assert "Did you mean" in str(einfo.value)
     assert "`ExternalModuleCall`" in str(einfo.value)
     M.x = X()()  # Good - Instance
+
+
+def test_invalid_instantiable_error():
+    """# Test the errors for common invalid `Instantiable`s
+    Inspired by issue #174."""
+
+    @h.paramclass
+    class P:  # Param class with an `Instantiable` field
+        i = h.Param(dtype=h.Instantiable, desc="Module to instantiate")
+
+    @h.generator
+    def G(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    def ok(val: T) -> T:
+        P(i=val)
+        return val
+
+    def bad(val: T) -> T:
+        with pytest.raises(Exception) as einfo:
+            P(i=val)
+        assert "Did you mean" in str(einfo.value)
+        return val
+
+    # Create parameters for each of the above
+    M = ok(h.Module(name="M"))  # Module
+    _ = bad(M())  # Instance
+
+    X = bad(h.ExternalModule(name="X", port_list=[]))
+    XC = ok(X())  # ExternalModuleCall
+    _ = bad(XC())  # Instance of ExternalModuleCall
+
+    R = bad(h.primitives.Res)  # Primitive
+    RC = ok(R(r=1))  # PrimitiveCall
+    _ = bad(RC())  # Instance of PrimitiveCall
+
+    GC = ok(G())  # Generated Module
+    _ = bad(GC())  # Instance of generated Module
 
 
 def test_generator_call_by_kwargs():
