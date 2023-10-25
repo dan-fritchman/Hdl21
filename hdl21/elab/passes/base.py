@@ -26,7 +26,7 @@ ElabStackEntry = Union[Module, Instance, InstanceArray, InstanceBundle]
 
 @datatype(config=AllowArbConfig)
 class ClassLevelCache:
-    """# Class-Level Cache for ElabPasss"""
+    """# Class-Level Cache for ElabPasses"""
 
     # Note Modules hash *by identity*, so each instance of `Module`,
     # regardless of the similarity of their content, gets its own entry in these sets.

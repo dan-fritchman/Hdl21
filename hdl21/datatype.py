@@ -52,8 +52,12 @@ def _datatype(cls: Type[T], *, config: Optional[Type] = None, **kwargs) -> Type[
     return cls
 
 
-def datatype(cls: Optional[Type] = None, **kwargs) -> Type:
+def datatype(cls: Optional[Type[T]] = None, **kwargs) -> Type[T]:
     """Register a class as a datatype."""
+
+    # NOTE: the return type here is really, like,
+    # `Union[Type[T], Callable[[Type[T]], Type[T]]`
+    # But do ya really want that, or just to know it works as a decorator.
 
     inner = lambda c: _datatype(c, **kwargs)
     if cls is None:
