@@ -16,14 +16,13 @@ from dataclasses import fields
 from enum import Enum
 from typing import Optional, List, Union, Dict, Any
 
-from pydantic.dataclasses import dataclass
-
 # Local imports
 # Proto-definitions
 import vlsir
 import vlsir.circuit_pb2 as vckt
 
 # HDL
+from ..datatype import datatype, AllowArbConfig
 from ..params import isparamclass
 from ..prefix import Prefix, Prefixed
 from ..scalar import Scalar
@@ -57,7 +56,7 @@ def to_proto(
     return exporter.export()
 
 
-@dataclass
+@datatype(config=AllowArbConfig)
 class ModuleMapping:
     hmod: Module  # hdl21.Module
     pmod: vckt.Module  # VLSIR Module

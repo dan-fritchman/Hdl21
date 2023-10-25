@@ -5,20 +5,26 @@ Spice-Class Simulation Interface
 from textwrap import dedent
 from warnings import warn
 from enum import Enum
-from typing import Union, Any, Optional, List, Awaitable, Dict
+from typing import Union, Any, Optional, List
 from pathlib import Path
 from dataclasses import field
 
-import vlsirtools.spice as vsp
-
 # Create a few aliases to the VLSIR sim-results types
-from vlsirtools.spice import SimResultUnion
-from vlsirtools.spice.sim_data import SimResult
+# Note many of these are "re-exports", not used here, but convenient for use cases.
+# Note `vsp.sim_data.SimResult` - the numpy based one - gets the `SimResult` name here.
+from vlsirtools.spice.sim_data import AnalysisType, SimResult
+from vlsirtools.spice import (
+    SimOptions,
+    SimResultUnion,
+    ResultFormat,
+    SupportedSimulators,
+    sim as _vlsirtools_sim,
+)
 from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
+from ..datatype import datatype, AllowArbConfig
 from ..one_or_more import OneOrMore
-from ..datatype import datatype
 from ..instance import Instance
 from ..signal import Signal, Port
 from ..instantiable import Instantiable, Module, ExternalModuleCall
@@ -48,9 +54,8 @@ def is_tb(m: Instantiable) -> bool:
     if len(m.ports) != 1:
         return False
 
-    # There's exactly one port. Retrieve it from the `ports` dict,
-    # first requiring getting its name from the `keys`.
-    port = m.ports[list(m.ports.keys())[0]]
+    # There's exactly one port. Retrieve it from the `ports` dict.
+    port = list(m.ports.values())[0]
 
     # While that port is *conventionally* called "VSS", it *can* be called anything.
     # The testbench interface is met so long as we have a single, scalar port.
@@ -127,20 +132,6 @@ def is_sweep(val: Any) -> bool:
     return isinstance(val, Sweep.__args__)
 
 
-class AnalysisType(Enum):
-    """Enumerated Analysis-Types
-    Corresponding to the entries in the `Analysis` type-union."""
-
-    OP = "op"
-    DC = "dc"
-    AC = "ac"
-    TRAN = "tran"
-    NOISE = "noise"
-    MONTE = "monte"
-    SWEEP = "sweep"
-    CUSTOM = "custom"
-
-
 @simattr
 @datatype
 class Op:
@@ -195,7 +186,7 @@ class Tran:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class Noise:
     """Noise Analysis"""
 
@@ -356,7 +347,7 @@ def is_simattr(val: Any) -> bool:
     return isinstance(val, SimAttr.__args__)
 
 
-@datatype
+@datatype(config=AllowArbConfig)
 class Sim:
     """
     # Simulation Input
@@ -384,7 +375,7 @@ class Sim:
             return attrs[0]
         return list(attrs)
 
-    def run(self, opts: Optional[vsp.SimOptions] = None) -> vsp.SimResultUnion:
+    def run(self, opts: Optional[SimOptions] = None) -> SimResultUnion:
         """Invoke simulation via `vlsirtools.spice`."""
         return run(self, opts=opts)
 
@@ -396,18 +387,18 @@ class Sim:
 
 
 def run(
-    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
-) -> OneOrMore[vsp.SimResultUnion]:
+    inp: OneOrMore[Sim], opts: Optional[SimOptions] = None
+) -> OneOrMore[SimResultUnion]:
     """Invoke one or more `Sim`s via `vlsirtools.spice`."""
 
     from .proto import to_proto
 
-    return vsp.sim(inp=to_proto(inp), opts=opts)
+    return _vlsirtools_sim(inp=to_proto(inp), opts=opts)
 
 
 def run_async(
-    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
-) -> OneOrMore[vsp.SimResultUnion]:
+    inp: OneOrMore[Sim], opts: Optional[SimOptions] = None
+) -> OneOrMore[SimResultUnion]:
     """Invoke simulation via `vlsirtools.spice`."""
     from .proto import to_proto
 
@@ -423,7 +414,7 @@ def run_async(
         )
     )
 
-    return vsp.sim(inp=to_proto(inp), opts=opts)
+    return _vlsirtools_sim(inp=to_proto(inp), opts=opts)
 
 
 def _add_attr_func(name: str, cls: type):

@@ -25,12 +25,18 @@ Past methods, and associated lessons include:
 import inspect
 from pathlib import Path
 from types import ModuleType, FrameType
-from typing import Optional, Set
+from typing import Optional
+from pydantic import Extra
 
-from pydantic.dataclasses import dataclass
+from .datatype import datatype
 
 
-@dataclass
+class Config:
+    arbitrary_types_allowed = True
+    allow_extra = Extra.forbid
+
+
+@datatype(config=Config)
 class SourceInfo:
     """# Python Source Info"""
 

@@ -8,7 +8,7 @@ from typing import Optional, Union, Any, Set
 from weakref import WeakSet
 
 # Local imports
-from .datatype import datatype
+from .datatype import datatype, AllowArbConfig
 from .connect import connectable
 from .sliceable import sliceable, is_sliceable
 from .concat import concatable
@@ -17,7 +17,7 @@ from .concat import concatable
 @sliceable
 @concatable
 @connectable
-@datatype
+@datatype(config=AllowArbConfig)
 class Slice:
     """
     # Slice
