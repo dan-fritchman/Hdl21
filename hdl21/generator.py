@@ -164,11 +164,13 @@ def run(call: GeneratorCall) -> Module:
     # This is helpful even if (especially if) we find it's a circular dependency next.
     the_cache.stack.append(call)
 
-    # Check for circular dependencies
-    if call in the_cache.pending:
-        msg = f"Invalid self referencing/ circular dependency in `{call}`"
-        raise RuntimeError(msg)
-    the_cache.pending.add(call)
+    if call.gen.enable_cache:
+        # Check for circular dependencies.
+        # Note this uses a hash-set of `GeneratorCall`s, so only hashable ones get checked.
+        if call in the_cache.pending:
+            msg = f"Invalid self referencing/ circular dependency in `{call}`"
+            raise RuntimeError(msg)
+        the_cache.pending.add(call)
 
     # Check that the call has a valid instance of the generator's parameter-class
     if not isinstance(call.params, call.gen.Params):
@@ -196,8 +198,8 @@ def run(call: GeneratorCall) -> Module:
 
     # Store the result in our cache, and on the Call.
     the_cache.stack.pop()
-    the_cache.pending.remove(call)
     if call.gen.enable_cache:
+        the_cache.pending.remove(call)
         the_cache.done[call] = m
 
     # And return the generated Module
