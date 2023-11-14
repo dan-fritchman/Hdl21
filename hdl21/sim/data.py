@@ -396,27 +396,6 @@ def run(
     return _vlsirtools_sim(inp=to_proto(inp), opts=opts)
 
 
-def run_async(
-    inp: OneOrMore[Sim], opts: Optional[SimOptions] = None
-) -> OneOrMore[SimResultUnion]:
-    """Invoke simulation via `vlsirtools.spice`."""
-    from .proto import to_proto
-
-    # FIXME: go through with deprecation
-    warn(
-        PendingDeprecationWarning(
-            dedent(
-                """\
-        Async `hdl21.Sim` invocation will be deprecated and `run_async` will be removed with the next major version.
-        Use `run` instead, which now parallelizes across simulation processes internally.
-    """
-            )
-        )
-    )
-
-    return _vlsirtools_sim(inp=to_proto(inp), opts=opts)
-
-
 def _add_attr_func(name: str, cls: type):
     # Create the internal "construct + add" closure
     def _method(self, *args, **kwargs):
