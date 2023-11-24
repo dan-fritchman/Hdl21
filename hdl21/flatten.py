@@ -89,7 +89,7 @@ def _find_signal_or_port(m: h.Module, name: str) -> h.Signal:
 def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
     if isinstance(m, h.Instance):
         return is_flat(m.of)
-    elif isinstance(m, (h.PrimitiveCall, h.GeneratorCall, h.ExternalModuleCall)):
+    elif isinstance(m, (h.PrimitiveCall, h.ExternalModuleCall)):
         return True
     elif isinstance(m, h.Module):
         insts = m.instances.values()

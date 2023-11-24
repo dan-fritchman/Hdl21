@@ -149,34 +149,3 @@ def test_flatten_with_concat():
 
     flattened = flatten(M)
 
-
-def test_flatten_generator():
-    """Flatten a Generator
-    (And it has Concat too! Kinda. But not by the point flattening happens)."""
-
-    @h.paramclass
-    class Params:
-        how_many = h.Param(dtype=int, default=5, desc="How many inverters you want?")
-
-    @h.generator
-    def Gen(params: Params) -> h.Module:
-        if params.how_many < 2:
-            raise ValueError
-
-        @h.module
-        class M:
-            vdd, vss, vin, vout = h.Ports(4)
-            internal_signal = h.Signal(width=params.how_many - 1)
-            # Array of `how_many` series-connected inverters
-            invs = params.how_many * Inverter(
-                vdd=vdd,
-                vss=vss,
-                vin=h.Concat(vin, internal_signal),
-                vout=h.Concat(internal_signal, vout),
-            )
-
-        return M
-
-    gen5 = Gen(how_many=5)
-    assert not is_flat(gen5)
-    flattened = flatten(gen5)
