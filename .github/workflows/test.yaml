@@ -61,6 +61,7 @@ jobs:
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           env_vars: OS,PYTHON
           name: codecov-umbrella
