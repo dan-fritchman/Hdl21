@@ -5,10 +5,13 @@ See function `flatten()` for details.
 """
 
 import copy
-from dataclasses import dataclass, field, replace
-from typing import Dict, Generator, Tuple, Union
+from pydantic.dataclasses import dataclass
+from dataclasses import field, replace
+from typing import Dict, Generator, List, Optional
 
 import hdl21 as h
+from .signal import _copy_to_internal
+from .datatype import AllowArbConfig
 
 
 def _walk_conns(conns, parents=tuple()):
@@ -23,11 +26,21 @@ def _flat_conns(conns):
     return {":".join(reversed(path)): value.name for path, value in _walk_conns(conns)}
 
 
-@dataclass
-class _PrimitiveNode:
+@dataclass(config=AllowArbConfig)
+class FlattenedInstance:
+    """
+    # Flattened Instance
+    An instance that survives flattening, because its contents are either (a) Primitive or (b) External.
+    """
+
     inst: h.Instance
-    path: Tuple[h.Module, ...] = tuple()
-    conns: Dict[str, h.Signal] = field(default_factory=dict)  # type: ignore
+    path: List[h.Instance] = field(default_factory=list)
+    conns: Dict[str, h.Signal] = field(default_factory=dict)
+
+    def __post_init_post_parse__(self):
+        # Assert that this instance's target is either a primitive, or external
+        if not isinstance(self.inst.of, (h.PrimitiveCall, h.ExternalModuleCall)):
+            raise ValueError(f"Invalid flattened instance {self}")
 
     def __str__(self):
         name = self.make_name()
@@ -41,33 +54,43 @@ class _PrimitiveNode:
 
 def walk(
     m: h.Module,
-    parents=tuple(),
-    conns=None,
-) -> Generator[_PrimitiveNode, None, None]:
-    if not conns:
+    parents: List[h.Instance],
+    conns: Optional[Dict[str, h.Signal]] = None,
+) -> Generator[FlattenedInstance, None, None]:
+    if conns is None:
         conns = {**m.signals, **m.ports}
     for inst in m.instances.values():
         new_conns = {}
-        new_parents = parents + (inst,)
+        new_parents = parents + [inst]
         for src_port_name, sig in inst.conns.items():
             if isinstance(sig, h.Signal):
                 key = sig.name
+            elif isinstance(sig, (h.Slice, h.Concat)):
+                msg = f"Flattening `Slice` and `Concat` is not (yet) supported"
+                raise NotImplementedError(msg)
+            elif isinstance(sig, (h.PortRef, h.BundleInstance, h.AnonymousBundle)):
+                # This shouldn't happen in normal use, but could in principle if
+                # someone e.g. calls this `walk` function directly.
+                msg = f"Error: {sig} should not have reached this stage in flattening"
+                raise RuntimeError(msg)
             else:
-                raise ValueError(f"unexpected signal type: {type(sig)}")
+                raise TypeError(f"Invalid connection {sig}")
 
             new_sig_name = ":".join([p.name for p in parents] + [key])
             if key in conns:
                 target_sig = conns[key]
             elif key in m.signals:
-                target_sig = replace(m.signals[key], name=new_sig_name)
+                target_sig = replace(
+                    _copy_to_internal(m.signals[key]), name=new_sig_name
+                )
             elif key in m.ports:
-                target_sig = replace(m.ports[key], name=new_sig_name)
+                target_sig = replace(_copy_to_internal(m.ports[key]), name=new_sig_name)
             else:
                 raise ValueError(f"signal {key} not found")
             new_conns[src_port_name] = target_sig
 
         if isinstance(inst.of, h.PrimitiveCall):
-            yield _PrimitiveNode(inst, new_parents, new_conns)
+            yield FlattenedInstance(inst, new_parents, new_conns)
         else:
             yield from walk(inst.of, new_parents, new_conns)
 
@@ -86,22 +109,25 @@ def _find_signal_or_port(m: h.Module, name: str) -> h.Signal:
     raise ValueError(f"Signal {name} not found in module {m.name}")
 
 
-def is_flat(m: Union[h.Instance, h.Instantiable]) -> bool:
-    if isinstance(m, h.Instance):
-        return is_flat(m.of)
-    elif isinstance(m, (h.PrimitiveCall, h.ExternalModuleCall)):
+def is_flat(m: h.Instantiable) -> bool:
+    """Boolean indication of whether `Instantiable` `m` is already flat."""
+
+    if isinstance(m, (h.PrimitiveCall, h.ExternalModuleCall)):
         return True
-    elif isinstance(m, h.Module):
-        insts = m.instances.values()
+    if isinstance(m, h.Module):
+        instancelike = (
+            list(m.instances.values())
+            + list(m.instarrays.values())
+            + list(m.instbundles.values())
+        )
         return all(
             isinstance(inst.of, (h.PrimitiveCall, h.ExternalModuleCall))
-            for inst in insts
+            for inst in instancelike
         )
-    else:
-        raise ValueError(f"Unexpected type {type(m)}")
+    raise TypeError(f"Invalid `Instantiable` argument to `is_flat`: {m}")
 
 
-def flatten(m: h.Module) -> h.Module:
+def flatten(m: h.Instantiable) -> h.Instantiable:
     r"""Flatten a module by moving all nested instances, ports and signals to the root level.
 
     For example, if we have a buffer module with two inverters, `inv_1` and `inv_2`, each with
@@ -143,10 +169,14 @@ def flatten(m: h.Module) -> h.Module:
         return m
 
     # recursively walk the module and collect all primitive instances
-    nodes = list(walk(m))
+    nodes: List[FlattenedInstance] = list(walk(m, parents=[]))
 
-    # NOTE: should we rename the module here?
-    new_module = h.Module((m.name or "module") + "_flat")
+    # Create our new, flattened Module
+    # Note that by virtue of going through elaboration above, `m.name` should be set.
+    # Check for it nonetheless, and raise an error if not.
+    if m.name is None:
+        raise ValueError(f"Anonymous Module {m} cannot be flattened. (Give it a name.)")
+    new_module = h.Module(m.name + "_flat")
     for port in m.ports.values():
         new_module.add(copy.copy(port))
 

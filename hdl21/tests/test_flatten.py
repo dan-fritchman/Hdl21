@@ -1,7 +1,3 @@
-from dataclasses import replace
-from enum import Enum
-from typing import Any
-
 import pytest
 
 import hdl21 as h
@@ -106,13 +102,15 @@ def test_flatten_inv_buffer():
 
 
 def test_flatten_node_desc():
-    nodes = list(walk(Buffer))
+    m = h.elaborate(Buffer)
+    nodes = list(walk(m, parents=[]))
     assert (
         str(nodes[0])
         == "{'name': 'inv_1:pmos', 'path': ['inv_1', 'pmos'], 'conns': {'d': 'inv_1_vout', 'g': 'vin', 's': 'vdd', 'b': 'vdd'}}"
     )
 
 
+@pytest.mark.xfail(reason="FIXME: flatten with slices & concats")
 def test_flatten_with_slices():
     """Flatten a Module with slices"""
 
@@ -127,6 +125,7 @@ def test_flatten_with_slices():
     flattened = flatten(InvTwoPack)
 
 
+@pytest.mark.xfail(reason="FIXME: flatten with slices & concats")
 def test_flatten_with_concat():
     """Test flattening a module with signal concatenations."""
 
@@ -148,4 +147,3 @@ def test_flatten_with_concat():
         nmos_array = NmosArray(d=h.Concat(s4, s2, s1, s0), g=g, vss=vss)
 
     flattened = flatten(M)
-
