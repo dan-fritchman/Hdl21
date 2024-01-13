@@ -21,6 +21,7 @@ from vlsirtools.spice import (
     sim as _vlsirtools_sim,
 )
 from vlsir.spice_pb2 import SimResult as SimResultProto
+from vlsirtools import SpiceType
 
 # Local Imports
 from ..datatype import datatype, AllowArbConfig
@@ -143,6 +144,8 @@ class Op:
     def tp(self) -> AnalysisType:
         return AnalysisType.OP
 
+def DcName(name:str, type: SpiceType = SpiceType.VSOURCE) -> str:
+    return f"{type.value}.xtop.{type.value}{name}"
 
 @simattr
 @datatype
