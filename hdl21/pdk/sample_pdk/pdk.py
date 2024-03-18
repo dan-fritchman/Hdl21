@@ -47,7 +47,7 @@ class SamplePdkMosParams:
     nf = h.Param(dtype=h.Scalar, desc="Number of parallel fingers", default=1)
     m = h.Param(dtype=h.Scalar, desc="Number of parallel fingers", default=1)
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         """Value Checks"""
         if self.w <= 0:
             raise ValueError(f"MosParams with invalid width {self.w}")

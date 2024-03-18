@@ -222,7 +222,7 @@ class SweepAnalysis:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class MonteCarlo:
     """Add monte-carlo variations to one or more `inner` analyses."""
 
@@ -285,7 +285,7 @@ class Save:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class Meas:
     """Measurement"""
 

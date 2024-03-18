@@ -64,7 +64,7 @@ class ExternalModule:
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._importpath = None
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         """After type-checking, do some more checks on values"""
         for p in self.port_list:
             if not p.name:
@@ -99,7 +99,7 @@ class ExternalModuleCall:
     module: ExternalModule
     params: Any
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.module.paramtype):
             msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"

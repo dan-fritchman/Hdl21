@@ -6,9 +6,8 @@ and thus supports its "connect by call" and "connect by assignment" semantics.
 import copy
 from typing import Any, Union, Dict
 
-from pydantic import BaseModel
 
-from .datatype import AllowArbConfig
+from .datatype import AllowArbConfig, _pydantic_major_version
 from .module import Module
 from .primitives import PrimitiveCall
 from .external_module import ExternalModuleCall
@@ -18,28 +17,53 @@ from .external_module import ExternalModuleCall
 InstantiableUnion = Union[Module, ExternalModuleCall, PrimitiveCall]
 
 
-class Instantiable(BaseModel):
-    """
-    # Instantiable
+_doc = """
+# Instantiable
 
-    Generally this means
-    ````python
-    Union[Module, ExternalModuleCall, PrimitiveCall]
-    ```
-    with some customized checking and error handling.
-    """
+Generally this means
+````python
+Union[Module, ExternalModuleCall, PrimitiveCall]
+```
+with some customized checking and error handling.
+"""
 
-    __root__: InstantiableUnion
-    Config = AllowArbConfig
+if _pydantic_major_version == 1:
+    from pydantic import BaseModel
 
-    def __init__(self, *_, **__):
-        # Brick any attempts to create instances
-        msg = f"Invalid attempt to instantiate an `Instantiable` directly. "
-        raise RuntimeError(msg)
+    class Instantiable(BaseModel):
 
-    @classmethod
-    def __get_validators__(cls):
-        yield assert_instantiable
+        __doc__ = _doc
+        __root__: InstantiableUnion
+        Config = AllowArbConfig
+
+        def __init__(self, *_, **__):
+            # Brick any attempts to create instances
+            msg = f"Invalid attempt to instantiate an `Instantiable` directly. "
+            raise RuntimeError(msg)
+
+        @classmethod
+        def __get_validators__(cls):
+            yield assert_instantiable
+
+else:
+    # FIXME: sort out this new RootModel stuff
+    Instantiable = InstantiableUnion
+
+    # from pydantic import RootModel
+
+    # class Instantiable(RootModel):
+    #     __doc__ = _doc
+    #     root: InstantiableUnion
+    #     model_config = AllowArbConfig
+
+    #     def __init__(self, *_, **__):
+    #         # Brick any attempts to create instances
+    #         msg = f"Invalid attempt to instantiate an `Instantiable` directly. "
+    #         raise RuntimeError(msg)
+
+    #     @classmethod
+    #     def __get_validators__(cls):
+    #         yield assert_instantiable
 
 
 def assert_instantiable(i: Any) -> Instantiable:

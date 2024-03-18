@@ -33,7 +33,7 @@ class NoConn:
 
     name: Optional[str] = None
 
-    def __post_init_post_parse__(self) -> None:
+    def __post_init__(self) -> None:
         # Internal management data
         # Connected port references
         self._connected_ports: Set[PortRef] = set()
