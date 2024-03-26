@@ -1,17 +1,11 @@
 # Std-Lib Imports
 from copy import deepcopy
-from dataclasses import field
-from typing import Dict, Tuple, List
-from types import SimpleNamespace
-
-# PyPi Imports
-from pydantic.dataclasses import dataclass
+from typing import List
 
 # Hdl21 Imports
 import hdl21 as h
 from hdl21.prefix import (
     MILLI,
-    µ,
     MEGA,
     TERA,
 )
@@ -35,7 +29,6 @@ from hdl21.primitives import (
 # Vlsirtool Types to ease downstream parsing
 from vlsirtools import SpiceType
 
-FIXME = None  # FIXME: Replace with real values!
 PDK_NAME = "sky130"
 
 """
@@ -133,23 +126,23 @@ class MosParams:
     sa = h.Param(
         dtype=h.Scalar,
         desc="Spacing between Adjacent Gate to Drain",
-        default=h.Literal(0),
+        default=0,
     )
     sb = h.Param(
         dtype=h.Scalar,
         desc="Spacing between Adjacent Gate to Source",
-        default=h.Literal(0),
+        default=0,
     )
     sd = h.Param(
         dtype=h.Scalar,
         desc="Spacing between Adjacent Drain to Source",
-        default=h.Literal(0),
+        default=0,
     )
     mult = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
 
-# FIXME: keep this alias as prior versions may have used it
+# NOTE: probably add a deprecation note for this alias; prior versions may have used it
 Sky130MosParams = MosParams
 
 

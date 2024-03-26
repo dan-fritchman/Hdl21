@@ -356,7 +356,7 @@ class Sky130Walker(h.HierarchyWalker):
         if isinstance(orig, h.Prefixed):
             return orig  # FIXME: where's the scaling?
         if isinstance(orig, h.Literal):
-            return h.Literal(f"({orig} * 1e6)")
+            return h.Literal(f"({orig.text} * 1e6)")
         raise TypeError(f"Param Value {orig}")
 
     def use_defaults(self, params: h.paramclass, modname: str, defaults: dict):
