@@ -53,11 +53,13 @@ if _pydantic_major_version == 1:
             tp.__pydantic_model__.update_forward_refs()
 
 else:  # _pydantic_major_version==2
-    from pydantic import Extra, BaseModel, RootModel
+    from pydantic import Extra, BaseModel, RootModel, BeforeValidator
 
     PYDANTIC_V2 = True
-    OurBaseConfig = dict(allow_extra="forbid")
-    AllowArbConfig = dict(allow_extra="forbid", arbitrary_types_allowed=True)
+    OurBaseConfig = dict(allow_extra="forbid", validate_default=True)
+    AllowArbConfig = dict(
+        allow_extra="forbid", validate_default=True, arbitrary_types_allowed=True
+    )
 
     def _update_forward_refs():
         """Update all the forward type-references"""

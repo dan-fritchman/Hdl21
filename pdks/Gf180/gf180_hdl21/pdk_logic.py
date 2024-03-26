@@ -285,11 +285,8 @@ class Gf180Walker(h.HierarchyWalker):
         Primarily type-dispatches across the need to scale to microns for this PDK."""
         if orig is None:
             return default
-        if not isinstance(orig, h.Scalar):
-            orig = h.scalar.to_scalar(orig)
-
         if isinstance(orig, h.Prefixed):
-            return orig
+            return orig  # FIXME: where's the scaling?
         if isinstance(orig, h.Literal):
             return h.Literal(f"({orig} * 1e6)")
         raise TypeError(f"Param Value {orig}")

@@ -335,7 +335,7 @@ class Prefixed(BaseModel):
 ToPrefixed = Union[int, float, str, Decimal]
 
 
-def to_prefixed(v: Union[Prefixed, "ToPrefixed"]) -> Prefixed:
+def to_prefixed(v: Union[Prefixed, ToPrefixed]) -> Prefixed:
     """Convert any convertible type to a `Prefixed` number."""
 
     if isinstance(v, Prefixed):

@@ -51,9 +51,10 @@ MyMosParams(w=h.Literal("sim_param_width"), l=h.Prefixed.new(20, NANO))
 MyMosParams(w="11*l", l=11)
 ```
 """
-from typing import Union
-from decimal import Decimal
 
+# Std-Lib Imports
+from typing import Union, Annotated
+from decimal import Decimal
 
 # Local Imports
 from .datatype import _pydantic_major_version
@@ -106,39 +107,13 @@ if _pydantic_major_version == 1:
             yield to_scalar
 
 else:
-    from .datatype import RootModel
-    from pydantic_core import core_schema
-    from pydantic import BaseModel, GetCoreSchemaHandler
-    from typing import Any, Type
+    from pydantic import BeforeValidator
 
-    class Scalar(RootModel):
-        root: Union[Prefixed, Literal]
-        __doc__ = _doc
-
-        def __init__(self, *_, **__):
-            # Brick any attempts to create instances
-            msg = f"Invalid attempt to instantiate a `Scalar` directly. "
-            msg += f"Create either of its variants `Prefixed` or `Literal` instead, "
-            msg += f"or use their built-in conversions from strings, ints, floats, and Decimals."
-            raise RuntimeError(msg)
-
-        @classmethod
-        def __get_pydantic_core_schema__(
-            cls, source: Type[Any], _handler: GetCoreSchemaHandler
-        ) -> core_schema.CoreSchema:
-            # if source is not Scalar:
-            #     raise TabError("HUH Invalid source")
-            return core_schema.no_info_after_validator_function(
-                to_scalar,
-                core_schema.union_schema([core_schema.model_schema(), Literal]),
-                serialization=None,
-                # core_schema.plain_serializer_function_ser_schema(
-                #     cls._serialize,
-                #     info_arg=False,
-                #     return_schema=core_schema.str_schema(),
-                # ),
-            )
-
+    # Union of types convertible into `Scalar`
+    Scalar = Annotated[
+        Union[Prefixed, Literal],
+        BeforeValidator(to_scalar),
+    ]
 
 __all__ = ["Scalar", "ToScalar", "to_scalar"]
 __doc__ = _doc
