@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from pydantic.dataclasses import dataclass
 
 import hdl21 as h
+from hdl21.datatype import OurBaseConfig
 
 
 def test_decimal():
@@ -480,8 +481,7 @@ def test_not_implemented_exponent():
 def test_prefixed_and_scalar_conversions():
     """Test inline conversions of built-in numeric types to `Prefixed` and `Scalar`."""
 
-    # FIXME: we may wanna export this config, or it applied to `dataclass` by default
-    @dataclass(config=dict(allow_extra="forbid", validate_default=True))
+    @dataclass(config=OurBaseConfig)
     class P:
         x: h.Prefixed
         y: h.Scalar

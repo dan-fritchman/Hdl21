@@ -4,8 +4,9 @@ and thus supports its "connect by call" and "connect by assignment" semantics.
 """
 
 # Std-Lib Imports
-import copy
+from __future__ import annotations
 from typing import Any, Union, Dict, Annotated
+import copy
 
 # Local Imports
 from .datatype import AllowArbConfig, _pydantic_major_version

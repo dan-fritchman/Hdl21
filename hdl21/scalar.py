@@ -1,3 +1,15 @@
+# Std-Lib Imports
+from __future__ import annotations
+from typing import Union, Annotated
+from decimal import Decimal
+
+# Local Imports
+from .datatype import _pydantic_major_version
+from .prefix import Prefixed
+from .literal import Literal
+
+
+# The shared docstring
 _doc = """
 # The `Scalar` parameter type
 
@@ -51,15 +63,6 @@ MyMosParams(w=h.Literal("sim_param_width"), l=h.Prefixed.new(20, NANO))
 MyMosParams(w="11*l", l=11)
 ```
 """
-
-# Std-Lib Imports
-from typing import Union, Annotated
-from decimal import Decimal
-
-# Local Imports
-from .datatype import _pydantic_major_version
-from .prefix import Prefixed
-from .literal import Literal
 
 
 # Union of types convertible into `Scalar`
