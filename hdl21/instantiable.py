@@ -3,10 +3,11 @@ Type-alias for `Instantiable` hdl21 types. Each is valid as the `of` field of `h
 and thus supports its "connect by call" and "connect by assignment" semantics. 
 """
 
+# Std-Lib Imports
 import copy
-from typing import Any, Union, Dict
+from typing import Any, Union, Dict, Annotated
 
-
+# Local Imports
 from .datatype import AllowArbConfig, _pydantic_major_version
 from .module import Module
 from .primitives import PrimitiveCall
@@ -17,56 +18,7 @@ from .external_module import ExternalModuleCall
 InstantiableUnion = Union[Module, ExternalModuleCall, PrimitiveCall]
 
 
-_doc = """
-# Instantiable
-
-Generally this means
-````python
-Union[Module, ExternalModuleCall, PrimitiveCall]
-```
-with some customized checking and error handling.
-"""
-
-if _pydantic_major_version == 1:
-    from pydantic import BaseModel
-
-    class Instantiable(BaseModel):
-
-        __doc__ = _doc
-        __root__: InstantiableUnion
-        Config = AllowArbConfig
-
-        def __init__(self, *_, **__):
-            # Brick any attempts to create instances
-            msg = f"Invalid attempt to instantiate an `Instantiable` directly. "
-            raise RuntimeError(msg)
-
-        @classmethod
-        def __get_validators__(cls):
-            yield assert_instantiable
-
-else:
-    # FIXME: sort out this new RootModel stuff
-    Instantiable = InstantiableUnion
-
-    # from pydantic import RootModel
-
-    # class Instantiable(RootModel):
-    #     __doc__ = _doc
-    #     root: InstantiableUnion
-    #     model_config = AllowArbConfig
-
-    #     def __init__(self, *_, **__):
-    #         # Brick any attempts to create instances
-    #         msg = f"Invalid attempt to instantiate an `Instantiable` directly. "
-    #         raise RuntimeError(msg)
-
-    #     @classmethod
-    #     def __get_validators__(cls):
-    #         yield assert_instantiable
-
-
-def assert_instantiable(i: Any) -> Instantiable:
+def assert_instantiable(i: Any) -> "Instantiable":
     """# Assert that `i` is an `Instantiable` type."""
     if not is_instantiable(i):
         return invalid(i)
@@ -98,7 +50,7 @@ def invalid(val: Any) -> None:
     raise TypeError(msg)
 
 
-def qualname(i: Instantiable) -> str:
+def qualname(i: "Instantiable") -> str:
     """Path-qualified name of Instantiable `i`"""
     from .qualname import qualname as module_qualname
 
@@ -115,7 +67,7 @@ def qualname(i: Instantiable) -> str:
     raise TypeError(f"Invalid Instantiable {i}")
 
 
-def io(i: Instantiable) -> Dict[str, "Connectable"]:
+def io(i: "Instantiable") -> Dict[str, "Connectable"]:
     """
     Get a complete dictionary of IO ports for `i`, including all types: Signals and Bundles.
     Copies the Instantiable's top-level dictionary so that it is not modified by consumers.
@@ -125,6 +77,42 @@ def io(i: Instantiable) -> Dict[str, "Connectable"]:
     if hasattr(i, "bundle_ports"):
         rv.update(copy.copy(i.bundle_ports))
     return rv
+
+
+_doc = """
+# Instantiable
+
+Generally this means
+````python
+Union[Module, ExternalModuleCall, PrimitiveCall]
+```
+with some customized checking and error handling.
+"""
+
+if _pydantic_major_version == 1:
+    from .datatype import BaseModel
+
+    class Instantiable(BaseModel):
+        # "Custom root types" implementation
+
+        __doc__ = _doc
+        __root__: InstantiableUnion
+        Config = AllowArbConfig
+
+        def __init__(self, *_, **__):
+            # Brick any attempts to create instances
+            msg = f"Invalid attempt to instantiate an `Instantiable` directly. "
+            raise RuntimeError(msg)
+
+        @classmethod
+        def __get_validators__(cls):
+            yield assert_instantiable
+
+else:
+    from .datatype import BeforeValidator
+
+    Instantiable = Annotated[InstantiableUnion, BeforeValidator(assert_instantiable)]
+    Instantiable.__doc__ = _doc
 
 
 __all__ = ["Instantiable", "is_instantiable"]

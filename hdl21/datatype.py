@@ -38,6 +38,7 @@ if _pydantic_major_version > 2 or _pydantic_major_version < 1:
 
 if _pydantic_major_version == 1:
     from pydantic import Extra, BaseModel
+    from pydantic.json import pydantic_encoder as pydantic_json_encoder
 
     PYDANTIC_V2 = False
 
@@ -54,6 +55,7 @@ if _pydantic_major_version == 1:
 
 else:  # _pydantic_major_version==2
     from pydantic import Extra, BaseModel, RootModel, BeforeValidator
+    from pydantic.deprecated.json import pydantic_encoder as pydantic_json_encoder
 
     PYDANTIC_V2 = True
     OurBaseConfig = dict(allow_extra="forbid", validate_default=True)

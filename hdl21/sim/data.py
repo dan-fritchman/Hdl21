@@ -207,7 +207,7 @@ class Noise:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class SweepAnalysis:
     """Sweep over `inner` analyses"""
 
