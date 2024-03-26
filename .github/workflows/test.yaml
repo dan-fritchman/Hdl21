@@ -16,26 +16,26 @@ jobs:
 
     # Notes on this matrix, particularly the dependencies part:
     # Hdl21 has two external dependencies: Pydantic and VLSIR.
-    # 
+    #
     # 1. VLSIR
     # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub.
     # Not every version of Hdl21 is designed to work with both.
     # Eventually this should know which *should* work.
     # For now it asserts that the dev-mode passes, and allows failer (`continue-on-error`) for the PyPi version.
-    # 
+    #
     # 2. Pydantic
     # Test with both the minimum supported version, and whatever pip selects, which is generally the latest.
     # Some languages/ libraries (ahem, Rust) find a way to build in this "test them min supported version" thing;
-    # we haven't seen one for Python, and can only really do this "manually" because there is only one. 
+    # we haven't seen one for Python, and can only really do this "manually" because there is only one.
     # Note the combinations pf `python-version` and `pydantic-version` are often relevant;
-    # typing-stuff generally evolves materially with each python version, and pydantic makes heavy use 
+    # typing-stuff generally evolves materially with each python version, and pydantic makes heavy use
     # of checking the current interpreter-version to try to make maximally detailed type-checking.
-    # 
+    #
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
-        pydantic-version: ["==1.9.0", ""] 
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        pydantic-version: ["==1.9.0", "==2.0", ""]
         dep-installer: ["dev", "pypi"]
     continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.11' }}
 
