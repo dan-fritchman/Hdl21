@@ -1,6 +1,6 @@
 # Std-Lib Imports
 from __future__ import annotations
-from typing import Union, Annotated
+from typing import Union
 from decimal import Decimal
 
 # Local Imports
@@ -110,7 +110,8 @@ if _pydantic_major_version == 1:
             yield to_scalar
 
 else:
-    from pydantic import BeforeValidator
+    from .datatype import BeforeValidator
+    from typing import Annotated
 
     # Union of types convertible into `Scalar`
     Scalar = Annotated[

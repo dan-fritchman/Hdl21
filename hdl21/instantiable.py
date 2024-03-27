@@ -5,7 +5,7 @@ and thus supports its "connect by call" and "connect by assignment" semantics.
 
 # Std-Lib Imports
 from __future__ import annotations
-from typing import Any, Union, Dict, Annotated
+from typing import Any, Union, Dict
 import copy
 
 # Local Imports
@@ -111,6 +111,7 @@ if _pydantic_major_version == 1:
 
 else:
     from .datatype import BeforeValidator
+    from typing import Annotated
 
     Instantiable = Annotated[InstantiableUnion, BeforeValidator(assert_instantiable)]
     Instantiable.__doc__ = _doc
