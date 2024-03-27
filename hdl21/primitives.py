@@ -187,7 +187,8 @@ _primitives: Dict[str, PrimLibEntry] = dict()
 def _add(prim: Primitive, aliases: List[str]) -> Primitive:
     """Add a primitive to this library.
     Ensures its identifier matches its `name` field, and adds any aliases to the global namespace.
-    This is a private function and should be used solely during `hdl21.primitives` import-time."""
+    This is a private function and should be used solely during `hdl21.primitives` import-time.
+    """
     global _primitives
 
     if prim.name in _primitives or prim.name in globals():
@@ -378,9 +379,9 @@ IdealCapacitor = _add(
 
 @paramclass
 class PhysicalCapacitorParams:
-    c = Param(dtype=Scalar, desc="Capacitance (F)", default=None)
-    w = Param(dtype=Scalar, desc="Width in resolution units", default=None)
-    l = Param(dtype=Scalar, desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
+    c = Param(dtype=Optional[Scalar], desc="Capacitance (F)", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     mult = Param(dtype=Optional[str], desc="Multiplier", default=None)
 

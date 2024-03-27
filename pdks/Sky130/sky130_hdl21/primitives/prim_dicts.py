@@ -1,14 +1,21 @@
-from ..pdk_data import *
-
-# Individuate component types
-MosKey = Tuple[str, MosType, MosVth, MosFamily]
-
 """
 These dictionaries are used to map all of the devices of the Sky130 technology
 to their corresponding caller functions above. Keys and names are used to 
 differentiate individual components and populate a namespace which can be used
 to find and determine the correct internal device to use.
 """
+
+# Std-Lib Imports
+from typing import Tuple, Dict
+from dataclasses import dataclass, field
+
+# Local Imports
+from hdl21.prefix import µ
+from ..pdk_data import *
+
+# Individuate component types
+MosKey = Tuple[str, MosType, MosVth, MosFamily]
+
 
 xtors: Dict[MosKey, h.ExternalModule] = {
     # Add all generic transistors
