@@ -183,17 +183,20 @@ class Prefixed(BaseModel):
         for using arguments by-position, which `pydantic.BaseModel` does not support."""
         return cls(number=number, prefix=prefix)
 
-    @classmethod
-    def validate(cls, v: Union["Prefixed", "ToPrefixed"]) -> "Prefixed":
-        """Validate `v` as a `Prefixed` number, or convert to `Prefixed` if applicable.
-        While usable elsewhere, `validate` is primarily intended for use in type-validated
-        dataclass trees, such as those generated in `paramclass`es."""
-
-        return to_prefixed(v)
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    #
+    # FIXME: pending potential deprecation #157
+    #
+    # @classmethod
+    # def validate(cls, v: Union["Prefixed", "ToPrefixed"]) -> "Prefixed":
+    #     """Validate `v` as a `Prefixed` number, or convert to `Prefixed` if applicable.
+    #     While usable elsewhere, `validate` is primarily intended for use in type-validated
+    #     dataclass trees, such as those generated in `paramclass`es."""
+    #
+    #     return to_prefixed(v)
+    #
+    # @classmethod
+    # def __get_validators__(cls):
+    #     yield cls.validate
 
     def __hash__(self):
         return hash((self.number, self.prefix))
@@ -335,7 +338,7 @@ class Prefixed(BaseModel):
 ToPrefixed = Union[int, float, str, Decimal]
 
 
-def to_prefixed(v: Union[Prefixed, "ToPrefixed"]) -> Prefixed:
+def to_prefixed(v: Union[Prefixed, ToPrefixed]) -> Prefixed:
     """Convert any convertible type to a `Prefixed` number."""
 
     if isinstance(v, Prefixed):

@@ -90,9 +90,6 @@ class BundleScope:
             self.signals[path_from_self] = sig
 
 
-BundleScope.__pydantic_model__.update_forward_refs()
-
-
 @datatype(config=AllowArbConfig)
 class BundlePortEntry:
     """# Bundle-Port Entry in the Cache

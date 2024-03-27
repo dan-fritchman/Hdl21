@@ -28,13 +28,13 @@ setup(
     author_email="dan@fritch.mn",
     packages=find_packages(),
     package_data={"hdl21": ["**/*.sp"]},  # Include built-in PDK models
-    python_requires=">=3.7, <3.12",
+    python_requires=">=3.7, <3.13",
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
         # Our primary external dependency is pydantic.
-        # Tested with everything in the 1.9-1.10 range.
-        "pydantic>=1.9.0,<1.11",
+        # Tested with everything in the 1.9-2.6 range.
+        "pydantic>=1.9.0,<2.7",
     ],
     extras_require={
         "dev": [

@@ -99,7 +99,7 @@ class Primitive:
     paramtype: Type[object]  # Class/ Type of valid Parameters
     primtype: PrimitiveType  # Ideal vs Physical Primitive-Type
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         """After type-checking, do plenty more checks on values"""
         if not isparamclass(self.paramtype):
             msg = f"Invalid Primitive param-type {self.paramtype} for {self.name}, must be an `hdl21.paramclass`"
@@ -143,7 +143,7 @@ class PrimitiveCall:
     prim: Primitive
     params: Any = NoParams
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.prim.paramtype):
             msg = f"Invalid parameters {self.params} for Primitive {self.prim}. Must be {self.prim.paramtype}"
@@ -187,7 +187,8 @@ _primitives: Dict[str, PrimLibEntry] = dict()
 def _add(prim: Primitive, aliases: List[str]) -> Primitive:
     """Add a primitive to this library.
     Ensures its identifier matches its `name` field, and adds any aliases to the global namespace.
-    This is a private function and should be used solely during `hdl21.primitives` import-time."""
+    This is a private function and should be used solely during `hdl21.primitives` import-time.
+    """
     global _primitives
 
     if prim.name in _primitives or prim.name in globals():
@@ -255,7 +256,7 @@ class MosParams:
     family = Param(dtype=MosFamily, desc="Device family", default=MosFamily.NONE)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
 
-    # def __post_init_post_parse__(self):
+    # def __post_init__(self):
     #     """Value Checks"""
     #     # FIXME: re-introduce these, for the case in which the parameters are `Prefixed` and not `Literal` values.
     #     if self.w <= 0:
@@ -378,9 +379,9 @@ IdealCapacitor = _add(
 
 @paramclass
 class PhysicalCapacitorParams:
-    c = Param(dtype=Scalar, desc="Capacitance (F)", default=None)
-    w = Param(dtype=Scalar, desc="Width in resolution units", default=None)
-    l = Param(dtype=Scalar, desc="Length in resolution units", default=None)
+    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
+    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
+    c = Param(dtype=Optional[Scalar], desc="Capacitance (F)", default=None)
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     mult = Param(dtype=Optional[str], desc="Multiplier", default=None)
 
@@ -654,7 +655,7 @@ class BipolarParams:
     model = Param(dtype=Optional[str], desc="Model (Name)", default=None)
     mult = Param(dtype=Optional[Scalar], desc="Multiplier", default=None)
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         """Value Checks"""
         if self.w is not None and self.w <= 0:
             raise ValueError(f"BipolarParams with invalid width {self.w}")

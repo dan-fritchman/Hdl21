@@ -106,7 +106,7 @@ class Signal:
     related_gnd: Optional["Signal"] = field(repr=False, default=None)
     # Related ground signal
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         if self.width < 1:
             raise ValueError(f"Signal {self.name} width must be positive")
         self._parent_module: Optional["Module"] = None

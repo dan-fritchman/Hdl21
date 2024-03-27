@@ -26,17 +26,11 @@ import inspect
 from pathlib import Path
 from types import ModuleType, FrameType
 from typing import Optional
-from pydantic import Extra
 
-from .datatype import datatype
-
-
-class Config:
-    arbitrary_types_allowed = True
-    allow_extra = Extra.forbid
+from .datatype import datatype, AllowArbConfig
 
 
-@datatype(config=Config)
+@datatype(config=AllowArbConfig)
 class SourceInfo:
     """# Python Source Info"""
 

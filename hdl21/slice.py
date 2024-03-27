@@ -43,7 +43,7 @@ class Slice:
     # Python index, i.e. that passed to square brackets
     index: Union[int, slice]
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         if not is_sliceable(self.parent):
             raise TypeError(f"{self.parent} is not Sliceable")
         self._connected_ports: Set["PortRef"] = set()

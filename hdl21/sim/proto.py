@@ -361,8 +361,6 @@ def export_float(num: Union[float, int, Decimal, Prefixed, Scalar]) -> float:
         return 0.0
     if isinstance(num, float):
         return num
-    if isinstance(num, Scalar):
-        return float(num.inner)
     if isinstance(num, (int, str, Decimal, Prefixed)):
         return float(num)
     raise TypeError(f"Invalid value for proto float: {num}")

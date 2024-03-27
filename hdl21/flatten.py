@@ -37,7 +37,7 @@ class FlattenedInstance:
     path: List[h.Instance] = field(default_factory=list)
     conns: Dict[str, h.Signal] = field(default_factory=dict)
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         # Assert that this instance's target is either a primitive, or external
         if not isinstance(self.inst.of, (h.PrimitiveCall, h.ExternalModuleCall)):
             raise ValueError(f"Invalid flattened instance {self}")

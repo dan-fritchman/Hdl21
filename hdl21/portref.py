@@ -24,7 +24,7 @@ class PortRef:
     inst: _Instance
     portname: str
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         # Inner management data
         self._connected_ports: Set[PortRef] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None

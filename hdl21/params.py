@@ -11,7 +11,7 @@ import pydantic
 
 # Local Imports
 from .default import Default
-from .datatype import AllowArbConfig
+from .datatype import AllowArbConfig, pydantic_json_encoder
 
 T = TypeVar("T")
 
@@ -293,7 +293,7 @@ def hdl21_naming_encoder(obj: Any) -> Any:
         return {f.name: getattr(obj, f.name) for f in dataclasses.fields(obj)}
 
     # Not an Hdl21 type. Hand off to pydantic.
-    return pydantic.json.pydantic_encoder(obj)
+    return pydantic_json_encoder(obj)
 
 
 # Shortcut for parameter-less generators.

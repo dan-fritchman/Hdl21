@@ -54,6 +54,8 @@ class ExternalModule:
         return self.paramtype
 
     def __post_init__(self):
+        """Post-Constructor Checks"""
+
         # Check for a valid parameter-type
         if not isparamclass(self.paramtype) and self.paramtype not in (dict, Dict):
             msg = f"Invalid parameter type {self.paramtype} for {self}. "
@@ -64,8 +66,7 @@ class ExternalModule:
         self._source_info: Optional[SourceInfo] = source_info(get_pymodule=True)
         self._importpath = None
 
-    def __post_init_post_parse__(self):
-        """After type-checking, do some more checks on values"""
+        # Now do some more checks on values
         for p in self.port_list:
             if not p.name:
                 raise ValueError(f"Unnamed Primitive Port {p} for {self.name}")
@@ -99,7 +100,7 @@ class ExternalModuleCall:
     module: ExternalModule
     params: Any
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         # Type-validate our parameters
         if not isinstance(self.params, self.module.paramtype):
             msg = f"Invalid parameter type {type(self.params)} for ExternalModule {self.module.name}. Must be {self.module.paramtype}"

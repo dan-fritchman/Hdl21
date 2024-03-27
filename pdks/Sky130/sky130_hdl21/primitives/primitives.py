@@ -1,11 +1,11 @@
-from ..pdk_data import *
-
 """
 These dictionaries are used to map all of the devices of the Sky130 technology
 to their corresponding caller functions above. Keys and names are used to 
 differentiate individual components and populate a namespace which can be used
 to find and determine the correct internal device to use.
 """
+
+from ..pdk_data import *
 
 NMOS_1p8V_STD = xtor_module("sky130_fd_pr__nfet_01v8")
 NMOS_1p8V_LOW = xtor_module("sky130_fd_pr__nfet_01v8_lvt")
