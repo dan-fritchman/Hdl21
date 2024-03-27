@@ -478,6 +478,7 @@ def test_not_implemented_exponent():
     assert e([]) == NotImplemented
 
 
+@pt.mark.xfail(reason="Testing for #157 pydantic v2")
 def test_prefixed_and_scalar_conversions():
     """Test inline conversions of built-in numeric types to `Prefixed` and `Scalar`."""
 
