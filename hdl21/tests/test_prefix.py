@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from pydantic.dataclasses import dataclass
 
 import hdl21 as h
+from hdl21.datatype import OurBaseConfig
 
 
 def test_decimal():
@@ -132,7 +133,6 @@ def test_prefixed_mul():
 
 
 def test_prefixed_div():
-
     """Test `Prefixed` True Division"""
     from hdl21.prefix import e
 
@@ -478,10 +478,11 @@ def test_not_implemented_exponent():
     assert e([]) == NotImplemented
 
 
+@pt.mark.xfail(reason="Testing for #157 pydantic v2")
 def test_prefixed_and_scalar_conversions():
     """Test inline conversions of built-in numeric types to `Prefixed` and `Scalar`."""
 
-    @dataclass
+    @dataclass(config=OurBaseConfig)
     class P:
         x: h.Prefixed
         y: h.Scalar

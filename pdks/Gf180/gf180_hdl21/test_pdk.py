@@ -143,7 +143,7 @@ def _compile_and_test(prims: h.Module, paramtype: h.Param):
 
     # ... and Test
     for k in prims.namespace:
-        if k is not "z":
+        if k != "z":
 
             assert isinstance(prims.namespace[k], h.Instance)
             assert isinstance(prims.namespace[k].of, h.ExternalModuleCall)
