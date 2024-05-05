@@ -2,24 +2,32 @@
 Spice-Class Simulation Interface 
 """
 
+from textwrap import dedent
+from warnings import warn
 from enum import Enum
-from typing import Union, Any, Optional, List, Awaitable
+from typing import Union, Any, Optional, List
 from pathlib import Path
 from dataclasses import field
 
-import vlsirtools.spice as vsp
-
 # Create a few aliases to the VLSIR sim-results types
-from vlsirtools.spice import SimResultUnion
-from vlsirtools.spice.sim_data import SimResult
+# Note many of these are "re-exports", not used here, but convenient for use cases.
+# Note `vsp.sim_data.SimResult` - the numpy based one - gets the `SimResult` name here.
+from vlsirtools.spice.sim_data import AnalysisType, SimResult
+from vlsirtools.spice import (
+    SimOptions,
+    SimResultUnion,
+    ResultFormat,
+    SupportedSimulators,
+    sim as _vlsirtools_sim,
+)
 from vlsir.spice_pb2 import SimResult as SimResultProto
 
 # Local Imports
+from ..datatype import datatype, AllowArbConfig
 from ..one_or_more import OneOrMore
-from ..datatype import datatype
 from ..instance import Instance
 from ..signal import Signal, Port
-from ..instantiable import Instantiable, Module, GeneratorCall, ExternalModuleCall
+from ..instantiable import Instantiable, Module, ExternalModuleCall
 from ..scalar import Scalar
 from ..literal import Literal
 
@@ -37,21 +45,17 @@ def tb(name: str) -> Module:
     return tb
 
 
-def is_tb(i: Instantiable) -> bool:
+def is_tb(m: Instantiable) -> bool:
     """Boolean indication of whether Instantiable `m` meets the test-bench interface."""
-    if isinstance(i, (Module, ExternalModuleCall)):
-        m = i
-    elif isinstance(i, GeneratorCall):
-        m = i.result
-    else:
+    if not isinstance(m, (Module, ExternalModuleCall)):
+        # Also filter out `Primitive`s, which don't work as testbenches
         raise TypeError(f"Invalid un-instantiable argument {i} to `is_tb`")
 
     if len(m.ports) != 1:
         return False
 
-    # There's exactly one port. Retrieve it from the `ports` dict,
-    # first requiring getting its name from the `keys`.
-    port = m.ports[list(m.ports.keys())[0]]
+    # There's exactly one port. Retrieve it from the `ports` dict.
+    port = list(m.ports.values())[0]
 
     # While that port is *conventionally* called "VSS", it *can* be called anything.
     # The testbench interface is met so long as we have a single, scalar port.
@@ -128,20 +132,6 @@ def is_sweep(val: Any) -> bool:
     return isinstance(val, Sweep.__args__)
 
 
-class AnalysisType(Enum):
-    """Enumerated Analysis-Types
-    Corresponding to the entries in the `Analysis` type-union."""
-
-    OP = "op"
-    DC = "dc"
-    AC = "ac"
-    TRAN = "tran"
-    NOISE = "noise"
-    MONTE = "monte"
-    SWEEP = "sweep"
-    CUSTOM = "custom"
-
-
 @simattr
 @datatype
 class Op:
@@ -196,7 +186,7 @@ class Tran:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class Noise:
     """Noise Analysis"""
 
@@ -217,7 +207,7 @@ class Noise:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class SweepAnalysis:
     """Sweep over `inner` analyses"""
 
@@ -232,7 +222,7 @@ class SweepAnalysis:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class MonteCarlo:
     """Add monte-carlo variations to one or more `inner` analyses."""
 
@@ -280,7 +270,7 @@ SaveTarget = Union[
     SaveMode,  # A `SaveMode`, e.g. `SaveMode.ALL`
     Signal,  # A single `Signal`
     List[Signal],  # A list of `Signal`s
-    str,  # A signal signale-name
+    str,  # A signal signal-name
     List[str],  # A list of signal-names
 ]
 
@@ -295,7 +285,7 @@ class Save:
 
 
 @simattr
-@datatype
+@datatype(config=AllowArbConfig)
 class Meas:
     """Measurement"""
 
@@ -331,19 +321,22 @@ def is_control(val: Any) -> bool:
     return isinstance(val, Control.__args__)
 
 
+# Define all available option types below
+OptionTypes = Union[
+    bool,
+    Scalar,
+    str,
+    Literal,
+]
+
+
 @simattr
 @datatype
 class Options:
     """Simulation Options"""
 
-    temper: Optional[int] = None  # Temperature
-    tnom: Optional[int] = None  # Nominal temperature
-    # FIXME NOTE: these three will in short order become `Scalar`s!
-    gmin: Optional[float] = None
-    reltol: Optional[float] = None
-    iabstol: Optional[float] = None
-
-    name: Optional[str] = None  # Name, used in class-based `Sim` definitions
+    value: OptionTypes
+    name: str
 
 
 # Spice-Sim Attribute-Union
@@ -354,7 +347,7 @@ def is_simattr(val: Any) -> bool:
     return isinstance(val, SimAttr.__args__)
 
 
-@datatype
+@datatype(config=AllowArbConfig)
 class Sim:
     """
     # Simulation Input
@@ -382,15 +375,9 @@ class Sim:
             return attrs[0]
         return list(attrs)
 
-    def run(self, opts: Optional[vsp.SimOptions] = None) -> vsp.SimResultUnion:
+    def run(self, opts: Optional[SimOptions] = None) -> SimResultUnion:
         """Invoke simulation via `vlsirtools.spice`."""
         return run(self, opts=opts)
-
-    async def run_async(
-        self, opts: Optional[vsp.SimOptions] = None
-    ) -> Awaitable[vsp.SimResultUnion]:
-        """Invoke simulation via `vlsirtools.spice`."""
-        return run_async(self, opts=opts)
 
     @property
     def Tb(self) -> "Module":
@@ -400,22 +387,13 @@ class Sim:
 
 
 def run(
-    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
-) -> OneOrMore[vsp.SimResultUnion]:
+    inp: OneOrMore[Sim], opts: Optional[SimOptions] = None
+) -> OneOrMore[SimResultUnion]:
     """Invoke one or more `Sim`s via `vlsirtools.spice`."""
 
-    from .to_proto import to_proto
+    from .proto import to_proto
 
-    return vsp.sim(inp=to_proto(inp), opts=opts)
-
-
-async def run_async(
-    inp: OneOrMore[Sim], opts: Optional[vsp.SimOptions] = None
-) -> OneOrMore[Awaitable[vsp.SimResultUnion]]:
-    """Invoke simulation via `vlsirtools.spice`."""
-    from .to_proto import to_proto
-
-    return await vsp.sim_async(inp=to_proto(inp), opts=opts)
+    return _vlsirtools_sim(inp=to_proto(inp), opts=opts)
 
 
 def _add_attr_func(name: str, cls: type):
@@ -481,7 +459,7 @@ def sim(cls: type) -> Sim:
 
     Class-based `Sim` definitions retain all class members which are `SimAttr`s and drop all others.
     Non-`SimAttr`-valued fields can nonetheless be handy for defining intermediate values upon which the ultimate SimAttrs depend,
-    such as the `a_path` field in the example aboe.
+    such as the `a_path` field in the example above.
 
     Classes decoratated by `sim` a single special required field,
     named either `tb` or `Tb`, which sets the simulation testbench.
@@ -497,7 +475,7 @@ def sim(cls: type) -> Sim:
     if cls.__bases__ != (object,):
         raise RuntimeError(f"Invalid @hdl21.sim inheriting from {cls.__bases__}")
 
-    protected_names = ["attrs", "add", "run", "run_async", "namespace"]
+    protected_names = ["attrs", "add", "run", "namespace"]
 
     # Initialize the content of the eventual `Sim`.
     # Note we largely can't create it now because the `tb` field is required at construction time.

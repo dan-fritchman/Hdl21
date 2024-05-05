@@ -1,9 +1,16 @@
+"""
+# `hdl21.sim` Unit Tests
+"""
+
+import pytest
+
 import hdl21 as h
 from hdl21.sim import *
-from hdl21.primitives import Vdc
 from hdl21.prefix import m
+from hdl21.primitives import Vdc
+import vlsir.spice_pb2 as vsp
 import vlsirtools
-import pytest
+from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
 
 
 def test_sim1():
@@ -56,7 +63,7 @@ def test_sim2():
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
-            Options(reltol=1e-9),
+            Options(1e-9, name="reltol"),
         ],
     )
     to_proto(s)
@@ -77,7 +84,7 @@ def test_simattrs():
         sweep=LogSweep(1e1, 1e10, 10),
         name="mynoise",
     )
-    assert tr.tstop == h.Scalar.new(11 * h.prefix.p)
+    assert tr.tstop == 11 * h.prefix.p
     sw = s.sweepanalysis(inner=[tr], var=p, sweep=LinearSweep(0, 1, 2), name="mysweep")
     mc = s.montecarlo(
         inner=[
@@ -90,7 +97,7 @@ def test_simattrs():
     s.meas(analysis=tr, name="a_delay", expr="trig_targ_something")
     s.include("/home/models")
     s.lib(path="/home/models", section="fast")
-    s.options(reltol=1e-9)
+    s.options(1e-9, name="reltol")
 
     to_proto(s)
 
@@ -124,7 +131,7 @@ def test_sim_decorator():
             npts=11,
         )
         a_delay = Meas(analysis=mytran, expr="trig_targ_something")
-        opts = Options(reltol=1e-9)
+        opts = Options(1e-9, name="reltol")
 
         # Attributes whose names don't really matter can be called anything,
         # but must be *assigned* into the class, not just constructed.
@@ -183,7 +190,7 @@ def test_proto1():
             Meas(analysis="mytr", name="a_delay", expr="trig_targ_something"),
             Include("/home/models"),
             Lib(path="/home/models", section="fast"),
-            Options(reltol=1e-9),
+            Options(1e-9, name="reltol"),
         ],
     )
 
@@ -258,7 +265,7 @@ def test_delay1():
     # FIXME! some real checks plz
 
 
-def empty_tb() -> h.Module:
+def empty_tb(num=0) -> h.Module:
     from hdl21.prefix import K
     from hdl21.primitives import R
 
@@ -274,7 +281,7 @@ def empty_tb() -> h.Module:
         s = h.Signal()
         r = ri(p=s, n=VSS)
 
-    EmptyTb.name = "EmptyTb"
+    EmptyTb.name = f"EmptyTb{num}"
     return EmptyTb
 
 
@@ -284,10 +291,6 @@ def empty_tb() -> h.Module:
 )
 def test_empty_sim1():
     """Create and run an empty `Sim`, returning a VLSIR_PROTO"""
-
-    from hdl21.sim import Sim, to_proto
-    import vlsir.spice_pb2 as vsp
-    from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
 
     s = Sim(tb=empty_tb(), attrs=[])
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
@@ -306,11 +309,42 @@ def test_empty_sim1():
 def test_empty_sim2():
     """Create and run an empty `Sim`, returning SIM_DATA"""
 
-    from hdl21.sim import Sim, to_proto
-    import vlsir.spice_pb2 as vsp
-    from vlsirtools.spice import sim, SimOptions, ResultFormat, sim_data as sd
-
     s = Sim(tb=empty_tb(), attrs=[])
     r = sim(to_proto(s), SimOptions(fmt=ResultFormat.SIM_DATA))
     assert isinstance(r, sd.SimResult)
     assert not len(r.an)  # No analysis inputs, no analysis results
+
+
+@pytest.mark.xfail(reason="VLSIR #71 https://github.com/Vlsir/Vlsir/issues/71")
+def test_multi_sim():
+    """Test multiple Sims in parallel"""
+    s1 = Sim(tb=empty_tb(1), attrs=[])
+    s2 = Sim(tb=empty_tb(2), attrs=[])
+    s3 = Sim(tb=empty_tb(3), attrs=[])
+    s4 = Sim(tb=empty_tb(4), attrs=[])
+
+    r = sim(to_proto([s1, s2, s3, s4]), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
+
+    for a in r:
+        assert isinstance(a, vsp.SimResult)
+        assert not len(a.an)
+
+
+def really_empty_tb() -> h.Module:
+    @h.module
+    class ReallyEmptyTb:
+        """An Empty TestBench, this time REALLY empty.
+        For inducing an error in a multi-sim below."""
+
+    return ReallyEmptyTb
+
+
+def test_multi_sim_error():
+    """Test that a failure in multiple concurrent sims fails, unlike in erdewit/nest_asyncio#57"""
+    with pytest.raises(Exception):
+        s1 = Sim(tb=empty_tb(1), attrs=[])
+        s2 = Sim(tb=really_empty_tb(), attrs=[])
+        s3 = Sim(tb=empty_tb(3), attrs=[])
+        s4 = Sim(tb=empty_tb(4), attrs=[])
+
+        r = sim(to_proto([s1, s2, s3, s4]), SimOptions(fmt=ResultFormat.VLSIR_PROTO))

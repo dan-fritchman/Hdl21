@@ -1,8 +1,8 @@
-from copy import copy
+# Std-Lib imports
 from typing import Set, Union, Optional
 
 # Local imports
-from .datatype import datatype
+from .datatype import datatype, AllowArbConfig
 from .connect import connectable
 from .sliceable import sliceable
 from .concat import concatable
@@ -12,7 +12,7 @@ from .instance import _Instance
 @concatable
 @sliceable
 @connectable
-@datatype
+@datatype(config=AllowArbConfig)
 class PortRef:
     """
     # PortRef
@@ -24,7 +24,7 @@ class PortRef:
     inst: _Instance
     portname: str
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         # Inner management data
         self._connected_ports: Set[PortRef] = set()
         self.resolved: Union[None, "Signal", "BundleInstance"] = None

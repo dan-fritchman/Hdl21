@@ -3,7 +3,7 @@ import hdl21 as h
 
 def test_resolve_portref_type():
     """Test resolution of PortRef "types" to their Module-level referents"""
-    from hdl21.elab.elaborators.resolve_ref_types import resolve_portref_type
+    from hdl21.elab.helpers.resolve_ref_types import resolve_portref_type
 
     @h.module
     class Inner:
@@ -62,7 +62,7 @@ def test_portref_slice():
 
 def test_resolve_bundleref_type():
     """Test resolution of BundleRef "types" to their Bundle-level referents"""
-    from hdl21.elab.elaborators.resolve_ref_types import resolve_bundleref_type
+    from hdl21.elab.helpers.resolve_ref_types import resolve_bundleref_type
 
     @h.bundle
     class B:

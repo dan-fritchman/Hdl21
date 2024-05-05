@@ -1,6 +1,6 @@
 """
 # Hdl21 Unit Tests
-Pulling directly from the documenation snippets, and making sure they work as claimed. 
+Pulling directly from the documentation snippets, and making sure they work as claimed. 
 """
 
 import hdl21 as _h
@@ -89,6 +89,7 @@ class MyParams:
 
 def test_generator1():
     import hdl21 as h
+    from hdl21.generator import GeneratorCall
 
     @h.generator
     def MyFirstGenerator(params: MyParams) -> h.Module:
@@ -97,8 +98,9 @@ def test_generator1():
         m.i = h.Input(width=params.w)
         return m
 
-    call = MyFirstGenerator(MyParams(w=16))
-    assert isinstance(call, h.GeneratorCall)
+    m = MyFirstGenerator(MyParams(w=16))
+    call = m._generated_by
+    assert isinstance(call, GeneratorCall)
     assert call.params == MyParams(w=16)
 
 
@@ -179,6 +181,25 @@ def test_params2():
     assert d1 == d2
 
 
+def test_inline_params_construction():
+    import hdl21 as h
+
+    @h.paramclass
+    class MyParams:
+        width = h.Param(dtype=int, desc="Width. Required")
+        text = h.Param(dtype=str, desc="Optional string", default="My Favorite Module")
+
+    @h.generator
+    def MyGen(params: MyParams) -> h.Module:
+        ...
+        # Module content is really irrelevant; really just shows caching
+        return h.Module()
+
+    assert MyGen(width=8, text="My Favorite Module") == MyGen(
+        MyParams(width=8, text="My Favorite Module")
+    )
+
+
 def test_external_module_primitive_example():
     """Test for the Primitives and ExternalModules example"""
 
@@ -227,3 +248,40 @@ def test_external_module_primitive_example():
     assert isinstance(DiodePlus, h.Module)
     assert isinstance(DiodePlus.d, h.Instance)
     assert isinstance(DiodePlus.d.of, h.PrimitiveCall)
+
+
+def test_scalar():
+    """Test the `Scalar` example"""
+    import hdl21 as h
+    from hdl21.prefix import NANO, µ
+    from decimal import Decimal
+
+    @h.paramclass
+    class MyMosParams:
+        w = h.Param(dtype=h.Scalar, desc="Width", default=1e-6)
+        l = h.Param(dtype=h.Scalar, desc="Length", default="w/5")
+
+    # Example instantiations
+    p = MyMosParams()  # Default values
+    assert p.w == h.scalar.to_scalar(Decimal(1e-6))
+    assert p.l == h.scalar.to_scalar("w/5")
+    assert isinstance(p.w, h.Prefixed)
+    assert isinstance(p.l, h.Literal)
+
+    p = MyMosParams(w=Decimal(1e-6), l=3 * µ)
+    assert isinstance(p.w, h.Prefixed)
+    assert isinstance(p.l, h.Prefixed)
+    assert p.w == h.scalar.to_scalar(Decimal(1e-6))
+    assert p.l == h.scalar.to_scalar(3 * µ)
+
+    p = MyMosParams(w=h.Literal("sim_param_width"), l=h.Prefixed.new(20, NANO))
+    assert isinstance(p.w, h.Literal)
+    assert isinstance(p.l, h.Prefixed)
+    assert p.w == h.scalar.to_scalar(h.Literal("sim_param_width"))
+    assert p.l == h.scalar.to_scalar(h.Prefixed.new(20, NANO))
+
+    p = MyMosParams(w="11*l", l=11)
+    assert isinstance(p.w, h.Literal)
+    assert isinstance(p.l, h.Prefixed)
+    assert p.w == h.scalar.to_scalar("11*l")
+    assert p.l == h.scalar.to_scalar(11)

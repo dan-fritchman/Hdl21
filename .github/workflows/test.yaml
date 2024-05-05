@@ -12,47 +12,77 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    container: tpluck95/vlsir-test-container
 
     # Notes on this matrix, particularly the dependencies part:
+    # Hdl21 has two external dependencies: Pydantic and VLSIR.
+    #
+    # 1. VLSIR
     # This sets up testing with dependencies from both (a) PyPi and (b) "dev" versions from GitHub.
-    # This is particularly relevant for VLSIR, which is often co-developed.
     # Not every version of Hdl21 is designed to work with both.
     # Eventually this should know which *should* work.
     # For now it asserts that the dev-mode passes, and allows failer (`continue-on-error`) for the PyPi version.
+    #
+    # 2. Pydantic
+    # Test with both the minimum supported version, and whatever pip selects, which is generally the latest.
+    # Some languages/ libraries (ahem, Rust) find a way to build in this "test them min supported version" thing;
+    # we haven't seen one for Python, and can only really do this "manually" because there is only one.
+    # Note the combinations pf `python-version` and `pydantic-version` are often relevant;
+    # typing-stuff generally evolves materially with each python version, and pydantic makes heavy use
+    # of checking the current interpreter-version to try to make maximally detailed type-checking.
+    #
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        pydantic-version: ["==1.9.0", "==2.0", "==2.6", ""]
         dep-installer: ["dev", "pypi"]
-    continue-on-error: ${{ matrix.dep-installer == 'pypi' }}
+    # Issues for these:
+    # VLSIR/ PyPi: https://github.com/dan-fritchman/Hdl21/issues/216
+    # Python 3.12: https://github.com/dan-fritchman/Hdl21/issues/215
+    # Python 3.7-3.8: https://github.com/dan-fritchman/Hdl21/issues/217
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.12' || matrix.python-version == '3.7'|| matrix.python-version == '3.8' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: bash scripts/install-${{ matrix.dep-installer }}.sh
-
-      - name: Test with pytest
         run: |
-          pytest -sv --cov=./ --cov-report=xml
+          apt update -y && apt upgrade -y
+          apt install -y python${{ matrix.python-version }} python${{ matrix.python-version }}-dev python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils
+          python${{ matrix.python-version }} -m pip install pytest
+          python${{ matrix.python-version }} -m pip install -Iv black==22.6
 
-      - name: Black Formatting Check
-        uses: psf/black@stable
-        with:
-          version: "22.6"
-          options: "--check --diff --verbose --exclude pdks/PdkTemplate"
+      - name: pytest `HDL21`
+        run: |
+          python${{ matrix.python-version }} -m venv ./venv
+          . ./venv/bin/activate
+          bash scripts/install-${{ matrix.dep-installer }}.sh
+          python${{ matrix.python-version }} -m pip install pydantic${{ matrix.pydantic-version }}
+          python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
 
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           env_vars: OS,PYTHON
           name: codecov-umbrella
           fail_ci_if_error: true
           path_to_write_report: ./coverage/codecov_report.txt
           verbose: true
+
+  # Seperate job for black, to remove all of the venv noise that we've created above
+  black:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Black Formatting Check
+        uses: psf/black@stable
+        with:
+          version: "22.6"
+          options: "--check --diff --verbose --exclude pdks/PdkTemplate"

@@ -12,7 +12,6 @@ from .instantiable import Instantiable
 from .module import Module
 from .external_module import ExternalModuleCall
 from .primitives import PrimitiveCall
-from .generator import GeneratorCall
 
 
 class HierarchyWalker:
@@ -44,8 +43,10 @@ class HierarchyWalker:
 
         if isinstance(src, Module):
             return self.visit_module(src)
-        if isinstance(src, GeneratorCall):
-            return self.visit_generator_call(src)
+        if isinstance(src, ExternalModuleCall):
+            return self.visit_external_module_call(src)
+        if isinstance(src, PrimitiveCall):
+            return self.visit_primitive_call(src)
         raise TypeError(f"Cannot walk non-elaboratable {src}")
 
     def visit_module(self, module: Module) -> Instantiable:
@@ -57,13 +58,6 @@ class HierarchyWalker:
         for inst in module.instances.values():
             self.visit_instance(inst)
         return module
-
-    def visit_generator_call(self, call: GeneratorCall) -> Instantiable:
-        """Visit a `GeneratorCall` object, primarily by visiting its resultant `Module`."""
-        if call.result is None:
-            raise RuntimeError(f"Generator {call} has not been elaborated")
-        call.result = self.visit_module(call.result)
-        return call.result
 
     def visit_external_module_call(self, call: ExternalModuleCall) -> Instantiable:
         """Visit an `ExternalModuleCall`.
@@ -87,8 +81,6 @@ class HierarchyWalker:
     def visit_instantiable(self, of: Instantiable) -> Instantiable:
         """Visit an `Instantiable` instance-target."""
 
-        if isinstance(of, GeneratorCall):
-            return self.visit_generator_call(call=of)
         if isinstance(of, Module):
             return self.visit_module(of)
         if isinstance(of, PrimitiveCall):

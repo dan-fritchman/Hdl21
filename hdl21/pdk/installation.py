@@ -106,7 +106,7 @@ class PdkInstallation:
     sim.run()
     ```
 
-    This "installation data" can in principle be store anywhere, or in unstructured types.
+    This "installation data" can in principle be stored anywhere, or in unstructured types.
     The primary goal of the `PdkInstallation` type is to centralize this data,
     and to enable shorthand registration and recall, particularly for
     the common case of a single in-memory `PdkInstallation`.

@@ -11,3 +11,6 @@ from .ro import main as test_ro
 from .rdac import main as test_rdac
 from .encoder import main as test_encoder
 from .mos_sim import main as test_mos_sim
+from .diff_ota import main as test_diff_ota
+from .idac import main as test_idac
+from .bundles import main as test_bundles

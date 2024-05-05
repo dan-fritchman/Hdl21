@@ -1,172 +1,123 @@
+# Std-Lib Imports
+from __future__ import annotations
 from typing import Union
 from decimal import Decimal
-from pydantic import BaseModel
 
 # Local Imports
+from .datatype import _pydantic_major_version
 from .prefix import Prefixed
 from .literal import Literal
 
 
-class Scalar(BaseModel):
-    """
-    # The `Scalar` parameter type
+# The shared docstring
+_doc = """
+# The `Scalar` parameter type
 
-    Generally this means `Union[Prefixed, Literal]`,
-    with some extra conversions from common built-in types, especially int, string, and float.
+Generally this means
+```python
+Union[Prefixed, Literal]
+```
+with built-in automatic conversions from each of:
+```python
+[str, int, float, Decimal]
+```
+when used in `paramclass` definitions.
 
-    `Scalar` is particularly designed for parameter-values of `Primitive`s and of simulations.
-    Most such parameters "want" to be the `Prefixed` type, for reasons outlined in
-    https://github.com/dan-fritchman/Hdl21#prefixed-numeric-parameters.
+`Scalar` is particularly designed for parameter-values of `Primitive`s and of simulations.
+Most such parameters "want" to be the `Prefixed` type, for reasons outlined in
+https://github.com/dan-fritchman/Hdl21#prefixed-numeric-parameters.
 
-    They often also need a string-valued escape hatch, e.g. when referring to out-of-Hdl21 quantities
-    such as parameters in external netlists, or simulation decks.
-    These out-of-Hdl21 expressions are represented by the `Literal` type, a simple wrapper around `str`.
+They often also need a string-valued escape hatch, e.g. when referring to out-of-Hdl21 quantities
+such as parameters in external netlists or simulation decks.
+These out-of-Hdl21 expressions are represented by the `Literal` type, a simple wrapper around `str`.
 
-    Where possible we prefer to use the `Prefixed` variant.
-    Strings and built-in numbers (int, float, Decimal) are converted to `Prefixed` inline by the `validate` method.
-    All of the `validate` mechanisms work for `Scalar`s used as fields in `pydantic.dataclasses`.
-    which crucially include all `hdl21.paramclass`es.
-    """
+Where possible `Scalar` prefers to use the `Prefixed` variant.
+Strings and built-in numbers (int, float, Decimal) are converted to `Prefixed` inline by the `validate` method.
+All of the `validate` mechanisms work for `Scalar`s used as fields in `pydantic.dataclasses`.
+which crucially include all `hdl21.paramclass`es.
 
-    inner: Union[Prefixed, Literal]
+While defined as a type, `Scalar` is not instantiable.
+It is really a class-based statement of `Union[Prefixed, Literal]`, with class methods to aid in validation.
 
-    @classmethod
-    def new(cls, inner: Union[Prefixed, Literal]) -> "Scalar":
-        """Create a `Scalar` from a `Prefixed` or `Literal`.
-        The (somewhat) shorthand way of calling the `Scalar` constructor
-        with arguments by-order, which `pydantic.BaseModel` does not support."""
-        return Scalar(inner=inner)
+If writing "primitive-like" parameters - e.g. those that go into SPICE simulations,
+or are provided to PDK-level devices, it is very likely that you will want to:
 
-    @classmethod
-    def validate(cls, v: Union["Scalar", "ToScalar"]) -> "Scalar":
-        """Validate and convert a `ToScalar` to a `Scalar`.
-        Most importantly this handles the case in which `v` is a *string*,
-        which attempts conversion to a `Prefixed`,
-        and falls back to a `Literal` on failure."""
+* Use `Scalar` as a parameter type, i.e. the `dtype` field of `Param`s.
+* Never actually instantiate a `Scalar` directly, including for its default value.
 
-        if isinstance(v, Scalar):
-            return v  # Valid as-is, return it.
-        if isinstance(v, (Prefixed, Literal)):
-            return Scalar(inner=v)  # Also basically done
+Example:
 
-        # Now the important case
-        if isinstance(v, str):
-            try:  # Try to convert to a Prefixed, which internally converts to a Decimal
-                inner = Prefixed(number=v)
-            except Exception:  # Catch all exceptions
-                inner = Literal(text=v)
-            return Scalar(inner=inner)
+```python
+import hdl21 as h
+from hdl21.prefix import NANO, µ
+from decimal import Decimal
 
-        # Everything else - notably including `int` and `float` - must be convertible to `Prefixed`, or fails in its validation.
-        return Scalar(inner=Prefixed(number=v))
+@h.paramclass
+class MyMosParams:
+w = h.Param(dtype=h.Scalar, desc="Width", default=1e-6) # Default `float` converts to a `Prefixed`
+l = h.Param(dtype=h.Scalar, desc="Length", default="w/5") # Default `str` converts to a `Literal`
 
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    """
-    # Math Methods
-    
-    Generally passed along to `self.inner`. 
-    If our inner value is a `Literal`, these generally fail. 
-    If it's a `Prefixed`, they should succeed. 
-
-    Note these generally *do not* return another `Scalar`. 
-    The intent of this type is really "Union[Prefixed, Literal], with some extra fancy conversions."
-    And those conversions include from anything that these math ops can produce - notably `Prefixed` and `Literal`. 
-    """
-
-    def __int__(self) -> int:
-        return int(self.inner)
-
-    def __float__(self) -> float:
-        return float(self.inner)
-
-    def __mul__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__mul__(other)
-
-    def __rmul__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__rmul__(other)
-
-    def __truediv__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__truediv__(other)
-
-    def __pow__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__pow__(other)
-
-    def __add__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__add__(other)
-
-    def __radd__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__radd__(other)
-
-    def __sub__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__sub__(other)
-
-    def __rsub__(self, other):
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__rsub__(other)
-
-    # Comparison operators
-    def __lt__(self, other) -> bool:
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__lt__(other)
-
-    def __le__(self, other) -> bool:
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__le__(other)
-
-    def __ne__(self, other) -> bool:
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__ne__(other)
-
-    def __gt__(self, other) -> bool:
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__gt__(other)
-
-    def __ge__(self, other) -> bool:
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__ge__(other)
-
-    """
-    # Equality and Hashing 
-
-    Both operate directly on `inner` values. 
-    This has some possibility to go haywire someday, if for example we enable `Literal` vs `Prefixed` equality tests, 
-    or otherwise allow them to drop through to one another, e.g. `Prefixed.number == Decimal(str(Literal.text))`, or similar. 
-    As-is hashing and equality testing the `inner` fields works. But these two methods require a look each time we edit them. 
-    """
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, Scalar):
-            other = other.inner
-        return self.inner.__eq__(other)
-
-    def __hash__(self) -> int:
-        return hash(self.inner)
+# Example instantiations
+MyMosParams(w=Decimal(1e-6), l=3*µ)
+MyMosParams(w=h.Literal("sim_param_width"), l=h.Prefixed.new(20, NANO))
+MyMosParams(w="11*l", l=11)
+```
+"""
 
 
 # Union of types convertible into `Scalar`
 ToScalar = Union[Prefixed, Literal, str, int, float, Decimal]
 
-__all__ = ["Scalar", "ToScalar"]
+
+def to_scalar(v: ToScalar) -> Union[Prefixed, Literal]:
+    """# Validate and convert anything in the `ToScalar` set of types to a `Prefixed` or `Literal`.
+    Most importantly this handles the case in which `v` is a *string*,
+    which attempts conversion to a `Prefixed`, and falls back to a `Literal` on failure.
+    """
+
+    if isinstance(v, (Prefixed, Literal)):
+        return v  # Valid as-is, return it.
+
+    # Now the important case: strings
+    if isinstance(v, str):
+        try:  # Try to convert to a Prefixed, which internally converts to a Decimal
+            return Prefixed(number=v)
+        except Exception:  # Catch all exceptions
+            return Literal(text=v)
+
+    # Everything else - notably including `int` and `float` - must be convertible to `Prefixed`, or fails in its validation.
+    return Prefixed(number=v)
+
+
+if _pydantic_major_version == 1:
+    from .datatype import BaseModel
+
+    class Scalar(BaseModel):
+        # The Pydantic "custom root types" feature is really what makes this work:
+        # https://docs.pydantic.dev/latest/usage/models/#custom-root-types
+        __root__: Union[Prefixed, Literal]
+        __doc__ = _doc
+
+        def __init__(self, *_, **__):
+            # Brick any attempts to create instances
+            msg = f"Invalid attempt to instantiate a `Scalar` directly. "
+            msg += f"Create either of its variants `Prefixed` or `Literal` instead, "
+            msg += f"or use their built-in conversions from strings, ints, floats, and Decimals."
+            raise RuntimeError(msg)
+
+        @classmethod
+        def __get_validators__(cls):
+            yield to_scalar
+
+else:
+    from .datatype import BeforeValidator
+    from typing import Annotated
+
+    # Union of types convertible into `Scalar`
+    Scalar = Annotated[
+        Union[Prefixed, Literal],
+        BeforeValidator(to_scalar),
+    ]
+
+__all__ = ["Scalar", "ToScalar", "to_scalar"]
+__doc__ = _doc

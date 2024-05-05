@@ -6,10 +6,10 @@
 * Importing back from VLSIR
 """
 
-import sys, pytest
+import pytest
 from io import StringIO
 from types import SimpleNamespace
-from textwrap import dedent
+from copy import deepcopy
 
 # Import the PUT (package under test)
 import hdl21 as h
@@ -27,7 +27,7 @@ def test_export_strides():
     p.s = h.Signal(width=20)
     p.c = c(p=p.s[::10])  # Connect two of the 20 bits, with stride 10
 
-    h.netlist(h.to_proto(p), sys.stdout, fmt="verilog")
+    h.netlist(h.to_proto(p), StringIO(), fmt="verilog")
 
 
 def test_prim_proto1():
@@ -81,7 +81,7 @@ def test_prim_proto1():
     assert len(HasPrims.signals) == 2
     assert len(HasPrims.instances) == 5
     for inst in HasPrims.instances.values():
-        assert isinstance(inst._resolved, h.primitives.PrimitiveCall)
+        assert isinstance(inst.of, h.primitives.PrimitiveCall)
 
 
 def test_ideal_primitives():
@@ -292,7 +292,6 @@ def test_proto_roundtrip():
 
 
 def test_proto_roundtrip2():
-
     # Create a child/leaf Module
     M1 = h.Module(name="M1")
     M1.i = h.Input()
@@ -400,9 +399,13 @@ def test_netlist_fmts():
     nl = StringIO()
     h.netlist(ppkg, nl, fmt="spice")
     nl = nl.getvalue()
-    assert ".SUBCKT Bot \n+ s_2 s_1 s_0 p" in nl
-    assert ".SUBCKT Top \n+ p" in nl
-    assert "xb \n+ s_2 s_1 s_0 p \n+ Bot" in nl
+    assert ".SUBCKT Bot" in nl
+    assert "+ s_2 s_1 s_0 p" in nl
+    assert ".SUBCKT Top" in nl
+    assert "+ p" in nl
+    assert "xb" in nl
+    assert "+ s_2 s_1 s_0 p" in nl
+    assert "+ Bot" in nl
 
 
 def test_spice_netlister():
@@ -501,7 +504,7 @@ def test_generator_recall():
     assert isinstance(getattr(ns, "CallMeTwice"), h.Module)
 
 
-def test_rountrip_external_module():
+def test_roundtrip_external_module():
     """Test round-tripping `ExternalModule`s between Hdl21 and VLSIR Proto"""
 
     @h.paramclass
@@ -523,3 +526,103 @@ def test_rountrip_external_module():
 def test_module_with_no_python_module():
     # Issue #48 https://github.com/dan-fritchman/Hdl21/issues/48
     exec("import hdl21 as h; h.to_proto(h.Module(name='not_in_a_pymodule'))")
+
+
+def test_netlist_spicetypes():
+    """# Test netlisting `ExternalModule`s with `SpiceType`s"""
+    from hdl21.external_module import SpiceType
+    from vlsirtools.netlist import NetlistFormat
+
+    NmosModel = h.ExternalModule(
+        name="nmos_model",
+        port_list=deepcopy(h.Mos.port_list),
+        paramtype=h.HasNoParams,
+        spicetype=SpiceType.MOS,
+    )
+
+    @h.module
+    class HasSpiceTypes:
+        VSS = h.Signal()
+        the_model_inst = NmosModel()(d=VSS, g=VSS, s=VSS, b=VSS)
+
+    # Test netlisting in a handful of formats
+    # Do some basic checking - mostly against exceptions.
+    # But make sure the model-name got in there at least somewhere.
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.SPICE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.XYCE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.NGSPICE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+    sio = StringIO()
+    h.netlist(HasSpiceTypes, sio, fmt=NetlistFormat.SPECTRE)
+    nl = sio.getvalue()
+    assert "nmos_model" in nl
+
+
+def test_module_with_literals():
+    """# Test exporting modules with literals"""
+
+    @h.module
+    class HasLit:
+        a, b, c = h.Ports(3)
+
+    # Add the literals
+    HasLit.literals.extend(
+        [
+            h.Literal("generate some_terrible_verilog_code"),
+            h.Literal(".some_spice_attribute what=ever"),
+            h.Literal("PRAGMA: some_pragma"),
+        ]
+    )
+
+    # Test converting to proto
+    pkg = h.to_proto(HasLit)
+    pmod = pkg.modules[0]
+    assert isinstance(pmod, vlsir.circuit.Module)
+    assert pmod.name == "hdl21.tests.test_exports.HasLit"
+    assert len(pmod.ports) == 3
+    assert len(pmod.signals) == 3
+
+    assert pmod.literals == [l.text for l in HasLit.literals]
+    assert pmod.literals == [
+        "generate some_terrible_verilog_code",
+        ".some_spice_attribute what=ever",
+        "PRAGMA: some_pragma",
+    ]
+
+    dest = StringIO()
+    h.netlist(HasLit, dest)
+    assert "generate some_terrible_verilog_code" in dest.getvalue()
+    assert ".some_spice_attribute what=ever" in dest.getvalue()
+    assert "PRAGMA: some_pragma" in dest.getvalue()
+
+    # Test round-tripping
+    ns = h.from_proto(pkg)
+    assert isinstance(ns, SimpleNamespace)
+    ns = ns.hdl21.tests.test_exports
+    assert isinstance(ns, SimpleNamespace)
+    HasLitRoundTripped = ns.HasLit
+    assert isinstance(HasLitRoundTripped, h.Module)
+    assert len(HasLitRoundTripped.literals) == 3
+    assert HasLitRoundTripped.literals == HasLit.literals
+
+
+def test_external_module_to_vlsir():
+    emod = h.ExternalModule(
+        name="emod",
+        port_list=[h.Port(name="p", direction=h.PortDir.INPUT)],
+    )
+    pmod = h.proto.export_external_module(emod)
+    assert isinstance(pmod, vlsir.circuit.ExternalModule)
+    # FIXME: some better tests

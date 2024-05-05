@@ -8,7 +8,7 @@ from typing import Optional, Union, Any, Set
 from weakref import WeakSet
 
 # Local imports
-from .datatype import datatype
+from .datatype import datatype, AllowArbConfig
 from .connect import connectable
 from .sliceable import sliceable, is_sliceable
 from .concat import concatable
@@ -17,7 +17,7 @@ from .concat import concatable
 @sliceable
 @concatable
 @connectable
-@datatype
+@datatype(config=AllowArbConfig)
 class Slice:
     """
     # Slice
@@ -43,7 +43,7 @@ class Slice:
     # Python index, i.e. that passed to square brackets
     index: Union[int, slice]
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         if not is_sliceable(self.parent):
             raise TypeError(f"{self.parent} is not Sliceable")
         self._connected_ports: Set["PortRef"] = set()
@@ -132,7 +132,7 @@ def _slice_inner(slize: Slice) -> SliceInner:
             # Align bot with the step
             bot += (top - bot) % abs(step)
         else:
-            # Here `start` and `stop` match `top` and `bot`'s inclsive/ exclusivity.
+            # Here `start` and `stop` match `top` and `bot`'s inclusive/exclusivity.
             # No need to add any offsets.
             top = (
                 parent.width

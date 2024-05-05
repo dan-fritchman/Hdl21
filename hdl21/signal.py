@@ -23,7 +23,7 @@ and direction. For internal `Signals`, the `direction` field is globally expecte
 from copy import copy
 from enum import Enum
 from dataclasses import field
-from typing import Callable, Optional, List, Set
+from typing import Callable, Optional, List, Set, Tuple
 
 # Local imports
 from .role import Role
@@ -106,7 +106,7 @@ class Signal:
     related_gnd: Optional["Signal"] = field(repr=False, default=None)
     # Related ground signal
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         if self.width < 1:
             raise ValueError(f"Signal {self.name} width must be positive")
         self._parent_module: Optional["Module"] = None
@@ -198,22 +198,36 @@ def Port(direction=PortDir.NONE, **kwargs) -> Signal:
     return Signal(direction=direction, vis=Visibility.PORT, **kwargs)
 
 
-def Power(**kwargs) -> Signal:
+def Power(direction=PortDir.INPUT, **kwargs) -> Signal:
     """# Power Signal Constructor
-    Thin wrapper around `hdl21.Signal`"""
-    return Signal(usage=Usage.POWER, **kwargs)
+    Thin wrapper around `hdl21.Signal`, setting the `POWER` usage attribute.
+    `Power` by default returns a `Port` with `PortDir.INPUT` direction.
+    Its direction can be overrident via the `direction` argument."""
+    return Signal(direction=direction, vis=Visibility.PORT, usage=Usage.POWER, **kwargs)
 
 
-def Ground(**kwargs) -> Signal:
+def Ground(direction=PortDir.INPUT, **kwargs) -> Signal:
     """# Ground Signal Constructor
-    Thin wrapper around `hdl21.Signal`"""
-    return Signal(usage=Usage.GROUND, **kwargs)
+    Thin wrapper around `hdl21.Signal`, setting the `GROUND` usage attribute.
+    `Ground` by default returns a `Port` with `PortDir.INPUT` direction.
+    Its direction can be overrident via the `direction` argument."""
+    return Signal(
+        direction=direction, vis=Visibility.PORT, usage=Usage.GROUND, **kwargs
+    )
 
 
-def Clock(**kwargs) -> Signal:
+def PowerGround(direction=PortDir.INPUT, **kwargs) -> Tuple[Signal, Signal]:
+    """# Power and Ground Signal Constructor
+    Returns a tuple of the two in (Power, Ground) order."""
+    return (Power(direction=direction, **kwargs), Ground(direction=direction, **kwargs))
+
+
+def Clock(direction=PortDir.INPUT, **kwargs) -> Signal:
     """# Clock Signal Constructor
-    Thin wrapper around `hdl21.Signal`"""
-    return Signal(usage=Usage.CLOCK, **kwargs)
+    Thin wrapper around `hdl21.Signal`, setting the `CLOCK` usage attribute.
+    `Clock` by default returns a `Port` with `PortDir.INPUT` direction.
+    Its direction can be overrident via the `direction` argument."""
+    return Signal(direction=direction, vis=Visibility.PORT, usage=Usage.CLOCK, **kwargs)
 
 
 """

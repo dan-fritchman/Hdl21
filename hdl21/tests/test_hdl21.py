@@ -2,14 +2,15 @@
 # Hdl21 Unit Tests 
 """
 
+from typing import TypeVar
 import copy, pytest
-from enum import Enum, EnumMeta, auto
-
 import hdl21 as h
+
+T = TypeVar("T")
 
 
 def test_version():
-    assert h.__version__ == "2.0.dev0"
+    assert h.__version__ == "5.0.0"  # NOTE: VLSIR_VERSION
 
 
 def test_module1():
@@ -85,16 +86,15 @@ def test_generator1():
     assert isinstance(m.i, h.Signal)
 
 
+@pytest.mark.xfail(reason="Deprecated/ unimplemented Context feature")
 def test_generator2():
     @h.paramclass
     class P2:
         f = h.Param(dtype=float, desc="a real number", default=1e-11)
 
     @h.generator
-    def g2(params: P2, ctx: h.Context) -> h.Module:
-        # Generator which takes a Context-argument
+    def g2(params: P2) -> h.Module:
         assert isinstance(params, P2)
-        assert isinstance(ctx, h.Context)
         return h.Module()
 
     m = h.elaborate(g2(P2()))
@@ -113,7 +113,7 @@ def test_generator3():
         return h.Module()
 
     @h.generator
-    def g3b(params: P3, ctx: h.Context) -> h.Module:
+    def g3b(params: P3) -> h.Module:
         return h.Module()
 
     M = h.Module(name="M")
@@ -130,18 +130,24 @@ def test_generator3():
     h.elaborate(HasGen)
 
     # Post-elab checks
+    from hdl21.generator import GeneratorCall
+
     assert isinstance(HasGen.a, h.Instance)
-    assert isinstance(HasGen.a.of, h.GeneratorCall)
-    assert HasGen.a.of.gen is g3a
-    assert HasGen.a.of.params == P3()
-    assert isinstance(HasGen.a.of.result, h.Module)
-    assert HasGen.a.of.result.name == "g3a(width=1)"
+    call = HasGen.a.of._generated_by
+    assert isinstance(call, GeneratorCall)
+    assert call.gen is g3a
+    assert call.params == P3()
+    result = h.Generator.Cache.done.get(call)
+    assert isinstance(result, h.Module)
+    assert result.name == "g3a(width=1)"
     assert isinstance(HasGen.b, h.Instance)
-    assert isinstance(HasGen.b.of, h.GeneratorCall)
-    assert isinstance(HasGen.b.of.result, h.Module)
-    assert HasGen.b.of.result.name == "g3b(width=5)"
-    assert HasGen.b.of.gen is g3b
-    assert HasGen.b.of.params == P3(width=5)
+    call = HasGen.b.of._generated_by
+    assert isinstance(call, GeneratorCall)
+    result = h.Generator.Cache.done.get(call)
+    assert isinstance(result, h.Module)
+    assert result.name == "g3b(width=5)"
+    assert call.gen is g3b
+    assert call.params == P3(width=5)
     assert isinstance(HasGen.c, h.Instance)
     assert isinstance(HasGen.c.of, h.Module)
     assert HasGen.c.of is M
@@ -421,11 +427,9 @@ def test_instantiable_as_param():
         m = h.Param(dtype=h.Module, desc="A `Module`")
         e = h.Param(dtype=h.ExternalModule, desc="An `ExternalModule`")
         ec = h.Param(dtype=h.ExternalModuleCall, desc="An `ExternalModuleCall`")
-        # FIXME: `Generator` is the one exception here. Maybe it can work, some day.
-        # g = h.Param(dtype=h.Generator, desc="An `Generator`")
-        gc = h.Param(dtype=h.GeneratorCall, desc="An `GeneratorCall`")
-        p = h.Param(dtype=h.Primitive, desc="An `Primitive`")
-        pc = h.Param(dtype=h.PrimitiveCall, desc="An `PrimitiveCall`")
+        g = h.Param(dtype=h.Generator, desc="A `Generator`")
+        p = h.Param(dtype=h.Primitive, desc="A `Primitive`")
+        pc = h.Param(dtype=h.PrimitiveCall, desc="A `PrimitiveCall`")
         i = h.Param(dtype=h.Instantiable, desc="An `Instantiable`")
 
     @h.generator
@@ -437,8 +441,7 @@ def test_instantiable_as_param():
             m = params.m(x=x)
             e = params.e()(x=x)
             ec = params.ec(x=x)
-            # g = params.g()(x=x)
-            gc = params.gc(x=x)
+            g = params.g()(x=x)
             p = params.p()(d=x, g=x, s=x, b=x)
             pc = params.pc(d=x, g=x, s=x, b=x)
             i = params.i(x=x)
@@ -459,15 +462,13 @@ def test_instantiable_as_param():
         m=Mod,
         e=Emod,
         ec=Emod(),
-        # g=Gen,
-        gc=Gen(),
+        g=Gen,
         p=h.Mos,
         pc=h.Mos(),
         i=Mod,
     )
     m = UsesThemParams(p)
     m = h.elaborate(m)
-    # assert m == Mod
 
 
 def test_instance_mult():
@@ -750,7 +751,6 @@ def test_wrong_decorator():
     assert "Did you mean to use the `module` decorator?" in str(e)
 
     with pytest.raises(TypeError) as e:
-
         h.Module(2)  # Bad!
 
     assert "Invalid Module name" in str(e)
@@ -920,7 +920,7 @@ def test_common_attr_errors():
     with pytest.raises(TypeError) as einfo:
         M.g = G(h.NoParams)  # Bad - GeneratorCall
     assert "Did you mean" in str(einfo.value)
-    assert "`GeneratorCall`" in str(einfo.value)
+    assert "`Module`" in str(einfo.value)
     M.g = G(h.NoParams)()  # Good - Instance
 
     X = h.ExternalModule(name="X", port_list=[])
@@ -933,6 +933,44 @@ def test_common_attr_errors():
     assert "Did you mean" in str(einfo.value)
     assert "`ExternalModuleCall`" in str(einfo.value)
     M.x = X()()  # Good - Instance
+
+
+def test_invalid_instantiable_error():
+    """# Test the errors for common invalid `Instantiable`s
+    Inspired by issue #174."""
+
+    @h.paramclass
+    class P:  # Param class with an `Instantiable` field
+        i = h.Param(dtype=h.Instantiable, desc="Module to instantiate")
+
+    @h.generator
+    def G(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    def ok(val: T) -> T:
+        P(i=val)
+        return val
+
+    def bad(val: T) -> T:
+        with pytest.raises(Exception) as einfo:
+            P(i=val)
+        assert "Did you mean" in str(einfo.value)
+        return val
+
+    # Create parameters for each of the above
+    M = ok(h.Module(name="M"))  # Module
+    _ = bad(M())  # Instance
+
+    X = bad(h.ExternalModule(name="X", port_list=[]))
+    XC = ok(X())  # ExternalModuleCall
+    _ = bad(XC())  # Instance of ExternalModuleCall
+
+    R = bad(h.primitives.Res)  # Primitive
+    RC = ok(R(r=1))  # PrimitiveCall
+    _ = bad(RC())  # Instance of PrimitiveCall
+
+    GC = ok(G())  # Generated Module
+    _ = bad(GC())  # Instance of generated Module
 
 
 def test_generator_call_by_kwargs():
@@ -950,8 +988,11 @@ def test_generator_call_by_kwargs():
 
     # Call without constructing a `P`
     m = M(a=1, b=2.0, c="3")
+    call = m._generated_by
 
-    assert isinstance(m, h.GeneratorCall)
+    from hdl21.generator import GeneratorCall
+
+    assert isinstance(call, GeneratorCall)
     m = h.elaborate(m)
     assert isinstance(m, h.Module)
 
@@ -1210,8 +1251,8 @@ def test_generator_eq():
     assert Gen() == Gen()
     assert Gen() == Gen(Params(p=111))
     assert Gen() == Gen(p=111)
-    assert Gen().params == Params()
-    assert Gen().params == Params(p=111)
+    assert Gen()._generated_by.params == Params()
+    assert Gen()._generated_by.params == Params(p=111)
 
     assert hash(Gen()) == hash(Gen(Params(p=111)))
     assert hash(Gen()) == hash(Gen(p=111))
@@ -1285,7 +1326,7 @@ def test_bad_generators():
     with pytest.raises(RuntimeError):
         # Extra arg
         @h.generator
-        def bad(p: P, ctx: h.Context, something_else: int) -> h.Module:
+        def bad(p: P, something_else: int) -> h.Module:
             return h.Module()
 
     with pytest.raises(RuntimeError):
@@ -1403,14 +1444,18 @@ def test_module_literals():
 
     @h.module
     class HasLit:
-        l1 = h.Literal("mother")
-        l2 = h.Literal("father")
+        x, y, z = 3 * h.Signal()
 
-    HasLit.l3 = h.Literal("child")
+    HasLit.literals.append(h.Literal("mother"))
+    HasLit.literals.append(h.Literal("father"))
+    HasLit.literals.extend(
+        [h.Literal("child"), h.Literal("uncle"), h.Literal("nephew")]
+    )
 
-    assert HasLit.l1.text == "mother"
-    assert HasLit.l2.text == "father"
-    assert HasLit.l3.text == "child"
+    assert len(HasLit.signals) == 3
+    assert HasLit.literals == [
+        h.Literal(t) for t in ["mother", "father", "child", "uncle", "nephew"]
+    ]
 
 
 def test_signal_mult():
@@ -1456,3 +1501,236 @@ def test_bundle_mult():
     assert len(M.signals) == 4
     assert M.b1_i is not M.b2_i
     assert M.b1_q is not M.b2_q
+
+
+def test_set_bad_attrs():
+    """Test the "only allow setting known attributes" feature of a few types."""
+
+    @h.bundle
+    class B:
+        s = h.Signal()
+
+    # Create a `BundleInstance`
+    b = B()
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        b.q = 5
+
+    # Create a `BundleRef` into that instance
+    ref = b.some_signal
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        ref.whatever = 6
+
+    # Create an `AnonymousBundle`
+    bu = h.bundlize(a=h.Signal())
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        bu.q = 5
+
+    # Create a `Concat`
+    c = h.Concat(h.Signal(), h.Signal())
+
+    # And assert we can't assign stuff to it
+    with pytest.raises(RuntimeError):
+        c.xyz = TabError
+
+
+def test_generator_function_combo():
+    """Test instantiating hierarchies that combine `@h.generator`s and regular old functions.
+    Inspired #192 https://github.com/dan-fritchman/Hdl21/issues/192."""
+
+    @h.generator
+    def Gen(_: h.HasNoParams) -> h.Module:
+        @h.module
+        class HasDiff:
+            d = h.Diff(port=True)
+
+        return HasDiff
+
+    def NonGen() -> h.Module:
+        @h.module
+        class HasTwoHasDiffs:
+            d = h.Diff(port=False)
+            a = Gen()(d=d)
+            b = Gen()(d=d)
+
+        return HasTwoHasDiffs
+
+    h.elaborate(NonGen())
+    h.elaborate(NonGen())
+
+
+def test_how_elab_caching_works():
+    """Not exactly a test of Hdl21, but of the mechanism used by class-level elaborator caching.
+    More or less the fix for #192 https://github.com/dan-fritchman/Hdl21/issues/192."""
+
+    from typing import Optional, List
+    from dataclasses import dataclass, field
+
+    @dataclass
+    class Cache:
+        ls: List[int] = field(default_factory=list)
+
+    class Base:
+        CLASS_CACHE: Optional[Cache] = None
+
+        def __init_subclass__(cls) -> None:
+            # Create a new `Cache` for each subclass
+            cls.CLASS_CACHE = Cache()
+
+        def do_something(self) -> None:
+            # Modify the class-level cache in an instance method
+            self.CLASS_CACHE.ls.append(1)
+
+    class Sub1(Base):
+        pass
+
+    class Sub2(Base):
+        pass
+
+    sub1 = Sub1()
+    sub2 = Sub2()
+
+    assert Base.CLASS_CACHE is None
+    assert Sub1.CLASS_CACHE is not None
+    assert Sub2.CLASS_CACHE is not None
+    assert Sub1.CLASS_CACHE is not Sub2.CLASS_CACHE
+    assert sub1.CLASS_CACHE is not None
+    assert sub2.CLASS_CACHE is not None
+    assert sub1.CLASS_CACHE is not sub2.CLASS_CACHE
+
+    sub1.do_something()
+    sub1.do_something()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == []
+
+    sub2.do_something()
+    sub2.do_something()
+    sub2.do_something()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1.CLASS_CACHE.ls == [1, 1]
+    assert sub2.CLASS_CACHE.ls == [1, 1, 1]
+
+    sub1b = Sub1()
+    sub2b = Sub2()
+
+    assert Base.CLASS_CACHE is None
+    assert sub1b.CLASS_CACHE.ls == [1, 1]
+    assert sub2b.CLASS_CACHE.ls == [1, 1, 1]
+    assert sub1.CLASS_CACHE is sub1b.CLASS_CACHE
+    assert sub2.CLASS_CACHE is sub2b.CLASS_CACHE
+
+
+def test_module_circular_dependency():
+    """Test attempting to elaborate an invalid circular dependency loop between `Module`s."""
+
+    # Create two modules which errantly instantiate each other
+    a = h.Module(name="a")
+    b = h.Module(name="b")
+    a.add(h.Instance(of=b, name="ib"))
+    b.add(h.Instance(of=a, name="ia"))
+
+    # Test that attempting to elaborate either throws the circular-dependency error
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(a)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(b)
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+
+def test_generator_circular_dependency():
+    """Test attempting to elaborate an invalid circular dependency loop between `Generator`s."""
+
+    # Create two generators which errantly instantiate each other
+    @h.generator
+    def f(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.g = g()()
+        return m
+
+    @h.generator
+    def g(_: h.HasNoParams) -> h.Module:
+        m = h.Module()
+        m.f = f()()
+        return m
+
+    # Test that attempting to elaborate either throws the circular-dependency error
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(f())
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+    with pytest.raises(RuntimeError) as einfo:
+        h.elaborate(g())
+    assert "Invalid self referencing/ circular dependency" in str(einfo.value)
+
+
+def test_generator_call_as_param():
+    """Test using a generated module as a parameter.
+    Inspired by #93 https://github.com/dan-fritchman/Hdl21/issues/93."""
+
+    from hdl21.generators import MosStack as Hdl21Mos
+
+    @h.generator
+    def Pmos(_: h.HasNoParams) -> h.Module:
+        return Hdl21Mos()  # Wrap the built-in generator
+
+    @h.paramclass
+    class Params:
+        unit = h.Param(dtype=h.Instantiable, desc="the unit pmos")
+
+    @h.generator
+    def PmosPair(params: Params) -> h.Module:
+        @h.module
+        class PmosPair:
+            x = h.Signal()
+            pair = h.Pair(params.unit)(d=x, g=x, s=x, b=x)
+
+        return PmosPair
+
+    h.elaborate(PmosPair(Params(Pmos())))
+
+
+def test_generator_caching():
+    """Test generators with and without caching.
+    https://github.com/dan-fritchman/Hdl21/issues/198"""
+
+    @h.generator
+    def G(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    g1 = G()
+    g2 = G()
+    assert g1 is g2
+
+    @h.generator(enable_cache=False)
+    def N(_: h.HasNoParams) -> h.Module:
+        return h.Module()
+
+    n1 = N()
+    n2 = N()
+    assert n1 is not n2
+
+    # Clear the cache and re-run em a few times
+    h.generator.cache.reset()
+
+    g3 = G()
+    g4 = G()
+    assert g3 is g4
+    assert g3 is not g2
+
+    n3 = N()
+    n4 = N()
+    assert n3 is not n4
+    assert n3 is not n2
+    assert n3 is not n1

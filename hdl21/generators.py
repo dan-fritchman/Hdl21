@@ -3,166 +3,113 @@
 """
 
 from copy import deepcopy
-from dataclasses import asdict, replace
-from typing import Optional, Tuple, Union
+from typing import Tuple, Union
 
-from . import primitives
-from .primitives import MosType, MosVth, Scalar
-from .generator import generator
-from .module import Module
-from .params import paramclass, Param
-from .signal import Signal
-from .instance import Instance
-from .instantiable import Instantiable
+# This is about the one place within the library that we use the global, named import `hdl21 as h`,
+# largely so that this module is a bit more copy-paste-edit-able.
+import hdl21 as h
 
 
-@paramclass
-class MosParams:
-    """Mos Series-Stack Generator Parameters"""
-
-    w = Param(dtype=Optional[Scalar], desc="Width in resolution units", default=None)
-    l = Param(dtype=Optional[Scalar], desc="Length in resolution units", default=None)
-    nser = Param(dtype=int, desc="Number of series fingers", default=1)
-    npar = Param(dtype=int, desc="Number of parallel fingers", default=1)
-    tp = Param(dtype=MosType, desc="MosType (PMOS/NMOS)", default=MosType.NMOS)
-    vth = Param(dtype=MosVth, desc="Threshold voltage specifier", default=MosVth.STD)
-
-    def __post_init_post_parse__(self):
-        """Value Checks"""
-        if self.w <= 0:
-            raise ValueError(f"MosParams with invalid width {self.w}")
-        if self.l <= 0:
-            raise ValueError(f"MosParams with invalid length {self.l}")
-        if self.npar <= 0:
-            raise ValueError(
-                f"MosParams with invalid number parallel fingers {self.npar}"
-            )
-        if self.nser <= 0:
-            raise ValueError(
-                f"MosParams with invalid number series fingers {self.nser}"
-            )
+SeriesConn = Union[h.Signal, str]
+SeriesConns = Tuple[SeriesConn, SeriesConn]
 
 
-@generator
-def Mos(params: MosParams) -> Module:
-    """Mos Series-Stack Generator
-    Generates a `Module` including `nser` identical series instances of unit-Mos `primitives.Mos`.
-    Unit-Mos gate and bulk ports are connected in parallel."""
-
-    # Extract the number of series fingers
-    nser = params.nser
-    # Extract the remaining params for the unit transistor
-    unit_params = asdict(params)
-    unit_params.pop("nser")
-    unit_params = primitives.Mos.Params(**unit_params)
-    # Create the Primitive unit-cell
-    unit_xtor = primitives.Mos(unit_params)
-
-    # Initialize our stack-module
-    m = Module()
-    # Copy the unit-cell ports
-    for p in primitives.Mos.port_list:
-        m.add(deepcopy(p))
-
-    # Add instances, starting at the source-side
-    inst = m.add(name="unit0", val=unit_xtor(s=m.s, g=m.g, b=m.b))
-    for iser in range(1, nser):
-        prev_inst = inst
-        inst = m.add(name=f"unit{iser}", val=unit_xtor(s=prev_inst.d, g=m.g, b=m.b))
-    # Finally connect the drain to the last instance
-    inst.d = m.d
-    # And return the module
-    return m
-
-
-@generator
-def Nmos(params: MosParams) -> Module:
-    """Nmos Generator. A thin wrapper around `hdl21.generators.Mos`"""
-    return Mos(replace(params, tp=MosType.NMOS))
-
-
-@generator
-def Pmos(params: MosParams) -> Module:
-    """Pmos Constructor. A thin wrapper around `hdl21.generators.Mos`"""
-    return Mos(replace(params, tp=MosType.PMOS))
-
-
-@paramclass
-class SeriesParParams:
-    """Series-Parallel Generator Parameters"""
+@h.paramclass
+class SeriesParams:
+    """# Series Generator Parameters"""
 
     # Required
-    unit = Param(dtype=Instantiable, desc="Unit cell")
-    series_conns = Param(
-        dtype=Tuple[Union[Signal, str], Union[Signal, str]],
-        desc="Ports or port-names of `unit` to be connected in series",
-    )
+    unit = h.Param(dtype=h.Instantiable, desc="Unit cell")
+    conns = h.Param(dtype=SeriesConns, desc="Series ports (or names)")
     # Optional
-    nser = Param(dtype=int, desc="Number of series instances", default=1)
-    npar = Param(dtype=int, desc="Number of parallel stacks", default=1)
+    nser = h.Param(dtype=int, desc="Number in series", default=1)
 
 
-@generator
-def SeriesPar(params: SeriesParParams) -> Module:
+@h.generator
+def Series(params: SeriesParams) -> h.Module:
     """
-    # Series-Parallel Generator
+    # Series Generator
 
-    Arrays `params.npar` copies of `params.nser` series-stacked Instances of unit-cell `params.unit`.
+    Arrays `params.nser` series-stacked Instances of unit-cell `params.unit`.
     The generated `Module` includes the same ports as `unit`.
-    The two series-connected ports of `unit` are specified by parameter two-tuple `series_conns`.
-    All other ports of `unit` are wired in parallel, and exposed as ports of the generated `Module`.
+    The two series-connected ports of `unit` are specified by parameter two-tuple `conns`.
+    All other ports of `unit` are wired in parallel, and exposed as ports of the generated module.
     """
 
-    unit = params.unit
+    if params.nser < 1:
+        raise ValueError(f"Invalid Series() generator with nser={params.nser}")
+    if params.nser == 1:
+        return Wrapper(params.unit)  # Easy mode
 
     # Initialize our stack-module
-    m = Module()
+    m = h.Module()
+
     # Copy the unit-cell ports
-    for p in unit.ports.values():
+    for p in params.unit.ports.values():
         m.add(deepcopy(p))
 
-    # Check for validity of the series-ports
-    if isinstance(params.series_conns[0], str):
-        ser0 = m.ports.get(params.series_conns[0], None)
-    elif isinstance(params.series_conns[0], Signal):
-        ser0 = params.series_conns[0]
-    else:  # Unreachable
-        raise TypeError
-    if isinstance(params.series_conns[1], str):
-        ser1 = m.ports.get(params.series_conns[1], None)
-    elif isinstance(params.series_conns[1], Signal):
-        ser1 = params.series_conns[1]
-    else:  # Unreachable
-        raise TypeError
-    if ser0 is None or ser1 is None:
-        raise ValueError(f"SeriesPar: unit does not have ports {params.series_conns}")
+    # Divy up the ports by series vs parallel connections
+    series_conns = _seriesconns(m, params.conns)
+    par_ports = [port for port in m.ports.values() if port not in series_conns]
+    unit_conns = {port.name: port for port in par_ports}
 
-    # Extract all the parallel-connected ports, and
-    par_ports = [
-        port for port in unit.ports.values() if port.name not in params.series_conns
-    ]
-    par_conns = {port.name: m.add(deepcopy(port)) for port in par_ports}
+    # Create the internal series-connected signals, and concatenate them with the series ports
+    i = m.add(h.Signal(name="i", width=params.nser - 1))
+    unit_conns[series_conns[0].name] = h.Concat(series_conns[0], i)
+    unit_conns[series_conns[1].name] = h.Concat(i, series_conns[1])
 
-    for ipar in range(params.npar):
-        # Add instances, starting at the `series_conns[0]`-side
-        inst = unit(**par_conns).connect(ser0.name, ser0)
-        inst = m.add(name=f"unit_{ipar}_0", val=inst)
-        for iser in range(1, params.nser):
-            prev_inst = inst
-            inst = unit(**par_conns)
-            inst.connect(ser0.name, getattr(prev_inst, ser1.name))
-            inst = m.add(name=f"unit_{ipar}_{iser}", val=inst)
-        # Finally connect the last series-port to the last instance
-        inst.connect(ser1.name, ser1)
+    # Create an array of unit instances
+    m.add(params.nser * params.unit(**unit_conns), name="units")
+
     # And return the module
     return m
 
 
-def Wrapper(m: Module) -> Module:
+def _seriesconns(m: h.Module, conns: SeriesConns) -> Tuple[h.Signal, h.Signal]:
+    # Extract the signals specified by `SeriesConns`
+    return (_seriesconn(m, conns[0]), _seriesconn(m, conns[1]))
+
+
+def _seriesconn(m: h.Module, conn: SeriesConn) -> h.Signal:
+    # Extract the signal specified by a `SeriesConn`
+    if isinstance(conn, h.Signal):
+        rv = m.ports.get(conn.name, None)
+    elif isinstance(conn, str):
+        rv = m.ports.get(conn, None)
+    else:
+        raise TypeError(f"Series: invalid series port {conn}")
+    # Check that we got something, and that it's a Signal (not, e.g., a Bundle).
+    if rv is None or not isinstance(rv, h.Signal):
+        raise ValueError(f"Series: invalid series port {conn}")
+    return rv
+
+
+@h.paramclass
+class MosStackParams:
+    """# Mos Stack Parameters"""
+
+    # All optional
+    # Equal to `SeriesParams`, with:
+    # - `conns` fixed to source/ drain
+    # - `unit` has a default, the built-in `h.primitives.Mos`
+    unit = h.Param(
+        dtype=h.Instantiable, desc="Unit Mos cell", default_factory=h.primitives.Mos
+    )
+    nser = h.Param(dtype=int, desc="Number in series", default=1)
+
+
+@h.generator
+def MosStack(params: MosStackParams) -> h.Module:
+    """# Mos Series-Stack Generator"""
+    # Use the `Series` generator, with series-connections between drain and source.
+    return Series(unit=params.unit, nser=params.nser, conns=("d", "s"))
+
+
+def Wrapper(m: h.Instantiable) -> h.Module:
     """
     # Module Wrapper Creator
 
-    Adds a `Module` hierarchy layer around argument-`Module` `m`.
+    Adds a `Module` hierarchy layer around argument-module (or other instantiable) `m`.
     Creates an `Instance` of `m` and clones its ports, connecting each.
 
     Note: `Wrapper` is generally aways more helpful when the returned `Module` is modified after the fact.
@@ -171,18 +118,67 @@ def Wrapper(m: Module) -> Module:
     Callers of `Wrapper` are therefore responsible for considerations such as unique naming.
     """
 
-    # FIXME: find this function a home with a less-confusing name!
     from .instantiable import io
 
     # Initialize our wrapper-module
-    wrapper = Module(name=f"{m.name}Wrapper")
+    wrapper = h.Module(name=f"{m.name}Wrapper")
 
     # Copy the inner-cell ports
     # Note this also serves as the connections-dict to the inner instance
     wrapper_io = {p.name: wrapper.add(deepcopy(p)) for p in io(m).values()}
 
     # Create the inner instance
-    wrapper.add(Instance(name="inner", of=m)(**wrapper_io))
+    wrapper.add(h.Instance(name="inner", of=m)(**wrapper_io))
 
     # And return the wrapper
     return wrapper
+
+
+@h.paramclass
+class AcDc:
+    ac = h.Param(dtype=h.Prefixed, desc="AC Voltage", default=0)
+    dc = h.Param(dtype=h.Prefixed, desc="DC Voltage", default=0)
+
+
+@h.paramclass
+class CmDmGenParams:
+    cm = h.Param(dtype=AcDc, desc="Common-Mode Voltage", default_factory=AcDc)
+    dm = h.Param(dtype=AcDc, desc="Differential Voltage", default_factory=AcDc)
+
+
+@h.generator
+def CmDmGen(p: CmDmGenParams) -> h.Module:
+    """# Common & Differential Mode Generator"""
+
+    @h.module
+    class CmDmGen:
+        # IO
+        diff = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
+        VSS = h.Port()
+        # Implementation
+        vc = h.Vdc(dc=p.cm.dc, ac=p.cm.ac)(n=VSS)
+        vp = h.Vdc(dc=p.dm.dc, ac=+p.dm.ac / 2)(p=diff.p, n=vc.p)
+        vn = h.Vdc(dc=p.dm.dc, ac=-p.dm.ac / 2)(p=diff.n, n=vc.p)
+
+    return CmDmGen
+
+
+@h.generator
+def Balun(_: h.HasNoParams) -> h.Module:
+    """# Balun Generator"""
+
+    @h.module
+    class Balun:
+        # IO
+        vic = h.Diff(port=True, role=h.Diff.Roles.SINK)
+        vid = h.Diff(port=True, role=h.Diff.Roles.SINK)
+        vod = h.Diff(port=True, role=h.Diff.Roles.SOURCE)
+        VSS = h.Ground()
+
+        # Implementation
+        voc = h.Signal()
+        ec = h.Vcvs(gain=1)(p=voc, n=VSS, cp=vic.p, cn=vic.n)
+        ep = h.Vcvs(gain=+500 * h.prefix.MILLI)(p=vod.p, n=voc, cp=vid.p, cn=vid.n)
+        en = h.Vcvs(gain=-500 * h.prefix.MILLI)(p=vod.n, n=voc, cp=vid.p, cn=vid.n)
+
+    return Balun

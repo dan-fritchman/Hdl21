@@ -10,12 +10,12 @@ https://github.com/pypa/sampleproject/blob/main/setup.py
 from setuptools import setup, find_packages
 import pathlib
 
-here = pathlib.Path(__file__).parent.resolve()
-
 # Get the long description from the README file
-long_description = (here / "readme.md").read_text(encoding="utf-8")
+here = pathlib.Path(__file__).parent.resolve()
+readme = here / "readme.md"
+long_description = "" if not readme.exists() else readme.read_text(encoding="utf-8")
 
-_VLSIR_VERSION = "4.0.dev0"
+_VLSIR_VERSION = "5.0.0"
 
 setup(
     name="hdl21",
@@ -27,11 +27,14 @@ setup(
     author="Dan Fritchman",
     author_email="dan@fritch.mn",
     packages=find_packages(),
-    python_requires=">=3.7, <4",
+    package_data={"hdl21": ["**/*.sp"]},  # Include built-in PDK models
+    python_requires=">=3.7, <3.13",
     install_requires=[
         f"vlsir=={_VLSIR_VERSION}",
         f"vlsirtools=={_VLSIR_VERSION}",
-        "pydantic==1.9.2",  # Note this is a very specific version, on purpose!
+        # Our primary external dependency is pydantic.
+        # Tested with everything in the 1.9-2.6 range.
+        "pydantic>=1.9.0,<2.7",
     ],
     extras_require={
         "dev": [
@@ -41,6 +44,7 @@ setup(
             "pre-commit==2.20",
             "black==22.6",
             "twine",
+            "build",
         ]
     },
 )
