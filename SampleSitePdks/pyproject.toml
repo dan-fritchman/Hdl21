@@ -1,5 +1,5 @@
 [project]
-name = "sitepdks"
+name = "hdl21-sitepdks"
 version = "5.0.0"
 description="PDK Installations on THIS Machine"
 dependencies = [
@@ -47,7 +47,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [tool.flit.module]
-name = "sitepdks.py"
+name = "sitepdks"
 
 [tool.pytest.ini_options]
 addopts = "--ignore=pdks/PdkTemplate"
