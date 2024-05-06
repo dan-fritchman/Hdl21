@@ -3,8 +3,8 @@ name = "hdl21"
 version = "5.0.0"
 description="Hardware Description Library"
 dependencies = [
-    "vlsir == 5.0.0",
-    "vlsirtools == 5.0.0",
+    "vlsir >= 5.0.0,<6.0.0",
+    "vlsirtools >= 5.0.0,<6.0.0",
     "pydantic>=1.9.0,<2.7",
 ]
 requires-python = ">=3.7, <3.13"
@@ -32,7 +32,6 @@ dev = [
     "pytest-cov",
     "pre-commit==2.20",
     "black==22.6",
-    "twine",
     "flit",
 ]
 
