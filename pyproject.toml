@@ -13,6 +13,11 @@ maintainers = [
 ]
 authors = [
   {name = "Dan Fritchman", email = "dan@fritch.mn"},
+  {name = "Thomas Pluck"},
+  {name = "Kennedy Caisley"},
+  {name = "Zeyi Wang"},
+  {name = "Arya Reais-Parsi"},
+  {name = "Vighnesh Iyer"},
   {name = "Curtis Mayberry", email = "Curtisma3@gmail.com"},
 ]
 
