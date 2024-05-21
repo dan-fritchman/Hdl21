@@ -1,5 +1,5 @@
 [project]
-name = "hdl21-sitepdks"
+name = "sitepdks"
 version = "5.0.0"
 description="PDK Installations on THIS Machine"
 dependencies = [
