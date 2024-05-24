@@ -1,12 +1,12 @@
 [project]
 name = "sitepdks"
 description = "PDK Installations on THIS Machine"
-version = "6.0.0rc0" # VLSIR_VERSION
+version = "6.0.0" # VLSIR_VERSION
 dependencies = [
-  "hdl21>=6.0.0rc0,<7",        # VLSIR_VERSION
-  "sky130-hdl21>=6.0.0rc0,<7", # VLSIR_VERSION
-  "gf180-hdl21>=6.0.0rc0,<7",  # VLSIR_VERSION
-  "asap7-hdl21>=6.0.0rc0,<7",  # VLSIR_VERSION
+  "hdl21>=6.0.0,<7",        # VLSIR_VERSION
+  "sky130-hdl21>=6.0.0,<7", # VLSIR_VERSION
+  "gf180-hdl21>=6.0.0,<7",  # VLSIR_VERSION
+  "asap7-hdl21>=6.0.0,<7",  # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]

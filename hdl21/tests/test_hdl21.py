@@ -10,7 +10,7 @@ T = TypeVar("T")
 
 
 def test_version():
-    assert h.__version__ == "6.0.0rc0"  # VLSIR_VERSION
+    assert h.__version__ == "6.0.0"  # VLSIR_VERSION
 
 
 def test_module1():
