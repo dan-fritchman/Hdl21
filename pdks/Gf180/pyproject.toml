@@ -1,9 +1,9 @@
 [project]
 name = "gf180-hdl21"
 description="Global Foundries 180nm MCU PDK Package for Hdl21"
-version = "6.0.0" # VLSIR_VERSION
+version = "7.0.0.dev0" # VLSIR_VERSION
 dependencies = [
-  "hdl21>=6.0.0,<7", # VLSIR_VERSION
+  "hdl21>=7.0.0.dev0,<7", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [
