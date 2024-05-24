@@ -1,24 +1,22 @@
 [project]
 name = "sitepdks"
-version = "5.0.0"
-description="PDK Installations on THIS Machine"
+description = "PDK Installations on THIS Machine"
+version = "6.0.0rc0" # VLSIR_VERSION
 dependencies = [
-    "hdl21 >= 5.0.0,<6.0.0",
-    "sky130-hdl21 >= 5.0.0,<6.0.0",
-    "gf180-hdl21 >= 5.0.0,<6.0.0",
-    "asap7-hdl21 >= 5.0.0,<6.0.0",
+  "hdl21>=6.0.0rc0,<7",        # VLSIR_VERSION
+  "sky130-hdl21>=6.0.0rc0,<7", # VLSIR_VERSION
+  "gf180-hdl21>=6.0.0rc0,<7",  # VLSIR_VERSION
+  "asap7-hdl21>=6.0.0rc0,<7",  # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
-maintainers = [
-  {name = "Dan Fritchman", email = "dan@fritch.mn"},
-]
+maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
 authors = [
-  {name = "Dan Fritchman", email = "dan@fritch.mn"},
-  {name = "Curtis Mayberry", email = "Curtisma3@gmail.com"},
+  { name = "Dan Fritchman", email = "dan@fritch.mn" },
+  { name = "Curtis Mayberry", email = "Curtisma3@gmail.com" },
 ]
 
 readme = "readme.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 keywords = ["HDL", "EDA", "analog", "circuit"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -28,12 +26,12 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest==7.1",
-    "coverage",
-    "pytest-cov",
-    "pre-commit==2.20",
-    "black==22.6",
-    "flit",
+  "pytest==7.1",
+  "coverage",
+  "pytest-cov",
+  "pre-commit==2.20",
+  "black==22.6",
+  "flit",
 ]
 
 [project.urls]

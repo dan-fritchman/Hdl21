@@ -1,22 +1,20 @@
 [project]
 name = "asap7-hdl21"
-version = "5.0.0"
-description="ASAP7 PDK Package for Hdl21"
+description = "ASAP7 PDK Package for Hdl21"
+version = "6.0.0rc0" # VLSIR_VERSION
 dependencies = [
-    "hdl21 >= 5.0.0,<6.0.0",
+  "hdl21>=6.0.0rc0,<7", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
-maintainers = [
-  {name = "Dan Fritchman", email = "dan@fritch.mn"},
-]
+maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
 authors = [
-  {name = "Dan Fritchman", email = "dan@fritch.mn"},
-  {name = "Thomas Pluck"},
-  {name = "Curtis Mayberry", email = "Curtisma3@gmail.com"},
+  { name = "Dan Fritchman", email = "dan@fritch.mn" },
+  { name = "Thomas Pluck" },
+  { name = "Curtis Mayberry", email = "Curtisma3@gmail.com" },
 ]
 
 readme = "readme.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 keywords = ["PDK", "EDA", "analog", "circuit"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -26,12 +24,12 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest==7.1",
-    "coverage",
-    "pytest-cov",
-    "pre-commit==2.20",
-    "black==22.6",
-    "flit",
+  "pytest==7.1",
+  "coverage",
+  "pytest-cov",
+  "pre-commit==2.20",
+  "black==22.6",
+  "flit",
 ]
 
 [project.urls]
