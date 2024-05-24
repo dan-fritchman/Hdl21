@@ -1,14 +1,14 @@
 [project]
 name = "{{ cookiecutter.pypi_name }}"
+description = "{{ cookiecutter.pdk_name }} PDK Package for Hdl21"
 version = "{{cookiecutter.version}}"
-description="{{ cookiecutter.pdk_name }} PDK Package for Hdl21"
 dependencies = [
-  "hdl21 >= 5.0.0,<6.0.0",
+  "hdl21>=7.0.0.dev1", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 
 readme = "readme.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 keywords = ["PDK", "EDA", "analog", "circuit"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -17,14 +17,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest==7.1",
-    "coverage",
-    "pytest-cov",
-    "pre-commit==2.20",
-    "black==22.6",
-    "flit",
-]
+dev = ["vlsirdev"]
 
 [build-system]
 requires = ["flit_core >=3.2,<4"]

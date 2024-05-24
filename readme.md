@@ -1272,8 +1272,6 @@ There are lots of other very cool hardware-description projects out there which 
 ```
 $ pytest -s
 ============================ test session starts =============================
-platform darwin -- Python 3.10.0, pytest-7.1.2, pluggy-1.0.0
-plugins: anyio-3.5.0, cov-3.0.0
 collected 126 items
 
 hdl21/pdk/test_pdk.py ...

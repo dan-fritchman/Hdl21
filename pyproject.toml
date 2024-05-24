@@ -1,28 +1,26 @@
 [project]
 name = "hdl21"
-version = "5.0.0"
-description="Hardware Description Library"
+description = "Hardware Description Library"
+version = "7.0.0.dev1" # VLSIR_VERSION
 dependencies = [
-    "vlsir >= 5.0.0,<6.0.0",
-    "vlsirtools >= 5.0.0,<6.0.0",
-    "pydantic>=1.9.0,<2.7",
+  "vlsir>=7.0.0.dev1",      # VLSIR_VERSION
+  "vlsirtools>=7.0.0.dev1", # VLSIR_VERSION
+  "pydantic>=1.9.0,<2.7",
 ]
 requires-python = ">=3.7, <3.13"
-maintainers = [
-  {name = "Dan Fritchman", email = "dan@fritch.mn"},
-]
+maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
 authors = [
-  {name = "Dan Fritchman", email = "dan@fritch.mn"},
-  {name = "Thomas Pluck"},
-  {name = "Kennedy Caisley"},
-  {name = "Zeyi Wang"},
-  {name = "Arya Reais-Parsi"},
-  {name = "Vighnesh Iyer"},
-  {name = "Curtis Mayberry", email = "Curtisma3@gmail.com"},
+  { name = "Dan Fritchman", email = "dan@fritch.mn" },
+  { name = "Thomas Pluck" },
+  { name = "Kennedy Caisley" },
+  { name = "Zeyi Wang" },
+  { name = "Arya Reais-Parsi" },
+  { name = "Vighnesh Iyer" },
+  { name = "Curtis Mayberry", email = "Curtisma3@gmail.com" },
 ]
 
 readme = "readme.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 keywords = ["HDL", "EDA", "analog", "circuit"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -31,14 +29,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest==7.1",
-    "coverage",
-    "pytest-cov",
-    "pre-commit==2.20",
-    "black==22.6",
-    "flit",
-]
+dev = ["vlsirdev"]
 
 [project.urls]
 Homepage = "https://github.com/dan-fritchman/Hdl21"
