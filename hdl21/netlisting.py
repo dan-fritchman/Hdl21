@@ -7,7 +7,7 @@ from typing import IO, Union, Optional
 # Import the core netlisting from `vlsirtools`
 import vlsir
 from vlsirtools.netlist import (
-    netlist as vlisr_netlist,
+    netlist as vlsir_netlist,
     NetlistFormat,
     NetlistFormatSpec,
     NetlistOptions,
@@ -51,7 +51,7 @@ def netlist(
         pkg = src
 
     # And invoke the VLSIR netlister
-    return vlisr_netlist(pkg=pkg, dest=dest, **kwargs)
+    return vlsir_netlist(pkg=pkg, dest=dest, **kwargs)
 
 
 __all__ = ["netlist", "NetlistFormat", "NetlistFormatSpec", "NetlistOptions"]
