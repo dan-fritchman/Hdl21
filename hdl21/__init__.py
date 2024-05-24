@@ -2,7 +2,7 @@
 # Hdl21 Hardware Description Library 
 """
 
-__version__ = "7.0.0.dev0"  # VLSIR_VERSION
+__version__ = "7.0.0.dev1"  # VLSIR_VERSION
 
 # Internal (python) module aliases, overridden by names such as the `module` decorator function.
 from . import module as _module_module

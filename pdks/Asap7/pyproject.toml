@@ -1,9 +1,9 @@
 [project]
 name = "asap7-hdl21"
 description = "ASAP7 PDK Package for Hdl21"
-version = "7.0.0.dev0" # VLSIR_VERSION
+version = "7.0.0.dev1" # VLSIR_VERSION
 dependencies = [
-  "hdl21>=7.0.0.dev0,<7", # VLSIR_VERSION
+  "hdl21>=7.0.0.dev1", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
@@ -23,14 +23,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest==7.1",
-  "coverage",
-  "pytest-cov",
-  "pre-commit==2.20",
-  "black==22.6",
-  "flit",
-]
+dev = ["vlsirdev"]
 
 [project.urls]
 Homepage = "https://github.com/dan-fritchman/Hdl21"

@@ -3,7 +3,7 @@ name = "{{ cookiecutter.pypi_name }}"
 description = "{{ cookiecutter.pdk_name }} PDK Package for Hdl21"
 version = "{{cookiecutter.version}}"
 dependencies = [
-  "hdl21>=7.0.0.dev0,<7", # VLSIR_VERSION
+  "hdl21>=7.0.0.dev1", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 
@@ -17,14 +17,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest==7.1",
-  "coverage",
-  "pytest-cov",
-  "pre-commit==2.20",
-  "black==22.6",
-  "flit",
-]
+dev = ["vlsirdev"]
 
 [build-system]
 requires = ["flit_core >=3.2,<4"]

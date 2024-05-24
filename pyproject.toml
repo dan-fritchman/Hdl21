@@ -1,10 +1,10 @@
 [project]
 name = "hdl21"
 description = "Hardware Description Library"
-version = "7.0.0.dev0" # VLSIR_VERSION
+version = "7.0.0.dev1" # VLSIR_VERSION
 dependencies = [
-  "vlsir>=7.0.0.dev0,<7",      # VLSIR_VERSION
-  "vlsirtools>=7.0.0.dev0,<7", # VLSIR_VERSION
+  "vlsir>=7.0.0.dev1",      # VLSIR_VERSION
+  "vlsirtools>=7.0.0.dev1", # VLSIR_VERSION
   "pydantic>=1.9.0,<2.7",
 ]
 requires-python = ">=3.7, <3.13"
@@ -29,14 +29,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest==7.1",
-  "coverage",
-  "pytest-cov",
-  "pre-commit==2.20",
-  "black==22.6",
-  "flit",
-]
+dev = ["vlsirdev"]
 
 [project.urls]
 Homepage = "https://github.com/dan-fritchman/Hdl21"
