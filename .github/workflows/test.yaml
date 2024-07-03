@@ -76,7 +76,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: bash scripts/install-pypi.sh
+        run: bash scripts/install-dev.sh # FIXME: move to PyPi when it's fixed
 
       - name: Test with pytest
         run: |
