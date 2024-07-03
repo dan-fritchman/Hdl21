@@ -4,7 +4,6 @@
 name: test
 
 on:
-  push:
   pull_request:
     branches:
       - main
@@ -65,6 +64,7 @@ jobs:
   # Seperate jobs for black and codecov, not subject to the dependency matrix
   codecov:
     runs-on: ubuntu-latest
+    container: tpluck95/vlsir-test-container
 
     steps:
       - name: Checkout Repo
