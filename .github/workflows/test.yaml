@@ -70,17 +70,21 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
+      # This is the same fairly long passage as above, with Python 3.11 and "latest Pydantic" hard-coded.
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: bash scripts/install-dev.sh # FIXME: move to PyPi when it's fixed
-
-      - name: Test with pytest
         run: |
-          pytest -sv --cov=./ --cov-report=xml
+          apt update -y && apt upgrade -y
+          apt install -y python3.11 python3.11-dev python3.11-venv python3.11-distutils
+          python3.11 -m pip install pytest
+          python3.11 -m pip install -Iv black==22.6
+
+      - name: pytest `HDL21`
+        run: |
+          python3.11 -m venv ./venv
+          . ./venv/bin/activate
+          bash scripts/install-dev.sh
+          python3.11 -m pip install pydantic
+          python3.11 -m pytest -sv --cov=./ --cov-report=xml
 
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
