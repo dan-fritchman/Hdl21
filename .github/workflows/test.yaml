@@ -62,6 +62,26 @@ jobs:
           python${{ matrix.python-version }} -m pip install pydantic${{ matrix.pydantic-version }}
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
 
+  # Seperate jobs for black and codecov, not subject to the dependency matrix
+  codecov:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: bash scripts/install-pypi.sh
+
+      - name: Test with pytest
+        run: |
+          pytest -sv --cov=./ --cov-report=xml
+
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
         with:
@@ -69,11 +89,10 @@ jobs:
           files: ./coverage.xml
           env_vars: OS,PYTHON
           name: codecov-umbrella
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           path_to_write_report: ./coverage/codecov_report.txt
           verbose: true
 
-  # Seperate job for black, to remove all of the venv noise that we've created above
   black:
     runs-on: ubuntu-latest
 
