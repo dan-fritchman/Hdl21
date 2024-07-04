@@ -1,0 +1,48 @@
+[project]
+name = "hdl21"
+description = "Hardware Description Library"
+version = "7.0.0.dev1" # VLSIR_VERSION
+dependencies = [
+  "vlsir>=7.0.0.dev1",      # VLSIR_VERSION
+  "vlsirtools>=7.0.0.dev1", # VLSIR_VERSION
+  "pydantic>=1.9.0,<2.7",
+]
+requires-python = ">=3.7, <3.13"
+maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
+authors = [
+  { name = "Dan Fritchman", email = "dan@fritch.mn" },
+  { name = "Thomas Pluck" },
+  { name = "Kennedy Caisley" },
+  { name = "Zeyi Wang" },
+  { name = "Arya Reais-Parsi" },
+  { name = "Vighnesh Iyer" },
+  { name = "Curtis Mayberry", email = "Curtisma3@gmail.com" },
+]
+
+readme = "readme.md"
+license = { file = "LICENSE" }
+keywords = ["HDL", "EDA", "analog", "circuit"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
+
+[project.optional-dependencies]
+dev = ["vlsirdev"]
+
+[project.urls]
+Homepage = "https://github.com/dan-fritchman/Hdl21"
+Documentation = "https://github.com/dan-fritchman/Hdl21/blob/main/readme.md"
+Repository = "https://github.com/dan-fritchman/Hdl21"
+"Bug Tracker" = "https://github.com/dan-fritchman/Hdl21/issues"
+
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.module]
+name = "hdl21"
+
+[tool.pytest.ini_options]
+addopts = "--ignore=pdks/PdkTemplate"

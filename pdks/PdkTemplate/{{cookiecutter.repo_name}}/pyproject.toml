@@ -1,0 +1,30 @@
+[project]
+name = "{{ cookiecutter.pypi_name }}"
+description = "{{ cookiecutter.pdk_name }} PDK Package for Hdl21"
+version = "{{cookiecutter.version}}"
+dependencies = [
+  "hdl21>=7.0.0.dev1", # VLSIR_VERSION
+]
+requires-python = ">=3.7, <3.13"
+
+readme = "readme.md"
+license = { file = "LICENSE" }
+keywords = ["PDK", "EDA", "analog", "circuit"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
+
+[project.optional-dependencies]
+dev = ["vlsirdev"]
+
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.module]
+name = "{{cookiecutter.pdk_name}}"
+
+[tool.pytest.ini_options]
+addopts = "--ignore=pdks/PdkTemplate"

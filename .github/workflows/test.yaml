@@ -4,7 +4,6 @@
 name: test
 
 on:
-  push:
   pull_request:
     branches:
       - main
@@ -62,6 +61,31 @@ jobs:
           python${{ matrix.python-version }} -m pip install pydantic${{ matrix.pydantic-version }}
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
 
+  # Seperate jobs for black and codecov, not subject to the dependency matrix
+  codecov:
+    runs-on: ubuntu-latest
+    container: tpluck95/vlsir-test-container
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      # This is the same fairly long passage as above, with Python 3.11 and "latest Pydantic" hard-coded.
+      - name: Set up Python 3.11
+        run: |
+          apt update -y && apt upgrade -y
+          apt install -y python3.11 python3.11-dev python3.11-venv python3.11-distutils
+          python3.11 -m pip install pytest
+          python3.11 -m pip install -Iv black==22.6
+
+      - name: pytest `HDL21`
+        run: |
+          python3.11 -m venv ./venv
+          . ./venv/bin/activate
+          bash scripts/install-dev.sh
+          python3.11 -m pip install pydantic
+          python3.11 -m pytest -sv --cov=./ --cov-report=xml
+
       - name: Upload coverage to Codecov # Adapted from https://github.com/codecov/codecov-action#usage
         uses: codecov/codecov-action@v3
         with:
@@ -69,11 +93,10 @@ jobs:
           files: ./coverage.xml
           env_vars: OS,PYTHON
           name: codecov-umbrella
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           path_to_write_report: ./coverage/codecov_report.txt
           verbose: true
 
-  # Seperate job for black, to remove all of the venv noise that we've created above
   black:
     runs-on: ubuntu-latest
 
