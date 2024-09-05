@@ -40,7 +40,7 @@ jobs:
     # VLSIR/ PyPi: https://github.com/dan-fritchman/Hdl21/issues/216
     # Python 3.12: https://github.com/dan-fritchman/Hdl21/issues/215
     # Python 3.7-3.8: https://github.com/dan-fritchman/Hdl21/issues/217
-    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.12' || matrix.python-version == '3.7'|| matrix.python-version == '3.8' }}
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.7'|| matrix.python-version == '3.8' }}
 
     steps:
       - name: Checkout Repo
