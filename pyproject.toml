@@ -5,7 +5,7 @@ version = "7.0.0.dev1" # VLSIR_VERSION
 dependencies = [
   "vlsir>=7.0.0.dev1",      # VLSIR_VERSION
   "vlsirtools>=7.0.0.dev1", # VLSIR_VERSION
-  "pydantic>=1.9.0,<2.7",
+  "pydantic>=1.9.0,<3",
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
@@ -29,7 +29,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["vlsirdev"]
+dev = ["vlsirdev>=7.0.0.dev1"]
 
 [project.urls]
 Homepage = "https://github.com/dan-fritchman/Hdl21"

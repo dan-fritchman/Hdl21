@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["vlsirdev"]
+dev = ["vlsirdev>=7.0.0.dev1"]
 
 [build-system]
 requires = ["flit_core >=3.2,<4"]
