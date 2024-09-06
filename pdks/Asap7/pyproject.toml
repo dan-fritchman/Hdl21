@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["vlsirdev"]
+dev = ["vlsirdev>=7.0.0.dev1"]
 
 [project.urls]
 Homepage = "https://github.com/dan-fritchman/Hdl21"
