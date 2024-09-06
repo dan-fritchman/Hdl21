@@ -9,9 +9,9 @@ on:
       - main
 
 jobs:
+
   test:
     runs-on: ubuntu-latest
-    container: tpluck95/vlsir-test-container
 
     # Notes on this matrix, particularly the dependencies part:
     # Hdl21 has two external dependencies: Pydantic and VLSIR.
@@ -40,11 +40,35 @@ jobs:
     # VLSIR/ PyPi: https://github.com/dan-fritchman/Hdl21/issues/216
     # Python 3.12: https://github.com/dan-fritchman/Hdl21/issues/215
     # Python 3.7-3.8: https://github.com/dan-fritchman/Hdl21/issues/217
-    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.12' || matrix.python-version == '3.7'|| matrix.python-version == '3.8' }}
+    continue-on-error: ${{ matrix.dep-installer == 'pypi' || matrix.python-version == '3.7'|| matrix.python-version == '3.8' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: bash scripts/install-${{ matrix.dep-installer }}.sh
+
+      - name: Test with pytest
+        run: pytest -sv 
+
+  test_with_sim: # This is the job that runs the simulation tests, and has a much smaller test matrix
+    runs-on: ubuntu-latest
+    container: tpluck95/vlsir-test-container
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11"]
+        pydantic-version: [""]
+        dep-installer: ["dev", "pypi"]
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         run: |
@@ -60,7 +84,7 @@ jobs:
           bash scripts/install-${{ matrix.dep-installer }}.sh
           python${{ matrix.python-version }} -m pip install pydantic${{ matrix.pydantic-version }}
           python${{ matrix.python-version }} -m pytest -sv --cov=./ --cov-report=xml
-
+  
   # Seperate jobs for black and codecov, not subject to the dependency matrix
   codecov:
     runs-on: ubuntu-latest
@@ -68,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # This is the same fairly long passage as above, with Python 3.11 and "latest Pydantic" hard-coded.
       - name: Set up Python 3.11
@@ -102,7 +126,7 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Black Formatting Check
         uses: psf/black@stable
