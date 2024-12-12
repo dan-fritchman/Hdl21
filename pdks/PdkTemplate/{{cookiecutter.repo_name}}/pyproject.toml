@@ -3,7 +3,7 @@ name = "{{ cookiecutter.pypi_name }}"
 description = "{{ cookiecutter.pdk_name }} PDK Package for Hdl21"
 version = "{{cookiecutter.version}}"
 dependencies = [
-  "hdl21>=7.0.0.dev1", # VLSIR_VERSION
+  "hdl21>=7.0.0", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 
