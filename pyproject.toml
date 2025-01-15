@@ -6,6 +6,8 @@ dependencies = [
   "vlsir>=7.0.0",      # VLSIR_VERSION
   "vlsirtools>=7.0.0", # VLSIR_VERSION
   "pydantic>=1.9.0,<3",
+  "typing-extensions"
+
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
