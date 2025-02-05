@@ -24,6 +24,16 @@ class PortRef:
     inst: _Instance
     portname: str
 
+    __slots__ = (
+        "inst",
+        "portname",
+        "_connected_ports",
+        "resolved",
+        "_slices",
+        "_concats",
+        "_width",
+    )
+
     def __post_init__(self):
         # Inner management data
         self._connected_ports: Set[PortRef] = set()
@@ -35,9 +45,10 @@ class PortRef:
     def __eq__(self, other) -> bool:
         """Port-reference equality requires *identity* between instances
         (and of course equality of port-name)."""
-        if not isinstance(other, PortRef):
+        try:
+            return self.inst is other.inst and self.portname == other.portname
+        except AttributeError:
             return False
-        return self.inst is other.inst and self.portname == other.portname
 
     def __hash__(self):
         """Hash references as the tuple of their instance-address and name"""
