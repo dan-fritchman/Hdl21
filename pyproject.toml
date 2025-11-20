@@ -1,11 +1,13 @@
 [project]
 name = "hdl21"
 description = "Hardware Description Library"
-version = "7.0.0.dev1" # VLSIR_VERSION
+version = "7.0.0" # VLSIR_VERSION
 dependencies = [
-  "vlsir>=7.0.0.dev1",      # VLSIR_VERSION
-  "vlsirtools>=7.0.0.dev1", # VLSIR_VERSION
-  "pydantic>=1.9.0,<2.7",
+  "vlsir>=7.0.0",      # VLSIR_VERSION
+  "vlsirtools>=7.0.0", # VLSIR_VERSION
+  "pydantic>=1.9.0,<3",
+  "typing-extensions"
+
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]

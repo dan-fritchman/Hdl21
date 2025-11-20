@@ -1256,7 +1256,8 @@ There are lots of other very cool hardware-description projects out there which 
 
 - [SpinalHDL](https://github.com/SpinalHDL/SpinalHDL)
 - [MyHDL](http://www.myhdl.org/)
-- [Migen](https://github.com/m-labs/migen) / [nMigen](https://github.com/m-labs/nmigen)
+- [Amaranth](https://github.com/amaranth-lang/amaranth)
+- [Migen](https://github.com/m-labs/migen)
 - [Magma](https://github.com/phanrahan/magma)
 - [PyMtl](https://github.com/cornell-brg/pymtl) / [PyMtl3](https://github.com/pymtl/pymtl3)
 - [Clash](https://clash-lang.org/)
