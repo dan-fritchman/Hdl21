@@ -1,0 +1,42 @@
+[project]
+name = "ihp-hdl21"
+description="IHP SG13G2 130nm BiCMOS PDK Package for Hdl21"
+version = "7.0.0" # VLSIR_VERSION
+dependencies = [
+  "hdl21>=7.0.0", # VLSIR_VERSION
+]
+requires-python = ">=3.7, <3.13"
+maintainers = [
+  {name = "Thomas Pluck"},
+]
+authors = [
+  {name = "Thomas Pluck"},
+]
+
+readme = "readme.md"
+license = {file = "LICENSE"}
+keywords = ["PDK", "EDA", "analog", "circuit", "BiCMOS", "HBT", "RF"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+]
+
+[project.optional-dependencies]
+dev = ["vlsirdev"]
+
+[project.urls]
+Homepage = "https://github.com/dan-fritchman/Hdl21"
+Documentation = "https://github.com/dan-fritchman/Hdl21/blob/main/pdks/IHP/readme.md"
+Repository = "https://github.com/dan-fritchman/Hdl21"
+"Bug Tracker" = "https://github.com/dan-fritchman/Hdl21/issues"
+
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.module]
+name = "ihp_hdl21"
+
+[tool.pytest.ini_options]
+addopts = "--ignore=pdks/PdkTemplate"
