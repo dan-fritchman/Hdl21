@@ -1,9 +1,9 @@
 [project]
 name = "sky130-hdl21"
 description="SkyWater 130nm PDK Package for Hdl21"
-version = "7.0.0.dev1" # VLSIR_VERSION
+version = "7.0.0" # VLSIR_VERSION
 dependencies = [
-  "hdl21>=7.0.0.dev1", # VLSIR_VERSION
+  "hdl21>=7.0.0", # VLSIR_VERSION
 ]
 requires-python = ">=3.7, <3.13"
 maintainers = [
