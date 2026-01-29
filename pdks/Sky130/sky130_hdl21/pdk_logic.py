@@ -1,26 +1,26 @@
-""" 
+"""
 
-# Hdl21 + SkyWater 130nm Open-Source PDK Modules and Transformations 
+# Hdl21 + SkyWater 130nm Open-Source PDK Modules and Transformations
 
 Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the SkyWater 130nm open-source PDK,
-and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
+and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules.
 
-The complete 130nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`. 
-They include: 
+The complete 130nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`.
+They include:
 
 * "Core" Mos transistors `sky130_fd_pr__{nfet,pfet}_01v8{,_lvt,_hvt}
 
-And may in the near future also include: 
+And may in the near future also include:
 
 * Resistors `sky130_fd_pr__res_*`
 * Capacitors `sky130_fd_pr__cap_*`
 * Bipolar Transistors `sky130_fd_pr__{npn,pnp}_*`
-* Diodes, which the PDK provides as SPICE `.model` statements alone, and will correspondingly need to be `hdl21.Module`s. 
+* Diodes, which the PDK provides as SPICE `.model` statements alone, and will correspondingly need to be `hdl21.Module`s.
 
-Many of the latter include a variety of "de-parameterization" steps not yet tested by this package's authors.  
+Many of the latter include a variety of "de-parameterization" steps not yet tested by this package's authors.
 
-Remaining devices can be added to user-projects as `hdl21.ExternalModule`s, 
-or added to this package via pull request.  
+Remaining devices can be added to user-projects as `hdl21.ExternalModule`s,
+or added to this package via pull request.
 
 """
 

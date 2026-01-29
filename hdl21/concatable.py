@@ -1,7 +1,7 @@
 """
-# Concatenation-ability Decorator 
+# Concatenation-ability Decorator
 
-Solely a marker used by `Concat` for validity checking. 
+Solely a marker used by `Concat` for validity checking.
 """
 
 # Local imports

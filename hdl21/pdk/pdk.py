@@ -1,46 +1,46 @@
-""" 
+"""
 # Hdl21 PDK Interface
 
-Hdl21 "process development kit" (PDK) packages provide the bundle between the Python HDL and fabricatable process technologies. 
-PDK packages typically include: 
+Hdl21 "process development kit" (PDK) packages provide the bundle between the Python HDL and fabricatable process technologies.
+PDK packages typically include:
 
-* (a) Definitions of technology-specific `ExternalModule`s, commonly including transistors and passive components, and 
+* (a) Definitions of technology-specific `ExternalModule`s, commonly including transistors and passive components, and
 * (b) A transformation method for converting generic `Primitive` elements to the technology-specific `ExternalModule`s.
 
-The latter manifests as a "compiler pass" over the Hdl21 circuit-proto tree. 
-An Hdl21 design hierarchically traversed and instances of `hdl21.Primitive`s 
-are transformed, typically to technology-specific `ExternalModule`s. 
+The latter manifests as a "compiler pass" over the Hdl21 circuit-proto tree.
+An Hdl21 design hierarchically traversed and instances of `hdl21.Primitive`s
+are transformed, typically to technology-specific `ExternalModule`s.
 
-The PDK API consists of one required method `compile`: 
+The PDK API consists of one required method `compile`:
 
 ```python
 def compile(src: Elaboratables) -> None
 ```
 
-The core method `compile` transforms a process-generic design hierarchy into PDK-specific content. 
-This will commonly manifest as replacement of `hdl21.Primitive` instances with PDK-specific `ExternalModule`s. 
+The core method `compile` transforms a process-generic design hierarchy into PDK-specific content.
+This will commonly manifest as replacement of `hdl21.Primitive` instances with PDK-specific `ExternalModule`s.
 
-The `Elaboratables` union type which serves as the input of `compile` can be any of: 
+The `Elaboratables` union type which serves as the input of `compile` can be any of:
 
 * An `hdl21.Module`
 * A call to an `hdl21.Generator`
 * Lists thereof
 
-A typical implementation of `compile`, shown in the `hdl21.pdk.sample_pdk` package, is to call the base class `visit_elaboratables` 
-method on a `Walker` subclass which implements the desired PDK transformations. For example: 
+A typical implementation of `compile`, shown in the `hdl21.pdk.sample_pdk` package, is to call the base class `visit_elaboratables`
+method on a `Walker` subclass which implements the desired PDK transformations. For example:
 
 ```python
 def compile(src: h.Elaboratables) -> None:
-    # Compile `src` to the Sample technology 
+    # Compile `src` to the Sample technology
     return SamplePdkWalker().visit_elaboratables(src)
 ```
 
-## Plug-in System 
+## Plug-in System
 
-Plug-in-style registration of `hdl21.PDK`s makes them available to `hdl21.Generator`s, 
-and generally allows for a full program-worth of comprehension of the target process.  
-Registering a PDK requires only passing its (Python) module as an argument to the `hdl21.pdk.register` function. 
-Typical PDKs packages then take the typical form: 
+Plug-in-style registration of `hdl21.PDK`s makes them available to `hdl21.Generator`s,
+and generally allows for a full program-worth of comprehension of the target process.
+Registering a PDK requires only passing its (Python) module as an argument to the `hdl21.pdk.register` function.
+Typical PDKs packages then take the typical form:
 
 ```python
 from hdl21.pdk import register
@@ -57,10 +57,10 @@ register(sample_pdk)
 
 import hdl21 as h
 
-# Definitions of PDK modules 
-MyMos = h.ExternalModule(name='MyMos', ...) 
+# Definitions of PDK modules
+MyMos = h.ExternalModule(name='MyMos', ...)
 
-# Compilation method 
+# Compilation method
 def compile(src: h.Elaboratables) -> h.Elaboratables:
     ...
 

@@ -1,8 +1,8 @@
 """
-# Default Value Sentinel 
+# Default Value Sentinel
 
-Used by a number of Hdl21 types to indicate a default value, 
-where all other "public" values could be valid non-default data. 
+Used by a number of Hdl21 types to indicate a default value,
+where all other "public" values could be valid non-default data.
 """
 
 from .datatype import datatype

@@ -122,7 +122,6 @@ def test_3_term_res_netlists():
 
 
 def test_diode_netlists():
-
     """
     Explicitly check diode netlists to see that nothing
     illegal is being generated and that models are compliant

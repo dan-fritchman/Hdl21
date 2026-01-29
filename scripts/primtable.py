@@ -1,5 +1,5 @@
 """
-# Primitive Table Generation 
+# Primitive Table Generation
 
 Writes the markdown-format table of primitives used in documentation.
 """

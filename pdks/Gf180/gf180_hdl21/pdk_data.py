@@ -1,17 +1,17 @@
-""" 
+"""
 
-# Hdl21 + Global Foundries 180nm MCU PDK Modules and Transformations 
+# Hdl21 + Global Foundries 180nm MCU PDK Modules and Transformations
 
 Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the Global Foundries 180nm open-source PDK, '
-and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
+and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules.
 
-The complete 180nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`. 
-They include: 
+The complete 180nm design kit includes hundreds of devices. A small subset are targets for conversion from `hdl21.Primitive`.
+They include:
 
-* 
+*
 
-Remaining devices can be added to user-projects as `hdl21.ExternalModule`s, 
-or added to this package via pull request.  
+Remaining devices can be added to user-projects as `hdl21.ExternalModule`s,
+or added to this package via pull request.
 
 """
 

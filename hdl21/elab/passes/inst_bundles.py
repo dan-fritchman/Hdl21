@@ -1,17 +1,16 @@
-""" 
+"""
 # `InstanceBundle`s ElabPass Pass
 
-Transform each `InstanceBundle` into a set of "scalar" `Instance`s, 
-and reconnect them to the signals of the original `Bundle`. 
+Transform each `InstanceBundle` into a set of "scalar" `Instance`s,
+and reconnect them to the signals of the original `Bundle`.
 
-This pass is designed to execute relatively early, and relies on `BundleRef`s in particular to 
-be resolved *after* it completes. 
+This pass is designed to execute relatively early, and relies on `BundleRef`s in particular to
+be resolved *after* it completes.
 
-FIXME: sort out the relationship between this pass and `ConnTypes`. 
-       Currently this pass checks for "bundle type identity" (i.e. `conn.bundle IS inst.bundle`), 
-       and `ConnTypes` checks for "structural equivalence". 
+FIXME: sort out the relationship between this pass and `ConnTypes`.
+       Currently this pass checks for "bundle type identity" (i.e. `conn.bundle IS inst.bundle`),
+       and `ConnTypes` checks for "structural equivalence".
 """
-
 
 # Local imports
 from ...connect import is_connectable

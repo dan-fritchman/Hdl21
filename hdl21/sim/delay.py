@@ -1,9 +1,9 @@
-""" 
-# Delay Measurements and Sims 
+"""
+# Delay Measurements and Sims
 
-The many, many-th iteration of taking a `Module` comprised of digital logic, 
-setting the states of all but one input, stepping the other, and measuring the delay(s) 
-to each of its outputs. 
+The many, many-th iteration of taking a `Module` comprised of digital logic,
+setting the states of all but one input, stepping the other, and measuring the delay(s)
+to each of its outputs.
 """
 
 from copy import copy

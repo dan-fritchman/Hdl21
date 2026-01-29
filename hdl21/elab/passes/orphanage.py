@@ -76,7 +76,8 @@ class Orphanage(ElabPass):
 
     def check_connectable(self, module: Module, conn: "Connectable") -> None:
         """Check a Connectable for orphanage.
-        Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements."""
+        Dispatches across connectable types, and recursively follows `conn` back to its constituent and/or parent elements.
+        """
 
         from ... import (
             NoConn,

@@ -1,7 +1,7 @@
 """
 # Hdl21 Connectable Decorator & Type Union
 
-Applied to types that are "used as connections", e.g. Signal. 
+Applied to types that are "used as connections", e.g. Signal.
 """
 
 # Std-Lib Imports

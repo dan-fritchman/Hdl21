@@ -3,7 +3,7 @@
 ## Analog Hardware Description Library in Python
 
 [![pypi](https://img.shields.io/badge/pypi-hdl21-blue)](https://pypi.org/project/hdl21/)
-[![python-versions](https://img.shields.io/badge/python-3.7_3.8_3.9_3.10_3.11-blue)](https://codecov.io/gh/dan-fritchman/Hdl21)
+[![python-versions](https://img.shields.io/badge/python-3.9_3.10_3.11_3.12-blue)](https://codecov.io/gh/dan-fritchman/Hdl21)
 [![test](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml/badge.svg)](https://github.com/dan-fritchman/Hdl21/actions/workflows/test.yaml)
 [![codecov](https://codecov.io/gh/dan-fritchman/Hdl21/branch/main/graph/badge.svg?token=f8LKUqEPdq)](https://codecov.io/gh/dan-fritchman/Hdl21)
 
@@ -828,6 +828,7 @@ Since PDKs are python packages, using them is as simple as importing them. Hdl21
 | ASAP7 Predictive/Academic PDK         | https://pypi.org/project/asap7-hdl21/  | [pdks/Asap7](./pdks/Asap7)  |
 | SkyWater 130nm Open-Source PDK        | https://pypi.org/project/sky130-hdl21/ | [pdks/Sky130](./pdks/Sky130) |
 | GlobalFoundries 180nm Open-Source PDK | https://pypi.org/project/gf180-hdl21/  | [pdks/Gf180](./pdks/Gf180)  |
+| IHP SG13G2 130nm BiCMOS OSS PDK | https://pypi.org/project/ihp-hdl21/ | [pdks/IHP](./pdks/IHP)
 
 Each contain much more detail documentation on their specific installation and use.
 

@@ -1,5 +1,5 @@
 """
-# PortRef Resolution 
+# PortRef Resolution
 
 Creates concrete `Signal`s and `BundleInstance`s to replace `PortRef`s.
 """

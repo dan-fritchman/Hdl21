@@ -1,18 +1,18 @@
 """
-# Nmos Current DAC Example 
+# Nmos Current DAC Example
 
-Using stacked generic FinFETs. 
-Demonstrates a few common tactics and features: 
+Using stacked generic FinFETs.
+Demonstrates a few common tactics and features:
 
 * Defining `ExternalModule`s for externally-defined devices, e.g. a small PDK
 * Using `Instantiable`s *as parameters* to allow generator-callers to fully specify the device
 * Using enumerated parameters to allow generator-callers to select from a set of options
 
-Note the generated sub-circuits will generally have names along the lines of `NmosIdac_{long_string}`, 
-e.g. `NmosIdac_46b3842dc8718a80a86891e28bc798e5_`. This 32-character hex-string is a hash of the 
-parameters. Hdl21 uses such a method when parameters are "compound", i.e. not a simple scalar. 
+Note the generated sub-circuits will generally have names along the lines of `NmosIdac_{long_string}`,
+e.g. `NmosIdac_46b3842dc8718a80a86891e28bc798e5_`. This 32-character hex-string is a hash of the
+parameters. Hdl21 uses such a method when parameters are "compound", i.e. not a simple scalar.
 
-For parameters with all scalar values, in contrast, Hdl21 names exported modules with a string 
+For parameters with all scalar values, in contrast, Hdl21 names exported modules with a string
 of their parameter values, e.g. NmosIdac_nbits_5.
 """
 
