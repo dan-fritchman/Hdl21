@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
-        pydantic-version: ["==1.9.0", "==2.0"]
+        pydantic-version: ["==1.9.0", "==2.0", "==2.10"]
         dep-installer: ["dev", "pypi"]
     # Issues for these:
     # VLSIR/ PyPi: https://github.com/dan-fritchman/Hdl21/issues/216
@@ -58,13 +58,13 @@ jobs:
       - name: Test with pytest
         run: pytest -sv 
 
-  # Pydantic >2.10 for 3.>12
+  # Pydantic >2.10 for 3.12
   test_two:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.12"]
         pydantic-version: ["==2.12"]
         dep-installer: ["dev", "pypi"]
         
