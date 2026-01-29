@@ -17,6 +17,7 @@ with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 from enum import Enum
 from decimal import Decimal
+from math import log10, floor
 from typing import Optional, Any, Union, Tuple
 from pydantic import BaseModel, Field
 from pydantic.dataclasses import dataclass
@@ -528,6 +529,53 @@ def e(exp: Any) -> Exponent:
         return Exponent(out_symbol, out_residual)
 
     return NotImplemented
+
+def convert_numeric_to_prefix(
+    value: float,
+):
+    """
+    This function converts a numeric value to a number under a SPICE unit closest to the base prefix. This allows us to connect a particular number real output, into a term that can be used in a SPICE netlist.
+    """
+    prefixes = [
+        (Prefix.YOCTO, y),
+        (Prefix.ZEPTO, z),
+        (Prefix.ATTO, a),
+        (Prefix.FEMTO, f),
+        (Prefix.PICO, p),
+        (Prefix.NANO, n),
+        (Prefix.MICRO, µ),
+        (Prefix.MICRO, u),
+        (Prefix.MILLI, m),
+        (Prefix.CENTI, c),
+        (Prefix.DECI, d),
+        # (Prefix.UNIT, ''),
+        (Prefix.DECA, D),
+        (Prefix.KILO, K),
+        (Prefix.MEGA, M),
+        (Prefix.GIGA, G),
+        (Prefix.TERA, T),
+        (Prefix.PETA, P),
+        (Prefix.EXA, E),
+        (Prefix.ZETTA, Z),
+        (Prefix.YOTTA, Y),
+    ]
+
+    target_prefix_inclusion_difference = 3
+    base_10 = log10(value)
+    value_target_base = floor(base_10)
+
+    closest_prefix = None
+    min_difference = 2
+    for prefix, _ in prefixes:
+        difference = abs(value_target_base - prefix.value)
+        if difference < min_difference:
+            min_difference = difference
+            closest_prefix = prefix
+
+    value /= 10 ** closest_prefix.value
+
+    return value * closest_prefix
+
 
 
 # Star-imports *do not* include the single-character names `µ`, `e`, et al.
