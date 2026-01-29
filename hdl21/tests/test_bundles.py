@@ -3,6 +3,7 @@
 
 Not necessarily exclusive to `Bundle`s, but focusing on them.
 """
+
 import copy, pytest
 from enum import Enum, auto
 
@@ -630,8 +631,7 @@ def test_bundle_noconns():
     """Test connecting `NoConn` to bundle-valued ports"""
 
     @h.bundle
-    class A:
-        ...  # empty
+    class A: ...  # empty
 
     @h.bundle
     class B:
@@ -746,8 +746,7 @@ def test_flipped():
     from hdl21.bundle import flippable
 
     @h.bundle
-    class Empty:
-        ...  # like it says, empty
+    class Empty: ...  # like it says, empty
 
     assert flippable(Empty)
 

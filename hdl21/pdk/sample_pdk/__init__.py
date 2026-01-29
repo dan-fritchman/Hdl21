@@ -1,8 +1,8 @@
 """
-# Hdl21 PDK Sample 
+# Hdl21 PDK Sample
 
-An entirely fictitious process-technology, 
-written solely as a demonstration of an `hdl21.pdk` plug-in package. 
+An entirely fictitious process-technology,
+written solely as a demonstration of an `hdl21.pdk` plug-in package.
 """
 
 from pathlib import Path

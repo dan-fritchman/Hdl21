@@ -1,5 +1,5 @@
-""" 
-# Hdl21 Built-In Generators Library 
+"""
+# Hdl21 Built-In Generators Library
 """
 
 from copy import deepcopy

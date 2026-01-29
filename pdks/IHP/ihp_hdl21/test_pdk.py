@@ -272,12 +272,8 @@ def test_inverter():
         out = h.Port()
 
         # Use CORE family for LV transistors
-        p = h.Mos(tp=MosType.PMOS, family=MosFamily.CORE)(
-            g=inp, d=out, s=vdd, b=vdd
-        )
-        n = h.Mos(tp=MosType.NMOS, family=MosFamily.CORE)(
-            g=inp, d=out, s=vss, b=vss
-        )
+        p = h.Mos(tp=MosType.PMOS, family=MosFamily.CORE)(g=inp, d=out, s=vdd, b=vdd)
+        n = h.Mos(tp=MosType.NMOS, family=MosFamily.CORE)(g=inp, d=out, s=vss, b=vss)
 
     # Compile
     ihp.compile(Inverter)
@@ -303,12 +299,8 @@ def test_io_buffer():
         out = h.Port()
 
         # Use IO family for HV transistors
-        p = h.Mos(tp=MosType.PMOS, family=MosFamily.IO)(
-            g=inp, d=out, s=vdd, b=vdd
-        )
-        n = h.Mos(tp=MosType.NMOS, family=MosFamily.IO)(
-            g=inp, d=out, s=vss, b=vss
-        )
+        p = h.Mos(tp=MosType.PMOS, family=MosFamily.IO)(g=inp, d=out, s=vdd, b=vdd)
+        n = h.Mos(tp=MosType.NMOS, family=MosFamily.IO)(g=inp, d=out, s=vss, b=vss)
 
     # Compile
     ihp.compile(IoBuffer)

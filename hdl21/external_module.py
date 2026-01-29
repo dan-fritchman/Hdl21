@@ -1,7 +1,7 @@
 """
 # External Module
 
-Wrapper for circuits defined outside Hdl21. 
+Wrapper for circuits defined outside Hdl21.
 """
 
 from typing import Any, Optional, List, Type, Dict

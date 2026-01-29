@@ -1,5 +1,5 @@
 """
-# Slice and Concatenation Resolution 
+# Slice and Concatenation Resolution
 """
 
 # Std-Lib Imports
@@ -59,7 +59,8 @@ def _resolve_sliceable(conn: Sliceable) -> Sliceable:
 
 def _list_slice(slize: Slice) -> List[Slice]:
     """Internal recursive helper for `resolve_slice`.
-    Returns a list of Slices in which each element has a concrete Signal for its parent."""
+    Returns a list of Slices in which each element has a concrete Signal for its parent.
+    """
 
     # Resolve "full-width" slices to their parent Signals
     if width(slize) == width(slize.parent):

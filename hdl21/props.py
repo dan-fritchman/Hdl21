@@ -4,7 +4,7 @@
 Properties are a simple key-value store for arbitrary data.
 Keys must be strings. Values may be any type.
 
-Properties serve as a handy place for storing "off-schema" data 
+Properties serve as a handy place for storing "off-schema" data
 on HDL objects such as Signals, Modules, and Instances.
 """
 

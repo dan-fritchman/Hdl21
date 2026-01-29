@@ -1,13 +1,13 @@
-""" 
-# Hdl21 + ASAP7 PDK Modules and Transformations 
+"""
+# Hdl21 + ASAP7 PDK Modules and Transformations
 
-Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the ASAP7 predictive-technology PDK, 
-defined at https://github.com/The-OpenROAD-Project/asap7, 
-and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules. 
+Defines a set of `hdl21.ExternalModule`s comprising the essential devices of the ASAP7 predictive-technology PDK,
+defined at https://github.com/The-OpenROAD-Project/asap7,
+and an `hdl21pdk.netlist` method for converting process-portable `hdl21.Primitive` elements into these modules.
 
-The primitive components of the ASAP7 PDK are comprised solely of core Mos transistors `{n,p}mos_{rvt,lvt,slvt,sram}`. 
+The primitive components of the ASAP7 PDK are comprised solely of core Mos transistors `{n,p}mos_{rvt,lvt,slvt,sram}`.
 
-FIXME!: Unlike the common subckt-based models provided by physical PDKs, the ASAP7 transistors are provided solely 
+FIXME!: Unlike the common subckt-based models provided by physical PDKs, the ASAP7 transistors are provided solely
 as BSIM-CMG `.model` definitions. These are represented as (FIXME: ...)
 
 """
@@ -25,8 +25,7 @@ from hdl21.primitives import Mos, MosType, MosVth, MosParams
 
 
 @dataclass
-class Install(PdkInstallation):
-    ...  # No content
+class Install(PdkInstallation): ...  # No content
 
 
 # The optional external-data installation.

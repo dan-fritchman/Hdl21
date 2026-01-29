@@ -53,6 +53,7 @@ class IhpMosParams:
         ng: Number of gate fingers. Default is 1.
         m: Multiplier. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in µm", default=0.35)
     l = h.Param(dtype=h.Scalar, desc="Length in µm", default=0.13)
     ng = h.Param(dtype=h.Scalar, desc="Number of gate fingers", default=1)
@@ -73,6 +74,7 @@ class IhpMosHvParams:
         ng: Number of gate fingers. Default is 1.
         m: Multiplier. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in µm", default=0.35)
     l = h.Param(dtype=h.Scalar, desc="Length in µm", default=0.45)
     ng = h.Param(dtype=h.Scalar, desc="Number of gate fingers", default=1)
@@ -92,6 +94,7 @@ class IhpHbtParams:
         Ny: Number of emitters in Y direction. Default is 1.
         m: Multiplier. Default is 1.
     """
+
     Nx = h.Param(dtype=h.Scalar, desc="Number of emitters in X", default=1)
     Ny = h.Param(dtype=h.Scalar, desc="Number of emitters in Y", default=1)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -107,6 +110,7 @@ class IhpPnpParams:
         l: Length in microns. Default is 2µm.
         m: Multiplier. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in µm", default=1.0)
     l = h.Param(dtype=h.Scalar, desc="Length in µm", default=2.0)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -124,6 +128,7 @@ class IhpResParams:
         l: Length in microns. Default is 2.0µm.
         m: Multiplier. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in µm", default=0.5)
     l = h.Param(dtype=h.Scalar, desc="Length in µm", default=2.0)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -141,6 +146,7 @@ class IhpCapParams:
         l: Length in microns. Default is 6.0µm (minimum).
         m: Multiplier. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in µm", default=6.0)
     l = h.Param(dtype=h.Scalar, desc="Length in µm", default=6.0)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -158,6 +164,7 @@ class IhpVaricapParams:
         l: Length in microns. Default is 1.0µm.
         m: Multiplier. Default is 1.
     """
+
     w = h.Param(dtype=h.Scalar, desc="Width in µm", default=1.0)
     l = h.Param(dtype=h.Scalar, desc="Length in µm", default=1.0)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -175,6 +182,7 @@ class IhpDiodeParams:
         pj: Junction perimeter in microns. Default is 4.0.
         m: Multiplier. Default is 1.
     """
+
     area = h.Param(dtype=h.Scalar, desc="Area in µm²", default=1.0)
     pj = h.Param(dtype=h.Scalar, desc="Junction perimeter in µm", default=4.0)
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
@@ -191,6 +199,7 @@ class IhpEsdParams:
     Attributes:
         m: Multiplier. Default is 1.
     """
+
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
 
@@ -204,6 +213,7 @@ class IhpLogicParams:
     Attributes:
         m: Multiplier. Default is 1.
     """
+
     m = h.Param(dtype=h.Scalar, desc="Multiplier", default=1)
 
 

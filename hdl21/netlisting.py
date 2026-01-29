@@ -1,5 +1,5 @@
-""" 
-# Hdl21 Netlisting 
+"""
+# Hdl21 Netlisting
 """
 
 from typing import IO, Union, Optional
@@ -22,7 +22,7 @@ def netlist(
     dest: IO,
     *,
     domain: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """
     # Hdl21 Netlisting

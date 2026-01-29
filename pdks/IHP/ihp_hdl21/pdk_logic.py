@@ -476,9 +476,7 @@ class IhpWalker(h.HierarchyWalker):
             return h.Literal(f"({orig.text} * 1e6)")
         raise TypeError(f"Param Value {orig}")
 
-    def use_defaults(
-        self, params: h.paramclass, modname: str, defaults: dict
-    ) -> tuple:
+    def use_defaults(self, params: h.paramclass, modname: str, defaults: dict) -> tuple:
         """Get width and length, using defaults if not specified."""
 
         w = params.w if params.w is not None else defaults.get(modname, (1.0, 1.0))[0]

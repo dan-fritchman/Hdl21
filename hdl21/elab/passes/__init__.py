@@ -1,7 +1,7 @@
-""" 
+"""
 # Elaboration Passes
 
-Recursive walkers of Hdl21 hierarchies which perform the mechanics of elaboration. 
+Recursive walkers of Hdl21 hierarchies which perform the mechanics of elaboration.
 """
 
 # Import the abstract base class for typing guards

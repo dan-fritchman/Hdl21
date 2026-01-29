@@ -367,6 +367,7 @@ def test_sim_transient():
     @h.module
     class RingOsc3:
         """3-stage ring oscillator"""
+
         VDD, VSS = 2 * h.Port()
         out = h.Port()
         n1, n2 = 2 * h.Signal()

@@ -1,11 +1,11 @@
 """
-# Helper for resolving the "types" of references. 
+# Helper for resolving the "types" of references.
 
-Note "types" here does not mean Python-types, but something more like "connection types". 
-Resolving a reference "type" produces either a Signal or BundleInstance, 
-which is "compatible with", but not equal to, the ultimate referent. 
+Note "types" here does not mean Python-types, but something more like "connection types".
+Resolving a reference "type" produces either a Signal or BundleInstance,
+which is "compatible with", but not equal to, the ultimate referent.
 
-For example: 
+For example:
 
 ```python
 @h.module
@@ -14,7 +14,7 @@ class Inner:
 
 @h.module
 class Outer:
-    i = Inner() 
+    i = Inner()
 
 # Create a `PortRef`
 ref = Outer.i.p
@@ -25,12 +25,12 @@ assert resolve_portref_type(ref) is not Outer.i.p
 assert resolve_portref_type(ref) is not Inner.p
 ```
 
-Here `ref` will ultimately refer to the a Signal within an `Instance` of `Inner`. 
-At the time of calling `resolve_portref_type`, no such Signal exists. 
-The result of `resolve_portref_type` is therefore the `Inner` *Module definition level* Signal object. 
+Here `ref` will ultimately refer to the a Signal within an `Instance` of `Inner`.
+At the time of calling `resolve_portref_type`, no such Signal exists.
+The result of `resolve_portref_type` is therefore the `Inner` *Module definition level* Signal object.
 This is often required e.g. for connection-validity checking, or for copying to new Signals.
 
-The important thing is: don't take the results of `resolve_*_type` as the actual referents! 
+The important thing is: don't take the results of `resolve_*_type` as the actual referents!
 """
 
 # Std-Lib Imports

@@ -1,6 +1,7 @@
 """
-hdl21 ProtoBuf Import 
+hdl21 ProtoBuf Import
 """
+
 from types import SimpleNamespace
 from typing import Union, Any, Dict, List, Optional
 
@@ -190,7 +191,7 @@ class ProtoImporter:
 
 
 def import_ports_and_signals(
-    pmod: Union[vckt.Module, vckt.ExternalModule]
+    pmod: Union[vckt.Module, vckt.ExternalModule],
 ) -> List[Signal]:
     """Import all Ports and Signals from Proto-Module `pmod`.
     Returns them as a single list, which can serve as arguments to `Module.add` or `ExternalModule.port_list`.

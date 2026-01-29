@@ -1,5 +1,5 @@
 """
-Spice-Class Simulation Interface 
+Spice-Class Simulation Interface
 """
 
 from textwrap import dedent

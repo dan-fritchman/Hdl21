@@ -1,17 +1,17 @@
 """
 # Metric Prefixes
 
-Defines the `Prefix` enumeration of SI unit-prefixes, 
-and the `Prefixed` combination of a `Prefix` and a literal value. 
+Defines the `Prefix` enumeration of SI unit-prefixes,
+and the `Prefixed` combination of a `Prefix` and a literal value.
 
-Common prefixes such as µ (micro), n (nano), and K (kilo) 
+Common prefixes such as µ (micro), n (nano), and K (kilo)
 are also exposed as single-character identifiers.
-Most commonly these can be used with the multiplication operator 
+Most commonly these can be used with the multiplication operator
 in expressions such as `5 * n`, `11 * M`, and `1 * µ`.
 
-For generation of other prefixes an `e()` function allows for syntax similar to 
-typical floating-point value generation. This is again most commonly useful in conjunction 
-with the multiplication operator, to construct values such as `11 * e(-21)`. 
+For generation of other prefixes an `e()` function allows for syntax similar to
+typical floating-point value generation. This is again most commonly useful in conjunction
+with the multiplication operator, to construct values such as `11 * e(-21)`.
 
 """
 
