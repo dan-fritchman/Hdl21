@@ -114,7 +114,8 @@ def test_bad_params1():
     with pytest.raises(RuntimeError):
         # Test that sub-classing a h.paramclass fails
 
-        class D(C): ...
+        class D(C):
+            ...
 
     with pytest.raises((TypeError, ValidationError)):
         # Test that missing arguments fail
@@ -134,13 +135,15 @@ def test_bad_params1():
     with pytest.raises(RuntimeError):
         # Test "no Module sub-classing"
 
-        class E(h.Module): ...
+        class E(h.Module):
+            ...
 
     with pytest.raises(RuntimeError):
         # Test "no decorating inherited types"
 
         @h.module
-        class E2(TabError): ...
+        class E2(TabError):
+            ...
 
     with pytest.raises(RuntimeError):
         # Test bad parameter names
