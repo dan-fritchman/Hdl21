@@ -119,12 +119,16 @@ def _slice_inner(slize: Slice) -> SliceInner:
             top = (
                 parent.width
                 if start is None
-                else start + 1 if start >= 0 else parent.width + start + 1
+                else start + 1
+                if start >= 0
+                else parent.width + start + 1
             )
             bot = (
                 0
                 if stop is None
-                else stop + 1 if stop >= 0 else parent.width + stop + 1
+                else stop + 1
+                if stop >= 0
+                else parent.width + stop + 1
             )
             # Align bot with the step
             bot += (top - bot) % abs(step)
@@ -134,7 +138,9 @@ def _slice_inner(slize: Slice) -> SliceInner:
             top = (
                 parent.width
                 if stop is None
-                else stop if stop >= 0 else parent.width + stop
+                else stop
+                if stop >= 0
+                else parent.width + stop
             )
             bot = 0 if start is None else start if start >= 0 else parent.width + start
             # Align top with the step

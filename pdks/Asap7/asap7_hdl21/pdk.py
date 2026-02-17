@@ -25,7 +25,8 @@ from hdl21.primitives import Mos, MosType, MosVth, MosParams
 
 
 @dataclass
-class Install(PdkInstallation): ...  # No content
+class Install(PdkInstallation):
+    ...  # No content
 
 
 # The optional external-data installation.

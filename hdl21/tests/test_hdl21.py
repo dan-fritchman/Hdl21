@@ -628,7 +628,8 @@ def test_illegal_module_attrs():
         a = list()
 
     @h.module
-    class C: ...
+    class C:
+        ...
 
     with pytest.raises(TypeError):
         C.b = TabError
@@ -650,7 +651,8 @@ def test_illegal_module_attrs():
     # As of v2.0 this is allowed, although `fail` does not show up on the resultant `Module`.
     @h.module
     class HasMethod:
-        def fail(self): ...
+        def fail(self):
+            ...
 
     assert not hasattr(HasMethod, "fail")
 
@@ -743,7 +745,8 @@ def test_wrong_decorator():
     with pytest.raises(TypeError) as e:
 
         @h.Module  # Bad!
-        class M: ...
+        class M:
+            ...
 
     assert "Did you mean to use the `module` decorator?" in str(e)
 
@@ -1301,7 +1304,8 @@ def test_bad_generators():
     """Test generator functions with bad call-signatures."""
 
     @h.paramclass
-    class P: ...
+    class P:
+        ...
 
     @h.generator  # A good, working generator!
     def good(p: P) -> h.Module:
@@ -1413,7 +1417,8 @@ def test_properties():
     assert m.props["my_favorite_number"] == 42
 
     @h.module
-    class M: ...
+    class M:
+        ...
 
     M.props["your_favorite_number"] = 11
     assert M.props["your_favorite_number"] == 11
@@ -1423,7 +1428,8 @@ def test_properties():
     assert mi.props["abc"] == 123
 
     @h.bundle
-    class B: ...
+    class B:
+        ...
 
     B.props["their_favorite_number"] = 3
     assert B.props["their_favorite_number"] == 3
