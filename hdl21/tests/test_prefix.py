@@ -117,9 +117,9 @@ def test_prefix_pow():
     """Test `Prefix` exponentiation"""
     from hdl21.prefix import µ, e
 
-    assert µ**2 == e(-12)
-    assert µ**0.5 == e(-3)
-    assert µ**-1 == e(6)
+    assert µ ** 2 == e(-12)
+    assert µ ** 0.5 == e(-3)
+    assert µ ** -1 == e(6)
 
 
 def test_prefixed_mul():
@@ -258,7 +258,7 @@ def test_e_pow():
     assert (2 * e(-2)) ** 2 == 4 * e(-4)
 
     # Precision-error tests
-    assert (3 * e(4)) ** 0.25, Decimal(3**0.25) * e(1)
+    assert (3 * e(4)) ** 0.25, Decimal(3 ** 0.25) * e(1)
 
 
 def test_e_div():
@@ -512,3 +512,12 @@ def test_prefixed_and_scalar_conversions():
         p = P(x=None, y=2)
     with pt.raises(ValidationError):
         p = P(x=3, y=None)
+
+
+def test_convert_numeric_to_prefix():
+    value = 1e4
+    converted_value = h.prefix.convert_numeric_to_prefix(value)
+    assert 10 * h.prefix.K == converted_value
+    value = 1e-4
+    converted_value = h.prefix.convert_numeric_to_prefix(value)
+    assert 0.1 * h.prefix.m == converted_value
