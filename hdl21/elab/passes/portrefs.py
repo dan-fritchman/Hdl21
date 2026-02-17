@@ -292,41 +292,37 @@ class ResolvePortRefs(ElabPass):
 class SetList:
     """A common combination of a hash-set and ordered list of the same items.
     Used for keeping ordered items while maintaining quick membership testing.
-
-    FIXME: this is really using a LIST for now, slowing down membership tests,
-    but should be set-based when some connectable types, particularly `Signal`, are ready for it.
     """
 
     def __init__(self):
-        # self.set = set()
+        self.set = set()
         self.list = list()
 
     def __bool__(self):
         return bool(self.list)
 
     def __contains__(self, item):
-        # return item in self.set
-        return item in self.list
+        return item in self.set
 
     def add(self, item):
-        # if item not in self.set:
-        if item not in self.list:
-            # self.set.add(item)
+        if item not in self.set:
+            self.set.add(item)
             self.list.append(item)
+        else:
+            raise RuntimeError(f"Item {item} already in SetList")
 
     def remove(self, item):
-        # if item not in self.set:
-        if item not in self.list:
-            raise RuntimeError
-            # self.set.add(item)
+        if item not in self.set:
+            raise RuntimeError(f"Item {item} not in SetList")
+        self.set.remove(item)
         self.list.remove(item)
 
     def pop(self):
-        # if item not in self.set:
         if not self.list:
-            raise RuntimeError
-            # self.set.add(item)
-        return self.list.pop(0)
+            raise RuntimeError("SetList is empty")
+        popped = self.list.pop(0)
+        self.set.remove(popped)
+        return popped
 
     @property
     def order(self):
