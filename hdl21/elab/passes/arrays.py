@@ -1,5 +1,5 @@
 """
-# Array Flattening 
+# Array Flattening
 """
 
 # Local imports
@@ -22,7 +22,8 @@ class ArrayFlattener(ElabPass):
 
     def elaborate_module(self, module: Module) -> Module:
         """Elaborate Module `module`.
-        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances."""
+        Primarily performs flattening of Instance Arrays, and re-connecting to the resultant flattened instances.
+        """
 
         # Flatten Instance arrays
         while module.instarrays:

@@ -1,7 +1,7 @@
 """
 # Test Content
 
-A semi-comprehensive set of Hdl21 features, for use in testing related packages, e.g. PDKs. 
+A semi-comprehensive set of Hdl21 features, for use in testing related packages, e.g. PDKs.
 """
 
 import hdl21 as h
@@ -53,5 +53,6 @@ class Top2:
 
 def walker_test_content():
     """Create a set of content for a `h.HierarchyWalker` test.
-    Returns a list of combinations of modules, generator calls, and all the internal features inside."""
+    Returns a list of combinations of modules, generator calls, and all the internal features inside.
+    """
     return [Top1(N(1)), Top2]

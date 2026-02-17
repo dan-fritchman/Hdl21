@@ -1,5 +1,5 @@
 """
-# Bundles Example 
+# Bundles Example
 
 Uses a typical embedded system as an example to demonstrate the use of hdl21 `Bundle`s.
 """

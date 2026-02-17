@@ -1,31 +1,31 @@
 """
 # Hdl21 Primitive Modules
 
-Primitives are leaf-level Modules typically defined not by users, 
-but by simulation tools or device fabricators. 
-Prominent examples include MOS transistors, diodes, resistors, and capacitors. 
+Primitives are leaf-level Modules typically defined not by users,
+but by simulation tools or device fabricators.
+Prominent examples include MOS transistors, diodes, resistors, and capacitors.
 
-Primitives divide in two classes, `physical` and `ideal`, indicated by their `primtype` attribute. 
-`PrimitiveType.IDEAL` primitives specify circuit-theoretic ideal elements 
-e.g. resistors, capacitors, inductors, and notably aphysical elements 
-such as ideal voltage and current sources. 
+Primitives divide in two classes, `physical` and `ideal`, indicated by their `primtype` attribute.
+`PrimitiveType.IDEAL` primitives specify circuit-theoretic ideal elements
+e.g. resistors, capacitors, inductors, and notably aphysical elements
+such as ideal voltage and current sources.
 
-`PrimitiveType.PHYSICAL` primitives in contrast specify abstract versions 
-of ultimately physically-realizable elements such as transistors and diodes. 
-These elements typically require some external translation, e.g. by a process-technology 
-library, to execute in simulations or to be realized in hardware. 
+`PrimitiveType.PHYSICAL` primitives in contrast specify abstract versions
+of ultimately physically-realizable elements such as transistors and diodes.
+These elements typically require some external translation, e.g. by a process-technology
+library, to execute in simulations or to be realized in hardware.
 
-Many element-types (particularly passives) come in both `ideal` and `physical` flavors, 
-as typical process-technologies include physical passives, but with far different 
-parameterization than ideal passives. For example resistors are commonly specified 
-in physical length and width. Capacitors are similarly specified in physical terms, 
-often adding metal layers or other physical features. The component-value (R,C,L, etc.) 
-for these physically-specified cells is commonly suggestive or optional. 
+Many element-types (particularly passives) come in both `ideal` and `physical` flavors,
+as typical process-technologies include physical passives, but with far different
+parameterization than ideal passives. For example resistors are commonly specified
+in physical length and width. Capacitors are similarly specified in physical terms,
+often adding metal layers or other physical features. The component-value (R,C,L, etc.)
+for these physically-specified cells is commonly suggestive or optional.
 
-Both the `Primitive` type and all of its instances are defined in this module. 
-The collection of `Primitive` instances is often referred to as Hdl21's "primitive library". 
+Both the `Primitive` type and all of its instances are defined in this module.
+The collection of `Primitive` instances is often referred to as Hdl21's "primitive library".
 
-Summary of the content of the primitive library: 
+Summary of the content of the primitive library:
 
 | Name                           | Description                       | Type     | Aliases                               | Ports        |
 | ------------------------------ | --------------------------------- | -------- | ------------------------------------- | ------------ |

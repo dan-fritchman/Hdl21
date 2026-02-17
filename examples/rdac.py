@@ -1,7 +1,7 @@
 """
 # Resistor DAC Example
 
-An example of using `ExternalModule`s representing an implementation technology/ PDK 
+An example of using `ExternalModule`s representing an implementation technology/ PDK
 in a parametric resistive DAC generator.
 """
 
@@ -225,9 +225,7 @@ def mux_tree(params: MuxTreeParams) -> h.Module:
         layer_mux_conns["ctrl"] = MuxTree.ctrl[layer]
         layer_mux_conns["ctrl_b"] = MuxTree.ctrl_b[layer]
         if layer != 0:
-            curr_output = MuxTree.add(
-                name=f"sig_{layer}", val=h.Signal(width=2**layer)
-            )
+            curr_output = MuxTree.add(name=f"sig_{layer}", val=h.Signal(width=2**layer))
         else:
             curr_output = MuxTree.out
         for mux_idx in range(2**layer):

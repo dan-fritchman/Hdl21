@@ -1,14 +1,14 @@
 """
 # VLSIR ProtoBuf Schema Export
 
-Primary entrypoint `to_proto` turns a set of elaborate-able `Elaboratables`, 
-and turns them into a `vlsir.circuit.Package`. 
+Primary entrypoint `to_proto` turns a set of elaborate-able `Elaboratables`,
+and turns them into a `vlsir.circuit.Package`.
 
-Most export-machinery is accomplished by primary implementation-class `ProtoExporter`, 
-which particularly handles hierarchically-referential types such as `Module`, `Instance`, and `ExternalModule`. 
+Most export-machinery is accomplished by primary implementation-class `ProtoExporter`,
+which particularly handles hierarchically-referential types such as `Module`, `Instance`, and `ExternalModule`.
 
-Exports of simpler "scalar"(-ish) types such as `Signal`s and `Param`s are provided as 
-free-standing functions to enable use elsewhere. 
+Exports of simpler "scalar"(-ish) types such as `Signal`s and `Param`s are provided as
+free-standing functions to enable use elsewhere.
 """
 
 from decimal import Decimal
@@ -270,7 +270,7 @@ def export_port_dir(port: Port) -> vckt.Port.Direction:
 
 
 def export_connection_target(
-    sig: Union[Signal, Slice, Concat]
+    sig: Union[Signal, Slice, Concat],
 ) -> vckt.ConnectionTarget:
     """Export a proto `ConnectionTarget`"""
 

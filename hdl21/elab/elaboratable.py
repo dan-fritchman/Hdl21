@@ -1,8 +1,8 @@
 """
-# Elaborate-able Types 
+# Elaborate-able Types
 
-More specifically, things that can be *the top level* of an elaboration process. 
-Sets the type-bounds on primary arguments to `elaborate` and related functions. 
+More specifically, things that can be *the top level* of an elaboration process.
+Sets the type-bounds on primary arguments to `elaborate` and related functions.
 """
 
 from typing import Any, List, Union

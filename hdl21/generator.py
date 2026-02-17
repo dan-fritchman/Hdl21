@@ -1,8 +1,8 @@
 """
 # Generators
 
-Functions that return Modules. 
-Including facilities for embedding them in a hardware hierarchy. 
+Functions that return Modules.
+Including facilities for embedding them in a hardware hierarchy.
 """
 
 # Std-Lib imports

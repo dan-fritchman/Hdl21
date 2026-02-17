@@ -1,8 +1,8 @@
-""" 
-# Fully Differential OTA Example 
+"""
+# Fully Differential OTA Example
 
-Highlights the capacity to use `Diff` signals and `Pair`s of instances 
-for differential circuits. 
+Highlights the capacity to use `Diff` signals and `Pair`s of instances
+for differential circuits.
 
 """
 

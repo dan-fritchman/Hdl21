@@ -1,7 +1,7 @@
 """
 # Hdl21 Pytest Configuration
 
-Primarily adds the simulator-focused options enabled by `VlsirTools`. 
+Primarily adds the simulator-focused options enabled by `VlsirTools`.
 """
 
 import sys

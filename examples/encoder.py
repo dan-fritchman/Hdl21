@@ -1,8 +1,8 @@
 """
-# Logical Encoder Example 
+# Logical Encoder Example
 
-A demonstration of: 
-* Using `ExternalModule`s of externally-defined logic cells 
+A demonstration of:
+* Using `ExternalModule`s of externally-defined logic cells
 * Creating a *recursive* `Module` generator, for a parameteric-width one-hot encoder
 """
 
