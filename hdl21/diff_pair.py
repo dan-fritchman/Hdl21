@@ -1,5 +1,5 @@
 """
-# `Diff` Differential Bundle and `Pair` Instance Pair 
+# `Diff` Differential Bundle and `Pair` Instance Pair
 """
 
 # Std-Lib Imports

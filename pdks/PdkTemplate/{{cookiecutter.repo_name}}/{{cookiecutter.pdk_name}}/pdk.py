@@ -1,5 +1,5 @@
-""" 
-# {{cookiecutter.repo_name}} 
+"""
+# {{cookiecutter.repo_name}}
 ## {{cookiecutter.pdk_name}} Hdl21 PDK Package
 """
 
@@ -109,9 +109,9 @@ class Cache:
     mos_modcalls: Dict[h.primitives.Mos.Params, h.ExternalModuleCall] = field(
         default_factory=dict
     )
-    res_modcalls: Dict[
-        h.primitives.PhysicalResistor.Params, h.ExternalModuleCall
-    ] = field(default_factory=dict)
+    res_modcalls: Dict[h.primitives.PhysicalResistor.Params, h.ExternalModuleCall] = (
+        field(default_factory=dict)
+    )
 
 
 CACHE = Cache()

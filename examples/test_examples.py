@@ -1,10 +1,10 @@
 """
-# Hdl21 Examples 
+# Hdl21 Examples
 ## In-line Test Suite
 
-Generally runs the main function of each example "script". 
-Check for errors where we can, but largely just check whether they generate exceptions. 
-Importing these functions with names that begin with `test_` gets them picked up by pytest. 
+Generally runs the main function of each example "script".
+Check for errors where we can, but largely just check whether they generate exceptions.
+Importing these functions with names that begin with `test_` gets them picked up by pytest.
 """
 
 from .ro import main as test_ro

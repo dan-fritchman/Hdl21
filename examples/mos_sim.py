@@ -1,5 +1,5 @@
 """
-# Mos DC Operating Point Simulation 
+# Mos DC Operating Point Simulation
 
 A simple, common spice-class simulation example using the built-in `sample` PDK.
 """

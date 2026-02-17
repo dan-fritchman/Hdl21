@@ -1,7 +1,7 @@
 """
-# Width Resolution Helper 
+# Width Resolution Helper
 
-Function to determine the `width` of connectable types. 
+Function to determine the `width` of connectable types.
 """
 
 # Std-Lib Imports
@@ -37,7 +37,8 @@ def fail(msg: str) -> None:
 def width(conn: Connectable, failer: Callable = fail) -> int:
     """Get the `width` of a conn. Largely dispatches across conn types.
     Optional function-valued argument `failer` is passed all errors.
-    This is commonly used to pass failure information and control back to `ElabPass`s."""
+    This is commonly used to pass failure information and control back to `ElabPass`s.
+    """
 
     # A reminder, as of this writing:
     # Connectable = Union["Signal", "Slice", "Concat", "NoConn", "PortRef", "BundleInstance", "AnonymousBundle", "BundleRef"]
@@ -68,7 +69,8 @@ def ref_width(ref: Union[PortRef, BundleRef], failer: Callable = fail) -> int:
     And cache the result on the Ref for future use.
 
     Optional function-valued argument `failer` is passed all errors.
-    This is commonly used to pass failure information and control back to `ElabPass`s."""
+    This is commonly used to pass failure information and control back to `ElabPass`s.
+    """
 
     if ref._width is not None:
         return ref._width

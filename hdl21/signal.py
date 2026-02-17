@@ -1,22 +1,22 @@
 """
-# hdl21 Signals and Ports 
+# hdl21 Signals and Ports
 
-Signals are Hdl21's base-level unit of hardware connectivity. 
+Signals are Hdl21's base-level unit of hardware connectivity.
 
-Each `Signal` is analogous in content to a *bus* or (single-dimensional) *array* in many legacy HDLs. 
-(Most similar to Verilog's packed single-dimensional arrays.) 
-The `Signal.width` field indicates the bit-width of said bus. 
-It defaults to one for scalar Signals. 
-Widths of zero or less generate errors, both at construction-time and later. 
+Each `Signal` is analogous in content to a *bus* or (single-dimensional) *array* in many legacy HDLs.
+(Most similar to Verilog's packed single-dimensional arrays.)
+The `Signal.width` field indicates the bit-width of said bus.
+It defaults to one for scalar Signals.
+Widths of zero or less generate errors, both at construction-time and later.
 
-Hdl21 `Signals` are *untyped*. 
-They represent a connection, not the type or value of data it carries. 
-In this sense they are more similar to analog-style environments than to most legacy HDLs. 
+Hdl21 `Signals` are *untyped*.
+They represent a connection, not the type or value of data it carries.
+In this sense they are more similar to analog-style environments than to most legacy HDLs.
 
-`Ports`, `Inputs`, `Outputs`, and `Inouts` are not dedicated Hdl21 types, 
-but thin convenience function-wrappers around `Signal`. 
-Each `Signal` includes enumerated fields for its visibility (internal vs port) 
-and direction. For internal `Signals`, the `direction` field is globally expected to be ignored. 
+`Ports`, `Inputs`, `Outputs`, and `Inouts` are not dedicated Hdl21 types,
+but thin convenience function-wrappers around `Signal`.
+Each `Signal` includes enumerated fields for its visibility (internal vs port)
+and direction. For internal `Signals`, the `direction` field is globally expected to be ignored.
 
 """
 

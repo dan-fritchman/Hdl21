@@ -1,9 +1,9 @@
 """
-# hdl21.module 
+# hdl21.module
 The `Module` module (get it?)
 
-This module primarily defines: 
-* The core circuit-reuse element `hdl21.Module` 
+This module primarily defines:
+* The core circuit-reuse element `hdl21.Module`
 * The `@module` (lower-case) decorator-function, for class-syntax creation of `Module`s
 """
 

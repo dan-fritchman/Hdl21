@@ -1,5 +1,5 @@
 """
-# Global Foundries 180nm OSS PDK Plug-In 
+# Global Foundries 180nm OSS PDK Plug-In
 
 Unit Tests
 """

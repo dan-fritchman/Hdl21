@@ -1,9 +1,9 @@
 """
-# Elaboration 
+# Elaboration
 
-Defines the primary `elaborate` method used to flesh out an in-memory `Module` or `Generator`. 
-Internally defines and uses a number of hierarchical visitor-classes which traverse the hardware hierarchy, 
-performing one or more transformation-passes.  
+Defines the primary `elaborate` method used to flesh out an in-memory `Module` or `Generator`.
+Internally defines and uses a number of hierarchical visitor-classes which traverse the hardware hierarchy,
+performing one or more transformation-passes.
 """
 
 # Std-Lib Imports

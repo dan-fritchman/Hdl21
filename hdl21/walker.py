@@ -1,5 +1,5 @@
 """
-# Hierachy Walker Module 
+# Hierachy Walker Module
 """
 
 # Std-Lib
@@ -92,7 +92,8 @@ class HierarchyWalker:
     @classmethod
     def walk(cls, src: Elaboratables) -> Elaboratables:
         """Walk a hierarchical design tree or list of them.
-        Class-level method commonly called on sub-classes, e.g. in PDK compilation methods."""
+        Class-level method commonly called on sub-classes, e.g. in PDK compilation methods.
+        """
         return cls().visit_elaboratables(src)
 
 

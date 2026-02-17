@@ -3,17 +3,15 @@ name = "hdl21"
 description = "Hardware Description Library"
 version = "7.0.0" # VLSIR_VERSION
 dependencies = [
-  "vlsir>=7.0.0",      # VLSIR_VERSION
-  "vlsirtools>=7.0.0", # VLSIR_VERSION
+  "vlsir>=7.0.0.dev1",      # VLSIR_VERSION
+  "vlsirtools>=7.0.0.dev1", # VLSIR_VERSION
   "pydantic>=1.9.0,<3",
-  "typing-extensions"
-
 ]
-requires-python = ">=3.7, <3.13"
+requires-python = ">=3.9, <3.13"
 maintainers = [{ name = "Dan Fritchman", email = "dan@fritch.mn" }]
 authors = [
   { name = "Dan Fritchman", email = "dan@fritch.mn" },
-  { name = "Thomas Pluck" },
+  { name = "Thomas Pluck", email = "thomaspluck95@proton.me" },
   { name = "Kennedy Caisley" },
   { name = "Zeyi Wang" },
   { name = "Arya Reais-Parsi" },
@@ -31,7 +29,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["vlsirdev"]
+dev = ["vlsirdev>=7.0.0.dev1"]
 
 [project.urls]
 Homepage = "https://github.com/dan-fritchman/Hdl21"

@@ -1,5 +1,5 @@
 """
-# Connection Type Checking 
+# Connection Type Checking
 """
 
 # Std-Lib Imports

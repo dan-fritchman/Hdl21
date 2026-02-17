@@ -1,5 +1,5 @@
-""" 
-# `hdl21.Bundle` and Related Classes 
+"""
+# `hdl21.Bundle` and Related Classes
 
 Structured connection objects, instances thereof, and associated utilities.
 """

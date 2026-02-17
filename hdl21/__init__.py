@@ -1,5 +1,5 @@
-""" 
-# Hdl21 Hardware Description Library 
+"""
+# Hdl21 Hardware Description Library
 """
 
 __version__ = "7.0.0"  # VLSIR_VERSION

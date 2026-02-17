@@ -1,8 +1,8 @@
 """
-# Qualified Names 
+# Qualified Names
 
-Helpers for uniquely identifying a Module or ExternalModule, 
-given their native language (Python) has hierarchical namespaces, 
+Helpers for uniquely identifying a Module or ExternalModule,
+given their native language (Python) has hierarchical namespaces,
 and many of their import/ export languages (e.g. Verilog, netlists) do not.
 """
 

@@ -1,8 +1,8 @@
-""" 
+"""
 # Hdl21 Unit Tests
 
-* Exporting to VLSIR 
-  * Ultimately to EDA formats 
+* Exporting to VLSIR
+  * Ultimately to EDA formats
 * Importing back from VLSIR
 """
 

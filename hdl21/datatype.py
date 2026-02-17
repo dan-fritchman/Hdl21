@@ -1,13 +1,13 @@
-""" 
-# Datatypes Decorator 
+"""
+# Datatypes Decorator
 
-Wraps `@pydantic.dataclasses.dataclass` so that we can make forward type-references 
-throughout the package, and then sort them all out at the end of import-time. 
+Wraps `@pydantic.dataclasses.dataclass` so that we can make forward type-references
+throughout the package, and then sort them all out at the end of import-time.
 
 The intended usage is such that `__init__.py` includes
 
 ```python
-# Import all the other code 
+# Import all the other code
 from .other_module1 import Whatever
 from .other_module2 import WhateverElse
 
@@ -17,14 +17,14 @@ from .datatype import _update_forward_refs
 _update_forward_refs()
 ```
 
-Notes: 
-- `@datatype` is designed solely to work *intra-package*. 
-  - Attempts to import and use it after `__init__.py` completes will generally fail. 
-  - Importing this function into other packages is therefore highly discouraged. (Copying it is quite easy though.) 
-- `@datatype` only works on modules which are imported before `_update_forward_refs()` is run. 
+Notes:
+- `@datatype` is designed solely to work *intra-package*.
+  - Attempts to import and use it after `__init__.py` completes will generally fail.
+  - Importing this function into other packages is therefore highly discouraged. (Copying it is quite easy though.)
+- `@datatype` only works on modules which are imported before `_update_forward_refs()` is run.
   - Generally this means modules which are imported as part of `__init__.py`
-- `@datatype` is designed solely to work on `pydantic.dataclasses.dataclass`es. 
-  - Notable exceptions include *union types* thereof, which do not have the necessary fields/ methods. 
+- `@datatype` is designed solely to work on `pydantic.dataclasses.dataclass`es.
+  - Notable exceptions include *union types* thereof, which do not have the necessary fields/ methods.
 """
 
 from typing import TypeVar, Type, Optional

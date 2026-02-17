@@ -6,6 +6,7 @@ Built-in `hdl21.pdk` plug-ins.
 - [Sky130](./Sky130) serves the [SkyWater 130nm](https://github.com/google/skywater-pdk) technology
 - [Gf180](./Gf180/) serves the [Global Foundries 180nm MCU](https://github.com/gf180mcu-pdk) technology
 - [Asap7](./Asap7) serves the [ASAP7](https://github.com/The-OpenROAD-Project/asap7/) predictive/ academic technology
+- [IHP](./IHP/) serves the [IHP 130nm SG13G2](https://github.com/IHP-GmbH/IHP-Open-PDK) BiCMOS technology
 
 While source-controlled in the Hdl21 codebase, each are stand-alone packages distributed through PyPi. 
 

@@ -1,6 +1,6 @@
-""" 
-# Hdl21 Built-In Generators 
-# Unit Tests 
+"""
+# Hdl21 Built-In Generators
+# Unit Tests
 """
 
 import hdl21 as h
